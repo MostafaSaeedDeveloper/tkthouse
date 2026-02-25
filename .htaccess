@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Keep direct access to ACME challenge files for SSL verification.
+    RewriteRule ^\.well-known/ - [L]
+
+    # Send every request to Laravel's public directory when document root
+    # cannot be changed on shared hosting.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
