@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Home - Music Forest HTML Template</title>
+        <title>TKT House | Techno Events & Ticket Booking</title>
         <!-- Bootstrap core CSS -->
         <link href="css/bootstrap.css" rel="stylesheet">
         <!-- Preloader CSS -->
@@ -47,17 +47,14 @@
     </head>
 
     <body class="msl-black">
-        <!--Loader Wrapper Start-->
         <div id="loader-wrapper">
             <div id="loader"></div>
             <div class="loader-section section-left"></div>
             <div class="loader-section section-right"></div>
         </div>
-        <!--Loader Wrapper End-->
 
-        <!--Kode Wrapper Start-->
         <div class="kode_wrapper">
-        	<header class="header-style-3">
+            <header class="header-style-3">
                 <div class="header-2st-row ">
                     <div class="container">
                         <div class="pull-left">
@@ -74,7 +71,7 @@
                         </div>
                         <div class="center-logo">
                             <div class="logo">
-                                <h1><a href="#"><img class="logo-light" src="images/logo-light.png" alt="logo here"><img class="logo-drak" src="images/logo-dark.png" alt="logo here"></a></h1>
+                                <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="images/logo-light.png" alt="TKT House"><img class="logo-drak" src="images/logo-dark.png" alt="TKT House"></a></h1>
                             </div>
                         </div>
                         <div class="pull-right">
@@ -82,14 +79,14 @@
                                 <li><a href="#" data-toggle="modal" data-target="#login-register1"><i class="fa fa-user-circle"></i></a></li>
                             </ul>
                             <div id="kode-responsive-navigation" class="dl-menuwrapper">
-	                            <button class="dl-trigger"></button>
-	                            <ul class="dl-menu">
-                                    <li><a href="#">Home</a></li>
-                                    <li><a href="#">About Us</a></li>
-                                    <li><a href="#">Events</a></li>
-                                    <li><a href="#">Contact Us</a></li>
-	                            </ul>
-	                        </div>
+                                <button class="dl-trigger"></button>
+                                <ul class="dl-menu">
+                                    <li><a href="{{ route('front.home') }}">Home</a></li>
+                                    <li><a href="{{ route('front.about') }}">About</a></li>
+                                    <li><a href="{{ route('front.events') }}">Events</a></li>
+                                    <li><a href="{{ route('front.contact') }}">Contact</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -97,13 +94,13 @@
                     <div class="container">
                         <div class="fst-navigation">
                             <nav class="navigation-1">
-        						<ul>
-                                    <li><a href="#">Home</a></li>
-                                    <li><a href="#">About Us</a></li>
-                                    <li><a href="#">Events</a></li>
-                                    <li><a href="#">Contact Us</a></li>
-								</ul>
-        					</nav>
+                                <ul>
+                                    <li><a href="{{ route('front.home') }}">Home</a></li>
+                                    <li><a href="{{ route('front.about') }}">About</a></li>
+                                    <li><a href="{{ route('front.events') }}">Events</a></li>
+                                    <li><a href="{{ route('front.contact') }}">Contact</a></li>
+                                </ul>
+                            </nav>
                         </div>
                     </div>
                 </div>
