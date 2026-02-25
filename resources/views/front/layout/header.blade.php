@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Home - Music Forest HTML Template</title>
+        <title>TKTHouse | Tech Events & Ticket Booking</title>
         <!-- Bootstrap core CSS -->
         <link href="css/bootstrap.css" rel="stylesheet">
         <!-- Preloader CSS -->
@@ -74,7 +74,7 @@
                         </div>
                         <div class="center-logo">
                             <div class="logo">
-                                <h1><a href="#"><img class="logo-light" src="images/logo-light.png" alt="logo here"><img class="logo-drak" src="images/logo-dark.png" alt="logo here"></a></h1>
+                                <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="images/logo-light.png" alt="TKTHouse logo"><img class="logo-drak" src="images/logo-dark.png" alt="TKTHouse logo"></a></h1>
                             </div>
                         </div>
                         <div class="pull-right">
@@ -84,10 +84,10 @@
                             <div id="kode-responsive-navigation" class="dl-menuwrapper">
 	                            <button class="dl-trigger"></button>
 	                            <ul class="dl-menu">
-                                    <li><a href="#">Home</a></li>
-                                    <li><a href="#">About Us</a></li>
-                                    <li><a href="#">Events</a></li>
-                                    <li><a href="#">Contact Us</a></li>
+                                    <li><a href="{{ route('front.home') }}">Home</a></li>
+                                    <li><a href="{{ route('front.about') }}">About Us</a></li>
+                                    <li><a href="{{ route('events.index') }}">Events</a></li>
+                                    <li><a href="{{ route('front.contact') }}">Contact Us</a></li>
 	                            </ul>
 	                        </div>
                         </div>
@@ -98,10 +98,10 @@
                         <div class="fst-navigation">
                             <nav class="navigation-1">
         						<ul>
-                                    <li><a href="#">Home</a></li>
-                                    <li><a href="#">About Us</a></li>
-                                    <li><a href="#">Events</a></li>
-                                    <li><a href="#">Contact Us</a></li>
+                                    <li><a href="{{ route('front.home') }}">Home</a></li>
+                                    <li><a href="{{ route('front.about') }}">About Us</a></li>
+                                    <li><a href="{{ route('events.index') }}">Events</a></li>
+                                    <li><a href="{{ route('front.contact') }}">Contact Us</a></li>
 								</ul>
         					</nav>
                         </div>

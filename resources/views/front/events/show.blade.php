@@ -4,8 +4,8 @@
        <!--Sub Banner Wrap Start-->
             <div class="sub-banner">
                 <div class="container">
-                    <h6>events Detail 02 Music Forest HTML Template</h6>
-                    <p>Praising pain was born and I will give you a complete account will give you a complete account</p>
+                    <h6>TKTHouse Event Details</h6>
+                    <p>This is a temporary event details page. All event links currently open this same event until dashboard integration is ready.</p>
                 </div>
             </div>
             <!--Sub Banner Wrap End-->
@@ -43,7 +43,7 @@
 
 							<!--KODE_EVENT_CONTER_CAPSTION START-->
 							<div class="kode_event_conter_capstion">
-								<h2>upcoming concerts</h2>
+								<h2>Tech Future Summit 2026</h2>
 								<div class="counter-meta">
 									<ul class="event-media">
 										<li><a href="#" data-toggle="tooltip" title="Facebook"><i class="fa fa-facebook"></i></a></li>
@@ -52,9 +52,9 @@
 										<li><a href="#" data-toggle="tooltip" title="Google Plus"><i class="fa fa-google-plus"></i></a></li>
 									</ul>
 									<ul class="info-event">
-										<li><i class="fa fa-user"></i><a href="#"><span>John Doe</span></a></li>
-										<li><i class="fa fa-comments"></i><a href="#"><span>33 comments</span></a></li>
-										<li><i class="fa fa-clock-o"></i><a href="#"><span>14 November. 2018</span></a></li>
+										<li><i class="fa fa-user"></i><a href="#"><span>TKTHouse Team</span></a></li>
+										<li><i class="fa fa-comments"></i><a href="#"><span>Live booking enabled</span></a></li>
+										<li><i class="fa fa-clock-o"></i><a href="#"><span>14 May. 2026</span></a></li>
 									</ul>
 								</div>
 							</div>
@@ -72,7 +72,7 @@
 	                                                <ul>
 	                                                    <li><h3>Start Date:</h3><span>18-10-18</span></li>
 	                                                    <li><h3>END Date:</h3><span>21-10-18</span></li>
-	                                                    <li><h3>location:</h3><span>united kingdom</span></li>
+	                                                    <li><h3>location:</h3><span>Cairo, Egypt</span></li>
 	                                                </ul>
 	                                            </div>
 	                                        </figure>
@@ -90,7 +90,7 @@
 	                                                <ul>
 	                                                    <li><h3>Start Date:</h3><span>20-01-18</span></li>
 	                                                    <li><h3>END Date:</h3><span>21-01-18</span></li>
-	                                                    <li><h3>location:</h3><span>united kingdom</span></li>
+	                                                    <li><h3>location:</h3><span>Cairo, Egypt</span></li>
 	                                                </ul>
 	                                            </div>
 	                                        </figure>
@@ -100,7 +100,7 @@
 
 	                                <div class="col-md-12">
 	                                    <div class="kode-event-place-holder-capstion">
-	                                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+	                                        <p>TKTHouse brings together speakers, startups, developers, and decision makers in one practical event journey. This temporary page is used for all event links at the moment, and the final dynamic event content will be loaded from the dashboard soon.</p>
 	                                        <figure>
 	                                            <div id="map-canvas" class="map-canvas"></div>
 	                                        </figure>
@@ -175,7 +175,7 @@
 											</ul>
 											<div class="caption-info">
 												<h5>Time until the next event</h5>
-												<span>23 July, Expo 2018 (Dubai Emirates)</span>
+												<span>14 May, TKTHouse Summit 2026 (Cairo)</span>
 											</div>
 										</div>
 
@@ -248,7 +248,7 @@
 			                                            <!-- Kode Comment Form Start -->
 			                                            <div class="kode-author">
 			                                                <figure>
-			                                                    <img src="extra-images/comment1.jpg" alt="KODEFOREST">
+			                                                    <img src="extra-images/comment1.jpg" alt="TKTHouse">
 			                                                </figure>
 			                                                <div class="kode-author-content">
 			                                                    <div class="kode-author-head">
@@ -267,7 +267,7 @@
 			                                                    <!-- Kode Comment Form Start -->
 			                                                    <div class="kode-author">
 			                                                        <figure>
-			                                                            <img src="extra-images/comment2.jpg" alt="KODEFOREST">
+			                                                            <img src="extra-images/comment2.jpg" alt="TKTHouse">
 			                                                        </figure>
 			                                                        <div class="kode-author-content">
 			                                                            <div class="kode-author-head">
@@ -288,7 +288,7 @@
 			                                            <!-- Kode Comment Form Start -->
 			                                            <div class="kode-author">
 			                                                <figure>
-			                                                    <img src="extra-images/comment3.jpg" alt="KODEFOREST">
+			                                                    <img src="extra-images/comment3.jpg" alt="TKTHouse">
 			                                                </figure>
 			                                                <div class="kode-author-content">
 			                                                    <div class="kode-author-head">
@@ -405,17 +405,17 @@
 	                            <h6> <i class="fa fa-twitter"></i> Twitter Feed</h6>
 	                            <ul class="aside_tweets banner_slider">
 	                                <li>
-	                                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore.</p>
+	                                    <p>TKTHouse delivers technology-first events with clear agendas, strong networking value, and smooth ticketing.</p>
 	                                    <span>10 mint</span>
 	                                </li>
 
 	                                <li>
-	                                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore.</p>
+	                                    <p>TKTHouse delivers technology-first events with clear agendas, strong networking value, and smooth ticketing.</p>
 	                                    <span>10 mint</span>
 	                                </li>
 
 	                                <li>
-	                                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore.</p>
+	                                    <p>TKTHouse delivers technology-first events with clear agendas, strong networking value, and smooth ticketing.</p>
 	                                    <span>10 mint</span>
 	                                </li>
 	                            </ul>
