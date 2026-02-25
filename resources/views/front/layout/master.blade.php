@@ -112,40 +112,40 @@
 
 
         <!--Jquery Library-->
-        <script src="{{asset('js/jquery.js')}}"></script>
+        <script src="js/jquery.js"></script>
     	<!--Bootstrap core JavaScript-->
-        <script src="{{asset('js/bootstrap.js')}}"></script>
+        <script src="js/bootstrap.js"></script>
         <!--Slick Slider JavaScript-->
-        <script src="{{asset('js/slick.min.js')}}"></script>
+        <script src="js/slick.min.js"></script>
         <!-- Player JavaScript -->
-        <script type="text/javascript" src="{{asset('js/jplayer/jplayer.jukebox.js')}}"></script>
-        <script type="text/javascript" src="{{asset('js/jplayer/jquery.jplayer.min.js')}}"></script>
-        <script type="text/javascript" src="{{asset('js/jplayer/jplayer.playlist.min.js')}}"></script>
+        <script type="text/javascript" src="js/jplayer/jplayer.jukebox.js"></script>
+        <script type="text/javascript" src="js/jplayer/jquery.jplayer.min.js"></script>
+        <script type="text/javascript" src="js/jplayer/jplayer.playlist.min.js"></script>
         <!--Dl Menu Script-->
-        <script src="{{asset('js/dl-menu/modernizr.custom.j')}}s"></script>
-        <script src="{{asset('js/dl-menu/jquery.dlmenu.js')}}"></script>
+        <script src="js/dl-menu/modernizr.custom.js"></script>
+        <script src="js/dl-menu/jquery.dlmenu.js"></script>
         <!--chosen JavaScript-->
-        <script src="{{asset('js/chosen.jquery.min.js')}}"></script>
+        <script src="js/chosen.jquery.min.js"></script>
         <!--downcount JavaScript-->
-        <script src="{{asset('js/downcount.js')}}"></script>
+        <script src="js/downcount.js"></script>
         <!--Pretty Photo JavaScript-->
-        <script src="{{asset('js/jquery.prettyPhoto.js')}}"></script>
+        <script src="js/jquery.prettyPhoto.js"></script>
         <!--masonry JavaScript-->
-        <script src="{{asset('js/masonry.min.js')}}"></script>
+        <script src="js/masonry.min.js"></script>
         <!--Range slider JavaScript-->
-        <script src="{{asset('js/range-slider.js')}}"></script>
+        <script src="js/range-slider.js"></script>
         <!--Search script JavaScript-->
-        <script src="{{asset('js/search-script.js')}}"></script>
+        <script src="js/search-script.js"></script>
         <!--Custom sidebar-->
-        <script src="{{asset('js/sidebar.min.js')}}"></script>
+        <script src="js/sidebar.min.js"></script>
         <!-- bxslider-->
-        <script src="{{asset('js/jquery.bxslider.js')}}"></script>
+        <script src="js/jquery.bxslider.js"></script>
         <!-- video-->
-        <script src="{{asset('js/video.js')}}"></script>
+        <script src="js/video.js"></script>
         <!-- waypoint-->
-        <script src="{{asset('js/waypoint.js')}}"></script>
+        <script src="js/waypoint.js"></script>
         <!--Custom JavaScript-->
-    	<script src="{{asset('js/custom.js')}}"></script>
+    	<script src="js/custom.js"></script>
 
   </body>
 
