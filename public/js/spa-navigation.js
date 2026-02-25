@@ -82,6 +82,7 @@
     if (!currentContent) return;
 
     currentContent.innerHTML = nextContent.innerHTML;
+    executeScripts(currentContent);
     document.title = doc.title || document.title;
 
     if (push) {
@@ -91,6 +92,24 @@
     setActiveNav(new URL(url, window.location.origin).pathname);
     initDynamicWidgets();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function executeScripts(container) {
+    var scripts = container.querySelectorAll('script');
+
+    scripts.forEach(function (oldScript) {
+      var newScript = document.createElement('script');
+
+      Array.prototype.slice.call(oldScript.attributes).forEach(function (attr) {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+
+      if (oldScript.textContent) {
+        newScript.textContent = oldScript.textContent;
+      }
+
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    });
   }
 
   async function navigate(url, push) {
