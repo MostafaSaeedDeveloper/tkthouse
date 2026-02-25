@@ -4,7 +4,7 @@
        <!--Sub Banner Wrap Start-->
             <div class="sub-banner">
                 <div class="container">
-                    <h6>TKTHouse Event Details</h6>
+                    <h6>Event Details</h6>
                     <p>Temporary event template: every event link currently shows this design until dashboard integration is completed.</p>
                 </div>
             </div>

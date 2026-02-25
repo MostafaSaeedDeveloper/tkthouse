@@ -26,6 +26,12 @@
         <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
         <link href="{{ asset('css/color.css') }}" rel="stylesheet">
         <link href="{{ asset('css/responsive.css') }}" rel="stylesheet">
+        <style>
+            .sub-banner h6,
+            .sub-banner p {
+                color: #000 !important;
+            }
+        </style>
     </head>
 
     <body class="msl-black">

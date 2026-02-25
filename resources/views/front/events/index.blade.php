@@ -4,7 +4,7 @@
             <!--Sub Banner Wrap Start-->
             <div class="sub-banner">
                 <div class="container">
-                    <h6>Event & listing Music Forest HTML Template</h6>
+                    <h6>Events</h6>
                     <p>Praising pain was born and I will give you a complete accountwill give you a complete account</p>
                 </div>
             </div>

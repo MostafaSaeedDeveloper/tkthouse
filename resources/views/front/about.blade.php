@@ -3,7 +3,7 @@
 @section('content')
 <div class="sub-banner">
     <div class="container">
-        <h6>About TKTHouse</h6>
+        <h6>About</h6>
         <p>We are a specialized company for techno events and ticket booking experiences.</p>
     </div>
 </div>
