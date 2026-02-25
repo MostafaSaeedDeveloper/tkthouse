@@ -1,0 +1,26 @@
+nav.navigation-1 a {
+    color: #000 !important;
+    font-weight: bold;
+}
+nav.navigation-1 ul li ul li a {
+    color: #fff !important;
+}
+.navigation-1 ul li ul li:hover a {
+    color: #000 !important
+}
+.playlist_menu_bar li a {
+    color: #ffc815 !important;
+}
+.pagination > li > a:hover, .pagination > li.active:hover a, .pagination > li.active a, .ticket-column:hover li a, .instagram-link:hover, .kf_comment_meta > span:hover > a, ul.kf_social_icon > li:hover a, .select-column .chosen-container.chosen-container-single.chosen-with-drop.chosen-container-active .active-result.highlighted, .select-column .active-result.result-selected:hover, .select-column .active-result.result-selected, .select-column .active-result.result-selected.highlighted, .effect-3d > span > span span:nth-of-type(2), .main-rslider .ui-slider-horizontal .ui-slider-range, .main-rslider .ui-slider-horizontal .ui-slider-handle, .btn-normal2, .btn-normal:hover, .footer_copyright, .subscribe_form button, .kode_testimonial_slider .slick-dots li button, .kode_video_content button:hover, .kode_artist_hover, .open_player .jp-playlist ul.mCustomScrollbar li.jp-playlist-current, .open_player .jp-playlist ul.mCustomScrollbar li:hover, .kode_event:hover .kode_event_content .active, .kode_event .kode_event_content .btn_normal:hover, .effect figure::before, .social_media_icons, .border_btn:hover, .kf_header_navigation .navigation ul > li > .children li:hover a::before, .kf_header_rock::before, .radio_btn:hover, .kf_header_navigation::before, .bgcolr-default, .mega_fig .play_icon, .flicker-link a.btn-1, .artists-rank figure, .msl-black .msl-concert-list .btn-1, .msl-black .widget-player .jp-playlist li.jp-playlist-current, .new-album-thumb:hover, .msl-eventlist2::before, .overlay_1, .dl-menuwrapper ul li a:hover, .dl-menuwrapper button:hover, .dl-menuwrapper button.dl-active, .mp3-list-table li:hover .mp3-playlist-item-cover, .masonry-thumb figure, .msl-video-thumb figure, .msl-featured-thumb figure, .msl-heading h5, .sub-banner::before, .blog-title::before, .msl-event figure, .msl-social a:hover, .top-player .jp-play-bar, .msl-blog-full:hover .btn-1, .music-album-nav li a::before, .msl-concert-list figure::before, .msl-artist-thumb figure::before, .msl-pagination .page-numbers::before, .artist-banner-thumb .btn-1.theme-bg, .widget-player .jp-seek-bar .jp-play-bar, .album-list-thumb-outer.active .album-list-thumb::before, .artist-bio .widget-event-info .msl-social a:hover, .main_banner .slick-dots .slick-active button, .top-player .jp-playlist li.jp-playlist-current, .widget-player .jp-state-playing button.jp-play, .mCSB_scrollTools .mCSB_dragger .mCSB_dragger_bar, .mCSB_scrollTools .mCSB_dragger .mCSB_dragger_bar:hover, .msl-featured-thumb3-outer > .msl-featured-thumb .text .btn-1:hover, .theme-bg, .kf_aside_twitter, .counter-meta, .login_btn .submit:hover, .blog_img_year, body.msl-black .pagination > li.active > a {
+    background-color: #FFC815 !important;
+}
+body.msl-black .title-style-2 .msl-heading {
+    padding: 18px 25px 17px 0px;
+    background: #FFC815
+}
+.msl-heading.light-color span{
+    color: #000 !important;
+}
+.albums-tables ul .play-btn a, .kf_blog_detail figure, .blog_img_year::before, .product-items:hover::after, .product-items:hover::before, .navigation-1 > ul > li:hover::before, .navigation-1 > ul > li:hover::after, .navigation-1 > ul > li.active::before, .navigation-1 > ul > li.active::after, footer.footer_section, .kode_testimonial_content, div.kode_blog_content, .kode_social_icons li:hover a, div.kode_artist_content h3::before, ul.kode_tabs li:hover a, ul.kode_tabs li.active a, .open_player .jp-controls button::before, .open_player .jp-controls button.jp-play, div.kf_music_albums figure, div.heading_ho2 h3::before, div.heading_ho2 h3::after, header.kf_header_rock, .kf_header_navigation .navigation ul li > .children, .navigation ul li .children, .mega_fig figure:hover, .mega_fig .play_icon, .artists-rank:hover figure, .navigation .mega_content, .video-admin-img, .kode-comments li:hover .children .kode-author, .kf_commet_field input:focus, textarea:focus, .page-result:hover, .slick-arrow:hover, .msl-concert-list figure, .widget-player .jp-interface, .main_banner .thumb:hover figure, .jp-state-playing button.jp-play, .kf_contact_meta li:hover span, .mp3-playlist-item-cover .img-holder, .widget-player .jp-playlist .jp-playlist-item-cover, .widget-player .jp-state-playing button.jp-play, .theme-bdr {
+    border-color: #000 !important;
+}
