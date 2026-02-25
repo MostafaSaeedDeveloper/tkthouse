@@ -1,5 +1,7 @@
 @include('front.layout.header')
-@yield('content')
+<main id="spa-content" data-spa-root>
+    @yield('content')
+</main>
 @include('front.layout.footer')
 
         </div>
@@ -146,6 +148,7 @@
         <script src="{{ asset('js/waypoint.js') }}"></script>
         <!--Custom JavaScript-->
     	<script src="{{ asset('js/custom.js') }}"></script>
+        <script src="{{ asset('js/spa-navigation.js') }}"></script>
 
   </body>
 
