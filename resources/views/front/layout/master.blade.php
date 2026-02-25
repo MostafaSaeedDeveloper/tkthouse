@@ -65,25 +65,25 @@
         	<div class="sidebar right">
 	           	<a href="#" class="side_t close_cross" data-action="close" data-side="right"><span></span></a>
 	        	<div class="kode_sidebar_right">
-	        		<a href="#" class="kode_logo"><img src="images/footer-logo.png" alt=""></a>
+	        		<a href="#" class="kode_logo"><img src="{{ asset('images/footer-logo.png') }}" alt=""></a>
 	        		<ul class="kode_demos">
 	        			<li>
-	        				<a href="event-detail.html" data-rel='prettyPhoto'><img src="images/demos/home1.jpg" alt="Default Home Page"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
+	        				<a href="event-detail.html" data-rel='prettyPhoto'><img src="{{ asset('images/demos/home1.jpg') }}" alt="Default Home Page"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
 	        			</li>
 	        			<li>
-	        				<a href="event-organiser.html" data-rel='prettyPhoto'><img src="images/demos/home2.jpg" alt="Home page 2"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
+	        				<a href="event-organiser.html" data-rel='prettyPhoto'><img src="{{ asset('images/demos/home2.jpg') }}" alt="Home page 2"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
 	        			</li>
 	        			<li>
-	        				<a href="shop-items.html" data-rel='prettyPhoto'><img src="images/demos/home3.jpg" alt="Home page 3"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
+	        				<a href="shop-items.html" data-rel='prettyPhoto'><img src="{{ asset('images/demos/home3.jpg') }}" alt="Home page 3"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
 	        			</li>
 	        			<li>
-	        				<a href="video-list.html" data-rel='prettyPhoto'><img src="images/demos/home4.jpg" alt="Home page 4"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
+	        				<a href="video-list.html" data-rel='prettyPhoto'><img src="{{ asset('images/demos/home4.jpg') }}" alt="Home page 4"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
 	        			</li>
 	        			<li>
-	        				<a href="headers.html" data-rel='prettyPhoto'><img src="images/demos/home5.jpg" alt="Home page 5"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
+	        				<a href="headers.html" data-rel='prettyPhoto'><img src="{{ asset('images/demos/home5.jpg') }}" alt="Home page 5"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
 	        			</li>
 	        			<li>
-	        				<a href="blog-detail-leftsidebar.html" data-rel='prettyPhoto'><img src="images/demos/home6.jpg" alt="black version"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
+	        				<a href="blog-detail-leftsidebar.html" data-rel='prettyPhoto'><img src="{{ asset('images/demos/home6.jpg') }}" alt="black version"><span ><i class="fa fa-search-plus" aria-hidden="true"></i></span></a>
 	        			</li>
 	        		</ul>
 
@@ -112,40 +112,40 @@
 
 
         <!--Jquery Library-->
-        <script src="js/jquery.js"></script>
+        <script src="{{ asset('js/jquery.js') }}"></script>
     	<!--Bootstrap core JavaScript-->
-        <script src="js/bootstrap.js"></script>
+        <script src="{{ asset('js/bootstrap.js') }}"></script>
         <!--Slick Slider JavaScript-->
-        <script src="js/slick.min.js"></script>
+        <script src="{{ asset('js/slick.min.js') }}"></script>
         <!-- Player JavaScript -->
-        <script type="text/javascript" src="js/jplayer/jplayer.jukebox.js"></script>
-        <script type="text/javascript" src="js/jplayer/jquery.jplayer.min.js"></script>
-        <script type="text/javascript" src="js/jplayer/jplayer.playlist.min.js"></script>
+        <script type="text/javascript" src="{{ asset('js/jplayer/jplayer.jukebox.js') }}"></script>
+        <script type="text/javascript" src="{{ asset('js/jplayer/jquery.jplayer.min.js') }}"></script>
+        <script type="text/javascript" src="{{ asset('js/jplayer/jplayer.playlist.min.js') }}"></script>
         <!--Dl Menu Script-->
-        <script src="js/dl-menu/modernizr.custom.js"></script>
-        <script src="js/dl-menu/jquery.dlmenu.js"></script>
+        <script src="{{ asset('js/dl-menu/modernizr.custom.js') }}"></script>
+        <script src="{{ asset('js/dl-menu/jquery.dlmenu.js') }}"></script>
         <!--chosen JavaScript-->
-        <script src="js/chosen.jquery.min.js"></script>
+        <script src="{{ asset('js/chosen.jquery.min.js') }}"></script>
         <!--downcount JavaScript-->
-        <script src="js/downcount.js"></script>
+        <script src="{{ asset('js/downcount.js') }}"></script>
         <!--Pretty Photo JavaScript-->
-        <script src="js/jquery.prettyPhoto.js"></script>
+        <script src="{{ asset('js/jquery.prettyPhoto.js') }}"></script>
         <!--masonry JavaScript-->
-        <script src="js/masonry.min.js"></script>
+        <script src="{{ asset('js/masonry.min.js') }}"></script>
         <!--Range slider JavaScript-->
-        <script src="js/range-slider.js"></script>
+        <script src="{{ asset('js/range-slider.js') }}"></script>
         <!--Search script JavaScript-->
-        <script src="js/search-script.js"></script>
+        <script src="{{ asset('js/search-script.js') }}"></script>
         <!--Custom sidebar-->
-        <script src="js/sidebar.min.js"></script>
+        <script src="{{ asset('js/sidebar.min.js') }}"></script>
         <!-- bxslider-->
-        <script src="js/jquery.bxslider.js"></script>
+        <script src="{{ asset('js/jquery.bxslider.js') }}"></script>
         <!-- video-->
-        <script src="js/video.js"></script>
+        <script src="{{ asset('js/video.js') }}"></script>
         <!-- waypoint-->
-        <script src="js/waypoint.js"></script>
+        <script src="{{ asset('js/waypoint.js') }}"></script>
         <!--Custom JavaScript-->
-    	<script src="js/custom.js"></script>
+    	<script src="{{ asset('js/custom.js') }}"></script>
 
   </body>
 

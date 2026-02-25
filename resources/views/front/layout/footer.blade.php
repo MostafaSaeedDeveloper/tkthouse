@@ -1,6 +1,6 @@
             <footer class="msl-footer">
                 <div class="logo">
-                    <a href="{{ route('front.home') }}"><img style="height: 70px" src="images/footer-logo.png" alt="TKT House"></a>
+                    <a href="{{ route('front.home') }}"><img style="height: 70px" src="{{ asset('images/footer-logo.png') }}" alt="TKT House"></a>
                 </div>
                 <div class="text">
                     <ul class="msl-social">

@@ -6,44 +6,44 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>TKT House | Techno Events & Ticket Booking</title>
         <!-- Bootstrap core CSS -->
-        <link href="css/bootstrap.css" rel="stylesheet">
+        <link href="{{ asset('css/bootstrap.css') }}" rel="stylesheet">
         <!-- Preloader CSS -->
-        <link rel="stylesheet" href="css/preloader.css">
+        <link rel="stylesheet" href="{{ asset('css/preloader.css') }}">
         <!-- DL Menu CSS -->
-        <link href="js/dl-menu/component.css" rel="stylesheet">
+        <link href="{{ asset('js/dl-menu/component.css') }}" rel="stylesheet">
         <!-- Slick Slider CSS -->
-        <link href="css/slick.css" rel="stylesheet"/>
-        <link href="css/slick-theme.css" rel="stylesheet"/>
+        <link href="{{ asset('css/slick.css') }}" rel="stylesheet"/>
+        <link href="{{ asset('css/slick-theme.css') }}" rel="stylesheet"/>
         <!-- jquery.bxslider CSS -->
-        <link href="css/jquery.bxslider.css" rel="stylesheet">
+        <link href="{{ asset('css/jquery.bxslider.css') }}" rel="stylesheet">
         <!--Player Css-->
-        <link href="js/jplayer/jplayer.uno.css" rel="stylesheet" />
+        <link href="{{ asset('js/jplayer/jplayer.uno.css') }}" rel="stylesheet" />
         <!--black-style Css-->
-        <link href="css/black-style.css" rel="stylesheet" />
+        <link href="{{ asset('css/black-style.css') }}" rel="stylesheet" />
         <!-- Fav icon -->
-        <link rel="icon" type="icon" sizes="96x96" href="fonts/fav.png">
-        <link href="css/font-awesome.css" rel="stylesheet">
-        <link href="css/svg-icons.css" rel="stylesheet">
+        <link rel="icon" type="icon" sizes="96x96" href="{{ asset('fonts/fav.png') }}">
+        <link href="{{ asset('css/font-awesome.css') }}" rel="stylesheet">
+        <link href="{{ asset('css/svg-icons.css') }}" rel="stylesheet">
         <!-- Pretty Photo CSS -->
-        <link href="css/prettyPhoto.css" rel="stylesheet">
+        <link href="{{ asset('css/prettyPhoto.css') }}" rel="stylesheet">
         <!-- animation CSS -->
-        <link href="css/animation.css" rel="stylesheet">
+        <link href="{{ asset('css/animation.css') }}" rel="stylesheet">
         <!-- Range slider CSS -->
-        <link href="css/range-slider.css" rel="stylesheet">
+        <link href="{{ asset('css/range-slider.css') }}" rel="stylesheet">
         <!-- Typography CSS -->
-        <link href="css/typography.css" rel="stylesheet">
+        <link href="{{ asset('css/typography.css') }}" rel="stylesheet">
         <!-- Widget CSS -->
-        <link href="css/widget.css" rel="stylesheet">
+        <link href="{{ asset('css/widget.css') }}" rel="stylesheet">
         <!-- Shortcodes CSS -->
-        <link href="css/shortcodes.css" rel="stylesheet">
+        <link href="{{ asset('css/shortcodes.css') }}" rel="stylesheet">
         <!-- Custom Main StyleSheet CSS -->
-        <link href="style.css" rel="stylesheet">
-        <link href="css/custom.css" rel="stylesheet">
+        <link href="{{ asset('style.css') }}" rel="stylesheet">
+        <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
         <!-- Color CSS -->
-        <link href="css/color.css" rel="stylesheet">
+        <link href="{{ asset('css/color.css') }}" rel="stylesheet">
 
         <!-- Responsive CSS -->
-        <link href="css/responsive.css" rel="stylesheet">
+        <link href="{{ asset('css/responsive.css') }}" rel="stylesheet">
     </head>
 
     <body class="msl-black">
@@ -71,7 +71,7 @@
                         </div>
                         <div class="center-logo">
                             <div class="logo">
-                                <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="images/logo-light.png" alt="TKT House"><img class="logo-drak" src="images/logo-dark.png" alt="TKT House"></a></h1>
+                                <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="{{ asset('images/logo-light.png') }}" alt="TKT House"><img class="logo-drak" src="{{ asset('images/logo-dark.png') }}" alt="TKT House"></a></h1>
                             </div>
                         </div>
                         <div class="pull-right">
