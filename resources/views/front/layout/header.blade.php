@@ -63,7 +63,7 @@
                         </div>
                         <div class="pull-right">
                             <ul class="playlist_menu_bar">
-                                <li><a href="#" aria-label="Account"><i class="fa fa-user-circle"></i></a></li>
+                                <li><a href="#" aria-label="Account" data-toggle="modal" data-target="#login-register1"><i class="fa fa-user-circle"></i></a></li>
                             </ul>
                             <div id="kode-responsive-navigation" class="dl-menuwrapper">
                                 <button class="dl-trigger"></button>
