@@ -28,4 +28,9 @@ class PagesController extends Controller
     {
         return view('front.contact');
     }
+
+    public function checkout()
+    {
+        return view('front.checkout');
+    }
 }
