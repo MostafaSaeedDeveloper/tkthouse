@@ -31,3 +31,6 @@ body.msl-black .title-style-2 .msl-heading {
 .ticket-section ul li {
     color: #eee;
 }
+.ms_width_off50.bg-trans * {
+    color: #000 !important;
+}
