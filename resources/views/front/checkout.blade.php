@@ -141,10 +141,6 @@
                                 <input class="checkout-input" type="text" value="+20 101 234 5678">
                             </div>
                             <div class="col-sm-12">
-                                <label class="checkout-label">Ticket Holder Name</label>
-                                <input class="checkout-input" type="text" value="Ahmed Hassan">
-                            </div>
-                            <div class="col-sm-12">
                                 <label class="checkout-label">Address</label>
                                 <input class="checkout-input" type="text" value="90 Street, New Cairo, Egypt">
                             </div>
@@ -152,22 +148,13 @@
                     </div>
 
                     <div class="checkout-card">
-                        <h4>Payment Method</h4>
-                        <label class="checkout-label">Card Holder Name</label>
+                        <h4>Ticket Holder Details</h4>
+                        <label class="checkout-label">Ticket Holder Name</label>
                         <input class="checkout-input" type="text" value="Ahmed Hassan">
-                        <label class="checkout-label">Card Number</label>
-                        <input class="checkout-input" type="text" value="4111 1111 1111 1111">
-
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <label class="checkout-label">Expiry Date</label>
-                                <input class="checkout-input" type="text" value="12/27">
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="checkout-label">CVV</label>
-                                <input class="checkout-input" type="text" value="123">
-                            </div>
-                        </div>
+                        <label class="checkout-label">Ticket Holder Phone</label>
+                        <input class="checkout-input" type="text" value="+20 101 234 5678">
+                        <label class="checkout-label">Ticket Holder Email</label>
+                        <input class="checkout-input" type="text" value="ahmed.hassan@email.com">
                     </div>
                 </div>
 
