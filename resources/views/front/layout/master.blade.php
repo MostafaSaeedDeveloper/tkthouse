@@ -40,7 +40,7 @@
   							<div class="ms_width_off50 bg-trans">
       							<div class="ms-heading2">
       								<h3>create new account</h3>
-      								<p>create your very own trenda account</p>
+      								<p>create your very own tkthouse account</p>
       							</div>
       							<div class="input-felid">
       								<label>email address</label>
