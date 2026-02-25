@@ -51,9 +51,9 @@
 										<li><a href="#" data-toggle="tooltip" title="Google Plus"><i class="fa fa-google-plus"></i></a></li>
 									</ul>
 									<ul class="info-event">
-										<li><i class="fa fa-user"></i><a href="#"><span>John Doe</span></a></li>
-										<li><i class="fa fa-comments"></i><a href="#"><span>33 comments</span></a></li>
-										<li><i class="fa fa-clock-o"></i><a href="#"><span>14 November. 2018</span></a></li>
+										<li><i class="fa fa-calendar"></i><a href="#"><span>Date: 14 November 2018</span></a></li>
+										<li><i class="fa fa-map-marker"></i><a href="#"><span>Location: United Kingdom</span></a></li>
+										<li><i class="fa fa-clock-o"></i><a href="#"><span>Time: 08:00 PM</span></a></li>
 									</ul>
 								</div>
 							</div>
