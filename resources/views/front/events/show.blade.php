@@ -152,7 +152,19 @@
 											</div>
 										</div>
 
-
+										<div class="house-rules-section" style="margin-top:40px;">
+											<h3 style="color:#248fcb; margin-bottom:15px;">House Rules :</h3>
+											<ul style="padding-left:30px; margin:0;">
+												<li>Minimum age for entrance is 21.</li>
+												<li>Violent behavior will result in immediate removal.</li>
+												<li>Doors open at 9:00 PM, so arrive early to experience every moment of this captivating event.</li>
+												<li>Doors open for you whenever you arrive.</li>
+												<li>No re-entry allowed.</li>
+												<li>Attire must be presentable.</li>
+												<li>Shorts and sportswear are not permitted.</li>
+												<li>Any unusual or inappropriate clothing or behavior will not be accepted.</li>
+											</ul>
+										</div>
 
 	                                </div>
 	                            </div>
