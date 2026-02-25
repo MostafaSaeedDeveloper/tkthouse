@@ -31,27 +31,13 @@
             .sub-banner p {
                 color: #000 !important;
             }
-        </style>
-    </head>
-
-    <body class="msl-black">
-        <div id="loader-wrapper">
-            <div id="loader"></div>
-            <div class="loader-section section-left"></div>
-            <div class="loader-section section-right"></div>
-        </div>
-
-        <div class="kode_wrapper">
-            <header class="header-style-3">
-                <div class="header-2st-row ">
-                    <div class="container">
-                        <div class="pull-left">
-                            <div class="social-icons">
-                                <strong>Follow Us:</strong>
-                                <ul>
-                                    <li><a href="#"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa fa-instagram" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa fa-youtube" aria-hidden="true"></i></a></li>
+            #login-register1 .ms_width_off50.bg-trans,
+            #login-register1 .ms_width_off50.bg-trans .ms-heading2 h3,
+            #login-register1 .ms_width_off50.bg-trans .ms-heading2 p,
+            #login-register1 .ms_width_off50.bg-trans .input-felid label,
+            #login-register1 .ms_width_off50.bg-trans .title-point,
+            #login-register1 .ms_width_off50.bg-trans .check-points li p {
+                color: #000 !important;
                                     <li><a href="#"><i class="fa fa-soundcloud" aria-hidden="true"></i></a></li>
                                 </ul>
                             </div>
