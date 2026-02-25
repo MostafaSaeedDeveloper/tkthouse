@@ -8,28 +8,28 @@
                 <div class="slide left-align">
                     <img src="extra-images/kf_slide_img14.jpg" alt="banner img">
                     <div class="banner_content container">
-                        <div class="b_title animated">OUR LATEST EVENT  IS READY NOW!</div>
-                        <p class="animated">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod <br>tempor incididunt ut magna aliqua.</p>
-                        <a href="index.html" class="btn_normal border_btn animated">CONTINUE</a>
-                        <a href="index.html" class="btn_normal border_btn animated ">EXPLORE</a>
+                        <div class="b_title animated">TKTHouse TECHNO NIGHTS ARE LIVE NOW!</div>
+                        <p class="animated">Book secure tickets for Cairo's best techno experiences and enjoy a seamless event journey.</p>
+                        <a href="{{ route('events.index') }}" class="btn_normal border_btn animated">GET TICKETS</a>
+                        <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}" class="btn_normal border_btn animated ">VIEW EVENT</a>
                     </div>
                 </div>
                 <div class="slide center-align">
                     <img src="extra-images/kf_slide_img5.jpg" alt="banner img">
                     <div class="banner_content container">
-                        <div class="b_title animated">OUR LATEST EVENT  IS READY NOW!</div>
-                        <p class="animated">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod <br>tempor incididunt ut magna aliqua.</p>
-                        <a href="index.html" class="btn_normal border_btn animated">CONTINUE</a>
-                        <a href="index.html" class="btn_normal border_btn animated ">EXPLORE</a>
+                        <div class="b_title animated">TKTHouse TECHNO NIGHTS ARE LIVE NOW!</div>
+                        <p class="animated">Book secure tickets for Cairo's best techno experiences and enjoy a seamless event journey.</p>
+                        <a href="{{ route('events.index') }}" class="btn_normal border_btn animated">GET TICKETS</a>
+                        <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}" class="btn_normal border_btn animated ">VIEW EVENT</a>
                     </div>
                 </div>
                 <div class="slide right-align">
                     <img src="extra-images/kf_slide_img8.jpg" alt="banner img">
                     <div class="banner_content container">
-                        <div class="b_title animated">OUR LATEST EVENT  IS READY NOW!</div>
-                        <p class="animated">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod <br>tempor incididunt ut magna aliqua.</p>
-                        <a href="index.html" class="btn_normal border_btn animated">CONTINUE</a>
-                        <a href="index.html" class="btn_normal border_btn animated ">EXPLORE</a>
+                        <div class="b_title animated">TKTHouse TECHNO NIGHTS ARE LIVE NOW!</div>
+                        <p class="animated">Book secure tickets for Cairo's best techno experiences and enjoy a seamless event journey.</p>
+                        <a href="{{ route('events.index') }}" class="btn_normal border_btn animated">GET TICKETS</a>
+                        <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}" class="btn_normal border_btn animated ">VIEW EVENT</a>
                     </div>
                 </div>
             </div>
@@ -55,18 +55,18 @@
                                         <div class="msl-eventlist2">
                                             <figure><img src="extra-images/black-img/event-list6.jpg" alt="KODEFOREST"></figure>
                                             <div class="eventlist2-heading">
-                                                <h5><a href="#">Summer Music Festival</a></h5>
+                                                <h5><a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Techno Pulse Night</a></h5>
                                                 <div class="evnt-tag">
-                                                    <a href="#">LeGaga</a>
-                                                    <a href="#">Mamaia</a>
-                                                    <a href="#">Romania</a>
+                                                    <a href="#">TKTHouse</a>
+                                                    <a href="#">Warehouse</a>
+                                                    <a href="#">Cairo</a>
                                                 </div>
                                             </div>
                                             <div class="eventlist2-date">
-                                                <h6>26 August <span>6:45PM</span></h6>
+                                                <h6>12 March <span>9:00PM</span></h6>
                                             </div>
                                             <div class="eventlist2-link">
-                                                <a class="btn-1" href="#">Buy Tickets</a>
+                                                <a class="btn-1" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Get Tickets</a>
                                             </div>
                                         </div>
                                         <!--Event List 2 End-->
@@ -76,18 +76,18 @@
                                         <div class="msl-eventlist2">
                                             <figure><img src="extra-images/black-img/event-list7.jpg" alt="KODEFOREST"></figure>
                                             <div class="eventlist2-heading">
-                                                <h5><a href="#">Summer Music Festival</a></h5>
+                                                <h5><a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Techno Pulse Night</a></h5>
                                                 <div class="evnt-tag">
-                                                    <a href="#">LeGaga</a>
-                                                    <a href="#">Mamaia</a>
-                                                    <a href="#">Romania</a>
+                                                    <a href="#">TKTHouse</a>
+                                                    <a href="#">Warehouse</a>
+                                                    <a href="#">Cairo</a>
                                                 </div>
                                             </div>
                                             <div class="eventlist2-date">
-                                                <h6>26 August <span>6:45PM</span></h6>
+                                                <h6>12 March <span>9:00PM</span></h6>
                                             </div>
                                             <div class="eventlist2-link">
-                                                <a class="btn-1" href="#">Buy Tickets</a>
+                                                <a class="btn-1" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Get Tickets</a>
                                             </div>
                                         </div>
                                         <!--Event List 2 End-->
@@ -97,18 +97,18 @@
                                         <div class="msl-eventlist2">
                                             <figure><img src="extra-images/black-img/event-list9.jpg" alt="KODEFOREST"></figure>
                                             <div class="eventlist2-heading">
-                                                <h5><a href="#">Summer Music Festival</a></h5>
+                                                <h5><a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Techno Pulse Night</a></h5>
                                                 <div class="evnt-tag">
-                                                    <a href="#">LeGaga</a>
-                                                    <a href="#">Mamaia</a>
-                                                    <a href="#">Romania</a>
+                                                    <a href="#">TKTHouse</a>
+                                                    <a href="#">Warehouse</a>
+                                                    <a href="#">Cairo</a>
                                                 </div>
                                             </div>
                                             <div class="eventlist2-date">
-                                                <h6>26 August <span>6:45PM</span></h6>
+                                                <h6>12 March <span>9:00PM</span></h6>
                                             </div>
                                             <div class="eventlist2-link">
-                                                <a class="btn-1" href="#">Buy Tickets</a>
+                                                <a class="btn-1" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Get Tickets</a>
                                             </div>
                                         </div>
                                         <!--Event List 2 End-->
@@ -118,18 +118,18 @@
                                         <div class="msl-eventlist2">
                                             <figure><img src="extra-images/black-img/event-list8.jpg" alt="KODEFOREST"></figure>
                                             <div class="eventlist2-heading">
-                                                <h5><a href="#">Summer Music Festival</a></h5>
+                                                <h5><a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Techno Pulse Night</a></h5>
                                                 <div class="evnt-tag">
-                                                    <a href="#">LeGaga</a>
-                                                    <a href="#">Mamaia</a>
-                                                    <a href="#">Romania</a>
+                                                    <a href="#">TKTHouse</a>
+                                                    <a href="#">Warehouse</a>
+                                                    <a href="#">Cairo</a>
                                                 </div>
                                             </div>
                                             <div class="eventlist2-date">
-                                                <h6>26 August <span>6:45PM</span></h6>
+                                                <h6>12 March <span>9:00PM</span></h6>
                                             </div>
                                             <div class="eventlist2-link">
-                                                <a class="btn-1" href="#">Buy Tickets</a>
+                                                <a class="btn-1" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Get Tickets</a>
                                             </div>
                                         </div>
                                         <!--Event List 2 End-->
@@ -139,18 +139,18 @@
                                         <div class="msl-eventlist2">
                                             <figure><img src="extra-images/black-img/event-list6.jpg" alt="KODEFOREST"></figure>
                                             <div class="eventlist2-heading">
-                                                <h5><a href="#">Summer Music Festival</a></h5>
+                                                <h5><a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Techno Pulse Night</a></h5>
                                                 <div class="evnt-tag">
-                                                    <a href="#">LeGaga</a>
-                                                    <a href="#">Mamaia</a>
-                                                    <a href="#">Romania</a>
+                                                    <a href="#">TKTHouse</a>
+                                                    <a href="#">Warehouse</a>
+                                                    <a href="#">Cairo</a>
                                                 </div>
                                             </div>
                                             <div class="eventlist2-date">
-                                                <h6>26 August <span>6:45PM</span></h6>
+                                                <h6>12 March <span>9:00PM</span></h6>
                                             </div>
                                             <div class="eventlist2-link">
-                                                <a class="btn-1" href="#">Buy Tickets</a>
+                                                <a class="btn-1" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Get Tickets</a>
                                             </div>
                                         </div>
                                         <!--Event List 2 End-->

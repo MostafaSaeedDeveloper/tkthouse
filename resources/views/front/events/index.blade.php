@@ -4,7 +4,7 @@
             <!--Sub Banner Wrap Start-->
             <div class="sub-banner">
                 <div class="container">
-                    <h6>Event & listing Music Forest HTML Template</h6>
+                    <h6>Events</h6>
                     <p>Praising pain was born and I will give you a complete accountwill give you a complete account</p>
                 </div>
             </div>
@@ -17,7 +17,7 @@
                             <figure><img src="extra-images/concert1.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -35,7 +35,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -44,7 +44,7 @@
                             <figure><img src="extra-images/concert2.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -62,7 +62,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -71,7 +71,7 @@
                             <figure><img src="extra-images/concert3.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -89,7 +89,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -98,7 +98,7 @@
                             <figure><img src="extra-images/concert4.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -116,7 +116,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -125,7 +125,7 @@
                             <figure><img src="extra-images/concert5.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -143,7 +143,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -152,7 +152,7 @@
                             <figure><img src="extra-images/concert6.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -170,7 +170,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -179,7 +179,7 @@
                             <figure><img src="extra-images/concert7.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -197,7 +197,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
@@ -206,7 +206,7 @@
                             <figure><img src="extra-images/concert8.jpg" alt="KODEFOREST"></figure>
                             <div class="text-overflow">
                                 <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
+                                    <a href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
                                 </h4>
                                 <!--Concert Meta Start-->
                                 <div class="concert-meta">
@@ -224,7 +224,7 @@
                                     </div>
                                 </div>
                                 <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
+                                <a class="btn-1 theme-bg" href="{{ route('events.show', ['event' => 'techno-pulse']) }}">Buy Ticket</a>
                             </div>
                         </div>
                         <!--Music Concert End-->
