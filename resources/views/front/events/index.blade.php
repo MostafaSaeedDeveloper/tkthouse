@@ -1,255 +1,44 @@
 @extends('front.layout.master')
 
 @section('content')
-            <!--Sub Banner Wrap Start-->
-            <div class="sub-banner">
-                <div class="container">
-                    <h6>Event & listing Music Forest HTML Template</h6>
-                    <p>Praising pain was born and I will give you a complete accountwill give you a complete account</p>
+    <div class="sub-banner">
+        <div class="container">
+            <h6>TKT House Events</h6>
+            <p>Discover upcoming techno parties and reserve your ticket.</p>
+        </div>
+    </div>
+
+    <div class="kode_content_wrap">
+        <section>
+            <div class="container">
+                <div class="msl-concert-list">
+                    <figure><img src="extra-images/concert1.jpg" alt="Underground Pulse"></figure>
+                    <div class="text-overflow">
+                        <h4 class="concert-title"><a href="{{ route('front.events.show') }}">Underground Pulse: Warehouse Edition</a></h4>
+                        <div class="concert-meta">
+                            <div class="concert-info"><b>Date:</b> <span>22 March, 2026</span></div>
+                            <div class="concert-info"><b>Time:</b> <span>10:00 PM</span></div>
+                            <div class="concert-info concert-location"><b>Location:</b> <span>Cairo Warehouse District</span></div>
+                        </div>
+                        <p>A deep and driving techno experience with headline DJs, immersive lights, and full-night production.</p>
+                        <a class="btn-1" href="{{ route('front.events.show') }}">View Details</a>
+                    </div>
+                </div>
+
+                <div class="msl-concert-list">
+                    <figure><img src="extra-images/concert2.jpg" alt="Bassline Temple"></figure>
+                    <div class="text-overflow">
+                        <h4 class="concert-title"><a href="{{ route('front.events.show') }}">Bassline Temple: Seafront Session</a></h4>
+                        <div class="concert-meta">
+                            <div class="concert-info"><b>Date:</b> <span>12 April, 2026</span></div>
+                            <div class="concert-info"><b>Time:</b> <span>9:30 PM</span></div>
+                            <div class="concert-info concert-location"><b>Location:</b> <span>Alexandria Seafront Arena</span></div>
+                        </div>
+                        <p>Open-air vibes, curated lineups, and high-energy techno performances by regional and international artists.</p>
+                        <a class="btn-1" href="{{ route('front.events.show') }}">View Details</a>
+                    </div>
                 </div>
             </div>
-            <!--Sub Banner Wrap End-->
- <div class="kode_content_wrap">
-                <section>
-                    <div class="container">
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert1.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert2.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert3.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert4.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert5.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert6.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert7.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Music Concert Start-->
-                        <div class="msl-concert-list">
-                            <figure><img src="extra-images/concert8.jpg" alt="KODEFOREST"></figure>
-                            <div class="text-overflow">
-                                <h4 class="concert-title">
-                                    <a href="#">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                                </h4>
-                                <!--Concert Meta Start-->
-                                <div class="concert-meta">
-                                    <div class="concert-info">
-                                        <b>Date:</b>
-                                        <span>25 July, 2018</span>
-                                    </div>
-                                    <div class="concert-info">
-                                        <b>phone:</b>
-                                        <span>06 511 21022</span>
-                                    </div>
-                                    <div class="concert-info concert-location">
-                                        <b>Location:</b>
-                                        <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                                    </div>
-                                </div>
-                                <!--Concert Meta End-->
-                                <a class="btn-1 theme-bg" href="#">Buy Ticket</a>
-                            </div>
-                        </div>
-                        <!--Music Concert End-->
-                        <!--Pagination Wrap Start-->
-                        <ul class="pagination">
-									<li>
-										<a aria-label="Previous" href="#">
-										<span aria-hidden="true"><i class="fa fa-angle-left"></i>PREV</span>
-										</a>
-									</li>
-									<li class="active"><a href="#">1</a></li>
-									<li><a href="#">2</a></li>
-									<li><a href="#">3</a></li>
-									<li><a href="#">4</a></li>
-									<li><a href="#">5</a></li>
-									<li>
-										<a aria-label="Next" href="#">
-										<span aria-hidden="true">Next<i class="fa fa-angle-right"></i></span>
-										</a>
-									</li>
-								</ul>
-                        <!--Pagination Wrap End-->
-                    </div>
-                </section>
-            </div>
-            <!--Main Content Wrap End-->
-
+        </section>
+    </div>
 @endsection
