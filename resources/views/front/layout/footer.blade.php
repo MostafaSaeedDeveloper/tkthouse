@@ -11,7 +11,6 @@
                         <li><a href="#" title="instagram"><i class="fa fa-instagram"></i></a></li>
                         <li><a href="#" title="soundcloud"><i class="fa fa-soundcloud"></i></a></li>
                     </ul>
-                    <p>Global techno experiences and secure ticket booking by TKT House.</p>
                 </div>
             </footer>
 
