@@ -1,6 +1,11 @@
 @extends('front.layout.master')
 
 @section('content')
+    <div class="sub-banner">
+        <div class="container">
+            <h6>Checkout</h6>
+        </div>
+    </div>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&display=swap');
 
@@ -116,7 +121,6 @@
 
     <section class="checkout-page">
         <div class="container">
-            <h1 class="checkout-title">CHECKOUT</h1>
             <p class="checkout-subtitle">Complete your booking for <strong>TKT House Techno Night</strong> (hardcoded demo data).</p>
 
             <div class="row">
