@@ -44,18 +44,13 @@
 							<!--KODE_EVENT_CONTER_CAPSTION START-->
 							<div class="kode_event_conter_capstion">
 								<div class="counter-meta">
-									<ul class="event-media">
-										<li><a href="#" data-toggle="tooltip" title="Facebook"><i class="fa fa-facebook"></i></a></li>
-										<li><a href="#" data-toggle="tooltip" title="Twitter"><i class="fa fa-twitter"></i></a></li>
-										<li><a href="#" data-toggle="tooltip" title="LinkedIn"><i class="fa fa-linkedin"></i></a></li>
-										<li><a href="#" data-toggle="tooltip" title="Google Plus"><i class="fa fa-google-plus"></i></a></li>
-									</ul>
 									<ul class="info-event">
 										<li><i class="fa fa-calendar"></i><a href="#"><span>Date: 14 November 2018</span></a></li>
 										<li><i class="fa fa-map-marker"></i><a href="#"><span>Location: United Kingdom</span></a></li>
 										<li><i class="fa fa-clock-o"></i><a href="#"><span>Time: 08:00 PM</span></a></li>
 									</ul>
 								</div>
+                                <img style="height: 500px;object-fit:contain" src="https://ticket-easy.co/wp-content/uploads/2025/10/SIDERAL-POST-FINAL.jpg" alt="">
 							</div>
 
 							<!--KODE_EVENT_CONTER_CAPSTION END-->
@@ -153,8 +148,8 @@
 										</div>
 
 										<div class="house-rules-section" style="margin-top:40px;">
-											<h3 style="color:#248fcb; margin-bottom:15px;">House Rules :</h3>
-											<ul style="padding-left:30px; margin:0;">
+											<h3 style=" margin-bottom:15px;">House Rules :</h3>
+											<ul class="house-rules" style="padding-left:5px; margin:0;">
 												<li>Minimum age for entrance is 21.</li>
 												<li>Violent behavior will result in immediate removal.</li>
 												<li>Doors open at 9:00 PM, so arrive early to experience every moment of this captivating event.</li>
