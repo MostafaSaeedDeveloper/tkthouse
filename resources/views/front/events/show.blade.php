@@ -1,63 +1,166 @@
 @extends('front.layout.master')
 
 @section('content')
-    <div class="sub-banner">
-        <div class="container">
-            <h6>TKT House Techno Night</h6>
-            <p>Event details and ticket options.</p>
-        </div>
-    </div>
-
-    <div class="kode_content_wrap">
-        <section>
-            <div class="container">
-                <div class="msl-concert-list">
-                    <figure><img src="extra-images/event-detail1.jpg" alt="TKT House Techno Night"></figure>
-                    <div class="text-overflow">
-                        <h4 class="concert-title"><a href="#">Underground Pulse: Warehouse Edition</a></h4>
-                        <div class="concert-meta">
-                            <div class="concert-info"><b>Date:</b> <span>22 March, 2026</span></div>
-                            <div class="concert-info"><b>Time:</b> <span>10:00 PM - 6:00 AM</span></div>
-                            <div class="concert-info concert-location"><b>Location:</b> <span>Cairo Warehouse District</span></div>
-                        </div>
-                        <p>TKT House presents a full-scale techno night with warehouse visuals, precision sound engineering, and a lineup built for underground electronic music lovers.</p>
-                    </div>
-                </div>
-
-                <div class="ticket-section">
-                    <div class="msl-black">
-                        <div class="msl-heading light-color">
-                            <h5><span>Book Your Tickets</span></h5>
-                        </div>
-                    </div>
-                    <div class="tickets">
-                        <ul class="kode-tickets-title">
-                            <li>Ticket Type</li>
-                            <li>Price</li>
-                            <li>Benefits</li>
-                            <li>Booking</li>
-                        </ul>
-                        <ul class="ticket-column secnd">
-                            <li><span>Early Access</span></li>
-                            <li><span>$35</span></li>
-                            <li><span>Entry before 11 PM</span></li>
-                            <li><a href="#">Reserve</a></li>
-                        </ul>
-                        <ul class="ticket-column">
-                            <li><span>General Admission</span></li>
-                            <li><span>$45</span></li>
-                            <li><span>Full night access</span></li>
-                            <li><a href="#">Reserve</a></li>
-                        </ul>
-                        <ul class="ticket-column secnd">
-                            <li><span>VIP Deck</span></li>
-                            <li><span>$80</span></li>
-                            <li><span>Fast track + lounge zone</span></li>
-                            <li><a href="#">Reserve</a></li>
-                        </ul>
-                    </div>
+            <!--Sub Banner Wrap Start-->
+            <div class="sub-banner">
+                <div class="container">
+                    <h6>Event Details Page</h6>
+                    <p>Praising pain was born and I will give you a complete account will give you a complete account</p>
                 </div>
             </div>
-        </section>
-    </div>
+            <!--Sub Banner Wrap End-->
+<!--Main Content Wrap Start-->
+            <section class="kode_content_wrap">
+                <div class="container">
+					<div class="row">
+						<div class="col-md-12">
+							<!--KODE-EVENT-CONTER-SECTION START-->
+							<div class="kode_event_counter_section">
+								<figure>
+									<img src="extra-images/event-update1.jpg" alt="">
+									<ul class="countdown">
+										<li>
+											<span class="days">72</span>
+											<p class="days_ref">days</p>
+										</li>
+										<li>
+											<span class="hours">13</span>
+											<p class="hours_ref">hours</p>
+										</li>
+										<li>
+											<span class="minutes">24</span>
+											<p class="minutes_ref">minute</p>
+										</li>
+										<li>
+											<span class="seconds last">00</span>
+											<p class="seconds_ref">sec</p>
+										</li>
+									</ul>
+								</figure>
+
+							</div>
+							<!--KODE-EVENT-CONTER-SECTION END-->
+
+							<!--KODE_EVENT_CONTER_CAPSTION START-->
+							<div class="kode_event_conter_capstion">
+								<div class="counter-meta">
+									<ul class="event-media">
+										<li><a href="#" data-toggle="tooltip" title="Facebook"><i class="fa fa-facebook"></i></a></li>
+										<li><a href="#" data-toggle="tooltip" title="Twitter"><i class="fa fa-twitter"></i></a></li>
+										<li><a href="#" data-toggle="tooltip" title="LinkedIn"><i class="fa fa-linkedin"></i></a></li>
+										<li><a href="#" data-toggle="tooltip" title="Google Plus"><i class="fa fa-google-plus"></i></a></li>
+									</ul>
+									<ul class="info-event">
+										<li><i class="fa fa-user"></i><a href="#"><span>John Doe</span></a></li>
+										<li><i class="fa fa-comments"></i><a href="#"><span>33 comments</span></a></li>
+										<li><i class="fa fa-clock-o"></i><a href="#"><span>14 November. 2018</span></a></li>
+									</ul>
+								</div>
+							</div>
+
+							<!--KODE_EVENT_CONTER_CAPSTION END-->
+	                        <div class="other-events">
+	                            <div class="row ">
+	                                <div class="col-md-6 col-sm-6 col-xs-12">
+	                                    <!--KODE_EVENT_PLACE_HOLDER START-->
+	                                    <div class="kode-event-place-holder">
+	                                        <figure>
+	                                            <img src="extra-images/event-n1.jpg" alt="">
+	                                            <div class="event-frame-over">
+	                                                <h2>EVENT DETAILS</h2>
+	                                                <ul>
+	                                                    <li><h3>Start Date:</h3><span>18-10-18</span></li>
+	                                                    <li><h3>END Date:</h3><span>21-10-18</span></li>
+	                                                    <li><h3>location:</h3><span>united kingdom</span></li>
+	                                                </ul>
+	                                            </div>
+	                                        </figure>
+	                                        <!--KODE_EVENT_PLACE_HOLDER END-->
+	                                    </div>
+	                                </div>
+
+	                                <div class="col-md-6 col-sm-6 col-xs-12">
+	                                    <!--KODE_EVENT_PLACE_HOLDER START-->
+	                                    <div class="kode-event-place-holder">
+	                                        <figure>
+	                                            <img src="extra-images/event-n2.jpg" alt="">
+	                                            <div class="event-frame-over">
+	                                                <h2>EVENT DETAILS</h2>
+	                                                <ul>
+	                                                    <li><h3>Start Date:</h3><span>20-01-18</span></li>
+	                                                    <li><h3>END Date:</h3><span>21-01-18</span></li>
+	                                                    <li><h3>location:</h3><span>united kingdom</span></li>
+	                                                </ul>
+	                                            </div>
+	                                        </figure>
+	                                        <!--KODE_EVENT_PLACE_HOLDER END-->
+	                                    </div>
+	                                </div>
+
+	                                <div class="col-md-12">
+	                                    <div class="kode-event-place-holder-capstion">
+	                                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+	                                        <figure>
+	                                        </figure>
+	                                        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+	                                    </div>
+										<div class="ticket-section">
+											<div class="msl-black">
+		                                        <div class="msl-heading light-color">
+		                                            <h5><span>BUY TICKETS TO THIS EVENT</span></h5>
+		                                        </div>
+	                                        </div>
+											<div class="tickets">
+												<ul class="kode-tickets-title">
+	                                            	<li>Ticket Type</li>
+	                                                <li>Price</li>
+	                                                <li>Qty</li>
+	                                                <li>Cart</li>
+												</ul>
+												<ul class="ticket-column secnd">
+													<li><span>Gold</span></li>
+													<li><span>$79.99</span></li>
+													<li>
+														<input class="input-qty-type" type="number" name="qty" value="1"/>
+													</li>
+													<li ><a href="#">Add To Cart</a></li>
+												</ul>
+												<ul class="ticket-column">
+													<li><span>Sliver</span></li>
+													<li><span>$49.99</span></li>
+													<li>
+														<input class="input-qty-type" type="number" name="qty" value="1"/>
+													</li>
+													<li><a href="#">Add To Cart</a></li>
+												</ul>
+												<ul class="ticket-column secnd">
+													<li><span>Regular</span></li>
+													<li><span>$29.99</span></li>
+													<li>
+														<input class="input-qty-type" type="number" name="qty" value="1"/>
+													</li>
+													<li><a href="#">Add To Cart</a></li>
+												</ul>
+												<ul class="ticket-column">
+													<li><span>Regular</span></li>
+													<li><span>$29.99</span></li>
+													<li>
+														<input class="input-qty-type" type="number" name="qty" value="1"/>
+													</li>
+													<li><a href="#">Add To Cart</a></li>
+												</ul>
+											</div>
+										</div>
+
+
+
+	                                </div>
+	                            </div>
+	                        </div>
+						</div>
+
+            		</div>
+        		</div>
+            </section>
+            <!--Main Content Wrap End-->
 @endsection

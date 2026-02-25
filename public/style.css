@@ -946,7 +946,7 @@ section{
 	display: inline-block;
 }
 .sub-banner *{
-	color: #fff !important;
+	color: #000 !important;
 	position: relative;
 }
 /*
@@ -7172,7 +7172,7 @@ blockquote{
 	overflow:hidden;
 	display:inline-block;
 	vertical-align:middle;
-	color:#fff;
+	color:#000;
 	float:none;
 }
 .counter-meta ul li{
@@ -7186,7 +7186,7 @@ blockquote{
 	width:21px;
 	height:21px;
 	text-align:center;
-	color:#fff;
+	color:#000;
 	font-weight:bold;
 	font-size:14px;
 	padding:2px;
@@ -7196,7 +7196,7 @@ blockquote{
 	margin:0 15px;
 }
 .info-event a{
-	color:#fff;
+	color:#000;
 	margin:0 0 0 10px;
 }
 .info-event li i{

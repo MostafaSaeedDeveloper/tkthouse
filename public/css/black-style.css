@@ -20,7 +20,7 @@ body.msl-black h1 a, body.msl-black h2 a, body.msl-black h3 a, body.msl-black h4
 /* Paragraph Typo */
 .msl-black p{
     /*color: #45535d;*/
-    color: #637e8f;
+    color: #dcdcdc;
 }
 p a {
     color: #fff;
@@ -329,7 +329,7 @@ body.msl-black .bottom-text .sec{
 .msl-black .page-result,
 .msl-black .concert-info b,
 .msl-black .timer-thumb h6{
-	color: #637e8f;
+	color: #eeeeee;
 }
 
 body.msl-black .new-album-thumb:hover .new-album-caption{

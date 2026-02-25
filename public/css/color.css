@@ -86,7 +86,7 @@ ol.meta_quote li i,
 .product-content span,
 .widget-heading h4
 {
-	color:#db152e ;
+	color:#FFC815 ;
 }
 /*
 	  ============================================================
@@ -172,7 +172,7 @@ ul.kf_social_icon > li:hover a,
 .blog_img_year,
 body.msl-black .pagination > li.active > a
 {
-	background-color:#db152e;
+	background-color:#FFC815;
 }
 /*
 	  ============================================================
@@ -226,7 +226,7 @@ textarea:focus,
 .widget-player .jp-state-playing button.jp-play,
 .theme-bdr
 {
-	border-color:#db152e;
+	border-color:#FFC815;
 }
 
 .instagram-link:hover,
@@ -248,7 +248,7 @@ textarea:focus,
 .msl-black .comment-reply-link,
 .msl-black .comment_item .kode-author-content h5 a,
 .msl-black .widget-player .jp-playlist .jp-playlist-current a .jp-artist,
-.msl-black .widget-player .jp-jukebox a, 
+.msl-black .widget-player .jp-jukebox a,
 .msl-black .widget-player .jp-controls button.jp-play,
 .msl-black .msl-blog-full .text .btn-1,
 .msl-black .kode-author-content span,
@@ -264,7 +264,7 @@ textarea:focus,
 .instagram-link,
 .msl-black .album-list-thumb-outer.active,
 .msl-black .msl-video-thumb,
-.msl-black .video-playlist-wrap, 
+.msl-black .video-playlist-wrap,
 .msl-black .video-player-contant,
 .msl-black .video-list-thumb,
 .msl-black  .mp3-list-table li:hover > div:before,
@@ -399,27 +399,27 @@ figure img
 		-moz-transition:all 0.3s ease-in-out;
 			-ms-transition:all 0.3s ease-in-out;
 				-o-transition:all 0.3s ease-in-out;
-					transition:all 0.3s ease-in-out;	
+					transition:all 0.3s ease-in-out;
 }
 
-.navigation ul > li:before, 
-.navigation ul > li:after, 
-.navigation ul ul, figcaption, 
-figure .social-network, 
-.featured-artist article figure figcaption:before, 
-.user-text, .user-text a.user-icon, 
-.user-text .sec, 
-.tag-cloud a, .table tbody tr, 
-.latest-album article figure::before, 
-.latest-album article .text .icon-plus, .latest-album article .text, 
-.widget-category, .widget-category ul li a, 
-.widget-archive ul li, .anker-plus, 
-.blog-listing article .text p a, 
-.event-orgnizer article figure figcaption, 
-.event-orgnizer article .text, .pagination ul li a, 
-.featured-artist.dj-listing article figure img, 
-.featured-artist.dj-listing article figure, 
-.gallery-page article figure img, .pro-detail, 
+.navigation ul > li:before,
+.navigation ul > li:after,
+.navigation ul ul, figcaption,
+figure .social-network,
+.featured-artist article figure figcaption:before,
+.user-text, .user-text a.user-icon,
+.user-text .sec,
+.tag-cloud a, .table tbody tr,
+.latest-album article figure::before,
+.latest-album article .text .icon-plus, .latest-album article .text,
+.widget-category, .widget-category ul li a,
+.widget-archive ul li, .anker-plus,
+.blog-listing article .text p a,
+.event-orgnizer article figure figcaption,
+.event-orgnizer article .text, .pagination ul li a,
+.featured-artist.dj-listing article figure img,
+.featured-artist.dj-listing article figure,
+.gallery-page article figure img, .pro-detail,
 .portfolio-filter ul li div figcaption,
 
 .kode_social_icons li a,
@@ -460,7 +460,7 @@ figure .social-network,
 .kode_demos span,
 .hover-3d .btns-effects li,
 .hover-3d .btns-effects,
-.hover-3d .btns-effects li:last-child, 
+.hover-3d .btns-effects li:last-child,
 .btns-effects li:last-child,
 .kf_music_albums figure:after,
 .ticket-column li a,
@@ -476,7 +476,7 @@ figure .social-network,
 		-moz-transition:all 0.4s ease-in-out;
 			-ms-transition:all 0.4s ease-in-out;
 				-o-transition:all 0.4s ease-in-out;
-					transition:all 0.4s ease-in-out;		
+					transition:all 0.4s ease-in-out;
 
 }
 
@@ -506,11 +506,11 @@ div.albums-tables ul li .like-btns span,
 div.albums-tables ul li .play-btn a,
 .navigation > ul > li:hover > a,
 .navigation ul li.active > a{
-    color:#db152e;
+    color:#FFC815;
 }
 .dl-menuwrapper li a:hover,
 .navigation ul li .children li:hover > a{
-   background:#db152e;
+   background:#FFC815;
 }
 
 
@@ -539,11 +539,11 @@ body.msl-black .eventlist2-link .btn-1{
 	background-color: transparent !important;
 }
 /*Black Version White Color Start*/
-.msl-black .widget-contact .kode-textarea textarea::-webkit-input-placeholder, 
+.msl-black .widget-contact .kode-textarea textarea::-webkit-input-placeholder,
 .msl-black .widget-contact .kf_commet_field input[type="text"]::-webkit-input-placeholder{
 	color: #fff;
 }
-.msl-black .widget-contact .kode-textarea textarea::-moz-placeholder, 
+.msl-black .widget-contact .kode-textarea textarea::-moz-placeholder,
 .msl-black .widget-contact .kf_commet_field input[type="text"]::-moz-placeholder{
 	color: #fff;
 }
@@ -557,14 +557,14 @@ body.msl-black .eventlist2-link .btn-1{
 /*Black Version White Color End*/
 .eventlist2-link .btn-1,
 .msl-black .widget-player .jp-jukebox a .jp-artist,
-.msl-black .widget-player .jp-jukebox, 
+.msl-black .widget-player .jp-jukebox,
 .msl-black .widget-player .jp-jukebox .jp-viewstate-control,
-.msl-black .widget-player .jp_column-right-inner button, 
+.msl-black .widget-player .jp_column-right-inner button,
 .msl-black .widget-player .jp-controls button,
 .msl-black .widget-player .opt-ui-cover .jp-details .jp-title{
 	color: #eee ; /*#45535d;*/
 }
-.msl-black .widget-player .jp-current-time, 
+.msl-black .widget-player .jp-current-time,
 .msl-black .widget-player .jp-duration{
 	color: #45535d !important;
 }

@@ -165,43 +165,5 @@
             </section>
             <!--Main Content Wrap End-->
 
-            <!--Flicker Slider Wrap Start-->
-            <div class="msl-flicker">
-                <!--Flicker Slider Wrap Start-->
-                <div class="flicker-slider">
-                    <!--Flicker Slider Thumb Start-->
-                    <div class="thumb">
-                        <img src="extra-images/flicker1.jpg" alt="TKTHouse">
-                    </div>
-                    <!--Flicker Slider Thumb End-->
-                    <!--Flicker Slider Thumb Start-->
-                    <div class="thumb">
-                        <img src="extra-images/flicker2.jpg" alt="TKTHouse">
-                    </div>
-                    <!--Flicker Slider Thumb End-->
-                    <!--Flicker Slider Thumb Start-->
-                    <div class="thumb">
-                        <img src="extra-images/flicker3.jpg" alt="TKTHouse">
-                    </div>
-                    <!--Flicker Slider Thumb End-->
-                    <!--Flicker Slider Thumb Start-->
-                    <div class="thumb">
-                        <img src="extra-images/flicker4.jpg" alt="TKTHouse">
-                    </div>
-                    <!--Flicker Slider Thumb End-->
-                    <!--Flicker Slider Thumb Start-->
-                    <div class="thumb">
-                        <img src="extra-images/flicker5.jpg" alt="TKTHouse">
-                    </div>
-                    <!--Flicker Slider Thumb End-->
-                    <!--Flicker Slider Thumb Start-->
-                    <div class="thumb">
-                        <img src="extra-images/flicker3.jpg" alt="TKTHouse">
-                    </div>
-                    <!--Flicker Slider Thumb End-->
-                </div>
-                <!--Flicker Slider End-->
-            </div>
-            <!--Flicker Slider Wrap End-->
 
 @endsection

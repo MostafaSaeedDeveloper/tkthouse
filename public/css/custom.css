@@ -24,3 +24,10 @@ body.msl-black .title-style-2 .msl-heading {
 .albums-tables ul .play-btn a, .kf_blog_detail figure, .blog_img_year::before, .product-items:hover::after, .product-items:hover::before, .navigation-1 > ul > li:hover::before, .navigation-1 > ul > li:hover::after, .navigation-1 > ul > li.active::before, .navigation-1 > ul > li.active::after, footer.footer_section, .kode_testimonial_content, div.kode_blog_content, .kode_social_icons li:hover a, div.kode_artist_content h3::before, ul.kode_tabs li:hover a, ul.kode_tabs li.active a, .open_player .jp-controls button::before, .open_player .jp-controls button.jp-play, div.kf_music_albums figure, div.heading_ho2 h3::before, div.heading_ho2 h3::after, header.kf_header_rock, .kf_header_navigation .navigation ul li > .children, .navigation ul li .children, .mega_fig figure:hover, .mega_fig .play_icon, .artists-rank:hover figure, .navigation .mega_content, .video-admin-img, .kode-comments li:hover .children .kode-author, .kf_commet_field input:focus, textarea:focus, .page-result:hover, .slick-arrow:hover, .msl-concert-list figure, .widget-player .jp-interface, .main_banner .thumb:hover figure, .jp-state-playing button.jp-play, .kf_contact_meta li:hover span, .mp3-playlist-item-cover .img-holder, .widget-player .jp-playlist .jp-playlist-item-cover, .widget-player .jp-state-playing button.jp-play, .theme-bdr {
     border-color: #000 !important;
 }
+.ticket-column li a {
+    background: #ffc815;
+    color: #000 !important;
+}
+.ticket-section ul li {
+    color: #eee;
+}
