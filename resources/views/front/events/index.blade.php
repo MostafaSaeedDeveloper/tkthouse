@@ -15,7 +15,7 @@
                     <figure><img src="extra-images/concert1.jpg" alt="Underground Pulse"></figure>
                     <div class="text-overflow">
                         <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Underground Pulse: Warehouse Edition</a>
+                            <a href="{{ route('front.events.show') }}">Underground Pulse</a>
                         </h4>
                         <div class="concert-meta">
                             <div class="concert-info">
@@ -28,7 +28,7 @@
                             </div>
                             <div class="concert-info concert-location">
                                 <b>Location:</b>
-                                <span>Cairo Warehouse District, Egypt</span>
+                                <span>Cairo Warehouse District</span>
                             </div>
                         </div>
                         <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
@@ -39,7 +39,7 @@
                     <figure><img src="extra-images/concert2.jpg" alt="Bassline Temple"></figure>
                     <div class="text-overflow">
                         <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Bassline Temple: Seafront Session</a>
+                            <a href="{{ route('front.events.show') }}">Bassline Temple</a>
                         </h4>
                         <div class="concert-meta">
                             <div class="concert-info">
@@ -52,7 +52,7 @@
                             </div>
                             <div class="concert-info concert-location">
                                 <b>Location:</b>
-                                <span>Alexandria Seafront Arena, Egypt</span>
+                                <span>Alexandria Seafront Arena</span>
                             </div>
                         </div>
                         <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
@@ -63,7 +63,7 @@
                     <figure><img src="extra-images/concert3.jpg" alt="Neon Frequency"></figure>
                     <div class="text-overflow">
                         <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Neon Frequency: Open Air Dome</a>
+                            <a href="{{ route('front.events.show') }}">Neon Frequency</a>
                         </h4>
                         <div class="concert-meta">
                             <div class="concert-info">
@@ -76,7 +76,7 @@
                             </div>
                             <div class="concert-info concert-location">
                                 <b>Location:</b>
-                                <span>Giza Open Air Dome, Egypt</span>
+                                <span>Giza Open Air Dome</span>
                             </div>
                         </div>
                         <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
