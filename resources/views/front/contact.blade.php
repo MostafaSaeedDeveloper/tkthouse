@@ -37,19 +37,19 @@
                             <div class="col-md-6 col-sm-6">
                                 <div class="widget-contact social-contact">
                                     <h4 class="widget-title2">Contact Us</h4>
-                                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla sagittis lacinia tellus. Nullam venenatis a sem non dictum. Aliquam orci ipsum, malesuada lacinia faucibus nec, bibendum a enim...</p>
+                                    <p>Planning a technology event? TKTHouse can help you manage production, marketing, and ticketing from one place.</p>
                                     <ul class="kf_contact_meta">
                                         <li>
                                             <span class="fa fa-phone"></span>
-                                            <p>(+92) - 334 - 2797084</p>
+                                            <p>+20 100 123 4567</p>
                                         </li>
                                         <li>
                                             <span class="fa fa-envelope"></span>
-                                            <p>example@kodeblog.com</p>
+                                            <p>hello@tkthouse.com</p>
                                         </li>
                                         <li>
                                             <span class="fa fa-map-marker"></span>
-                                            <p>90, Downtown St, USA</p>
+                                            <p>New Cairo, Egypt</p>
                                         </li>
                                     </ul>
                                 </div>

@@ -95,7 +95,7 @@
                         <li class="behance"><a href="#"><i class="fa fa-behance"></i></a></li>
                         <li class="gplus"><a href="#"><i class="fa fa-google-plus"></i></a></li>
                     </ul>
-					<p><i aria-hidden="true" class="fa fa-copyright"></i>2018 MUSIC FOREST TEMPLATE Made by KODEFOREST</p>
+					<p><i aria-hidden="true" class="fa fa-copyright"></i>2026 TKTHouse - Tech Events & Ticket Booking</p>
 
 	        	</div>
 	        </div>
