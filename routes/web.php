@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\PagesController;
+use App\Http\Controllers\CustomerDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PagesController::class, 'home'])->name('front.home');
@@ -19,6 +20,7 @@ Route::get('/events/{event}', [PagesController::class, 'eventShow'])->name('fron
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/account/dashboard', [CustomerDashboardController::class, 'index'])->name('front.account.dashboard');
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('front.checkout.store');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
