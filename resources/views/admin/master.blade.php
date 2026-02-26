@@ -324,7 +324,8 @@
 
           ClassicEditor
             .create(element)
-            .then(() => {
+            .then((editor) => {
+              editor.ui.view.editable.element.style.minHeight = '220px';
               element.dataset.ckeditorInitialized = '1';
             })
             .catch((error) => {
