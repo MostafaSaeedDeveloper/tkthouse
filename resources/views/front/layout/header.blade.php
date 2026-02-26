@@ -46,7 +46,7 @@
         <link href="{{ asset('css/responsive.css') }}" rel="stylesheet">
     </head>
 
-    <body class="msl-black">
+    <body class="msl-black" data-authenticated="{{ auth()->check() ? "1" : "0" }}">
         <div id="loader-wrapper">
             <div id="loader"></div>
             <div class="loader-section section-left"></div>

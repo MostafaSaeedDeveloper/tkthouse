@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('login');
             }
 
-            return route('front.customer.login');
+            return route('front.customer.login', ['redirect' => $request->fullUrl()]);
         });
     })
     ->withExceptions(function (Exceptions $exceptions): void {

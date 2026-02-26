@@ -18,6 +18,7 @@
                             </div>
                             <form method="POST" action="{{ route('front.customer.login.store') }}">
                                 @csrf
+                                <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
                                 <div class="input-felid">
                                     <label>username or email address</label>
                                     <input type="text" name="login" placeholder="username or email address*" required>
@@ -39,6 +40,7 @@
                             </div>
                             <form method="POST" action="{{ route('front.customer.register.store') }}">
                                 @csrf
+                                <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
                                 <div class="input-felid">
                                     <label>full name</label>
                                     <input type="text" name="name" placeholder="full name*" required>
@@ -150,6 +152,32 @@
         <!--Custom JavaScript-->
     	<script src="{{ asset('js/custom.js') }}"></script>
         <script src="{{ asset('js/spa-navigation.js') }}"></script>
+
+        <script>
+            (function () {
+                var isAuthenticated = document.body && document.body.dataset.authenticated === '1';
+                if (isAuthenticated) {
+                    return;
+                }
+
+                document.addEventListener('click', function (event) {
+                    var link = event.target.closest('a.tkt-checkout-btn');
+                    if (!link) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    var checkoutUrl = link.getAttribute('href') || '';
+                    document.querySelectorAll('[data-redirect-target]').forEach(function (input) {
+                        input.value = checkoutUrl;
+                    });
+
+                    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
+                        window.jQuery('#login-register1').modal('show');
+                    }
+                });
+            })();
+        </script>
 
   </body>
 

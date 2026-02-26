@@ -11,6 +11,7 @@
                         <h4 class="text-warning mb-4">Create a New Account</h4>
                         <form method="POST" action="{{ route('front.customer.register.store') }}">
                             @csrf
+                            <input type="hidden" name="redirect_to" value="{{ request('redirect') }}">
                             <div class="mb-3">
                                 <label class="form-label">Full Name</label>
                                 <input type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required>
@@ -32,7 +33,7 @@
                             </div>
                             <button type="submit" class="btn btn-warning w-100">Create Account</button>
                         </form>
-                        <p class="mt-3 mb-0">Already have an account? <a href="{{ route('front.customer.login') }}">Login</a></p>
+                        <p class="mt-3 mb-0">Already have an account? <a href="{{ route('front.customer.login', ['redirect' => request('redirect')]) }}">Login</a></p>
                     </div>
                 </div>
             </div>

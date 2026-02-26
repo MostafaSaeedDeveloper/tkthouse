@@ -11,6 +11,7 @@
                         <h4 class="text-warning mb-4">Login to Continue</h4>
                         <form action="{{ route('front.customer.login.store') }}" method="POST">
                             @csrf
+                            <input type="hidden" name="redirect_to" value="{{ request('redirect') }}">
                             <div class="mb-3">
                                 <label class="form-label">Email or Username</label>
                                 <input type="text" name="login" value="{{ old('login') }}" class="form-control @error('login') is-invalid @enderror" required autofocus>
@@ -23,7 +24,7 @@
                             </div>
                             <button class="btn btn-warning w-100" type="submit">Login</button>
                         </form>
-                        <p class="mt-3 mb-0">New customer? <a href="{{ route('front.customer.register') }}">Create account</a></p>
+                        <p class="mt-3 mb-0">New customer? <a href="{{ route('front.customer.register', ['redirect' => request('redirect')]) }}">Create account</a></p>
                     </div>
                 </div>
             </div>

@@ -20,6 +20,7 @@ class CustomerAuthController extends Controller
         $validated = $request->validate([
             'login' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'redirect_to' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $field = filter_var($validated['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
@@ -30,7 +31,7 @@ class CustomerAuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('front.account.dashboard'));
+        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null);
     }
 
     public function showRegister()
@@ -44,6 +45,7 @@ class CustomerAuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'redirect_to' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $user = User::create([
@@ -56,7 +58,7 @@ class CustomerAuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('front.account.dashboard');
+        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null);
     }
 
     public function logout(Request $request)
@@ -67,6 +69,22 @@ class CustomerAuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('front.home');
+    }
+
+
+    private function redirectAfterAuth(Request $request, ?string $redirectTo)
+    {
+        if (is_string($redirectTo) && $redirectTo !== '') {
+            if (str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
+                return redirect()->to($redirectTo);
+            }
+
+            if (str_starts_with($redirectTo, url('/'))) {
+                return redirect()->to($redirectTo);
+            }
+        }
+
+        return redirect()->intended(route('front.account.dashboard'));
     }
 
     private function generateUsername(string $email): string
