@@ -34,3 +34,91 @@ body.msl-black .title-style-2 .msl-heading {
 .ms_width_off50.bg-trans * {
     color: #000 !important;
 }
+
+/* Customer auth popup refinement (inspired by original design) */
+.customer-auth-modal .modal-dialog,
+.customer-auth-modal .modal-content {
+    width: 980px;
+    max-width: 95vw;
+}
+.customer-auth-modal .modal-content {
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+}
+.customer-auth-modal .ms-login-form {
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+}
+.customer-auth-modal .auth-panel {
+    min-height: 620px;
+    padding: 48px 50px;
+}
+body.msl-black .customer-auth-modal .auth-panel-login {
+    background: #000;
+}
+body.msl-black .customer-auth-modal .auth-panel-register {
+    background: #FFC815;
+}
+.customer-auth-modal .auth-form-card {
+    background: #dddddd;
+    padding: 22px 20px 26px;
+    min-height: 420px;
+}
+.customer-auth-modal .input-felid {
+    margin-bottom: 20px;
+}
+.customer-auth-modal .input-felid label {
+    font-size: 13px;
+    font-weight: 600;
+}
+.customer-auth-modal .input-felid input {
+    height: 56px;
+    border-radius: 32px;
+    background: #c5cfde;
+    font-size: 16px;
+}
+.customer-auth-modal .auth-panel-register .input-felid input {
+    background: #f0f0f0;
+}
+.customer-auth-modal .btn-normal2 {
+    min-width: 145px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+    padding: 10px 24px;
+}
+.customer-auth-modal .ms-login-form sup {
+    top: 50%;
+    margin-top: -25px;
+    z-index: 2;
+    font-size: 16px;
+    color: #666;
+    font-size: 20px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.18);
+}
+.customer-auth-modal .close {
+    position: absolute;
+    right: -10px;
+    top: -20px;
+    z-index: 3;
+}
+@media (max-width: 991px) {
+    .customer-auth-modal .ms-login-form {
+        display: block;
+    }
+    .customer-auth-modal .auth-panel {
+        width: 100%;
+        min-height: auto;
+        padding: 32px 24px;
+    }
+    .customer-auth-modal .ms-login-form sup {
+        position: static;
+        display: block;
+        margin: 12px auto;
+    }
+    .customer-auth-modal .auth-form-card {
+        min-height: auto;
+    }
+}
