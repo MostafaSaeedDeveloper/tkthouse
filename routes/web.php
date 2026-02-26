@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\PagesController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,7 +17,14 @@ Route::get('/checkout', [PagesController::class, 'checkout'])->name('front.check
 
 Auth::routes();
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::view('/dashboard', 'admin.index')->name('dashboard');
-    Route::redirect('/home', '/dashboard');
+    Route::resource('users', UserController::class)->except('show');
+    Route::resource('roles', RoleController::class)->except('show');
+    Route::resource('permissions', PermissionController::class)->except('show');
+    Route::resource('events', EventController::class)->except('show');
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });
+
+Route::redirect('/dashboard', '/admin/dashboard');
+Route::redirect('/home', '/admin/dashboard');

@@ -1,0 +1,2 @@
+<div class="mb-3"><label class="form-label">Role Name</label><input name="name" class="form-control" value="{{ old('name', $role->name ?? '') }}" required></div>
+<div class="mb-3"><label class="form-label">Permissions</label><select name="permissions[]" class="form-select" multiple>@foreach($permissions as $permission)<option value="{{ $permission->name }}" @selected(in_array($permission->name, old('permissions', isset($role) ? $role->permissions->pluck('name')->toArray() : [])))>{{ $permission->name }}</option>@endforeach</select></div>

@@ -1,0 +1,4 @@
+@extends('admin.master')
+@section('content')
+<div class="content">@include('admin.partials.flash')<div class="d-flex justify-content-between mb-3"><h2 class="h4">Roles</h2><a class="btn btn-primary" href="{{ route('admin.roles.create') }}">Create Role</a></div><div class="block block-rounded"><div class="table-responsive"><table class="table"><thead><tr><th>Name</th><th>Permissions</th><th></th></tr></thead><tbody>@foreach($roles as $role)<tr><td>{{ $role->name }}</td><td>{{ $role->permissions->pluck('name')->implode(', ') ?: '-' }}</td><td class="text-end"><a href="{{ route('admin.roles.edit',$role) }}" class="btn btn-sm btn-alt-primary">Edit</a><form method="POST" action="{{ route('admin.roles.destroy',$role) }}" class="d-inline">@csrf @method('DELETE')<button class="btn btn-sm btn-danger">Delete</button></form></td></tr>@endforeach</tbody></table></div></div>{{ $roles->links() }}</div>
+@endsection
