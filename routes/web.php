@@ -8,4 +8,5 @@ Auth::routes();
 require __DIR__.'/admin.php';
 require __DIR__.'/customer.php';
 
-Route::redirect('/home', '/admin');
+Route::redirect('/home', '/dashboard');
+Route::redirect('/admin', '/dashboard');
