@@ -11,143 +11,79 @@
     <div class="kode_content_wrap">
         <section>
             <div class="container">
-                <div class="msl-concert-list">
-                    <figure><img src="extra-images/concert1.jpg" alt="KODEFOREST"></figure>
-                    <div class="text-overflow">
-                        <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                        </h4>
-                        <div class="concert-meta">
-                            <div class="concert-info">
-                                <b>Date:</b>
-                                <span>25 July, 2018</span>
+                @forelse($events as $event)
+                    <div class="msl-concert-list">
+                        <figure>
+                            <img src="{{ $event->cover_image_url ?? asset('extra-images/concert1.jpg') }}" alt="{{ $event->name }}">
+                        </figure>
+                        <div class="text-overflow">
+                            <h4 class="concert-title">
+                                <a href="{{ route('front.events.show', $event) }}">{{ $event->name }}</a>
+                            </h4>
+                            <div class="concert-meta">
+                                <div class="concert-info">
+                                    <b>Date:</b>
+                                    <span>{{ $event->event_date->format('d F, Y') }}</span>
+                                </div>
+                                <div class="concert-info">
+                                    <b>Time:</b>
+                                    <span>{{ \Carbon\Carbon::parse($event->event_time)->format('g:iA') }}</span>
+                                </div>
+                                <div class="concert-info concert-location">
+                                    <b>Location:</b>
+                                    <span>{{ $event->location }}</span>
+                                </div>
                             </div>
-                            <div class="concert-info">
-                                <b>phone:</b>
-                                <span>06 511 21022</span>
-                            </div>
-                            <div class="concert-info concert-location">
-                                <b>Location:</b>
-                                <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                            </div>
+                            <a class="btn-1 theme-bg" href="{{ route('front.events.show', $event) }}">Buy Ticket</a>
                         </div>
-                        <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
                     </div>
-                </div>
-
-                <div class="msl-concert-list">
-                    <figure><img src="extra-images/concert2.jpg" alt="KODEFOREST"></figure>
-                    <div class="text-overflow">
-                        <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                        </h4>
-                        <div class="concert-meta">
-                            <div class="concert-info">
-                                <b>Date:</b>
-                                <span>25 July, 2018</span>
+                @empty
+                    <div class="msl-concert-list">
+                        <figure><img src="{{ asset('extra-images/concert1.jpg') }}" alt="No events"></figure>
+                        <div class="text-overflow">
+                            <h4 class="concert-title">No upcoming events available right now.</h4>
+                            <div class="concert-meta">
+                                <div class="concert-info concert-location">
+                                    <b>Note:</b>
+                                    <span>Please check back later for new event announcements.</span>
+                                </div>
                             </div>
-                            <div class="concert-info">
-                                <b>phone:</b>
-                                <span>06 511 21022</span>
-                            </div>
-                            <div class="concert-info concert-location">
-                                <b>Location:</b>
-                                <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                            </div>
+                            <a class="btn-1 theme-bg" href="{{ route('front.home') }}">Back to Home</a>
                         </div>
-                        <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
                     </div>
-                </div>
+                @endforelse
 
-                <div class="msl-concert-list">
-                    <figure><img src="extra-images/concert6.jpg" alt="KODEFOREST"></figure>
-                    <div class="text-overflow">
-                        <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                        </h4>
-                        <div class="concert-meta">
-                            <div class="concert-info">
-                                <b>Date:</b>
-                                <span>25 July, 2018</span>
-                            </div>
-                            <div class="concert-info">
-                                <b>phone:</b>
-                                <span>06 511 21022</span>
-                            </div>
-                            <div class="concert-info concert-location">
-                                <b>Location:</b>
-                                <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                            </div>
-                        </div>
-                        <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
-                    </div>
-                </div>
+                @if($events->hasPages())
+                    <ul class="pagination">
+                        @if($events->onFirstPage())
+                            <li class="disabled">
+                                <span aria-hidden="true"><i class="fa fa-angle-left"></i>PREV</span>
+                            </li>
+                        @else
+                            <li>
+                                <a href="{{ $events->previousPageUrl() }}" aria-label="Previous">
+                                    <span aria-hidden="true"><i class="fa fa-angle-left"></i>PREV</span>
+                                </a>
+                            </li>
+                        @endif
 
-                <div class="msl-concert-list">
-                    <figure><img src="extra-images/concert7.jpg" alt="KODEFOREST"></figure>
-                    <div class="text-overflow">
-                        <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                        </h4>
-                        <div class="concert-meta">
-                            <div class="concert-info">
-                                <b>Date:</b>
-                                <span>25 July, 2018</span>
-                            </div>
-                            <div class="concert-info">
-                                <b>phone:</b>
-                                <span>06 511 21022</span>
-                            </div>
-                            <div class="concert-info concert-location">
-                                <b>Location:</b>
-                                <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                            </div>
-                        </div>
-                        <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
-                    </div>
-                </div>
+                        @foreach($events->getUrlRange(1, $events->lastPage()) as $page => $url)
+                            <li class="{{ $events->currentPage() === $page ? 'active' : '' }}"><a href="{{ $url }}">{{ $page }}</a></li>
+                        @endforeach
 
-                <div class="msl-concert-list">
-                    <figure><img src="extra-images/concert8.jpg" alt="KODEFOREST"></figure>
-                    <div class="text-overflow">
-                        <h4 class="concert-title">
-                            <a href="{{ route('front.events.show') }}">Lorem Ipsum Proin gravida nibh vel velit auctor aliquet</a>
-                        </h4>
-                        <div class="concert-meta">
-                            <div class="concert-info">
-                                <b>Date:</b>
-                                <span>25 July, 2018</span>
-                            </div>
-                            <div class="concert-info">
-                                <b>phone:</b>
-                                <span>06 511 21022</span>
-                            </div>
-                            <div class="concert-info concert-location">
-                                <b>Location:</b>
-                                <span>Level 13, 2 Elizabeth St, Melbourne victoria 3000 Australia</span>
-                            </div>
-                        </div>
-                        <a class="btn-1 theme-bg" href="{{ route('front.events.show') }}">Buy Ticket</a>
-                    </div>
-                </div>
-
-                <ul class="pagination">
-                    <li>
-                        <a aria-label="Previous" href="#">
-                            <span aria-hidden="true"><i class="fa fa-angle-left"></i>PREV</span>
-                        </a>
-                    </li>
-                    <li class="active"><a href="#">1</a></li>
-                    <li><a href="#">2</a></li>
-                    <li><a href="#">3</a></li>
-                    <li><a href="#">4</a></li>
-                    <li><a href="#">5</a></li>
-                    <li>
-                        <a aria-label="Next" href="#">
-                            <span aria-hidden="true">Next<i class="fa fa-angle-right"></i></span>
-                        </a>
-                    </li>
-                </ul>
+                        @if($events->hasMorePages())
+                            <li>
+                                <a href="{{ $events->nextPageUrl() }}" aria-label="Next">
+                                    <span aria-hidden="true">Next<i class="fa fa-angle-right"></i></span>
+                                </a>
+                            </li>
+                        @else
+                            <li class="disabled">
+                                <span aria-hidden="true">Next<i class="fa fa-angle-right"></i></span>
+                            </li>
+                        @endif
+                    </ul>
+                @endif
             </div>
         </section>
     </div>

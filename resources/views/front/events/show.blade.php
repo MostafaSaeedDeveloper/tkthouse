@@ -476,7 +476,7 @@
 <!-- Sub Banner -->
 <div class="sub-banner">
     <div class="container">
-        <h6>Event Details</h6>
+        <h6>{{ $event->name }}</h6>
         <p>Secure your spot — limited tickets available</p>
     </div>
 </div>
@@ -490,7 +490,7 @@
                 <!-- Event Hero Image + Countdown -->
                 <div class="kode_event_counter_section">
                     <figure>
-                        <img src="extra-images/event-update1.jpg" alt="">
+                        <img src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                         <ul class="countdown">
                             <li><span class="days">72</span><p class="days_ref">days</p></li>
                             <li><span class="hours">13</span><p class="hours_ref">hours</p></li>
@@ -504,12 +504,12 @@
                 <div class="kode_event_conter_capstion">
                     <div class="counter-meta">
                         <ul class="info-event">
-                            <li><i class="fa fa-calendar"></i><a href="#"><span>Date: 14 November 2025</span></a></li>
-                            <li><i class="fa fa-map-marker"></i><a href="#"><span>Location: Cairo, Egypt</span></a></li>
-                            <li><i class="fa fa-clock-o"></i><a href="#"><span>Time: 09:00 PM</span></a></li>
+                            <li><i class="fa fa-calendar"></i><a href="#"><span>Date: {{ $event->event_date->format('d F Y') }}</span></a></li>
+                            <li><i class="fa fa-map-marker"></i><a href="#"><span>Location: {{ $event->location }}</span></a></li>
+                            <li><i class="fa fa-clock-o"></i><a href="#"><span>Time: {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}</span></a></li>
                         </ul>
                     </div>
-                    <img style="height:500px; object-fit:contain;" src="https://ticket-easy.co/wp-content/uploads/2025/10/SIDERAL-POST-FINAL.jpg" alt="Sideral Event">
+                    <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
                 <!-- Event Visuals -->
@@ -518,13 +518,13 @@
                         <div class="col-md-6 col-sm-6 col-xs-12">
                             <div class="kode-event-place-holder">
                                 <figure>
-                                    <img src="extra-images/event-n1.jpg" alt="">
+                                    <img src="{{ $event->images->first()?->path_url ?? $event->cover_image_url ?? asset('extra-images/event-n1.jpg') }}" alt="{{ $event->name }}">
                                     <div class="event-frame-over">
                                         <h2>EVENT DETAILS</h2>
                                         <ul>
-                                            <li><h3>Start Date:</h3><span>14-11-25</span></li>
-                                            <li><h3>End Date:</h3><span>15-11-25</span></li>
-                                            <li><h3>Location:</h3><span>Cairo, Egypt</span></li>
+                                            <li><h3>Start Date:</h3><span>{{ $event->event_date->format('d-m-y') }}</span></li>
+                                            <li><h3>Status:</h3><span>{{ str($event->status)->replace('_', ' ')->title() }}</span></li>
+                                            <li><h3>Location:</h3><span>{{ $event->location }}</span></li>
                                         </ul>
                                     </div>
                                 </figure>
@@ -533,13 +533,13 @@
                         <div class="col-md-6 col-sm-6 col-xs-12">
                             <div class="kode-event-place-holder">
                                 <figure>
-                                    <img src="extra-images/event-n2.jpg" alt="">
+                                    <img src="{{ $event->images->skip(1)->first()?->path_url ?? $event->cover_image_url ?? asset('extra-images/event-n2.jpg') }}" alt="{{ $event->name }}">
                                     <div class="event-frame-over">
                                         <h2>EVENT DETAILS</h2>
                                         <ul>
-                                            <li><h3>Doors Open:</h3><span>09:00 PM</span></li>
-                                            <li><h3>Last Entry:</h3><span>01:00 AM</span></li>
-                                            <li><h3>Dress Code:</h3><span>Smart Casual</span></li>
+                                            <li><h3>Doors Open:</h3><span>{{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}</span></li>
+                                            <li><h3>Map:</h3><span>{{ $event->map_url ? 'Available' : 'Not Provided' }}</span></li>
+                                            <li><h3>Venue:</h3><span>{{ $event->location }}</span></li>
                                         </ul>
                                     </div>
                                 </figure>
@@ -548,8 +548,7 @@
 
                         <div class="col-md-12">
                             <div class="kode-event-place-holder-capstion">
-                                <p>Get ready for an unforgettable night of deep, hypnotic techno. This event brings together the most respected names in the underground scene for a journey through dark, pulsating rhythms and immersive audiovisual experiences. The venue is transformed into a sonic sanctuary where every beat is felt as much as heard.</p>
-                                <p>Limited capacity ensures an intimate atmosphere. Arrive early to make the most of the night. No re-entry after exit — once you're in, you're in for the full experience.</p>
+                                {!! nl2br(e($event->description)) !!}
                             </div>
                         </div>
                     </div>
@@ -574,118 +573,51 @@
             <!-- LEFT: Ticket Cards -->
             <div class="col-md-8 col-sm-12">
                 <div class="tkt-ticket-cards">
-
-                    <!-- CARD: VIP -->
-                    <div class="tkt-ticket-card" data-ticket="VIP Access" data-price="79.99" data-id="vip">
-                        <div class="card-stripe"></div>
-                        <div class="card-badge">
-                            <i class="fa fa-star card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
-                            <span class="badge-label">VIP</span>
+                    @forelse($event->tickets as $ticket)
+                        @php
+                            $badgeType = $loop->first ? 'limited' : 'available';
+                        @endphp
+                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}">
+                            <div class="card-stripe"></div>
+                            <div class="card-badge">
+                                <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
+                                <span class="badge-label">{{ strtoupper(substr($ticket->label ?: $ticket->name, 0, 6)) }}</span>
+                            </div>
+                            <div class="card-info">
+                                <div class="card-meta">
+                                    <span class="ticket-name">{{ strtoupper($ticket->name) }}</span>
+                                    <span class="ticket-desc">{{ $ticket->description ?: 'General admission ticket' }}</span>
+                                    <span class="tkt-avail-badge {{ $badgeType }}">{{ str($ticket->status)->replace('_', ' ')->title() }}</span>
+                                </div>
+                                <div class="card-price">
+                                    <span class="price-amount">${{ number_format($ticket->price, 2) }}</span>
+                                    <span class="price-label">per ticket</span>
+                                </div>
+                                <div class="tkt-qty-counter">
+                                    <button class="qty-btn qty-minus" type="button">−</button>
+                                    <input class="qty-val" type="text" value="1" readonly>
+                                    <button class="qty-btn qty-plus" type="button">+</button>
+                                </div>
+                                <button class="tkt-add-btn" type="button">
+                                    <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
+                                </button>
+                            </div>
                         </div>
-                        <div class="card-info">
-                            <div class="card-meta">
-                                <span class="ticket-name">VIP ACCESS</span>
-                                <span class="ticket-desc">Priority entry · Dedicated area · Welcome drink</span>
-                                <span class="tkt-avail-badge limited">Few Left</span>
+                    @empty
+                        <div class="tkt-ticket-empty">
+                            <div class="card-stripe"></div>
+                            <div class="card-badge">
+                                <i class="fa fa-exclamation-circle card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
+                                <span class="badge-label">INFO</span>
                             </div>
-                            <div class="card-price">
-                                <span class="price-amount">$79<small style="font-size:18px;">.99</small></span>
-                                <span class="price-label">per ticket</span>
+                            <div class="card-info">
+                                <div class="card-meta">
+                                    <span class="ticket-name">TICKETS NOT AVAILABLE YET</span>
+                                    <span class="ticket-desc">Please check again later.</span>
+                                </div>
                             </div>
-                            <div class="tkt-qty-counter">
-                                <button class="qty-btn qty-minus" type="button">−</button>
-                                <input class="qty-val" type="text" value="1" readonly>
-                                <button class="qty-btn qty-plus" type="button">+</button>
-                            </div>
-                            <button class="tkt-add-btn" type="button">
-                                <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
-                            </button>
                         </div>
-                    </div>
-
-                    <!-- CARD: Silver -->
-                    <div class="tkt-ticket-card" data-ticket="Silver Pass" data-price="49.99" data-id="silver">
-                        <div class="card-stripe"></div>
-                        <div class="card-badge">
-                            <i class="fa fa-certificate card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
-                            <span class="badge-label">SILVER</span>
-                        </div>
-                        <div class="card-info">
-                            <div class="card-meta">
-                                <span class="ticket-name">SILVER PASS</span>
-                                <span class="ticket-desc">General access · Preferred queue lane</span>
-                                <span class="tkt-avail-badge selling">Selling Fast</span>
-                            </div>
-                            <div class="card-price">
-                                <span class="price-amount">$49<small style="font-size:18px;">.99</small></span>
-                                <span class="price-label">per ticket</span>
-                            </div>
-                            <div class="tkt-qty-counter">
-                                <button class="qty-btn qty-minus" type="button">−</button>
-                                <input class="qty-val" type="text" value="1" readonly>
-                                <button class="qty-btn qty-plus" type="button">+</button>
-                            </div>
-                            <button class="tkt-add-btn" type="button">
-                                <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- CARD: Regular -->
-                    <div class="tkt-ticket-card" data-ticket="Regular Entry" data-price="29.99" data-id="regular">
-                        <div class="card-stripe"></div>
-                        <div class="card-badge">
-                            <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
-                            <span class="badge-label">ENTRY</span>
-                        </div>
-                        <div class="card-info">
-                            <div class="card-meta">
-                                <span class="ticket-name">REGULAR ENTRY</span>
-                                <span class="ticket-desc">Standard general admission</span>
-                                <span class="tkt-avail-badge available">Available</span>
-                            </div>
-                            <div class="card-price">
-                                <span class="price-amount">$29<small style="font-size:18px;">.99</small></span>
-                                <span class="price-label">per ticket</span>
-                            </div>
-                            <div class="tkt-qty-counter">
-                                <button class="qty-btn qty-minus" type="button">−</button>
-                                <input class="qty-val" type="text" value="1" readonly>
-                                <button class="qty-btn qty-plus" type="button">+</button>
-                            </div>
-                            <button class="tkt-add-btn" type="button">
-                                <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- CARD: Early Bird -->
-                    <div class="tkt-ticket-card" data-ticket="Early Bird" data-price="19.99" data-id="early">
-                        <div class="card-stripe"></div>
-                        <div class="card-badge">
-                            <i class="fa fa-bolt card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
-                            <span class="badge-label">EARLY</span>
-                        </div>
-                        <div class="card-info">
-                            <div class="card-meta">
-                                <span class="ticket-name">EARLY BIRD</span>
-                                <span class="ticket-desc">Discounted entry · First 100 tickets only</span>
-                                <span class="tkt-avail-badge available">Available</span>
-                            </div>
-                            <div class="card-price">
-                                <span class="price-amount">$19<small style="font-size:18px;">.99</small></span>
-                                <span class="price-label">per ticket</span>
-                            </div>
-                            <div class="tkt-qty-counter">
-                                <button class="qty-btn qty-minus" type="button">−</button>
-                                <input class="qty-val" type="text" value="1" readonly>
-                                <button class="qty-btn qty-plus" type="button">+</button>
-                            </div>
-                            <button class="tkt-add-btn" type="button">
-                                <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
-                            </button>
-                        </div>
-                    </div>
+                    @endforelse
 
                 </div><!-- /tkt-ticket-cards -->
 
@@ -696,14 +628,17 @@
                         <h4>HOUSE RULES</h4>
                     </div>
                     <div class="tkt-rules-grid">
-                        <div class="rule-item"><span>Minimum age for entrance is 21.</span></div>
-                        <div class="rule-item"><span>Violent behavior results in immediate removal.</span></div>
-                        <div class="rule-item"><span>Doors open at 9:00 PM — arrive early.</span></div>
-                        <div class="rule-item"><span>No re-entry after exit.</span></div>
-                        <div class="rule-item"><span>Attire must be presentable &amp; smart casual.</span></div>
-                        <div class="rule-item"><span>Shorts and sportswear are not permitted.</span></div>
-                        <div class="rule-item"><span>Management reserves the right to refuse entry.</span></div>
-                        <div class="rule-item"><span>Unusual or inappropriate behavior will not be tolerated.</span></div>
+                        @php
+                            $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))
+                                ->map(fn ($rule) => trim($rule))
+                                ->filter();
+                        @endphp
+                        @forelse($rules as $rule)
+                            <div class="rule-item"><span>{{ $rule }}</span></div>
+                        @empty
+                            <div class="rule-item"><span>Follow venue instructions and security guidelines during the event.</span></div>
+                            <div class="rule-item"><span>Please arrive early to complete the entry process smoothly.</span></div>
+                        @endforelse
                     </div>
                 </div>
 
@@ -765,6 +700,11 @@
         var minus = card.querySelector('.qty-minus');
         var plus  = card.querySelector('.qty-plus');
         var val   = card.querySelector('.qty-val');
+        var addBtn = card.querySelector('.tkt-add-btn');
+
+        if (!minus || !plus || !val || !addBtn) {
+            return;
+        }
 
         minus.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -778,7 +718,6 @@
         });
 
         // Add to cart
-        var addBtn = card.querySelector('.tkt-add-btn');
         addBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             var id     = card.dataset.id;

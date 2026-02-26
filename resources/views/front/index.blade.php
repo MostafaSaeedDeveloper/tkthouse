@@ -10,8 +10,8 @@
                     <div class="banner_content container">
                         <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
                         <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                        <a href="{{ route('front.events.show') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                        <a href="{{ route('front.events.show') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
+                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
                     </div>
                 </div>
                 <div class="slide center-align">
@@ -19,8 +19,8 @@
                     <div class="banner_content container">
                         <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
                         <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                        <a href="{{ route('front.events.show') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                        <a href="{{ route('front.events.show') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
+                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
                     </div>
                 </div>
                 <div class="slide right-align">
@@ -28,8 +28,8 @@
                     <div class="banner_content container">
                         <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
                         <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                        <a href="{{ route('front.events.show') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                        <a href="{{ route('front.events.show') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
+                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
                     </div>
                 </div>
             </div>
@@ -41,7 +41,7 @@
 	            <div class="container">
 	            	<div class="row">
 	            		<div class="col-md-12">
-				            <div class="msl-eventlist2-wrap mg-40">
+			            <div class="msl-eventlist2-wrap mg-40">
                                 <!--Heading Start-->
                                 <div class="msl-black title-style-2">
 	                                <div class="msl-heading light-color">
@@ -50,111 +50,51 @@
 	                            </div>
                                 <!--Heading End-->
                                 <div class="msl-eventlist2-slider bottom-arrow msl-black">
-                                    <div>
-                                        <!--Event List 2 Strat-->
-                                        <div class="msl-eventlist2">
-                                            <figure><img src="extra-images/black-img/event-list6.jpg" alt="TKTHouse"></figure>
-                                            <div class="eventlist2-heading">
-                                                <h5><a href="{{ route('front.events.show') }}">Tech Future Summit 2026</a></h5>
-                                                <div class="evnt-tag">
-                                                    <a href="#">TKTHouse</a>
-                                                    <a href="#">Tech</a>
-                                                    <a href="#">Conference</a>
+                                    @forelse($upcomingEvents as $event)
+                                        <div>
+                                            <!--Event List 2 Strat-->
+                                            <div class="msl-eventlist2">
+                                                <figure>
+                                                    <img src="{{ $event->cover_image_url ?? asset('extra-images/black-img/event-list6.jpg') }}" alt="{{ $event->name }}">
+                                                </figure>
+                                                <div class="eventlist2-heading">
+                                                    <h5><a href="{{ route('front.events.show', $event) }}">{{ $event->name }}</a></h5>
+                                                    <div class="evnt-tag">
+                                                        <a href="#">TKTHouse</a>
+                                                        <a href="#">Tech</a>
+                                                        <a href="#">{{ str($event->status)->replace('_', ' ')->title() }}</a>
+                                                    </div>
+                                                </div>
+                                                <div class="eventlist2-date">
+                                                    <h6>{{ $event->event_date->format('d M') }} <span>{{ \Carbon\Carbon::parse($event->event_time)->format('g:iA') }}</span></h6>
+                                                </div>
+                                                <div class="eventlist2-link">
+                                                    <a class="btn-1" href="{{ route('front.events.show', $event) }}">Buy Tickets</a>
                                                 </div>
                                             </div>
-                                            <div class="eventlist2-date">
-                                                <h6>14 May <span>7:00PM</span></h6>
-                                            </div>
-                                            <div class="eventlist2-link">
-                                                <a class="btn-1" href="{{ route('front.events.show') }}">Buy Tickets</a>
-                                            </div>
+                                            <!--Event List 2 End-->
                                         </div>
-                                        <!--Event List 2 End-->
-                                    </div>
-                                    <div>
-                                        <!--Event List 2 Strat-->
-                                        <div class="msl-eventlist2">
-                                            <figure><img src="extra-images/black-img/event-list7.jpg" alt="TKTHouse"></figure>
-                                            <div class="eventlist2-heading">
-                                                <h5><a href="{{ route('front.events.show') }}">Tech Future Summit 2026</a></h5>
-                                                <div class="evnt-tag">
-                                                    <a href="#">TKTHouse</a>
-                                                    <a href="#">Tech</a>
-                                                    <a href="#">Conference</a>
+                                    @empty
+                                        <div>
+                                            <div class="msl-eventlist2">
+                                                <figure><img src="extra-images/black-img/event-list6.jpg" alt="TKTHouse"></figure>
+                                                <div class="eventlist2-heading">
+                                                    <h5><a href="{{ route('front.events') }}">No upcoming events yet</a></h5>
+                                                    <div class="evnt-tag">
+                                                        <a href="#">TKTHouse</a>
+                                                        <a href="#">Tech</a>
+                                                        <a href="#">Soon</a>
+                                                    </div>
+                                                </div>
+                                                <div class="eventlist2-date">
+                                                    <h6>Stay Tuned <span>New dates soon</span></h6>
+                                                </div>
+                                                <div class="eventlist2-link">
+                                                    <a class="btn-1" href="{{ route('front.events') }}">Explore Events</a>
                                                 </div>
                                             </div>
-                                            <div class="eventlist2-date">
-                                                <h6>14 May <span>7:00PM</span></h6>
-                                            </div>
-                                            <div class="eventlist2-link">
-                                                <a class="btn-1" href="{{ route('front.events.show') }}">Buy Tickets</a>
-                                            </div>
                                         </div>
-                                        <!--Event List 2 End-->
-                                    </div>
-                                    <div>
-                                        <!--Event List 2 Strat-->
-                                        <div class="msl-eventlist2">
-                                            <figure><img src="extra-images/black-img/event-list9.jpg" alt="TKTHouse"></figure>
-                                            <div class="eventlist2-heading">
-                                                <h5><a href="{{ route('front.events.show') }}">Tech Future Summit 2026</a></h5>
-                                                <div class="evnt-tag">
-                                                    <a href="#">TKTHouse</a>
-                                                    <a href="#">Tech</a>
-                                                    <a href="#">Conference</a>
-                                                </div>
-                                            </div>
-                                            <div class="eventlist2-date">
-                                                <h6>14 May <span>7:00PM</span></h6>
-                                            </div>
-                                            <div class="eventlist2-link">
-                                                <a class="btn-1" href="{{ route('front.events.show') }}">Buy Tickets</a>
-                                            </div>
-                                        </div>
-                                        <!--Event List 2 End-->
-                                    </div>
-                                    <div>
-                                        <!--Event List 2 Strat-->
-                                        <div class="msl-eventlist2">
-                                            <figure><img src="extra-images/black-img/event-list8.jpg" alt="TKTHouse"></figure>
-                                            <div class="eventlist2-heading">
-                                                <h5><a href="{{ route('front.events.show') }}">Tech Future Summit 2026</a></h5>
-                                                <div class="evnt-tag">
-                                                    <a href="#">TKTHouse</a>
-                                                    <a href="#">Tech</a>
-                                                    <a href="#">Conference</a>
-                                                </div>
-                                            </div>
-                                            <div class="eventlist2-date">
-                                                <h6>14 May <span>7:00PM</span></h6>
-                                            </div>
-                                            <div class="eventlist2-link">
-                                                <a class="btn-1" href="{{ route('front.events.show') }}">Buy Tickets</a>
-                                            </div>
-                                        </div>
-                                        <!--Event List 2 End-->
-                                    </div>
-                                    <div>
-                                        <!--Event List 2 Strat-->
-                                        <div class="msl-eventlist2">
-                                            <figure><img src="extra-images/black-img/event-list6.jpg" alt="TKTHouse"></figure>
-                                            <div class="eventlist2-heading">
-                                                <h5><a href="{{ route('front.events.show') }}">Tech Future Summit 2026</a></h5>
-                                                <div class="evnt-tag">
-                                                    <a href="#">TKTHouse</a>
-                                                    <a href="#">Tech</a>
-                                                    <a href="#">Conference</a>
-                                                </div>
-                                            </div>
-                                            <div class="eventlist2-date">
-                                                <h6>14 May <span>7:00PM</span></h6>
-                                            </div>
-                                            <div class="eventlist2-link">
-                                                <a class="btn-1" href="{{ route('front.events.show') }}">Buy Tickets</a>
-                                            </div>
-                                        </div>
-                                        <!--Event List 2 End-->
-                                    </div>
+                                    @endforelse
                                 </div>
                             </div>
 
