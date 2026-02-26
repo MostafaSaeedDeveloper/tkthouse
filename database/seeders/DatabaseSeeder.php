@@ -11,12 +11,14 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        User::updateOrCreate(
+        $this->call([
+            RolesAndPermissionsSeeder::class,
+            EventsSeeder::class,
+        ]);
+
+        $admin = User::updateOrCreate(
             ['username' => 'admin'],
             [
                 'name' => 'Administrator',
@@ -24,5 +26,7 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('123456789'),
             ]
         );
+
+        $admin->syncRoles(['admin']);
     }
 }
