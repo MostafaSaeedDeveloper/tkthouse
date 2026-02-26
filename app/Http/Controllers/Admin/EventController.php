@@ -91,7 +91,7 @@ class EventController extends Controller
             'map_url' => ['nullable', 'url'],
             'description' => ['required', 'string'],
             'house_rules' => ['nullable', 'string'],
-            'status' => ['required', 'in:active,inactive,draft'],
+            'status' => ['required', 'in:active,inactive,draft,sold_out'],
             'cover_image' => $coverRule,
             'gallery_images.*' => ['nullable', 'image', 'max:2048'],
             'tickets' => ['nullable', 'array'],

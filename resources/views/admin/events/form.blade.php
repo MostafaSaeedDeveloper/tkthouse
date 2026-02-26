@@ -50,6 +50,7 @@
             <option value="active" @selected(old('status', $event->status ?? 'active') === 'active')>Active</option>
             <option value="inactive" @selected(old('status', $event->status ?? '') === 'inactive')>Inactive</option>
             <option value="draft" @selected(old('status', $event->status ?? '') === 'draft')>Draft</option>
+            <option value="sold_out" @selected(old('status', $event->status ?? '') === 'sold_out')>Sold Out</option>
         </select>
     </div>
     <div class="col-md-8 mb-3">
