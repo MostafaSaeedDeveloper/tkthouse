@@ -6,203 +6,73 @@
             <h6>Checkout</h6>
         </div>
     </div>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&display=swap');
 
-        .checkout-page {
-            background: #090909;
-            padding: 70px 0 90px;
-            color: #fff;
-        }
-
-        .checkout-title {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 54px;
-            letter-spacing: 4px;
-            margin-bottom: 8px;
-        }
-
-        .checkout-subtitle {
-            font-family: 'Barlow', sans-serif;
-            color: rgba(255, 255, 255, 0.65);
-            margin-bottom: 40px;
-            font-size: 16px;
-        }
-
-        .checkout-card {
-            background: #121212;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 28px;
-            margin-bottom: 20px;
-        }
-
-        .checkout-card h4 {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 28px;
-            letter-spacing: 2px;
-            margin: 0 0 18px;
-            color: #f4c430;
-        }
-
-        .checkout-label {
-            font-family: 'Barlow', sans-serif;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: rgba(255, 255, 255, 0.65);
-            margin-bottom: 7px;
-        }
-
-        .checkout-input {
-            width: 100%;
-            background: #0d0d0d;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            height: 46px;
-            padding: 0 14px;
-            color: #fff;
-            margin-bottom: 14px;
-            font-family: 'Barlow', sans-serif;
-        }
-
-        .ticket-item {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-            padding: 12px 0;
-            font-family: 'Barlow', sans-serif;
-        }
-
-        .ticket-item strong {
-            display: block;
-            color: #fff;
-            font-size: 15px;
-        }
-
-        .ticket-item span {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 12px;
-        }
-
-        .checkout-total {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 16px;
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 28px;
-            letter-spacing: 2px;
-        }
-
-        .checkout-total .amount {
-            color: #f4c430;
-        }
-
-        .checkout-btn {
-            width: 100%;
-            margin-top: 24px;
-            height: 50px;
-            border: none;
-            background: #f4c430;
-            color: #000;
-            font-family: 'Bebas Neue', sans-serif;
-            letter-spacing: 2px;
-            font-size: 18px;
-        }
-
-        .note-box {
-            margin-top: 16px;
-            background: rgba(244, 196, 48, 0.1);
-            border: 1px solid rgba(244, 196, 48, 0.3);
-            padding: 12px;
-            font-family: 'Barlow', sans-serif;
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 13px;
-        }
-    </style>
-
-    <section class="checkout-page">
+    <section class="py-5" style="background:#090909;color:#fff;min-height:60vh;">
         <div class="container">
-            <p class="checkout-subtitle">Complete your booking for <strong>TKT House Techno Night</strong> (hardcoded demo data).</p>
+            @if(!$event)
+                <div class="alert alert-warning">Please choose an event first.</div>
+            @else
+                @if(session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+                @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
-            <div class="row">
-                <div class="col-md-7">
-                    <div class="checkout-card">
-                        <h4>Billing Details</h4>
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <label class="checkout-label">First Name</label>
-                                <input class="checkout-input" type="text" value="Ahmed">
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <form method="POST" action="{{ route('front.checkout.store') }}" class="p-4" style="background:#121212;border:1px solid rgba(255,255,255,.08);">
+                            @csrf
+                            <input type="hidden" name="event_id" value="{{ $event->id }}">
+
+                            <h4 class="mb-3">Billing Details</h4>
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6"><input class="form-control" name="first_name" placeholder="First Name" value="{{ old('first_name') }}" required></div>
+                                <div class="col-sm-6"><input class="form-control" name="last_name" placeholder="Last Name" value="{{ old('last_name') }}" required></div>
+                                <div class="col-sm-6"><input type="email" class="form-control" name="email" placeholder="Email" value="{{ old('email') }}" required></div>
+                                <div class="col-sm-6"><input class="form-control" name="phone" placeholder="Phone" value="{{ old('phone') }}"></div>
+                                <div class="col-12"><input class="form-control" name="address" placeholder="Address" value="{{ old('address') }}"></div>
                             </div>
-                            <div class="col-sm-6">
-                                <label class="checkout-label">Last Name</label>
-                                <input class="checkout-input" type="text" value="Hassan">
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="checkout-label">Email</label>
-                                <input class="checkout-input" type="text" value="ahmed.hassan@email.com">
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="checkout-label">Phone</label>
-                                <input class="checkout-input" type="text" value="+20 101 234 5678">
-                            </div>
-                            <div class="col-sm-12">
-                                <label class="checkout-label">Address</label>
-                                <input class="checkout-input" type="text" value="90 Street, New Cairo, Egypt">
-                            </div>
-                        </div>
+
+                            <h4 class="mb-3">Select Tickets</h4>
+                            @foreach($event->tickets as $ticket)
+                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                    <div>
+                                        <div class="fw-bold">{{ $ticket->name }}</div>
+                                        <small>{{ number_format($ticket->price, 2) }} EGP</small>
+                                    </div>
+                                    <input type="number" min="0" class="form-control" style="width:100px" name="tickets[{{ $ticket->id }}]" value="{{ old('tickets.'.$ticket->id, 0) }}">
+                                </div>
+                            @endforeach
+
+                            <button class="btn btn-warning w-100 mt-4" type="submit">Place Order</button>
+                        </form>
                     </div>
 
-                    <div class="checkout-card">
-                        <h4>Ticket Holder Details</h4>
-                        <label class="checkout-label">Ticket Holder Name</label>
-                        <input class="checkout-input" type="text" value="Ahmed Hassan">
-                        <label class="checkout-label">Ticket Holder Phone</label>
-                        <input class="checkout-input" type="text" value="+20 101 234 5678">
-                        <label class="checkout-label">Ticket Holder Email</label>
-                        <input class="checkout-input" type="text" value="ahmed.hassan@email.com">
-                    </div>
-                </div>
-
-                <div class="col-md-5">
-                    <div class="checkout-card">
-                        <h4>Order Summary</h4>
-
-                        <div class="ticket-item">
-                            <div>
-                                <strong>Early Bird Ticket × 2</strong>
-                                <span>Gate opens at 9:00 PM</span>
-                            </div>
-                            <strong>1,200 EGP</strong>
-                        </div>
-
-                        <div class="ticket-item">
-                            <div>
-                                <strong>VIP Backstage × 1</strong>
-                                <span>Priority entry + lounge access</span>
-                            </div>
-                            <strong>1,500 EGP</strong>
-                        </div>
-
-                        <div class="ticket-item">
-                            <div>
-                                <strong>Service Fees</strong>
-                                <span>Booking & processing</span>
-                            </div>
-                            <strong>120 EGP</strong>
-                        </div>
-
-                        <div class="checkout-total">
-                            <span>Total</span>
-                            <span class="amount">2,820 EGP</span>
-                        </div>
-
-                        <button class="checkout-btn" type="button">Place Order</button>
-
-                        <div class="note-box">
-                            This checkout page is a front-end demo only. All values are hardcoded and no real payment is processed.
+                    <div class="col-md-5">
+                        <div class="p-4" style="background:#121212;border:1px solid rgba(255,255,255,.08);">
+                            <h4 class="mb-2">{{ $event->name }}</h4>
+                            <p class="text-light-emphasis mb-2">{{ $event->event_date?->format('Y-m-d') }} - {{ $event->location }}</p>
+                            <hr>
+                            <h5>Event Fees</h5>
+                            @forelse($event->fees as $fee)
+                                <div class="d-flex justify-content-between">
+                                    <span>{{ $fee->name }}</span>
+                                    <span>{{ $fee->fee_type === 'percentage' ? $fee->value.'%' : number_format($fee->value,2).' EGP' }}</span>
+                                </div>
+                            @empty
+                                <small class="text-light-emphasis">No extra fees.</small>
+                            @endforelse
                         </div>
                     </div>
                 </div>
-            </div>
+            @endif
         </div>
     </section>
 @endsection
