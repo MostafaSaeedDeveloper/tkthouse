@@ -122,3 +122,39 @@ body.msl-black .customer-auth-modal .auth-panel-register {
         min-height: auto;
     }
 }
+
+
+/* Checkout auth popup final polish */
+.customer-auth-modal .modal-dialog {
+    margin: 40px auto;
+}
+.customer-auth-modal .auth-panel {
+    min-height: 560px;
+}
+.customer-auth-modal .auth-form-card {
+    border-radius: 0;
+}
+.customer-auth-modal .close {
+    right: 0;
+    top: 0;
+    width: 50px;
+    height: 38px;
+    background: #ff1f1f;
+    border-radius: 0 0 0 6px;
+    line-height: 30px;
+    padding: 0;
+}
+.customer-auth-modal .ms-heading2 h3 {
+    font-size: 42px;
+    letter-spacing: 0.5px;
+}
+@media (max-width: 991px) {
+    .customer-auth-modal .modal-dialog {
+        margin: 20px auto;
+    }
+    .customer-auth-modal .close {
+        right: 8px;
+        top: 8px;
+        border-radius: 4px;
+    }
+}

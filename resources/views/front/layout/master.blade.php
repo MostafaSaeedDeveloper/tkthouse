@@ -167,6 +167,11 @@
                     }
 
                     event.preventDefault();
+                    event.stopPropagation();
+                    if (typeof event.stopImmediatePropagation === 'function') {
+                        event.stopImmediatePropagation();
+                    }
+
                     var checkoutUrl = link.getAttribute('href') || '';
                     document.querySelectorAll('[data-redirect-target]').forEach(function (input) {
                         input.value = checkoutUrl;
@@ -175,7 +180,7 @@
                     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
                         window.jQuery('#login-register1').modal('show');
                     }
-                });
+                }, true);
             })();
         </script>
 
