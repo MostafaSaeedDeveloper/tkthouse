@@ -54,7 +54,7 @@
         </select>
     </div>
     <div class="col-md-8 mb-3">
-        <label class="form-label">Cover Image</label>
+        <label class="form-label">Event Image</label>
         <input type="file" name="cover_image" class="form-control" {{ isset($event) ? '' : 'required' }}>
     </div>
     <div class="col-12 mb-3">
