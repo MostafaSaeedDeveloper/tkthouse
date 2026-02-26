@@ -7,7 +7,6 @@
     <div class="d-md-flex justify-content-md-between align-items-md-center mb-3">
         <div>
             <h1 class="h3 mb-1">Orders</h1>
-            <p class="text-muted mb-0">Orders list inspired by <code>be_pages_ecom_orders.html</code>.</p>
         </div>
     </div>
 

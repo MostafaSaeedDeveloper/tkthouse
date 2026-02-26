@@ -7,7 +7,6 @@
     <div class="d-md-flex justify-content-md-between align-items-md-center mb-3">
         <div>
             <h1 class="h3 mb-1">Events</h1>
-            <p class="text-muted mb-0">Manage events, status, and quick actions.</p>
         </div>
         <div class="mt-3 mt-md-0">
             <a class="btn btn-primary" href="{{ route('admin.events.create') }}">
