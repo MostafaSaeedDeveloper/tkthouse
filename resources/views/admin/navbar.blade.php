@@ -35,6 +35,28 @@
         </a>
       </li>
 
+
+      <li class="nav-main-item">
+        <a class="nav-main-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}">
+          <i class="nav-main-link-icon fa fa-cart-shopping"></i>
+          <span class="nav-main-link-name">Orders</span>
+        </a>
+      </li>
+
+      <li class="nav-main-item">
+        <a class="nav-main-link {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}" href="{{ route('admin.customers.index') }}">
+          <i class="nav-main-link-icon fa fa-address-book"></i>
+          <span class="nav-main-link-name">Customers</span>
+        </a>
+      </li>
+
+      <li class="nav-main-item">
+        <a class="nav-main-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}" href="{{ route('admin.tickets.index') }}">
+          <i class="nav-main-link-icon fa fa-ticket"></i>
+          <span class="nav-main-link-name">Tickets</span>
+        </a>
+      </li>
+
       <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
         <a class="nav-main-link nav-main-link-submenu" data-toggle="submenu" aria-haspopup="true" aria-expanded="{{ $usersMenuOpen ? 'true' : 'false' }}" href="#">
           <i class="nav-main-link-icon fa fa-users"></i>
