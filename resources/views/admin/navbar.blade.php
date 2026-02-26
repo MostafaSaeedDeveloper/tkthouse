@@ -124,15 +124,15 @@
                 </a>
               </li>
               <li class="nav-main-item">
-                <a class="nav-main-link {{ request()->routeIs('admin.projects.*') ? 'active' : '' }}" href="{{ route('admin.projects.index') }}">
-                  <i class="nav-main-link-icon fa fa-briefcase"></i>
-                  <span class="nav-main-link-name">Projects</span>
+                <a class="nav-main-link {{ request()->routeIs('admin.events.*') ? 'active' : '' }}" href="{{ route('admin.events.index') }}">
+                  <i class="nav-main-link-icon fa fa-calendar"></i>
+                  <span class="nav-main-link-name">Events</span>
                 </a>
               </li>
               <li class="nav-main-item">
-                <a class="nav-main-link {{ request()->routeIs('admin.contact-submissions.*') ? 'active' : '' }}" href="{{ route('admin.contact-submissions.index') }}">
-                  <i class="nav-main-link-icon fa fa-envelope"></i>
-                  <span class="nav-main-link-name">Contact</span>
+                <a class="nav-main-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}">
+                  <i class="nav-main-link-icon fa fa-receipt"></i>
+                  <span class="nav-main-link-name">Orders</span>
                 </a>
               </li>
               <li class="nav-main-item">
