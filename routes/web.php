@@ -17,8 +17,14 @@ Route::get('/about', [PagesController::class, 'about'])->name('front.about');
 Route::get('/events', [PagesController::class, 'events'])->name('front.events');
 Route::get('/events/{event}', [PagesController::class, 'eventShow'])->name('front.events.show');
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
-Route::post('/checkout', [CheckoutController::class, 'store'])->name('front.checkout.store');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('front.checkout.store');
+    Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
+    Route::get('/orders/{order}/payment/{token}', [CheckoutController::class, 'paymentPage'])->name('front.orders.payment');
+    Route::post('/orders/{order}/payment/{token}', [CheckoutController::class, 'confirmPayment'])->name('front.orders.payment.confirm');
+});
 
 Auth::routes();
 
@@ -31,6 +37,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::resource('tickets', TicketController::class)->except('show');
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');

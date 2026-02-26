@@ -22,16 +22,18 @@ class CheckoutController extends Controller
         }
 
         $eventSelection = session('checkout.event_selection');
+        $buyer = $this->buyerDefaults($request);
 
         if ($eventSelection) {
             return view('front.checkout', [
                 'mode' => 'event_locked',
                 'eventSelection' => $eventSelection,
+                'buyer' => $buyer,
             ]);
         }
 
         $eventTickets = EventTicket::query()
-            ->with('event:id,name,status,event_date')
+            ->with('event:id,name,status,event_date,requires_booking_approval')
             ->where('status', 'active')
             ->get()
             ->filter(fn ($ticket) => $ticket->event && $ticket->event->status === 'active')
@@ -48,6 +50,7 @@ class CheckoutController extends Controller
             'eventTickets' => $eventTickets,
             'legacyTickets' => $legacyTickets,
             'eventSelection' => null,
+            'buyer' => $buyer,
         ]);
     }
 
@@ -69,8 +72,39 @@ class CheckoutController extends Controller
         return $this->storeFromOpenSelection($request, $baseValidated);
     }
 
-    private function storeFromLockedEventSelection(Request $request, array $baseValidated, array $selection)
+    public function thankYou()
     {
+        return view('front.checkout-thank-you');
+    }
+
+    public function paymentPage(Request $request, Order $order, string $token)
+    {
+        abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
+        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
+        abort_unless($order->status === 'approved_pending_payment', 404);
+
+        $order->load(['items', 'customer']);
+
+        return view('front.payment', compact('order'));
+    }
+
+    public function confirmPayment(Request $request, Order $order, string $token)
+    {
+        abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
+        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
+        abort_unless($order->status === 'approved_pending_payment', 404);
+
+        $order->update([
+            'status' => 'paid',
+            'payment_status' => 'paid',
+        ]);
+
+        return redirect()->route('front.checkout.thank-you')->with('success', 'Payment completed successfully.');
+    }
+
+    private function storeFromLockedEventSelection(Request $request, array $baseValidated)
+    {
+        $selection = session('checkout.event_selection', []);
         $attendees = collect($request->input('attendees', []));
         $ticketUnits = collect($selection['units'] ?? []);
 
@@ -107,21 +141,26 @@ class CheckoutController extends Controller
             throw ValidationException::withMessages($errors);
         }
 
-        DB::transaction(function () use ($baseValidated, $selection, $ticketUnits, $attendees) {
-            $customer = Customer::updateOrCreate(
-                ['email' => $baseValidated['email']],
-                [
-                    'first_name' => $baseValidated['first_name'],
-                    'last_name' => $baseValidated['last_name'],
-                    'phone' => $baseValidated['phone'] ?? null,
-                    'address' => $baseValidated['address'] ?? null,
-                ]
-            );
+        $event = Event::query()->findOrFail((int) ($selection['event_id'] ?? 0));
+        $requiresApproval = (bool) $event->requires_booking_approval;
+
+        if (! $requiresApproval) {
+            $request->validate([
+                'payment_method' => ['required', 'in:visa,wallet'],
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval) {
+            $customer = $this->upsertCustomer($baseValidated);
 
             $order = Order::create([
                 'customer_id' => $customer->id,
+                'user_id' => $request->user()->id,
                 'order_number' => 'ORD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT),
-                'status' => 'confirmed',
+                'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
+                'requires_approval' => $requiresApproval,
+                'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
+                'payment_status' => 'unpaid',
                 'total_amount' => 0,
             ]);
 
@@ -129,11 +168,6 @@ class CheckoutController extends Controller
 
             foreach ($ticketUnits as $index => $unit) {
                 $attendee = $attendees[$index];
-                $holderName = trim((string) ($attendee['name'] ?? ''));
-                $holderPhone = trim((string) ($attendee['phone'] ?? ''));
-                $holderEmail = trim((string) ($attendee['email'] ?? ''));
-                $holderSocial = trim((string) ($attendee['social_profile'] ?? ''));
-
                 $lineTotal = (float) $unit['ticket_price'];
                 $total += $lineTotal;
 
@@ -143,11 +177,11 @@ class CheckoutController extends Controller
                     'ticket_price' => $unit['ticket_price'],
                     'quantity' => 1,
                     'line_total' => $lineTotal,
-                    'holder_name' => $holderName,
-                    'holder_email' => $holderEmail,
-                    'holder_phone' => $holderPhone,
+                    'holder_name' => trim((string) ($attendee['name'] ?? '')),
+                    'holder_email' => trim((string) ($attendee['email'] ?? '')),
+                    'holder_phone' => trim((string) ($attendee['phone'] ?? '')),
                     'holder_gender' => (string) $attendee['gender'],
-                    'holder_social_profile' => $holderSocial !== '' ? $holderSocial : null,
+                    'holder_social_profile' => trim((string) ($attendee['social_profile'] ?? '')) ?: null,
                 ]);
             }
 
@@ -156,7 +190,7 @@ class CheckoutController extends Controller
 
         session()->forget('checkout.event_selection');
 
-        return redirect()->route('front.checkout')->with('success', 'Order completed successfully.');
+        return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
     }
 
     private function storeFromOpenSelection(Request $request, array $baseValidated)
@@ -170,9 +204,7 @@ class CheckoutController extends Controller
             'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $items = collect($validated['items'])
-            ->filter(fn ($item) => ! empty($item['ticket_key']))
-            ->values();
+        $items = collect($validated['items'])->filter(fn ($item) => ! empty($item['ticket_key']))->values();
 
         if ($items->isEmpty()) {
             throw ValidationException::withMessages(['items' => 'Please add at least one ticket row.']);
@@ -183,17 +215,14 @@ class CheckoutController extends Controller
                 throw ValidationException::withMessages(['items' => 'Invalid ticket selection.']);
             }
 
-            return $item + [
-                'ticket_type' => $matches[1],
-                'ticket_ref_id' => (int) $matches[2],
-            ];
+            return $item + ['ticket_type' => $matches[1], 'ticket_ref_id' => (int) $matches[2]];
         });
 
         $eventTicketIds = $grouped->where('ticket_type', 'event')->pluck('ticket_ref_id')->all();
         $legacyTicketIds = $grouped->where('ticket_type', 'legacy')->pluck('ticket_ref_id')->all();
 
         $eventTickets = EventTicket::query()
-            ->with('event:id,name,status')
+            ->with('event:id,name,status,requires_booking_approval')
             ->whereIn('id', $eventTicketIds)
             ->where('status', 'active')
             ->get()
@@ -205,21 +234,27 @@ class CheckoutController extends Controller
             ->get()
             ->keyBy('id');
 
-        DB::transaction(function () use ($baseValidated, $grouped, $eventTickets, $legacyTickets) {
-            $customer = Customer::updateOrCreate(
-                ['email' => $baseValidated['email']],
-                [
-                    'first_name' => $baseValidated['first_name'],
-                    'last_name' => $baseValidated['last_name'],
-                    'phone' => $baseValidated['phone'] ?? null,
-                    'address' => $baseValidated['address'] ?? null,
-                ]
-            );
+        $requiresApproval = $grouped
+            ->where('ticket_type', 'event')
+            ->contains(fn ($item) => (bool) optional($eventTickets->get($item['ticket_ref_id']))->event?->requires_booking_approval);
+
+        if (! $requiresApproval) {
+            $request->validate([
+                'payment_method' => ['required', 'in:visa,wallet'],
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $baseValidated, $grouped, $eventTickets, $legacyTickets, $requiresApproval) {
+            $customer = $this->upsertCustomer($baseValidated);
 
             $order = Order::create([
                 'customer_id' => $customer->id,
+                'user_id' => $request->user()->id,
                 'order_number' => 'ORD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT),
-                'status' => 'confirmed',
+                'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
+                'requires_approval' => $requiresApproval,
+                'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
+                'payment_status' => 'unpaid',
                 'total_amount' => 0,
             ]);
 
@@ -264,7 +299,35 @@ class CheckoutController extends Controller
             $order->update(['total_amount' => $total]);
         });
 
-        return redirect()->route('front.checkout')->with('success', 'Order completed successfully.');
+        return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
+    }
+
+    private function upsertCustomer(array $baseValidated): Customer
+    {
+        return Customer::updateOrCreate(
+            ['email' => $baseValidated['email']],
+            [
+                'first_name' => $baseValidated['first_name'],
+                'last_name' => $baseValidated['last_name'],
+                'phone' => $baseValidated['phone'] ?? null,
+                'address' => $baseValidated['address'] ?? null,
+            ]
+        );
+    }
+
+    private function buyerDefaults(Request $request): array
+    {
+        $user = $request->user();
+        $customer = Customer::query()->where('email', $user->email)->first();
+        $nameParts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
+
+        return [
+            'first_name' => $customer?->first_name ?? ($nameParts[0] ?? ''),
+            'last_name' => $customer?->last_name ?? ($nameParts[1] ?? ''),
+            'email' => $user->email,
+            'phone' => $customer?->phone ?? '',
+            'address' => $customer?->address ?? '',
+        ];
     }
 
     private function normalizeEventCart(Event $event, string $encodedCart): array
@@ -280,12 +343,7 @@ class CheckoutController extends Controller
         }
 
         $requested = collect($payload)
-            ->map(function ($row) {
-                return [
-                    'ticket_id' => (int) ($row['ticket_id'] ?? 0),
-                    'qty' => max(1, (int) ($row['qty'] ?? 1)),
-                ];
-            })
+            ->map(fn ($row) => ['ticket_id' => (int) ($row['ticket_id'] ?? 0), 'qty' => max(1, (int) ($row['qty'] ?? 1))])
             ->filter(fn ($row) => $row['ticket_id'] > 0)
             ->values();
 
@@ -324,6 +382,7 @@ class CheckoutController extends Controller
         return [
             'event_id' => $event->id,
             'event_name' => $event->name,
+            'requires_approval' => (bool) $event->requires_booking_approval,
             'units' => $units,
         ];
     }

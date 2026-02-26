@@ -101,6 +101,7 @@ class EventController extends Controller
             'description' => ['required', 'string'],
             'house_rules' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive,draft,sold_out'],
+            'requires_booking_approval' => ['required', 'boolean'],
             'cover_image' => $coverRule,
             'gallery_images.*' => ['nullable', 'image', 'max:2048'],
             'tickets' => ['nullable', 'array'],

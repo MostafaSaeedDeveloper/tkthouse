@@ -22,12 +22,14 @@ class Event extends Model
         'house_rules',
         'cover_image',
         'status',
+        'requires_booking_approval',
     ];
 
     protected function casts(): array
     {
         return [
             'event_date' => 'date',
+            'requires_booking_approval' => 'boolean',
         ];
     }
 

@@ -11,14 +11,33 @@ class Order extends Model
 
     protected $fillable = [
         'customer_id',
+        'user_id',
         'order_number',
         'status',
+        'requires_approval',
+        'payment_method',
+        'payment_status',
+        'payment_link_token',
+        'approved_at',
         'total_amount',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'requires_approval' => 'boolean',
+            'approved_at' => 'datetime',
+        ];
+    }
 
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function items()
