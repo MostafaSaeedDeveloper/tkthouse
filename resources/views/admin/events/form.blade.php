@@ -93,7 +93,7 @@
             <div class="col-md-2 mb-2"><label class="form-label">Status</label><select class="form-select" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option></select></div>
             <div class="col-md-2 mb-2"><label class="form-label">Label</label><input class="form-control" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
             <div class="col-md-2 mb-2"><label class="form-label">Description</label><input class="form-control" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
-            <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row">Remove</button></div>
+            <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
         </div>
     @endforeach
 </div>
@@ -109,7 +109,7 @@
             <div class="col-md-3 mb-2"><label class="form-label">Fee Type</label><select class="form-select" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
             <div class="col-md-2 mb-2"><label class="form-label">Value</label><input type="number" step="0.01" class="form-control" name="fees[{{ $index }}][value]" value="{{ $fee['value'] ?? '' }}"></div>
             <div class="col-md-3 mb-2"><label class="form-label">Description</label><input class="form-control" name="fees[{{ $index }}][description]" value="{{ $fee['description'] ?? '' }}"></div>
-            <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row">Remove</button></div>
+            <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
         </div>
     @endforeach
 </div>
@@ -121,7 +121,7 @@
         <div class="col-md-2 mb-2"><label class="form-label">Status</label><select class="form-select" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option></select></div>
         <div class="col-md-2 mb-2"><label class="form-label">Label</label><input class="form-control" name="__NAME__[label]"></div>
         <div class="col-md-2 mb-2"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
-        <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row">Remove</button></div>
+        <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
     </div>
 </template>
 
@@ -131,7 +131,7 @@
         <div class="col-md-3 mb-2"><label class="form-label">Fee Type</label><select class="form-select" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
         <div class="col-md-2 mb-2"><label class="form-label">Value</label><input type="number" step="0.01" class="form-control" name="__NAME__[value]"></div>
         <div class="col-md-3 mb-2"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
-        <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row">Remove</button></div>
+        <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
     </div>
 </template>
 

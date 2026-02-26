@@ -22,7 +22,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::resource('users', UserController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
     Route::resource('permissions', PermissionController::class)->except('show');
-    Route::resource('events', EventController::class)->except('show');
+    Route::resource('events', EventController::class);
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });
 

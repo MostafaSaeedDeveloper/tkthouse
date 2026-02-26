@@ -11,7 +11,7 @@ class EventController extends Controller
 {
     public function index()
     {
-        $events = Event::withCount(['tickets', 'fees', 'images'])->latest()->paginate(12);
+        $events = Event::latest()->paginate(12);
 
         return view('admin.events.index', compact('events'));
     }
@@ -37,6 +37,13 @@ class EventController extends Controller
         });
 
         return redirect()->route('admin.events.index')->with('success', 'Event created successfully.');
+    }
+
+    public function show(Event $event)
+    {
+        $event->load(['tickets', 'fees', 'images']);
+
+        return view('admin.events.show', compact('event'));
     }
 
     public function edit(Event $event)
