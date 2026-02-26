@@ -1,4 +1,25 @@
 @extends('admin.master')
+
 @section('content')
-<div class="content"><h2 class="h4">Create Event</h2>@include('admin.partials.flash')<form method="POST" action="{{ route('admin.events.store') }}" enctype="multipart/form-data" class="block block-rounded block-content">@csrf @include('admin.events.form')<button class="btn btn-primary mt-3">Save Event</button></form></div>
+<div class="content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Create Event</h2>
+        <a href="{{ route('admin.events.index') }}" class="btn btn-alt-secondary btn-sm">Back to Events</a>
+    </div>
+
+    @include('admin.partials.flash')
+
+    <form method="POST" action="{{ route('admin.events.store') }}" enctype="multipart/form-data" class="block block-rounded">
+        @csrf
+
+        <div class="block-content">
+            @include('admin.events.form')
+        </div>
+
+        <div class="block-content block-content-full bg-body-light d-flex justify-content-end gap-2">
+            <a href="{{ route('admin.events.index') }}" class="btn btn-alt-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Event</button>
+        </div>
+    </form>
+</div>
 @endsection
