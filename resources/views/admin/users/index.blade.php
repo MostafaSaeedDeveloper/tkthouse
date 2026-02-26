@@ -10,14 +10,26 @@
     <div class="block block-rounded">
         <div class="table-responsive">
             <table class="table table-striped mb-0">
-                <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Roles</th><th>Last Login</th><th>IP</th><th></th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Custom Permissions</th>
+                        <th>Last Login</th>
+                        <th>IP</th>
+                        <th></th>
+                    </tr>
+                </thead>
                 <tbody>
                 @foreach($users as $user)
                     <tr>
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->username }}</td>
                         <td>{{ $user->email }}</td>
-                        <td>{{ $user->roles->pluck('name')->implode(', ') ?: '-' }}</td>
+                        <td>{{ $user->roles->first()?->name ?: '-' }}</td>
+                        <td>{{ $user->permissions->pluck('name')->implode(', ') ?: '-' }}</td>
                         <td>{{ $user->last_login_at?->format('Y-m-d H:i') ?: '-' }}</td>
                         <td>{{ $user->last_login_ip ?: '-' }}</td>
                         <td class="text-end">

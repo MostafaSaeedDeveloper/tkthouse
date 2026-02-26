@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('roles')->latest()->paginate(15);
+        $users = User::with(['roles', 'permissions'])->latest()->paginate(15);
 
         return view('admin.users.index', compact('users'));
     }
@@ -20,8 +21,9 @@ class UserController extends Controller
     public function create()
     {
         $roles = Role::orderBy('name')->get();
+        $permissions = Permission::orderBy('name')->get();
 
-        return view('admin.users.create', compact('roles'));
+        return view('admin.users.create', compact('roles', 'permissions'));
     }
 
     public function store(Request $request)
@@ -31,8 +33,9 @@ class UserController extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'roles' => ['nullable', 'array'],
-            'roles.*' => ['exists:roles,name'],
+            'role' => ['nullable', 'exists:roles,name'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['exists:permissions,name'],
         ]);
 
         $user = User::create([
@@ -42,7 +45,9 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $user->syncRoles($validated['roles'] ?? []);
+        $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
+        $user->syncPermissions($validated['permissions'] ?? []);
+
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
         return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
@@ -51,8 +56,9 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = Role::orderBy('name')->get();
+        $permissions = Permission::orderBy('name')->get();
 
-        return view('admin.users.edit', compact('user', 'roles'));
+        return view('admin.users.edit', compact('user', 'roles', 'permissions'));
     }
 
     public function update(Request $request, User $user)
@@ -62,8 +68,9 @@ class UserController extends Controller
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'password' => ['nullable', 'string', 'min:8'],
-            'roles' => ['nullable', 'array'],
-            'roles.*' => ['exists:roles,name'],
+            'role' => ['nullable', 'exists:roles,name'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['exists:permissions,name'],
         ]);
 
         $user->update([
@@ -73,7 +80,9 @@ class UserController extends Controller
             'password' => filled($validated['password'] ?? null) ? Hash::make($validated['password']) : $user->password,
         ]);
 
-        $user->syncRoles($validated['roles'] ?? []);
+        $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
+        $user->syncPermissions($validated['permissions'] ?? []);
+
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
