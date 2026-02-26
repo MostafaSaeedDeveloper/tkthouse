@@ -19,6 +19,8 @@ class OrderItem extends Model
         'holder_name',
         'holder_email',
         'holder_phone',
+        'holder_gender',
+        'holder_social_profile',
     ];
 
     public function order()

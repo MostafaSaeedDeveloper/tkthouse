@@ -2,11 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
+
 class PagesController extends Controller
 {
     public function home()
     {
-        return view('front.index');
+        $upcomingEvents = Event::query()
+            ->where('status', 'active')
+            ->whereDate('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date')
+            ->orderBy('event_time')
+            ->take(6)
+            ->get();
+
+        return view('front.index', compact('upcomingEvents'));
     }
 
     public function about()
@@ -16,12 +26,24 @@ class PagesController extends Controller
 
     public function events()
     {
-        return view('front.events.index');
+        $events = Event::query()
+            ->where('status', 'active')
+            ->whereDate('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date')
+            ->orderBy('event_time')
+            ->paginate(10);
+
+        return view('front.events.index', compact('events'));
     }
 
-    public function eventShow()
+    public function eventShow(Event $event)
     {
-        return view('front.events.show');
+        $event->load([
+            'tickets' => fn ($query) => $query->where('status', 'active')->orderBy('price'),
+            'images',
+        ]);
+
+        return view('front.events.show', compact('event'));
     }
 
     public function contact()

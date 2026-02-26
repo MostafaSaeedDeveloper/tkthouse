@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 class EventController extends Controller
 {
@@ -26,7 +28,7 @@ class EventController extends Controller
         $validated = $this->validateEvent($request);
 
         DB::transaction(function () use ($request, $validated) {
-            $coverImage = $request->file('cover_image')?->store('events', 'public');
+            $coverImage = $request->file('cover_image') ? $this->storePublicImage($request->file('cover_image'), 'uploads/events') : null;
             $event = Event::create(array_merge($validated, ['cover_image' => $coverImage]));
 
             $this->syncTickets($event, $validated['tickets'] ?? []);
@@ -59,7 +61,7 @@ class EventController extends Controller
 
         DB::transaction(function () use ($request, $validated, $event) {
             if ($request->hasFile('cover_image')) {
-                $validated['cover_image'] = $request->file('cover_image')->store('events', 'public');
+                $validated['cover_image'] = $this->storePublicImage($request->file('cover_image'), 'uploads/events');
             }
 
             $event->update($validated);
@@ -148,7 +150,18 @@ class EventController extends Controller
         }
 
         foreach ($request->file('gallery_images') as $image) {
-            $event->images()->create(['path' => $image->store('events/gallery', 'public')]);
+            $event->images()->create(['path' => $this->storePublicImage($image, 'uploads/events/gallery')]);
         }
+    }
+
+    private function storePublicImage(UploadedFile $file, string $directory): string
+    {
+        $targetDirectory = public_path($directory);
+        File::ensureDirectoryExists($targetDirectory);
+
+        $filename = $file->hashName();
+        $file->move($targetDirectory, $filename);
+
+        return trim($directory, '/').'/'.$filename;
     }
 }
