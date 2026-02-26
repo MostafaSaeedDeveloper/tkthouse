@@ -7,63 +7,64 @@
         </div>
 		<!-- Modal -->
 		<div id="login-register1" class="modal fade" role="dialog">
-		  	<div class="modal-dialog">
-			    <!-- Modal content-->
-			    <div class="modal-content">
-			    	<button type="button" class="close" data-dismiss="modal">&times;</button>
-			      	<div class="ms-login-form">
-  						<form>
-  							<div class="ms_width_off50">
-      							<div class="ms-heading2">
-      								<h3>Sign in</h3>
-      								<p>welcome back! sign in to your account</p>
-      							</div>
-      							<div class="input-felid">
-      								<label>username or email address</label>
-      								<input type="text" placeholder="user name or email address*">
-      							</div>
-      							<div class="input-felid">
-      								<label>password</label>
-      								<input type="text" placeholder="password*">
-      							</div>
-      							<div class="pull-left">
-      								<input type="checkbox" name="remember" id="clik">
-      								<span class="box"></span>
-      								<label for="clik" class="ck-title">remember me</label>
-      							</div>
-      							<div class="pull-right">
-      								<a href="#" class="fpw">forgotten password?</a>
-      							</div>
-      							<div class="btn-submit">
-      								<button class="btn-normal2" type="submit">login</button>
-      							</div>
-  							</div>
-  							<sup>Or</sup>
-  							<div class="ms_width_off50 bg-trans">
-      							<div class="ms-heading2">
-      								<h3>create new account</h3>
-      								<p>create your very own tkthouse account</p>
-      							</div>
-      							<div class="input-felid">
-      								<label>email address</label>
-      								<input type="text" placeholder="user name or email address*">
-      							</div>
-      							<div class="btn-submit margin-15">
-      								<button class="btn-normal2" type="submit">register</button>
-      							</div>
-      							<h4 class="title-point">sign up today and you will be able to:</h4>
-      							<ul class="check-points">
-      								<li><p>speed your way through the checkout</p></li>
-      								<li><p>track your orders easily</p></li>
-      								<li><p>keep a record of all your purchases</p></li>
-      							</ul>
-  							</div>
-  						</form>
-  					</div>
-			    </div>
-		  	</div>
-		</div>
-		<div class="sidebars">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <div class="ms-login-form">
+                        <div class="ms_width_off50">
+                            <div class="ms-heading2">
+                                <h3>Sign in</h3>
+                                <p>welcome back! sign in to your customer account</p>
+                            </div>
+                            <form method="POST" action="{{ route('front.customer.login.store') }}">
+                                @csrf
+                                <div class="input-felid">
+                                    <label>username or email address</label>
+                                    <input type="text" name="login" placeholder="username or email address*" required>
+                                </div>
+                                <div class="input-felid">
+                                    <label>password</label>
+                                    <input type="password" name="password" placeholder="password*" required>
+                                </div>
+                                <div class="btn-submit">
+                                    <button class="btn-normal2" type="submit">login</button>
+                                </div>
+                            </form>
+                        </div>
+                        <sup>Or</sup>
+                        <div class="ms_width_off50 bg-trans">
+                            <div class="ms-heading2">
+                                <h3>create new account</h3>
+                                <p>create your customer account</p>
+                            </div>
+                            <form method="POST" action="{{ route('front.customer.register.store') }}">
+                                @csrf
+                                <div class="input-felid">
+                                    <label>full name</label>
+                                    <input type="text" name="name" placeholder="full name*" required>
+                                </div>
+                                <div class="input-felid">
+                                    <label>email address</label>
+                                    <input type="email" name="email" placeholder="email address*" required>
+                                </div>
+                                <div class="input-felid">
+                                    <label>password</label>
+                                    <input type="password" name="password" placeholder="password*" required>
+                                </div>
+                                <div class="input-felid">
+                                    <label>confirm password</label>
+                                    <input type="password" name="password_confirmation" placeholder="confirm password*" required>
+                                </div>
+                                <div class="btn-submit margin-15">
+                                    <button class="btn-normal2" type="submit">register</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="sidebars">
         	<div class="sidebar right">
 	           	<a href="#" class="side_t close_cross" data-action="close" data-side="right"><span></span></a>
 	        	<div class="kode_sidebar_right">

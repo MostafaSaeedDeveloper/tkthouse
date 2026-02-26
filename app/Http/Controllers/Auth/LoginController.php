@@ -10,22 +10,11 @@ class LoginController extends Controller
 {
     use AuthenticatesUsers;
 
-    protected $redirectTo = '/account/dashboard';
+    protected $redirectTo = '/dashboard';
 
     public function username(): string
     {
-        return 'login';
-    }
-
-    protected function credentials(Request $request): array
-    {
-        $login = (string) $request->input('login');
-        $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-
-        return [
-            $field => $login,
-            'password' => (string) $request->input('password'),
-        ];
+        return 'username';
     }
 
     public function __construct()
@@ -42,14 +31,5 @@ class LoginController extends Controller
         ]);
 
         activity('auth')->performedOn($user)->causedBy($user)->log('User logged in');
-    }
-
-    protected function redirectTo(): string
-    {
-        if (method_exists(auth()->user(), 'hasRole') && auth()->user()->hasRole('admin')) {
-            return '/admin/dashboard';
-        }
-
-        return '/account/dashboard';
     }
 }

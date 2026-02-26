@@ -7,13 +7,12 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class RegisterController extends Controller
 {
     use RegistersUsers;
 
-    protected $redirectTo = '/account/dashboard';
+    protected $redirectTo = '/home';
 
     public function __construct()
     {
@@ -24,6 +23,7 @@ class RegisterController extends Controller
     {
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'unique:users'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
@@ -33,24 +33,9 @@ class RegisterController extends Controller
     {
         return User::create([
             'name' => $data['name'],
-            'username' => $this->generateUsername($data['email']),
+            'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
-    }
-
-    private function generateUsername(string $email): string
-    {
-        $base = Str::slug(Str::before($email, '@'), '_');
-        $base = $base !== '' ? $base : 'customer';
-        $username = $base;
-        $suffix = 1;
-
-        while (User::query()->where('username', $username)->exists()) {
-            $suffix++;
-            $username = $base.'_'.$suffix;
-        }
-
-        return $username;
     }
 }
