@@ -309,5 +309,62 @@
 
     <!-- Page JS Code -->
     <script src="{{asset('admin/assets/js/pages/be_pages_dashboard.min.js')}}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      (() => {
+        if (typeof Swal === 'undefined') {
+          return;
+        }
+
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+        });
+
+        if (window.adminToastSuccess) {
+          Toast.fire({ icon: 'success', title: window.adminToastSuccess });
+        }
+
+        if (Array.isArray(window.adminValidationErrors) && window.adminValidationErrors.length) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            html: '<ul style="text-align:left;margin:0;padding-left:20px;">' + window.adminValidationErrors.map((item) => `<li>${item}</li>`).join('') + '</ul>',
+          });
+        }
+
+        document.querySelectorAll('form').forEach((form) => {
+          const method = (form.querySelector('input[name="_method"]')?.value || form.method || '').toUpperCase();
+          if (method !== 'DELETE') {
+            return;
+          }
+
+          form.addEventListener('submit', (event) => {
+            if (form.dataset.confirmed === '1') {
+              return;
+            }
+
+            event.preventDefault();
+            Swal.fire({
+              title: 'Are you sure?',
+              text: 'This action cannot be undone.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Yes, delete it',
+              cancelButtonText: 'Cancel',
+            }).then((result) => {
+              if (result.isConfirmed) {
+                form.dataset.confirmed = '1';
+                form.submit();
+              }
+            });
+          });
+        });
+      })();
+    </script>
+
   </body>
 </html>

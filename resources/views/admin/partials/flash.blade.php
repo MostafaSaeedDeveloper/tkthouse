@@ -1,13 +1,11 @@
 @if(session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
+    <script>
+        window.adminToastSuccess = @json(session('success'));
+    </script>
 @endif
 
 @if($errors->any())
-    <div class="alert alert-danger">
-        <ul class="mb-0">
-            @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
+    <script>
+        window.adminValidationErrors = @json($errors->all());
+    </script>
 @endif
