@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -12,8 +13,23 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        if ($request->filled('event') && $request->filled('cart')) {
+            $event = Event::query()->where('status', 'active')->findOrFail((int) $request->input('event'));
+            $selection = $this->normalizeEventCart($event, (string) $request->input('cart'));
+            session(['checkout.event_selection' => $selection]);
+        }
+
+        $eventSelection = session('checkout.event_selection');
+
+        if ($eventSelection) {
+            return view('front.checkout', [
+                'mode' => 'event_locked',
+                'eventSelection' => $eventSelection,
+            ]);
+        }
+
         $eventTickets = EventTicket::query()
             ->with('event:id,name,status,event_date')
             ->where('status', 'active')
@@ -27,7 +43,12 @@ class CheckoutController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('front.checkout', compact('eventTickets', 'legacyTickets'));
+        return view('front.checkout', [
+            'mode' => 'open',
+            'eventTickets' => $eventTickets,
+            'legacyTickets' => $legacyTickets,
+            'eventSelection' => null,
+        ]);
     }
 
     public function store(Request $request)
@@ -38,53 +59,129 @@ class CheckoutController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
-            'items' => ['required', 'array'],
         ]);
 
-        $items = collect($request->input('items', []))
-            ->map(function ($item) {
-                return [
-                    'ticket_key' => trim((string) ($item['ticket_key'] ?? '')),
-                    'quantity' => (int) ($item['quantity'] ?? 1),
-                    'holder_name' => trim((string) ($item['holder_name'] ?? '')),
-                    'holder_email' => trim((string) ($item['holder_email'] ?? '')),
-                    'holder_phone' => trim((string) ($item['holder_phone'] ?? '')),
-                ];
-            })
-            ->filter(fn ($item) => $item['ticket_key'] !== '')
+        $eventSelection = session('checkout.event_selection');
+        if ($eventSelection) {
+            return $this->storeFromLockedEventSelection($request, $baseValidated, $eventSelection);
+        }
+
+        return $this->storeFromOpenSelection($request, $baseValidated);
+    }
+
+    private function storeFromLockedEventSelection(Request $request, array $baseValidated, array $selection)
+    {
+        $attendees = collect($request->input('attendees', []));
+        $ticketUnits = collect($selection['units'] ?? []);
+
+        if ($ticketUnits->isEmpty()) {
+            throw ValidationException::withMessages(['tickets' => 'No selected tickets found. Please go back to event page and select tickets.']);
+        }
+
+        if ($attendees->count() !== $ticketUnits->count()) {
+            throw ValidationException::withMessages(['attendees' => 'Please fill attendee data for all selected tickets.']);
+        }
+
+        $errors = [];
+        foreach ($attendees as $index => $attendee) {
+            $name = trim((string) ($attendee['name'] ?? ''));
+            $phone = trim((string) ($attendee['phone'] ?? ''));
+            $email = trim((string) ($attendee['email'] ?? ''));
+            $gender = trim((string) ($attendee['gender'] ?? ''));
+
+            if ($name === '') {
+                $errors["attendees.$index.name"] = 'Name is required.';
+            }
+            if ($phone === '') {
+                $errors["attendees.$index.phone"] = 'Phone is required.';
+            }
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors["attendees.$index.email"] = 'Valid email is required.';
+            }
+            if (! in_array($gender, ['male', 'female'], true)) {
+                $errors["attendees.$index.gender"] = 'Gender is required.';
+            }
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        DB::transaction(function () use ($baseValidated, $selection, $ticketUnits, $attendees) {
+            $customer = Customer::updateOrCreate(
+                ['email' => $baseValidated['email']],
+                [
+                    'first_name' => $baseValidated['first_name'],
+                    'last_name' => $baseValidated['last_name'],
+                    'phone' => $baseValidated['phone'] ?? null,
+                    'address' => $baseValidated['address'] ?? null,
+                ]
+            );
+
+            $order = Order::create([
+                'customer_id' => $customer->id,
+                'order_number' => 'ORD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT),
+                'status' => 'confirmed',
+                'total_amount' => 0,
+            ]);
+
+            $total = 0;
+
+            foreach ($ticketUnits as $index => $unit) {
+                $attendee = $attendees[$index];
+                $holderName = trim((string) ($attendee['name'] ?? ''));
+                $holderPhone = trim((string) ($attendee['phone'] ?? ''));
+                $holderEmail = trim((string) ($attendee['email'] ?? ''));
+                $holderSocial = trim((string) ($attendee['social_profile'] ?? ''));
+
+                $lineTotal = (float) $unit['ticket_price'];
+                $total += $lineTotal;
+
+                $order->items()->create([
+                    'ticket_id' => null,
+                    'ticket_name' => $unit['event_name'].' - '.$unit['ticket_name'],
+                    'ticket_price' => $unit['ticket_price'],
+                    'quantity' => 1,
+                    'line_total' => $lineTotal,
+                    'holder_name' => $holderName,
+                    'holder_email' => $holderEmail,
+                    'holder_phone' => $holderPhone,
+                    'holder_gender' => (string) $attendee['gender'],
+                    'holder_social_profile' => $holderSocial !== '' ? $holderSocial : null,
+                ]);
+            }
+
+            $order->update(['total_amount' => $total]);
+        });
+
+        session()->forget('checkout.event_selection');
+
+        return redirect()->route('front.checkout')->with('success', 'Order completed successfully.');
+    }
+
+    private function storeFromOpenSelection(Request $request, array $baseValidated)
+    {
+        $validated = $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.ticket_key' => ['required', 'string'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.holder_name' => ['required', 'string', 'max:255'],
+            'items.*.holder_email' => ['required', 'email', 'max:255'],
+            'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $items = collect($validated['items'])
+            ->filter(fn ($item) => ! empty($item['ticket_key']))
             ->values();
 
         if ($items->isEmpty()) {
-            throw ValidationException::withMessages([
-                'items' => 'Please select at least one ticket row.',
-            ]);
-        }
-
-        $ticketErrors = [];
-        foreach ($items as $index => $item) {
-            if (! preg_match('/^(event|legacy):(\d+)$/', $item['ticket_key'], $matches)) {
-                $ticketErrors["items.$index.ticket_key"] = 'Invalid ticket selection.';
-            }
-
-            if ($item['quantity'] < 1) {
-                $ticketErrors["items.$index.quantity"] = 'Quantity must be at least 1.';
-            }
-
-            if ($item['holder_name'] === '') {
-                $ticketErrors["items.$index.holder_name"] = 'Holder name is required for each selected ticket.';
-            }
-
-            if ($item['holder_email'] === '' || ! filter_var($item['holder_email'], FILTER_VALIDATE_EMAIL)) {
-                $ticketErrors["items.$index.holder_email"] = 'A valid holder email is required for each selected ticket.';
-            }
-        }
-
-        if (! empty($ticketErrors)) {
-            throw ValidationException::withMessages($ticketErrors);
+            throw ValidationException::withMessages(['items' => 'Please add at least one ticket row.']);
         }
 
         $grouped = $items->map(function ($item) {
-            preg_match('/^(event|legacy):(\d+)$/', $item['ticket_key'], $matches);
+            if (! preg_match('/^(event|legacy):(\d+)$/', $item['ticket_key'], $matches)) {
+                throw ValidationException::withMessages(['items' => 'Invalid ticket selection.']);
+            }
 
             return $item + [
                 'ticket_type' => $matches[1],
@@ -131,21 +228,17 @@ class CheckoutController extends Controller
             foreach ($grouped as $item) {
                 if ($item['ticket_type'] === 'event') {
                     $ticket = $eventTickets->get($item['ticket_ref_id']);
-
                     if (! $ticket || ! $ticket->event || $ticket->event->status !== 'active') {
                         throw ValidationException::withMessages(['items' => 'Selected event ticket is no longer available.']);
                     }
-
                     $ticketName = ($ticket->event->name ? $ticket->event->name.' - ' : '').$ticket->name;
                     $ticketPrice = $ticket->price;
                     $orderTicketId = null;
                 } else {
                     $ticket = $legacyTickets->get($item['ticket_ref_id']);
-
                     if (! $ticket) {
                         throw ValidationException::withMessages(['items' => 'Selected ticket is no longer available.']);
                     }
-
                     $ticketName = $ticket->name;
                     $ticketPrice = $ticket->price;
                     $orderTicketId = $ticket->id;
@@ -163,6 +256,8 @@ class CheckoutController extends Controller
                     'holder_name' => $item['holder_name'],
                     'holder_email' => $item['holder_email'],
                     'holder_phone' => $item['holder_phone'] ?: null,
+                    'holder_gender' => null,
+                    'holder_social_profile' => null,
                 ]);
             }
 
@@ -170,5 +265,66 @@ class CheckoutController extends Controller
         });
 
         return redirect()->route('front.checkout')->with('success', 'Order completed successfully.');
+    }
+
+    private function normalizeEventCart(Event $event, string $encodedCart): array
+    {
+        $decoded = base64_decode(strtr($encodedCart, '-_', '+/'), true);
+        if ($decoded === false) {
+            throw ValidationException::withMessages(['cart' => 'Invalid cart data.']);
+        }
+
+        $payload = json_decode($decoded, true);
+        if (! is_array($payload)) {
+            throw ValidationException::withMessages(['cart' => 'Invalid cart format.']);
+        }
+
+        $requested = collect($payload)
+            ->map(function ($row) {
+                return [
+                    'ticket_id' => (int) ($row['ticket_id'] ?? 0),
+                    'qty' => max(1, (int) ($row['qty'] ?? 1)),
+                ];
+            })
+            ->filter(fn ($row) => $row['ticket_id'] > 0)
+            ->values();
+
+        if ($requested->isEmpty()) {
+            throw ValidationException::withMessages(['cart' => 'No tickets selected.']);
+        }
+
+        $tickets = EventTicket::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'active')
+            ->whereIn('id', $requested->pluck('ticket_id'))
+            ->get()
+            ->keyBy('id');
+
+        $units = [];
+        foreach ($requested as $row) {
+            $ticket = $tickets->get($row['ticket_id']);
+            if (! $ticket) {
+                continue;
+            }
+
+            for ($i = 0; $i < $row['qty']; $i++) {
+                $units[] = [
+                    'ticket_id' => $ticket->id,
+                    'ticket_name' => $ticket->name,
+                    'ticket_price' => (float) $ticket->price,
+                    'event_name' => $event->name,
+                ];
+            }
+        }
+
+        if (empty($units)) {
+            throw ValidationException::withMessages(['cart' => 'Selected tickets are no longer available.']);
+        }
+
+        return [
+            'event_id' => $event->id,
+            'event_name' => $event->name,
+            'units' => $units,
+        ];
     }
 }

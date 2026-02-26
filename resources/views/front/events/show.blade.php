@@ -669,7 +669,7 @@
                             <span class="tot-val" id="summaryTotal">$0.00</span>
                         </div>
 
-                        <a href="{{ url('/checkout') }}" class="tkt-checkout-btn" id="checkoutBtn" style="pointer-events:none; background:rgba(244,196,48,0.2); color:rgba(0,0,0,0.4);">
+                        <a href="{{ route('front.checkout') }}" data-checkout-base="{{ route('front.checkout') }}" data-event-id="{{ $event->id }}" class="tkt-checkout-btn" id="checkoutBtn" style="pointer-events:none; background:rgba(244,196,48,0.2); color:rgba(0,0,0,0.4);">
                             PROCEED TO CHECKOUT &nbsp;<i class="fa fa-arrow-right"></i>
                         </a>
 
@@ -780,6 +780,8 @@
 
         summaryTotal.textContent = '$' + total.toFixed(2);
 
+        updateCheckoutLink();
+
         if (keys.length > 0) {
             summaryBox.classList.add('has-items');
             checkoutBtn.style.pointerEvents = 'auto';
@@ -791,6 +793,31 @@
             checkoutBtn.style.background = 'rgba(244,196,48,0.2)';
             checkoutBtn.style.color = 'rgba(0,0,0,0.4)';
         }
+    }
+
+
+
+    function updateCheckoutLink() {
+        var checkoutBtn  = document.getElementById('checkoutBtn');
+        if (!checkoutBtn) return;
+
+        var payload = [];
+        Object.keys(cart).forEach(function(id) {
+            var ticketId = parseInt((id || '').replace('ticket-', ''), 10);
+            if (!Number.isNaN(ticketId)) {
+                payload.push({ ticket_id: ticketId, qty: cart[id].qty });
+            }
+        });
+
+        if (!payload.length) {
+            checkoutBtn.href = checkoutBtn.dataset.checkoutBase || checkoutBtn.href;
+            return;
+        }
+
+        var encoded = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        var base = checkoutBtn.dataset.checkoutBase || checkoutBtn.href;
+        var eventId = checkoutBtn.dataset.eventId;
+        checkoutBtn.href = base + '?event=' + encodeURIComponent(eventId) + '&cart=' + encodeURIComponent(encoded);
     }
 
     function showToast(msg) {

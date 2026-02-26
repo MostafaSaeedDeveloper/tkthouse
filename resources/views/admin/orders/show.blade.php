@@ -44,6 +44,20 @@
                             <td>
                                 {{ $item->holder_name }}<br>
                                 <span class="fs-sm text-muted">{{ $item->holder_email }} - {{ $item->holder_phone }}</span>
+                                @if($item->holder_gender || $item->holder_social_profile)
+                                    <br>
+                                    <span class="fs-sm text-muted">
+                                        @if($item->holder_gender)
+                                            Gender: {{ ucfirst($item->holder_gender) }}
+                                        @endif
+                                        @if($item->holder_gender && $item->holder_social_profile)
+                                            |
+                                        @endif
+                                        @if($item->holder_social_profile)
+                                            Social: {{ $item->holder_social_profile }}
+                                        @endif
+                                    </span>
+                                @endif
                             </td>
                             <td>{{ $item->quantity }}</td>
                             <td>{{ number_format($item->ticket_price, 2) }}</td>
