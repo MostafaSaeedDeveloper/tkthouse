@@ -15,7 +15,7 @@ return new class extends Migration
             $table->decimal('wallet_balance', 12, 2)->default(0)->after('status');
             $table->string('referral_code')->nullable()->unique()->after('wallet_balance');
             $table->foreignId('referred_by_user_id')->nullable()->after('referral_code')->constrained('users')->nullOnDelete();
-            $table->timestamp('last_login_at')->nullable()->after('referred_by_user_id');
+            $table->dateTime('last_login_at')->nullable()->after('referred_by_user_id');
             $table->string('last_login_ip')->nullable()->after('last_login_at');
             $table->softDeletes();
         });
@@ -56,8 +56,8 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug')->unique();
             $table->longText('description');
-            $table->timestamp('starts_at');
-            $table->timestamp('ends_at');
+            $table->dateTime('starts_at');
+            $table->dateTime('ends_at');
             $table->enum('status', ['draft', 'published', 'hidden', 'cancelled'])->default('draft');
             $table->string('cover_image')->nullable();
             $table->json('gallery')->nullable();
@@ -76,8 +76,8 @@ return new class extends Migration
             $table->unsignedInteger('qty_total');
             $table->unsignedInteger('qty_sold')->default(0);
             $table->boolean('is_available')->default(true);
-            $table->timestamp('sale_starts_at')->nullable();
-            $table->timestamp('sale_ends_at')->nullable();
+            $table->dateTime('sale_starts_at')->nullable();
+            $table->dateTime('sale_ends_at')->nullable();
             $table->unsignedInteger('min_per_order')->default(1);
             $table->unsignedInteger('max_per_order')->default(10);
             $table->foreignId('fees_policy_id')->nullable()->constrained('fees_policies')->nullOnDelete();
@@ -108,7 +108,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'paid', 'cancelled', 'refunded', 'expired'])->default('pending');
             $table->foreignId('payment_method_id')->nullable()->constrained('payment_methods')->nullOnDelete();
             $table->enum('payment_status', ['unpaid', 'paid', 'failed', 'refunded'])->default('unpaid');
-            $table->timestamp('paid_at')->nullable();
+            $table->dateTime('paid_at')->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();
         });
@@ -133,7 +133,7 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3)->default('EGP');
             $table->enum('status', ['initiated', 'succeeded', 'failed', 'refunded'])->default('initiated');
-            $table->timestamp('paid_at')->nullable();
+            $table->dateTime('paid_at')->nullable();
             $table->json('raw_response')->nullable();
             $table->timestamps();
         });
@@ -149,8 +149,8 @@ return new class extends Migration
             $table->enum('status', ['valid', 'used', 'cancelled', 'refunded'])->default('valid');
             $table->string('attendee_name')->nullable();
             $table->string('attendee_phone')->nullable();
-            $table->timestamp('issued_at')->nullable();
-            $table->timestamp('used_at')->nullable();
+            $table->dateTime('issued_at')->nullable();
+            $table->dateTime('used_at')->nullable();
             $table->timestamps();
         });
 
@@ -162,7 +162,7 @@ return new class extends Migration
             $table->string('gate')->nullable();
             $table->string('device_id')->nullable();
             $table->enum('result', ['success', 'duplicate', 'invalid']);
-            $table->timestamp('created_at')->useCurrent();
+            $table->dateTime('created_at')->useCurrent();
         });
 
         Schema::create('fees_rules', function (Blueprint $table): void {
@@ -195,8 +195,8 @@ return new class extends Migration
             $table->foreignId('referred_user_id')->constrained('users')->cascadeOnDelete();
             $table->enum('status', ['pending', 'qualified', 'paid'])->default('pending');
             $table->decimal('reward_amount', 12, 2)->default(0);
-            $table->timestamp('qualified_at')->nullable();
-            $table->timestamp('paid_at')->nullable();
+            $table->dateTime('qualified_at')->nullable();
+            $table->dateTime('paid_at')->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();
         });
@@ -214,8 +214,8 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->enum('type', ['percent', 'fixed']);
             $table->decimal('value', 12, 2);
-            $table->timestamp('starts_at')->nullable();
-            $table->timestamp('ends_at')->nullable();
+            $table->dateTime('starts_at')->nullable();
+            $table->dateTime('ends_at')->nullable();
             $table->unsignedInteger('usage_limit')->nullable();
             $table->unsignedInteger('used_count')->default(0);
             $table->boolean('is_active')->default(true);
