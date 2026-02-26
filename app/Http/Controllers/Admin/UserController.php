@@ -67,7 +67,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:8'],
             'role' => ['nullable', 'exists:roles,name'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
@@ -77,7 +77,7 @@ class UserController extends Controller
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'],
-            'password' => filled($validated['password'] ?? null) ? Hash::make($validated['password']) : $user->password,
+            'password' => Hash::make($validated['password']),
         ]);
 
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
