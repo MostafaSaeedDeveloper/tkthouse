@@ -12,4 +12,7 @@ Route::get('/checkout', [PagesController::class, 'checkout'])->name('front.check
 
 Auth::routes();
 
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::middleware('auth')->group(function () {
+    Route::view('/dashboard', 'admin.index')->name('dashboard');
+    Route::redirect('/home', '/dashboard');
+});
