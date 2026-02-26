@@ -306,9 +306,33 @@
 
     <!-- Page JS Plugins -->
     <script src="{{asset('admin/assets/js/plugins/chart.js/chart.umd.js')}}"></script>
+    <script src="{{asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js')}}"></script>
 
     <!-- Page JS Code -->
     <script src="{{asset('admin/assets/js/pages/be_pages_dashboard.min.js')}}"></script>
+
+    <script>
+      (() => {
+        if (typeof ClassicEditor === 'undefined') {
+          return;
+        }
+
+        document.querySelectorAll('.js-ckeditor-description').forEach((element) => {
+          if (element.dataset.ckeditorInitialized === '1') {
+            return;
+          }
+
+          ClassicEditor
+            .create(element)
+            .then(() => {
+              element.dataset.ckeditorInitialized = '1';
+            })
+            .catch((error) => {
+              console.error(error);
+            });
+        });
+      })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
       (() => {

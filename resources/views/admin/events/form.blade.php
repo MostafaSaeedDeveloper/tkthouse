@@ -59,7 +59,7 @@
     </div>
     <div class="col-12 mb-3">
         <label class="form-label">Description</label>
-        <textarea name="description" class="form-control" rows="4" required>{{ old('description', $event->description ?? '') }}</textarea>
+        <textarea name="description" class="form-control js-ckeditor-description" rows="4" required>{{ old('description', $event->description ?? '') }}</textarea>
     </div>
     <div class="col-12 mb-3">
         <label class="form-label">House Rules</label>
