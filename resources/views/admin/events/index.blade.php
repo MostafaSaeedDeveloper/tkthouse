@@ -23,7 +23,7 @@
                     @foreach($events as $event)
                         <tr>
                             <td>
-                                <a href="{{ route('admin.events.show', $event) }}" class="fw-semibold">
+                                <a href="{{ route('admin.events.edit', $event) }}" class="fw-semibold">
                                     {{ $event->name }}
                                 </a>
                             </td>
