@@ -6,7 +6,6 @@
         <div class="block-header block-header-default"><h3 class="block-title">{{ $customer->full_name }}</h3></div>
         <div class="block-content">
             <p>{{ $customer->email }} | {{ $customer->phone }}</p>
-            <p>{{ $customer->address }}</p>
         </div>
     </div>
 
