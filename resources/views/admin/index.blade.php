@@ -380,7 +380,19 @@ window.addEventListener('load', function () {
 </script>
 
 <script>
-(function () {
+window.addEventListener('load', function () {
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js is not loaded');
+        return;
+    }
+
+    const revenueCanvas = document.getElementById('revenueChart');
+    const ordersCanvas = document.getElementById('ordersChart');
+    if (!revenueCanvas || !ordersCanvas) {
+        return;
+    }
+
+
     const gold    = '#f5b800';
     const goldDim = 'rgba(245,184,0,0.15)';
     const gridCol = 'rgba(255,255,255,0.05)';
@@ -406,7 +418,7 @@ window.addEventListener('load', function () {
         }
     };
 
-    new Chart(document.getElementById('revenueChart'), {
+    new Chart(revenueCanvas, {
         type: 'line',
         data: {
             labels  : @json($labels),
@@ -425,7 +437,7 @@ window.addEventListener('load', function () {
         options: { ...sharedOpts }
     });
 
-    new Chart(document.getElementById('ordersChart'), {
+    new Chart(ordersCanvas, {
         type: 'bar',
         data: {
             labels  : @json($labels),
@@ -439,7 +451,7 @@ window.addEventListener('load', function () {
         },
         options: { ...sharedOpts }
     });
-})();
+});
 </script>
 
 @endsection
