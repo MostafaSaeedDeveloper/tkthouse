@@ -80,6 +80,15 @@
         </a>
       </li>
 
+      {{-- Reports --}}
+      <li class="nav-main-item">
+        <a class="nav-main-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}"
+           href="{{ route('admin.reports.index') }}">
+          <i class="nav-main-link-icon fa fa-chart-column"></i>
+          <span class="nav-main-link-name">Reports</span>
+        </a>
+      </li>
+
       {{-- Separator --}}
       <li class="nav-main-heading">System</li>
 
