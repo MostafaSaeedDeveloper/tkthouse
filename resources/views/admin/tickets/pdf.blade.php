@@ -22,7 +22,7 @@
         <p><strong>Ticket Type:</strong> {{ $ticket->name }}</p>
     </div>
     <div class="qr">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ urlencode($ticket->qr_payload ?: $ticket->ticket_number) }}" alt="QR">
+        <img src="{{ $qrDataUri }}" alt="QR">
     </div>
 </div>
 </body>

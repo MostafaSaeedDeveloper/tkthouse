@@ -49,4 +49,22 @@ class Ticket extends Model
     {
         return $this->belongsTo(OrderItem::class);
     }
+
+    public function eventLabel(): string
+    {
+        $name = (string) ($this->name ?? '');
+
+        return trim((string) strstr($name, ' - ', true)) ?: $name;
+    }
+
+    public function ticketTypeLabel(): string
+    {
+        $name = (string) ($this->name ?? '');
+
+        if (! str_contains($name, ' - ')) {
+            return $name;
+        }
+
+        return trim((string) substr(strstr($name, ' - '), 3));
+    }
 }

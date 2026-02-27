@@ -26,6 +26,8 @@ class TicketController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateTicket($request);
+        $validated['name'] = $request->input('name', $validated['holder_name'] ?? 'Ticket');
+
         Ticket::create($validated);
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket created successfully.');
@@ -48,6 +50,8 @@ class TicketController extends Controller
     public function update(Request $request, Ticket $ticket)
     {
         $validated = $this->validateTicket($request);
+        $validated['name'] = $request->input('name', $ticket->name);
+
         $ticket->update($validated);
 
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Ticket updated successfully.');
@@ -66,7 +70,10 @@ class TicketController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket'))->output();
+        $ticket->loadMissing('order');
+        $qrDataUri = $this->qrDataUri($ticket);
+
+        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri'))->output();
         $showUrl = route('admin.tickets.show', $ticket);
 
         Mail::raw(
@@ -104,7 +111,10 @@ class TicketController extends Controller
 
     public function download(Ticket $ticket)
     {
-        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket'));
+        $ticket->loadMissing('order');
+        $qrDataUri = $this->qrDataUri($ticket);
+
+        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri'));
 
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
@@ -156,7 +166,6 @@ class TicketController extends Controller
     private function validateTicket(Request $request): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:not_checked_in,checked_in,canceled'],
             'holder_name' => ['nullable', 'string', 'max:255'],
@@ -174,14 +183,33 @@ class TicketController extends Controller
         return $payload;
     }
 
+    private function qrDataUri(Ticket $ticket): string
+    {
+        $payload = $ticket->qr_payload ?: $ticket->ticket_number;
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $payload);
+
+        try {
+            $response = Http::timeout(15)->get($url);
+            if ($response->successful()) {
+                return 'data:image/png;base64,'.base64_encode($response->body());
+            }
+        } catch (\Throwable) {
+            // Ignore and fallback to URL
+        }
+
+        return $url;
+    }
+
     private function ensureScannerAccess(): void
     {
         $user = auth()->user();
         abort_unless($user, 403);
 
-        $allowed = method_exists($user, 'hasAnyRole')
-            && $user->hasAnyRole(['Scanner', 'Admin', 'Super Admin']);
+        $allowedByRole = method_exists($user, 'hasAnyRole')
+            && $user->hasAnyRole(['admin', 'scanner', 'Admin', 'Scanner', 'Super Admin']);
 
-        abort_unless($allowed, 403);
+        $allowedByPermission = method_exists($user, 'can') && $user->can('tickets.manage');
+
+        abort_unless($allowedByRole || $allowedByPermission, 403);
     }
 }

@@ -37,6 +37,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             'tickets.view',
             'tickets.manage',
+            'scanner.access',
             'fees.manage',
             'event-images.manage',
 
@@ -56,6 +57,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $eventManagerRole = Role::findOrCreate('event_manager', 'web');
         $ticketManagerRole = Role::findOrCreate('ticket_manager', 'web');
         $supportRole = Role::findOrCreate('support', 'web');
+        $scannerRole = Role::findOrCreate('scanner', 'web');
 
         $adminRole->syncPermissions(Permission::all());
 
@@ -68,6 +70,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'events.mark-sold-out',
             'tickets.view',
             'tickets.manage',
+            'scanner.access',
             'fees.manage',
             'event-images.manage',
             'orders.view',
@@ -80,6 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'events.view',
             'tickets.view',
             'tickets.manage',
+            'scanner.access',
             'fees.manage',
             'orders.view',
             'orders.manage',
@@ -93,6 +97,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.view',
             'attendees.view',
             'activity-logs.view',
+        ]);
+
+        $scannerRole->syncPermissions([
+            'dashboard.view',
+            'tickets.view',
+            'tickets.manage',
+            'scanner.access',
+            'orders.view',
         ]);
     }
 }

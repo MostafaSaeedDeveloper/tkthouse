@@ -1,9 +1,6 @@
 @csrf
 <div class="row g-3">
-    <div class="col-md-6">
-        <label class="form-label">Ticket Name</label>
-        <input type="text" name="name" value="{{ old('name', $ticket->name ?? '') }}" class="form-control" required>
-    </div>
+    <input type="hidden" name="name" value="{{ old('name', $ticket->name ?? 'Ticket') }}">
     <div class="col-md-6">
         <label class="form-label">Status</label>
         <select name="status" class="form-select">

@@ -16,10 +16,10 @@
                 <table class="table table-hover table-vcenter mb-0">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Ticket #</th>
-                            <th>Order #</th>
+                            <th>Ticket Number</th>
                             <th>Holder</th>
+                            <th>Event</th>
+                            <th>Order</th>
                             <th>Status</th>
                             <th class="text-end">Actions</th>
                         </tr>
@@ -28,10 +28,10 @@
                         @php($statusLabels = ['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'])
                         @forelse($tickets as $ticket)
                             <tr>
-                                <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->name }}</a></td>
-                                <td>{{ $ticket->ticket_number ?? '-' }}</td>
-                                <td>{{ $ticket->order?->order_number ?? '-' }}</td>
+                                <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number ?? '-' }}</a></td>
                                 <td>{{ $ticket->holder_name ?: '-' }}</td>
+                                <td>{{ $ticket->eventLabel() ?: '-' }}</td>
+                                <td>{{ $ticket->order?->order_number ?? '-' }}</td>
                                 <td>{{ $statusLabels[$ticket->status] ?? str($ticket->status)->headline() }}</td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-alt-info" href="{{ route('admin.tickets.show', $ticket) }}"><i class="fa fa-eye"></i></a>

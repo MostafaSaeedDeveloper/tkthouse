@@ -20,12 +20,19 @@
         <div class="block-content">
             <div class="row g-3">
                 <div class="col-md-8">
-                    <p><strong>Name:</strong> {{ $ticket->name }}</p>
+                    <p><strong>Ticket Number:</strong> {{ $ticket->ticket_number ?? "-" }}</p>
+                    <p><strong>Holder:</strong> {{ $ticket->holder_name ?: "-" }}</p>
+                    <p><strong>Event:</strong> {{ $ticket->eventLabel() ?: "-" }}</p>
+                    <p><strong>Ticket Type:</strong> {{ $ticket->ticketTypeLabel() ?: "-" }}</p>
                     <p><strong>Order #:</strong> {{ $ticket->order?->order_number ?? '-' }}</p>
-                    <p><strong>Holder:</strong> {{ $ticket->holder_name ?: '-' }}</p>
-                    <p><strong>Email:</strong> {{ $ticket->holder_email ?: '-' }}</p>
+                                        <p><strong>Email:</strong> {{ $ticket->holder_email ?: '-' }}</p>
                     <p><strong>Phone:</strong> {{ $ticket->holder_phone ?: '-' }}</p>
                     <p><strong>Status:</strong> {{ $statusLabels[$ticket->status] ?? str($ticket->status)->headline() }}</p>
+                    <p><strong>Created At:</strong> {{ $ticket->created_at?->format('Y-m-d H:i:s') ?: '-' }}</p>
+                    <p><strong>Updated At:</strong> {{ $ticket->updated_at?->format('Y-m-d H:i:s') ?: '-' }}</p>
+                    <p><strong>Issued At:</strong> {{ $ticket->issued_at?->format('Y-m-d H:i:s') ?: '-' }}</p>
+                    <p><strong>Checked In At:</strong> {{ $ticket->checked_in_at?->format('Y-m-d H:i:s') ?: '-' }}</p>
+                    <p><strong>Canceled At:</strong> {{ $ticket->canceled_at?->format('Y-m-d H:i:s') ?: '-' }}</p>
                 </div>
                 <div class="col-md-4 text-center">
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ urlencode($ticket->qr_payload ?: $ticket->ticket_number) }}" alt="QR" class="img-fluid">
