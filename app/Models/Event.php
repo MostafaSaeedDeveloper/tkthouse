@@ -61,6 +61,19 @@ class Event extends Model
         return $slug;
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->newQuery()
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->orWhere('id', $value)
+            ->firstOrFail();
+    }
+
     public function tickets()
     {
         return $this->hasMany(EventTicket::class);

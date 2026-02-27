@@ -282,7 +282,7 @@
                     {{-- Cards grid --}}
                     <div class="ev-home-grid">
                         @forelse($upcomingEvents as $event)
-                            <a class="ev-home-card" href="{{ route('front.events.show', ['event' => $event->slug]) }}">
+                            <a class="ev-home-card" href="{{ route('front.events.show', ['event' => $event->slug ?: $event->id]) }}">
 
                                 <div class="ev-home-card-img">
                                     <img src="{{ $event->cover_image_url ?? asset('extra-images/black-img/event-list6.jpg') }}"
