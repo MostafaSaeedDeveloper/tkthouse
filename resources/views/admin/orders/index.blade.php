@@ -32,7 +32,7 @@
                             <td class="fw-semibold">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</td>
                             <td>{{ $order->customer?->full_name }}<br><span class="fs-sm text-muted">{{ $order->customer?->email }}</span></td>
                             <td>{{ $order->items_count }}</td>
-                            <td>{{ number_format($order->total_amount, 2) }}</td>
+                            <td>{{ number_format($order->total_amount, 2) }} EGP</td>
                             <td><span class="badge bg-info">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
                             <td>{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</td>
                             <td class="text-end">

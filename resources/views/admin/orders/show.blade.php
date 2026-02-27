@@ -121,13 +121,13 @@
                   <div class="od-ticket-holder-info">{{ $item->holder_name }}<span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span></div>
                 </div>
               </div>
-              <div><div class="od-ticket-price">{{ number_format((float)$item->line_total,2) }}</div><div class="od-ticket-qty">Qty × {{ $item->quantity }}</div></div>
+              <div><div class="od-ticket-price">{{ number_format((float)$item->line_total,2) }} EGP</div><div class="od-ticket-qty">Qty × {{ $item->quantity }}</div></div>
             </div>
           @empty
             <div class="od-note-text">No tickets found.</div>
           @endforelse
 
-          <div class="od-total-bar"><span>Total Amount</span><strong>{{ number_format((float)$order->total_amount,2) }}</strong></div>
+          <div class="od-total-bar"><span>Total Amount</span><strong>{{ number_format((float)$order->total_amount,2) }} EGP</strong></div>
         </div>
       </div>
 
