@@ -25,7 +25,7 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validateEvent($request);
+        $validated = $this->normalizeEventPayload($this->validateEvent($request));
 
         DB::transaction(function () use ($request, $validated) {
             $coverImage = $request->file('cover_image') ? $this->storePublicImage($request->file('cover_image'), 'uploads/events') : null;
@@ -57,7 +57,7 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
-        $validated = $this->validateEvent($request, true);
+        $validated = $this->normalizeEventPayload($this->validateEvent($request, true));
 
         DB::transaction(function () use ($request, $validated, $event) {
             if ($request->hasFile('cover_image')) {
@@ -86,6 +86,14 @@ class EventController extends Controller
         activity('events')->causedBy(auth()->user())->log('Event deleted: '.$eventName);
 
         return back()->with('success', 'Event deleted successfully.');
+    }
+
+
+    private function normalizeEventPayload(array $validated): array
+    {
+        $validated['description'] = $validated['description'] ?? '';
+
+        return $validated;
     }
 
     private function validateEvent(Request $request, bool $isUpdate = false): array
