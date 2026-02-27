@@ -98,7 +98,7 @@ class EventController extends Controller
             'event_time' => ['required'],
             'location' => ['required', 'string', 'max:255'],
             'map_url' => ['nullable', 'url'],
-            'description' => ['required', 'string'],
+            'description' => ['nullable', 'string'],
             'house_rules' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive,draft,sold_out'],
             'requires_booking_approval' => ['required', 'boolean'],

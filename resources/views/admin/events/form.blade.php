@@ -65,8 +65,9 @@
         <input type="file" name="cover_image" class="form-control" {{ isset($event) ? '' : 'required' }}>
     </div>
     <div class="col-12 mb-3">
-        <label class="form-label">Description</label>
-        <textarea name="description" class="form-control js-ckeditor-description" rows="3" required>{{ old('description', $event->description ?? '') }}</textarea>
+        <label class="form-label">Description (Optional)</label>
+        <textarea name="description" class="form-control js-ckeditor-description" rows="3" placeholder="Add event details for attendees...">{{ old('description', $event->description ?? '') }}</textarea>
+        <div class="form-text">You can leave this empty if you don't need a description.</div>
     </div>
     <div class="col-12 mb-3">
         <label class="form-label">House Rules</label>

@@ -18,7 +18,7 @@
 
         <div class="block-content block-content-full bg-body-light d-flex justify-content-end gap-2">
             <a href="{{ route('admin.events.index') }}" class="btn btn-alt-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Save Event</button>
+            <button type="submit" class="btn btn-primary">Create Event</button>
         </div>
     </form>
 </div>
