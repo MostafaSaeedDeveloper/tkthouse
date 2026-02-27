@@ -50,6 +50,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
     Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+    Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
     Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');

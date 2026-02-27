@@ -7,6 +7,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 
 class OrderController extends Controller
 {
@@ -21,7 +22,16 @@ class OrderController extends Controller
     {
         $order->load(['customer', 'items.ticket', 'user']);
 
-        return view('admin.orders.show', compact('order'));
+        $activities = Activity::query()
+            ->with('causer')
+            ->forSubject($order)
+            ->latest()
+            ->get();
+
+        $notes = $activities->where('log_name', 'order_notes')->values();
+        $history = $activities->where('log_name', '!=', 'order_notes')->values();
+
+        return view('admin.orders.show', compact('order', 'notes', 'history'));
     }
 
     public function edit(Order $order)
@@ -78,7 +88,33 @@ class OrderController extends Controller
 
         $order->update(['total_amount' => $total]);
 
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties([
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+                'total_amount' => (float) $order->total_amount,
+            ])
+            ->log('Order updated');
+
         return redirect()->route('admin.orders.show', $order)->with('success', 'Order updated successfully.');
+    }
+
+
+    public function storeNote(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'body' => ['required', 'string', 'max:2000'],
+        ]);
+
+        activity('order_notes')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties(['body' => $validated['body']])
+            ->log('Order note added');
+
+        return back()->with('success', 'Note added successfully.');
     }
 
     public function approve(Request $request, Order $order)
@@ -92,6 +128,11 @@ class OrderController extends Controller
             'approved_at' => now(),
             'payment_link_token' => Str::random(40),
         ]);
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->log('Order approved and payment link created');
 
         $paymentLink = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
 

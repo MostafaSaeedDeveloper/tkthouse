@@ -2,104 +2,140 @@
 
 @section('content')
 @php
-    $displayOrderNumber = preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number;
-    $statusLabel = ucwords(str_replace('_', ' ', (string) $order->status));
-    $paymentMethodLabel = ucwords(str_replace('_', ' ', (string) $order->payment_method));
-    $paymentStatusLabel = ucwords(str_replace('_', ' ', (string) $order->payment_status));
-    $customerInitials = collect(explode(' ', (string) ($order->customer?->full_name ?? '')))
-        ->filter()
-        ->map(fn ($part) => mb_substr($part, 0, 1))
-        ->take(2)
-        ->implode('');
+  $displayOrderNumber = preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number;
+  $statusClass = str_replace('approved_pending_payment', 'approved', (string) $order->status);
+  $statusLabel = ucwords(str_replace('_', ' ', (string) $order->status));
+  $customerName = $order->customer?->full_name ?: 'N/A';
+  $customerInitials = collect(explode(' ', $customerName))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('');
 @endphp
 
-<div class="content">
-    @include('admin.partials.flash')
+<style>
+.od-wrap { padding: 8px 0 60px; }
+.od-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.od-head-left p  { font-size: 13px; color: #5e5e72; margin: 4px 0 0; }
+.od-head-left h1 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: #fff; margin: 0; letter-spacing: -0.3px; }
+.od-head-left h1 span { color: #f5b800; }
+.od-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .od-grid { grid-template-columns: 1fr; } }
+.od-card { background: #0d0d10; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+.od-card-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.07); gap: 10px; }
+.od-card-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #f5b800; display: flex; align-items: center; gap: 8px; }
+.od-card-title::before { content: ''; width: 3px; height: 13px; background: #f5b800; border-radius: 2px; flex-shrink: 0; }
+.od-card-body { padding: 20px; }
+.od-info-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px; gap: 12px; }
+.od-info-row:last-child { border-bottom: none; }
+.od-info-label { color: #5e5e72; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+.od-info-val   { color: #dddde8; font-weight: 500; text-align: right; }
+.od-status { display: inline-flex; align-items: center; gap: 6px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 11px; border-radius: 99px; }
+.od-status.pending,.od-status.pending_payment,.od-status.pending_approval { color: #f5b800; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); }
+.od-status.approved,.od-status.paid { color: #22c55e; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25); }
+.od-status.rejected { color: #e8445a; background: rgba(232,68,90,0.10); border: 1px solid rgba(232,68,90,0.25); }
+.od-customer,.od-ticket-holder { display: flex; align-items: center; gap: 10px; }
+.od-avatar,.od-ticket-holder-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); color: #f5b800; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.od-btn-approve,.od-btn-back { display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 16px;text-decoration:none;border:0; }
+.od-btn-approve { background:#f5b800;color:#000; }
+.od-btn-back { background:#15151b;color:#5e5e72;border:1px solid rgba(255,255,255,0.07); }
+.od-ticket { background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:12px; }
+.od-ticket-name{color:#fff;font-weight:700}.od-ticket-holder-info{color:#dddde8;font-size:12px}.od-ticket-holder-info span{display:block;color:#5e5e72}
+.od-ticket-price{color:#f5b800;font-weight:700;text-align:right}.od-ticket-qty{font-size:11px;color:#5e5e72;text-align:right}
+.od-total-bar { display:flex;justify-content:space-between;background:rgba(245,184,0,0.06);border:1px solid rgba(245,184,0,0.2);border-radius:10px;padding:14px 20px;margin-top:16px;color:#fff; }
+.od-note-item,.od-hist-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.od-note-item:last-child,.od-hist-item:last-child{border-bottom:0}
+.od-note-avatar,.od-hist-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#15151b;color:#f5b800}
+.od-note-author,.od-hist-action{color:#dddde8;font-size:12px}.od-note-author span,.od-hist-meta{display:block;color:#5e5e72;font-size:11px}
+.od-note-text{color:#dddde8;font-size:12px}
+.od-note-form textarea{width:100%;background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:8px;color:#dddde8;padding:10px;min-height:90px;margin-top:12px}
+.od-note-submit{margin-top:10px;background:#f5b800;border:0;border-radius:8px;padding:7px 14px;font-weight:700}
+</style>
 
-    <div class="d-md-flex justify-content-md-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">Order #{{ $displayOrderNumber }}</h1>
-            <p class="text-muted mb-0">Created {{ $order->created_at?->format('d M Y, h:i A') }}</p>
-        </div>
-        <div class="d-flex gap-2 mt-3 mt-md-0">
-            <a href="{{ route('admin.orders.edit', $order) }}" class="btn btn-alt-primary">
-                <i class="fa fa-pen me-1"></i> Edit Order
-            </a>
-            @if($order->status === 'pending_approval')
-                <form method="POST" action="{{ route('admin.orders.approve', $order) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-check me-1"></i> Approve</button>
-                </form>
-            @endif
-            <a href="{{ route('admin.orders.index') }}" class="btn btn-alt-secondary">Back</a>
-        </div>
+<div class="content od-wrap">
+  @include('admin.partials.flash')
+
+  <div class="od-head">
+    <div class="od-head-left">
+      <h1>Order <span>#{{ $displayOrderNumber }}</span></h1>
+      <p>{{ $order->created_at?->format('d M Y, H:i') }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      @if($order->status === 'pending_approval')
+      <form method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
+        <button class="od-btn-approve" type="submit"><i class="fa fa-check"></i> Approve & Send Payment Link</button>
+      </form>
+      @endif
+      <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
+      <a href="{{ route('admin.orders.index') }}" class="od-btn-back"><i class="fa fa-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  <div class="od-grid">
+    <div>
+      <div class="od-card"><div class="od-card-head"><div class="od-card-title">Order Summary</div><span class="od-status {{ $statusClass }}">{{ $statusLabel }}</span></div>
+        <div class="od-card-body">
+          <div class="od-info-row"><span class="od-info-label">Order #</span><span class="od-info-val">{{ $displayOrderNumber }}</span></div>
+          <div class="od-info-row"><span class="od-info-label">Date</span><span class="od-info-val">{{ $order->created_at?->format('d M Y, H:i') }}</span></div>
+          <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_method)) }}</span></div>
+          <div class="od-info-row"><span class="od-info-label">Payment Status</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_status)) }}</span></div>
+        </div></div>
+
+      <div class="od-card"><div class="od-card-head"><div class="od-card-title">Customer</div></div><div class="od-card-body">
+        <div class="od-customer"><div class="od-avatar">{{ $customerInitials ?: 'NA' }}</div><div>
+          <div style="color:#fff;font-weight:600">{{ $customerName }}</div>
+          <div style="font-size:12px;color:#5e5e72">{{ $order->customer?->email ?: '-' }}</div>
+          <div style="font-size:12px;color:#5e5e72">{{ $order->customer?->phone ?: '-' }}</div>
+        </div></div></div></div>
+
+      <div class="od-card"><div class="od-card-head"><div class="od-card-title">Tickets</div><span style="font-size:12px;color:#5e5e72;">{{ $order->items->count() }} ticket(s)</span></div><div class="od-card-body">
+        @forelse($order->items as $item)
+          <div class="od-ticket">
+            <div>
+              <div class="od-ticket-name">{{ $item->ticket_name }}</div>
+              <div class="od-ticket-holder"><div class="od-ticket-holder-avatar">{{ collect(explode(' ', (string)$item->holder_name))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') }}</div>
+                <div class="od-ticket-holder-info">{{ $item->holder_name }}<span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span></div>
+              </div>
+            </div>
+            <div><div class="od-ticket-price">{{ number_format((float)$item->line_total,2) }}</div><div class="od-ticket-qty">Qty × {{ $item->quantity }}</div></div>
+          </div>
+        @empty
+          <div class="od-info-val" style="text-align:left">No tickets found.</div>
+        @endforelse
+        <div class="od-total-bar"><span>Total Amount</span><strong>{{ number_format((float)$order->total_amount,2) }}</strong></div>
+      </div></div>
+
+      <div class="od-card"><div class="od-card-head"><div class="od-card-title">Internal Notes</div><span style="font-size:12px;color:#5e5e72;">{{ $notes->count() }} notes</span></div><div class="od-card-body">
+        @forelse($notes as $note)
+          <div class="od-note-item"><div class="od-note-avatar">{{ collect(explode(' ', (string)($note->causer?->name ?? 'NA')))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') ?: 'NA' }}</div>
+            <div><div class="od-note-author">{{ $note->causer?->name ?? 'System' }}<span>{{ $note->created_at?->format('d M Y, H:i') }}</span></div>
+            <div class="od-note-text">{{ data_get($note->properties, 'body', $note->description) }}</div></div></div>
+        @empty
+          <div class="od-note-text">No notes yet.</div>
+        @endforelse
+        <form class="od-note-form" method="POST" action="{{ route('admin.orders.notes.store', $order) }}">@csrf
+          <textarea name="body" placeholder="Add an internal note about this order…">{{ old('body') }}</textarea>
+          <button type="submit" class="od-note-submit"><i class="fa fa-paper-plane"></i> Add Note</button>
+        </form>
+      </div></div>
+
+      <div class="od-card"><div class="od-card-head"><div class="od-card-title">Order History</div><span style="font-size:12px;color:#5e5e72;">{{ $history->count() }} events</span></div><div class="od-card-body">
+        @forelse($history as $log)
+          <div class="od-hist-item"><div class="od-hist-icon"><i class="fa fa-clock"></i></div><div>
+            <div class="od-hist-action">{{ $log->description }} @if($log->causer)<strong>by {{ $log->causer->name }}</strong>@endif</div>
+            <div class="od-hist-meta">{{ $log->created_at?->format('d M Y, H:i') }}</div>
+          </div></div>
+        @empty
+          <div class="od-note-text">No history yet.</div>
+        @endforelse
+      </div></div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-xl-8">
-            <div class="block block-rounded">
-                <div class="block-header block-header-default">
-                    <h3 class="block-title">Ticket Items</h3>
-                </div>
-                <div class="block-content">
-                    @forelse($order->items as $item)
-                        <div class="border rounded p-3 mb-3">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h5 class="mb-1">{{ $item->ticket_name }}</h5>
-                                    <div class="fs-sm text-muted">Unit Price: {{ number_format((float) $item->ticket_price, 2) }}</div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="fw-bold text-primary">{{ number_format((float) $item->line_total, 2) }}</div>
-                                    <div class="fs-sm text-muted">Qty × {{ $item->quantity }}</div>
-                                </div>
-                            </div>
-                            <div class="fs-sm">
-                                <div><strong>Holder:</strong> {{ $item->holder_name }}</div>
-                                <div><strong>Email:</strong> {{ $item->holder_email }}</div>
-                                <div><strong>Phone:</strong> {{ $item->holder_phone ?: '-' }}</div>
-                            </div>
-                        </div>
-                    @empty
-                        <p class="text-muted">No ticket items found for this order.</p>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-4">
-            <div class="block block-rounded">
-                <div class="block-header block-header-default">
-                    <h3 class="block-title">Order Details</h3>
-                </div>
-                <div class="block-content">
-                    <div class="mb-2"><strong>Status:</strong> {{ $statusLabel }}</div>
-                    <div class="mb-2"><strong>Payment Method:</strong> {{ $paymentMethodLabel }}</div>
-                    <div class="mb-2"><strong>Payment Status:</strong> {{ $paymentStatusLabel }}</div>
-                    <div class="mb-2"><strong>Approval Required:</strong> {{ $order->requires_approval ? 'Yes' : 'No' }}</div>
-                    <div class="mb-2"><strong>Approved At:</strong> {{ $order->approved_at?->format('d M Y, h:i A') ?? '-' }}</div>
-                    <div class="mb-2"><strong>Total Amount:</strong> {{ number_format((float) $order->total_amount, 2) }}</div>
-                </div>
-            </div>
-
-            <div class="block block-rounded">
-                <div class="block-header block-header-default">
-                    <h3 class="block-title">Customer</h3>
-                </div>
-                <div class="block-content">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center me-2" style="width:40px;height:40px;">
-                            {{ $customerInitials ?: 'NA' }}
-                        </div>
-                        <div>
-                            <div class="fw-semibold">{{ $order->customer?->full_name ?: 'N/A' }}</div>
-                            <div class="fs-sm text-muted">{{ $order->customer?->email ?: '-' }}</div>
-                        </div>
-                    </div>
-                    <div class="fs-sm"><strong>Phone:</strong> {{ $order->customer?->phone ?: '-' }}</div>
-                </div>
-            </div>
-        </div>
+    <div>
+      <div class="od-card"><div class="od-card-head"><div class="od-card-title">Activity</div></div><div class="od-card-body">
+        @forelse($history->take(8) as $entry)
+          <div class="od-info-row"><span class="od-info-label">{{ $entry->created_at?->format('d M, H:i') }}</span><span class="od-info-val" style="text-align:left">{{ $entry->description }}</span></div>
+        @empty
+          <div class="od-note-text">No recent activity.</div>
+        @endforelse
+      </div></div>
     </div>
+  </div>
 </div>
 @endsection
