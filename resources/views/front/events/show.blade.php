@@ -488,7 +488,7 @@
             <div class="col-md-12">
 
                 <!-- Event Hero Image + Countdown -->
-                <div class="kode_event_counter_section">
+                {{-- <div class="kode_event_counter_section">
                     <figure>
                         <img src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                         <ul class="countdown">
@@ -498,7 +498,7 @@
                             <li><span class="seconds last">00</span><p class="seconds_ref">sec</p></li>
                         </ul>
                     </figure>
-                </div>
+                </div> --}}
 
                 <!-- Event Meta -->
                 <div class="kode_event_conter_capstion">
@@ -512,52 +512,11 @@
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
-                <!-- Event Visuals -->
-                <div class="other-events">
-                    <div class="row">
-                        <div class="col-md-6 col-sm-6 col-xs-12">
-                            <div class="kode-event-place-holder">
-                                <figure>
-                                    <img src="{{ $event->images->first()?->path_url ?? $event->cover_image_url ?? asset('extra-images/event-n1.jpg') }}" alt="{{ $event->name }}">
-                                    <div class="event-frame-over">
-                                        <h2>EVENT DETAILS</h2>
-                                        <ul>
-                                            <li><h3>Start Date:</h3><span>{{ $event->event_date->format('d-m-y') }}</span></li>
-                                            <li><h3>Status:</h3><span>{{ str($event->status)->replace('_', ' ')->title() }}</span></li>
-                                            <li><h3>Location:</h3><span>{{ $event->location }}</span></li>
-                                        </ul>
-                                    </div>
-                                </figure>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-sm-6 col-xs-12">
-                            <div class="kode-event-place-holder">
-                                <figure>
-                                    <img src="{{ $event->images->skip(1)->first()?->path_url ?? $event->cover_image_url ?? asset('extra-images/event-n2.jpg') }}" alt="{{ $event->name }}">
-                                    <div class="event-frame-over">
-                                        <h2>EVENT DETAILS</h2>
-                                        <ul>
-                                            <li><h3>Doors Open:</h3><span>{{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}</span></li>
-                                            <li><h3>Map:</h3><span>{{ $event->map_url ? 'Available' : 'Not Provided' }}</span></li>
-                                            <li><h3>Venue:</h3><span>{{ $event->location }}</span></li>
-                                        </ul>
-                                    </div>
-                                </figure>
-                            </div>
-                        </div>
-
-                        <div class="col-md-12">
-                            <div class="kode-event-place-holder-capstion">
-                                {!! nl2br(e($event->description)) !!}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
 </section>
+<br>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!--  TICKET BOOKING SECTION                                      -->
