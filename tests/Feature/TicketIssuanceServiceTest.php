@@ -78,7 +78,7 @@ class TicketIssuanceServiceTest extends TestCase
             'customer_id' => $customer->id,
             'user_id' => $user->id,
             'order_number' => '2602270002',
-            'status' => 'approved_pending_payment',
+            'status' => 'pending_payment',
             'requires_approval' => true,
             'payment_method' => 'visa',
             'payment_status' => 'unpaid',

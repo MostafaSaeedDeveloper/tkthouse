@@ -22,12 +22,16 @@ class Ticket extends Model
         'holder_phone',
         'qr_payload',
         'issued_at',
+        'checked_in_at',
+        'canceled_at',
     ];
 
     protected function casts(): array
     {
         return [
             'issued_at' => 'datetime',
+            'checked_in_at' => 'datetime',
+            'canceled_at' => 'datetime',
         ];
     }
 

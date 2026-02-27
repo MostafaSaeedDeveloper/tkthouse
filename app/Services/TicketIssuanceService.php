@@ -52,11 +52,11 @@ class TicketIssuanceService
                         'name' => $item->ticket_name,
                         'price' => $item->ticket_price,
                         'description' => 'Issued from order #'.$order->order_number,
-                        'status' => 'active',
+                        'status' => 'not_checked_in',
                         'holder_name' => $item->holder_name,
                         'holder_email' => $item->holder_email,
                         'holder_phone' => $item->holder_phone,
-                        'qr_payload' => route('front.tickets.show', $issuedTicket),
+                        'qr_payload' => $issuedTicket->ticket_number,
                         'issued_at' => now(),
                     ]
                 );
@@ -81,7 +81,7 @@ class TicketIssuanceService
 
     private function ticketNumber(int $orderId, int $itemId, int $seatIndex): string
     {
-        return sprintf('TKT-%06d-%03d-%02d', $orderId, $itemId, $seatIndex);
+        return sprintf('%06d%03d%02d', $orderId, $itemId, $seatIndex);
     }
 
     private function sendWhatsapp(Order $order): void
