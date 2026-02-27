@@ -78,12 +78,6 @@
                             <ul class="playlist_menu_bar">
                                 @auth
                                     <li><a href="{{ route('front.account.dashboard') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
-                                    <li>
-                                        <form action="{{ route('front.customer.logout') }}" method="POST" style="display:inline;">
-                                            @csrf
-                                            <button type="submit" style="background:none;border:0;color:#fff;" title="Logout"><i class="fa fa-sign-out"></i></button>
-                                        </form>
-                                    </li>
                                 @else
                                     <li><a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a></li>
                                 @endauth
