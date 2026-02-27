@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -13,10 +14,12 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
+        $events = Event::query()->orderBy('name')->pluck('name');
+
         $tickets = Ticket::query()
             ->with('order')
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
-            ->when($request->filled('event'), fn ($query) => $query->where('event_name', 'like', '%'.$request->input('event').'%'))
+            ->when($request->filled('event'), fn ($query) => $query->where('event_name', 'like', $request->string('event').'%'))
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->input('search'));
 
@@ -31,7 +34,7 @@ class TicketController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.tickets.index', compact('tickets'));
+        return view('admin.tickets.index', compact('tickets', 'events'));
     }
 
     public function create()

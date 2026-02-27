@@ -20,7 +20,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="orders-status">Status</label>
-                    <select id="orders-status" name="status" class="form-select">
+                    <select id="orders-status" name="status" class="form-select js-admin-select2" data-placeholder="All statuses">
                         <option value="">All statuses</option>
                         @foreach(['pending_approval' => 'Pending Approval', 'pending_payment' => 'Pending Payment', 'on_hold' => 'On Hold', 'complete' => 'Complete', 'canceled' => 'Canceled', 'rejected' => 'Rejected'] as $value => $label)
                             <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
@@ -29,7 +29,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="orders-payment-method">Payment Method</label>
-                    <select id="orders-payment-method" name="payment_method" class="form-select">
+                    <select id="orders-payment-method" name="payment_method" class="form-select js-admin-select2" data-placeholder="All payment methods">
                         <option value="">All payment methods</option>
                         @foreach(['pending_review' => 'Pending Review', 'manual' => 'Manual', 'visa' => 'Visa', 'mada' => 'Mada', 'mastercard' => 'Mastercard', 'cash' => 'Cash', 'bank_transfer' => 'Bank Transfer'] as $value => $label)
                             <option value="{{ $value }}" @selected(request('payment_method') === $value)>{{ $label }}</option>

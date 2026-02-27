@@ -20,7 +20,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="tickets-status">Status</label>
-                    <select id="tickets-status" name="status" class="form-select">
+                    <select id="tickets-status" name="status" class="form-select js-admin-select2" data-placeholder="All statuses">
                         <option value="">All statuses</option>
                         @foreach(['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'] as $value => $label)
                             <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
@@ -29,7 +29,12 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="tickets-event">Event</label>
-                    <input type="text" id="tickets-event" name="event" class="form-control" value="{{ request('event') }}" placeholder="Event name">
+                    <select id="tickets-event" name="event" class="form-select js-admin-select2" data-placeholder="All events">
+                        <option value="">All events</option>
+                        @foreach($events as $eventName)
+                            <option value="{{ $eventName }}" @selected(request('event') === $eventName)>{{ $eventName }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100">Filter</button>
