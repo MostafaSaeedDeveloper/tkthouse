@@ -27,11 +27,11 @@
 <div class="row">
     <div class="col-md-6 mb-3">
         <label class="form-label">Event Name</label>
-        <input name="name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
+        <input name="name" id="event_name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
     </div>
     <div class="col-md-3 mb-3">
         <label class="form-label">Date</label>
-        <input type="date" name="event_date" class="form-control" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" required>
+        <input type="text" name="event_date" class="form-control js-flatpickr" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d" required>
     </div>
     <div class="col-md-3 mb-3">
         <label class="form-label">Time</label>
@@ -40,6 +40,10 @@
     <div class="col-md-6 mb-3">
         <label class="form-label">Location</label>
         <input name="location" class="form-control" value="{{ old('location', $event->location ?? '') }}" required>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Slug</label>
+        <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name">
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Map URL (Optional)</label>
@@ -219,5 +223,60 @@
             }
             coverPlaceholder?.classList.add('d-none');
         });
+
+
+        const nameInput = document.getElementById('event_name');
+        const slugInput = document.getElementById('event_slug');
+
+        const slugify = (value) => value
+            .toString()
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+
+        let slugManuallyEdited = false;
+
+        slugInput?.addEventListener('input', () => {
+            slugManuallyEdited = slugInput.value.trim().length > 0;
+            slugInput.value = slugify(slugInput.value);
+        });
+
+        nameInput?.addEventListener('input', () => {
+            if (!slugInput || slugManuallyEdited) {
+                return;
+            }
+
+            slugInput.value = slugify(nameInput.value);
+        });
+
+        const initEventDatePicker = () => {
+            if (typeof flatpickr === 'undefined') {
+                return;
+            }
+
+            const dateInputs = document.querySelectorAll('.js-flatpickr');
+            dateInputs.forEach((input) => {
+                if (input._flatpickr) {
+                    return;
+                }
+
+                flatpickr(input, {
+                    dateFormat: input.dataset.dateFormat || 'Y-m-d',
+                    allowInput: true,
+                    clickOpens: true,
+                });
+            });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initEventDatePicker);
+        } else {
+            initEventDatePicker();
+        }
+
+        window.addEventListener('load', initEventDatePicker);
+
     })();
 </script>

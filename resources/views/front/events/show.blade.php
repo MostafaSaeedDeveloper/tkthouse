@@ -540,6 +540,21 @@
 
     .tkt-house-rules-mobile { display: none; }
 
+    .tkt-event-map {
+        margin: 28px 0 12px;
+    }
+    .tkt-event-map h4 {
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 2px;
+        color: #fff;
+        margin-bottom: 14px;
+    }
+    .tkt-event-map iframe {
+        width: 100%;
+        min-height: 320px;
+        border: 0;
+    }
+
     @media (max-width: 767px) {
         .tkt-house-rules-desktop { display: none; }
         .tkt-house-rules-mobile {
@@ -587,6 +602,18 @@
                     </div>
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
+
+                @if($event->map_url)
+                    <div class="tkt-event-map">
+                        <h4>EVENT LOCATION MAP</h4>
+                        <iframe
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps?q={{ urlencode($event->map_url) }}&output=embed"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                @endif
 
             </div>
         </div>

@@ -14,6 +14,7 @@ class Event extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'event_date',
         'event_time',
         'location',
@@ -31,6 +32,38 @@ class Event extends Model
             'event_date' => 'date',
             'requires_booking_approval' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $event) {
+            if (empty($event->slug)) {
+                $event->slug = static::generateUniqueSlug($event->name, $event->id);
+            }
+        });
+    }
+
+    private static function generateUniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $baseSlug = Str::slug($name);
+        $baseSlug = $baseSlug !== '' ? $baseSlug : 'event';
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (static::query()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists()) {
+            $slug = $baseSlug.'-'.$counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 
     public function tickets()

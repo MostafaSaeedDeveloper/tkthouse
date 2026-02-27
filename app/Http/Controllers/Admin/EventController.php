@@ -8,6 +8,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class EventController extends Controller
 {
@@ -57,7 +59,7 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
-        $validated = $this->normalizeEventPayload($this->validateEvent($request, true));
+        $validated = $this->normalizeEventPayload($this->validateEvent($request, $event));
 
         DB::transaction(function () use ($request, $validated, $event) {
             if ($request->hasFile('cover_image')) {
@@ -92,16 +94,22 @@ class EventController extends Controller
     private function normalizeEventPayload(array $validated): array
     {
         $validated['description'] = $validated['description'] ?? '';
+        $validated['slug'] = Str::slug((string) ($validated['slug'] ?? ''));
+
+        if ($validated['slug'] === '') {
+            $validated['slug'] = null;
+        }
 
         return $validated;
     }
 
-    private function validateEvent(Request $request, bool $isUpdate = false): array
+    private function validateEvent(Request $request, ?Event $event = null): array
     {
         $coverRule = ['nullable', 'image', 'max:2048'];
 
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('events', 'slug')->ignore($event?->id)],
             'event_date' => ['required', 'date'],
             'event_time' => ['required'],
             'location' => ['required', 'string', 'max:255'],

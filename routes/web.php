@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [PagesController::class, 'home'])->name('front.home');
 Route::get('/about', [PagesController::class, 'about'])->name('front.about');
 Route::get('/events', [PagesController::class, 'events'])->name('front.events');
-Route::get('/events/{event}', [PagesController::class, 'eventShow'])->name('front.events.show');
+Route::get('/events/{event:slug}', [PagesController::class, 'eventShow'])->name('front.events.show');
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
 
 Route::middleware('guest')->group(function () {
