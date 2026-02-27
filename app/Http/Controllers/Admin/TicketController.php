@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -11,11 +12,29 @@ use Illuminate\Support\Facades\Mail;
 
 class TicketController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tickets = Ticket::query()->with('order')->latest()->paginate(15);
+        $events = Event::query()->orderBy('name')->pluck('name');
 
-        return view('admin.tickets.index', compact('tickets'));
+        $tickets = Ticket::query()
+            ->with('order')
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when($request->filled('event'), fn ($query) => $query->where('event_name', 'like', $request->string('event').'%'))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim((string) $request->input('search'));
+
+                $query->where(function ($nestedQuery) use ($search) {
+                    $nestedQuery->where('ticket_number', 'like', "%{$search}%")
+                        ->orWhere('holder_name', 'like', "%{$search}%")
+                        ->orWhere('holder_email', 'like', "%{$search}%")
+                        ->orWhereHas('order', fn ($orderQuery) => $orderQuery->where('order_number', 'like', "%{$search}%"));
+                });
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.tickets.index', compact('tickets', 'events'));
     }
 
     public function create()

@@ -7,6 +7,7 @@
   $statusLabel = ucwords(str_replace('_', ' ', (string) $order->status));
   $customerName = $order->customer?->full_name ?: 'N/A';
   $customerInitials = collect(explode(' ', $customerName))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('');
+  $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
 @endphp
 
 <style>
@@ -89,6 +90,15 @@
           <div class="od-info-row"><span class="od-info-label">Date</span><span class="od-info-val">{{ $order->created_at?->format('d M Y, H:i') }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_method)) }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Payment Status</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_status)) }}</span></div>
+          @if($order->status === 'pending_payment' && $paymentLink)
+            <div class="od-info-row" style="align-items:flex-start;">
+              <span class="od-info-label">Payment Link</span>
+              <div class="od-info-val" style="display:flex;gap:8px;align-items:center;max-width:70%;">
+                <input id="paymentLinkShow" type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" style="background:#15151b;border-color:rgba(255,255,255,.1);color:#dddde8;">
+                <button type="button" class="btn btn-sm btn-alt-secondary" data-copy-target="paymentLinkShow">Copy</button>
+              </div>
+            </div>
+          @endif
         </div>
       </div>
 
@@ -204,4 +214,23 @@
     </div>
   </div>
 </div>
+
+<script>
+(() => {
+  document.querySelectorAll('[data-copy-target]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const input = document.getElementById(button.dataset.copyTarget);
+      if (!input) return;
+      try {
+        await navigator.clipboard.writeText(input.value);
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+      } catch (e) {
+        input.select();
+        document.execCommand('copy');
+      }
+    });
+  });
+})();
+</script>
 @endsection

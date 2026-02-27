@@ -21,6 +21,8 @@
     'bank_transfer' => 'Bank Transfer',
   ];
 
+  $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
+
   $paymentStatusOptions = [
     'unpaid'           => 'Unpaid',
     'pending'          => 'Pending',
@@ -396,6 +398,15 @@
               <span class="oe-pricing-label">Email</span>
               <span class="oe-pricing-val" style="font-size:12px;">{{ $order->customer?->email ?: '-' }}</span>
             </div>
+            @if($order->status === 'pending_payment' && $paymentLink)
+            <div class="oe-pricing-row" style="display:block;">
+              <span class="oe-pricing-label" style="display:block;margin-bottom:8px;">Payment Link</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input id="paymentLinkEdit" type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" style="background:#15151b;border-color:rgba(255,255,255,.1);color:#dddde8;">
+                <button type="button" class="oe-btn" style="padding:6px 10px;" data-copy-target="paymentLinkEdit">Copy</button>
+              </div>
+            </div>
+            @endif
           </div>
         </div>
       </div>
@@ -447,6 +458,21 @@
   sel.addEventListener('change', function () {
     badge.className = 'oe-status-preview status-' + this.value;
     badge.textContent = statusMap[this.value] || this.value;
+  });
+
+  document.querySelectorAll('[data-copy-target]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const input = document.getElementById(button.dataset.copyTarget);
+      if (!input) return;
+      try {
+        await navigator.clipboard.writeText(input.value);
+        button.textContent = 'Copied';
+        setTimeout(() => { button.textContent = 'Copy'; }, 1200);
+      } catch (e) {
+        input.select();
+        document.execCommand('copy');
+      }
+    });
   });
 })();
 </script>
