@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemSettingController;
+use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
@@ -76,6 +77,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->name('settings.update');
+    Route::resource('payment-methods', PaymentMethodController::class)->except('show');
 });
 
 Route::redirect('/dashboard', '/admin/dashboard');

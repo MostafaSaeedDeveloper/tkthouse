@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use App\Models\Ticket;
 use App\Services\PaymobService;
 use App\Support\SystemSettings;
@@ -32,6 +33,7 @@ class CheckoutController extends Controller
                 'mode' => 'event_locked',
                 'eventSelection' => $eventSelection,
                 'buyer' => $buyer,
+                'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code']),
             ]);
         }
 
@@ -54,6 +56,7 @@ class CheckoutController extends Controller
             'legacyTickets' => $legacyTickets,
             'eventSelection' => null,
             'buyer' => $buyer,
+            'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code']),
         ]);
     }
 
@@ -89,7 +92,7 @@ class CheckoutController extends Controller
 
         return view('front.payment', [
             'order' => $order,
-            'paymobEnabled' => (bool) SystemSettings::get('paymob_enabled', false),
+            'paymobEnabled' => (bool) PaymentMethod::query()->where('code', 'paymob')->where('is_active', true)->exists(),
         ]);
     }
 

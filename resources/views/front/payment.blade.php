@@ -22,7 +22,7 @@
                             <div class="alert alert-danger">{{ $errors->first('payment') }}</div>
                         @endif
 
-                        @if($paymobEnabled)
+                        @if($paymobEnabled && $order->payment_method === 'paymob')
                             <a class="btn btn-primary w-100 mb-2" href="{{ route('front.orders.payment.paymob', ['order' => $order, 'token' => $order->payment_link_token]) }}">Pay with Paymob</a>
                         @endif
 

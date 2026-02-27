@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SystemSetting;
+use App\Models\PaymentMethod;
 
 class SystemSettings
 {
@@ -35,13 +36,7 @@ class SystemSettings
 
     public static function paymentMethods(): array
     {
-        $methods = static::get('payment_methods', ['visa', 'wallet']);
-
-        if (! is_array($methods) || empty($methods)) {
-            return ['visa', 'wallet'];
-        }
-
-        return array_values(array_intersect($methods, ['visa', 'wallet', 'paymob']));
+        return PaymentMethod::activeCodes();
     }
 
     private static function encode(mixed $value): ?string

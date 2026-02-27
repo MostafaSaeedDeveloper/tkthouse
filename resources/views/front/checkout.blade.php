@@ -1,7 +1,6 @@
 @extends('front.layout.master')
 @php
-    $enabledPaymentMethods = \App\Support\SystemSettings::paymentMethods();
-    $paymentMethodLabels = ['visa' => 'Visa / Card', 'wallet' => 'Wallet', 'paymob' => 'Paymob'];
+    $enabledPaymentMethods = collect($activePaymentMethods ?? [])->values();
     $paymentMethodIcons = ['visa' => '💳', 'wallet' => '👛', 'paymob' => '🏦'];
 @endphp
 
@@ -291,7 +290,7 @@
                             @else
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method }}" @checked(old('payment_method')===$method) required><span class="pay-icon">{{ $paymentMethodIcons[$method] ?? '💰' }}</span><span class="pay-name">{{ $paymentMethodLabels[$method] ?? ucfirst($method) }}</span></label>
+                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><span class="pay-icon">{{ $paymentMethodIcons[$method->code] ?? '💰' }}</span><span class="pay-name">{{ $method->name }}</span></label>
                                     @endforeach
                                 </div>
                             @endif
@@ -401,7 +400,7 @@
                             <div id="pay-now-box" style="display:none;">
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method }}"> <span class="pay-icon">{{ $paymentMethodIcons[$method] ?? '💰' }}</span><span class="pay-name">{{ $paymentMethodLabels[$method] ?? ucfirst($method) }}</span></label>
+                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <span class="pay-icon">{{ $paymentMethodIcons[$method->code] ?? '💰' }}</span><span class="pay-name">{{ $method->name }}</span></label>
                                     @endforeach
                                 </div>
                             </div>

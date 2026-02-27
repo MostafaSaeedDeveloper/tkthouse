@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
-use App\Support\SystemSettings;
+use App\Models\PaymentMethod;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -11,14 +11,25 @@ class PaymobService
 {
     public function createCheckoutUrl(Order $order): string
     {
-        $apiKey = (string) SystemSettings::get('paymob_api_key', '');
-        $iframeId = (string) SystemSettings::get('paymob_iframe_id', '');
+        $paymobMethod = PaymentMethod::query()
+            ->where('code', 'paymob')
+            ->where('provider', 'paymob')
+            ->where('is_active', true)
+            ->first();
 
-        if ($apiKey === '' || $iframeId === '') {
-            throw new RuntimeException('Paymob is not fully configured yet. Please add API Key and Iframe ID from System Settings.');
+        if (! $paymobMethod) {
+            throw new RuntimeException('Paymob payment method is disabled. Please enable it from Payment Methods settings.');
         }
 
-        $integrationId = $this->resolveIntegrationId((string) $order->payment_method);
+        $config = $paymobMethod->config ?? [];
+        $apiKey = (string) ($config['api_key'] ?? '');
+        $iframeId = (string) ($config['iframe_id'] ?? '');
+
+        if ($apiKey === '' || $iframeId === '') {
+            throw new RuntimeException('Paymob is not fully configured yet. Please complete Paymob settings in Payment Methods page.');
+        }
+
+        $integrationId = $this->resolveIntegrationId((string) $order->payment_method, $config);
         $authToken = $this->authenticate($apiKey);
         $paymobOrderId = $this->registerOrder($authToken, $order);
         $paymentKey = $this->createPaymentKey($authToken, $order, $paymobOrderId, $integrationId);
@@ -26,13 +37,13 @@ class PaymobService
         return 'https://accept.paymob.com/api/acceptance/iframes/'.$iframeId.'?payment_token='.$paymentKey;
     }
 
-    private function resolveIntegrationId(string $method): string
+    private function resolveIntegrationId(string $method, array $config): string
     {
         if ($method === 'wallet') {
-            return (string) SystemSettings::get('paymob_integration_id_wallet', '');
+            return (string) ($config['integration_id_wallet'] ?? '');
         }
 
-        return (string) SystemSettings::get('paymob_integration_id_card', '');
+        return (string) ($config['integration_id_card'] ?? '');
     }
 
     private function authenticate(string $apiKey): string
