@@ -2,6 +2,8 @@
 
 @section('content')
 
+<link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -144,8 +146,8 @@
 
         <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
             <input type="hidden" name="range" value="custom">
-            <input type="date" name="from" class="db-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}">
-            <input type="date" name="to" class="db-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}">
+            <input type="text" name="from" class="db-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
+            <input type="text" name="to" class="db-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
             <button type="submit" class="db-filter-apply">Apply</button>
         </form>
     </div>
@@ -366,6 +368,17 @@
      ║   data:   {!! json_encode($revenueData) !!}
      ║   (same for orders chart)            ║
      ╚══════════════════════════════════════╝ --}}
+<script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
+<script>
+window.addEventListener('load', function () {
+    if (window.Dashmix && typeof Dashmix.helpersOnLoad === 'function') {
+        Dashmix.helpersOnLoad(['js-flatpickr']);
+    } else if (typeof flatpickr !== 'undefined') {
+        flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y' });
+    }
+});
+</script>
+
 <script>
 (function () {
     const gold    = '#f5b800';
