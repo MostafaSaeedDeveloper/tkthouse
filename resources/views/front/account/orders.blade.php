@@ -4,7 +4,7 @@
 <div class="sub-banner"><div class="container"><h6>My Dashboard</h6></div></div>
 <section class="py-5" style="background:#090909;color:#fff;">
     <div class="container">
-        @include('front.account.partials.tabs')
+        @include('front.account.partials.navigation')
 
         <div class="card bg-dark border-secondary">
             <div class="card-header border-secondary text-warning">My Orders</div>

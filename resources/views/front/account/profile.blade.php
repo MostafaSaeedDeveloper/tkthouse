@@ -8,7 +8,7 @@
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
 
-        @include('front.account.partials.tabs')
+        @include('front.account.partials.navigation')
 
         <div class="row g-4">
             <div class="col-lg-4">
@@ -69,7 +69,7 @@
                                 <button class="btn btn-warning" type="submit">
                                     <i class="si si-check me-1"></i>Save Changes
                                 </button>
-                                <a href="{{ route('front.account.dashboard') }}" class="btn btn-outline-light">Back to Overview</a>
+                                <a href="{{ route('front.account.orders') }}" class="btn btn-outline-light">View Orders</a>
                             </div>
                         </form>
                     </div>

@@ -31,7 +31,7 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
-    Route::get('/account/dashboard', [CustomerDashboardController::class, 'index'])->name('front.account.dashboard');
+    Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
     Route::get('/account/profile', [CustomerDashboardController::class, 'profile'])->name('front.account.profile');
     Route::put('/account/profile', [CustomerDashboardController::class, 'updateProfile'])->name('front.account.profile.update');
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');

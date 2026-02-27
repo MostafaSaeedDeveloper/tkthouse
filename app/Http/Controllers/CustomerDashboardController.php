@@ -10,18 +10,6 @@ use Illuminate\Validation\Rule;
 
 class CustomerDashboardController extends Controller
 {
-    public function index(Request $request)
-    {
-        $user = $request->user();
-
-        $ordersCount = $this->ordersQuery($user)->count();
-        $ticketsCount = $this->ticketsQuery($user)->count();
-        $latestOrders = $this->ordersQuery($user)->latest()->limit(5)->get();
-        $latestTickets = $this->ticketsQuery($user)->with('order')->latest()->limit(5)->get();
-
-        return view('front.account.dashboard', compact('user', 'ordersCount', 'ticketsCount', 'latestOrders', 'latestTickets'));
-    }
-
     public function profile(Request $request)
     {
         return view('front.account.profile', ['user' => $request->user()]);
