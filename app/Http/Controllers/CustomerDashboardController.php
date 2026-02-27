@@ -14,25 +14,41 @@ class CustomerDashboardController extends Controller
     {
         $user = $request->user();
 
-        $orders = Order::query()
+        $ordersCount = $this->ordersQuery($user)->count();
+        $ticketsCount = $this->ticketsQuery($user)->count();
+        $latestOrders = $this->ordersQuery($user)->latest()->limit(5)->get();
+        $latestTickets = $this->ticketsQuery($user)->with('order')->latest()->limit(5)->get();
+
+        return view('front.account.dashboard', compact('user', 'ordersCount', 'ticketsCount', 'latestOrders', 'latestTickets'));
+    }
+
+    public function profile(Request $request)
+    {
+        return view('front.account.profile', ['user' => $request->user()]);
+    }
+
+    public function orders(Request $request)
+    {
+        $user = $request->user();
+
+        $orders = $this->ordersQuery($user)
             ->with(['items', 'customer', 'issuedTickets'])
-            ->where(function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                    ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
-            })
             ->latest()
-            ->paginate(10, ['*'], 'orders_page');
+            ->paginate(10);
 
-        $tickets = IssuedTicket::query()
+        return view('front.account.orders', compact('user', 'orders'));
+    }
+
+    public function tickets(Request $request)
+    {
+        $user = $request->user();
+
+        $tickets = $this->ticketsQuery($user)
             ->with(['order'])
-            ->whereHas('order', function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                    ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
-            })
             ->latest()
-            ->paginate(10, ['*'], 'tickets_page');
+            ->paginate(10);
 
-        return view('front.account.dashboard', compact('orders', 'tickets', 'user'));
+        return view('front.account.tickets', compact('user', 'tickets'));
     }
 
     public function updateProfile(Request $request)
@@ -56,6 +72,22 @@ class CustomerDashboardController extends Controller
 
         $user->update($validated);
 
-        return back()->with('success', 'Profile updated successfully.');
+        return redirect()->route('front.account.profile')->with('success', 'Profile updated successfully.');
+    }
+
+    private function ordersQuery($user)
+    {
+        return Order::query()->where(function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
+        });
+    }
+
+    private function ticketsQuery($user)
+    {
+        return IssuedTicket::query()->whereHas('order', function ($query) use ($user) {
+            $query->where('user_id', $user->id)
+                ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
+        });
     }
 }
