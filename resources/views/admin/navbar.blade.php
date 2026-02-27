@@ -48,7 +48,7 @@
       <li class="nav-main-item">
         <a class="nav-main-link {{ request()->routeIs('admin.events.*') ? 'active' : '' }}"
            href="{{ route('admin.events.index') }}">
-          <i class="nav-main-link-icon fa fa-calendar-star"></i>
+          <i class="nav-main-link-icon fa fa-calendar-alt"></i>
           <span class="nav-main-link-name">Events</span>
         </a>
       </li>
