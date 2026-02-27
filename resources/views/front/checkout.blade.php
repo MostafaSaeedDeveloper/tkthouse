@@ -172,7 +172,7 @@
             </div>
         @endif
 
-        @php $buyer = $buyer ?? ['first_name'=>'','last_name'=>'','email'=>'','phone'=>'','address'=>'']; @endphp
+        @php $buyer = $buyer ?? ['first_name'=>'','last_name'=>'','email'=>'','phone'=>'']; @endphp
 
         {{-- ================================================================
              MODE: EVENT LOCKED
@@ -202,7 +202,6 @@
                                 <div class="co-field"><label>Email</label> <input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
                                 <div class="co-field"><label>Phone</label> <input name="phone" placeholder="+1 234 567 890"   value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
-                            <div class="co-field"><label>Address</label><input name="address" placeholder="Street, City" value="{{ old('address',$buyer['address']) }}"></div>
                         </div>
 
                         {{-- Attendee Stepper --}}
@@ -282,7 +281,7 @@
                         <div class="co-label">Payment Method</div>
                         <div class="co-card">
                             @if($requiresApproval)
-                                <div class="co-pay-pending">🕐 &nbsp; Pending Admin Review</div>
+                                <div class="co-pay-pending">🕐 &nbsp; Need Approval</div>
                             @else
                                 <div class="co-pay-options">
                                     <label class="co-pay-opt"><input type="radio" name="payment_method" value="visa"   @checked(old('payment_method')==='visa')   required><span class="pay-icon">💳</span><span class="pay-name">Visa / Card</span></label>
@@ -385,13 +384,12 @@
                                 <div class="co-field"><label>Email</label><input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
                                 <div class="co-field"><label>Phone</label><input name="phone" placeholder="+1 234 567 890" value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
-                            <div class="co-field"><label>Address</label><input name="address" placeholder="Street, City" value="{{ old('address',$buyer['address']) }}"></div>
                         </div>
 
                         <div class="co-label">Payment Method</div>
                         <div class="co-card">
                             <div id="pending-review-box">
-                                <div class="co-pay-pending">🕐 &nbsp; Pending Admin Review</div>
+                                <div class="co-pay-pending">🕐 &nbsp; Need Approval</div>
                             </div>
                             <div id="pay-now-box" style="display:none;">
                                 <div class="co-pay-options">

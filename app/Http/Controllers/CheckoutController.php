@@ -61,7 +61,6 @@ class CheckoutController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
         ]);
 
         $eventSelection = session('checkout.event_selection');
@@ -310,7 +309,6 @@ class CheckoutController extends Controller
                 'first_name' => $baseValidated['first_name'],
                 'last_name' => $baseValidated['last_name'],
                 'phone' => $baseValidated['phone'] ?? null,
-                'address' => $baseValidated['address'] ?? null,
             ]
         );
     }
@@ -326,7 +324,6 @@ class CheckoutController extends Controller
             'last_name' => $customer?->last_name ?? ($nameParts[1] ?? ''),
             'email' => $user->email,
             'phone' => $customer?->phone ?? '',
-            'address' => $customer?->address ?? '',
         ];
     }
 

@@ -35,7 +35,6 @@
             <p class="mb-1"><strong>{{ $order->customer?->full_name }}</strong></p>
             <p class="mb-1">{{ $order->customer?->email }}</p>
             <p class="mb-1">{{ $order->customer?->phone }}</p>
-            <p class="mb-0">{{ $order->customer?->address }}</p>
         </div>
     </div>
 
