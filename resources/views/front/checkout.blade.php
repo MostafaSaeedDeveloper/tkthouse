@@ -1,4 +1,10 @@
 @extends('front.layout.master')
+@php
+    $enabledPaymentMethods = \App\Support\SystemSettings::paymentMethods();
+    $paymentMethodLabels = ['visa' => 'Visa / Card', 'wallet' => 'Wallet', 'paymob' => 'Paymob'];
+    $paymentMethodIcons = ['visa' => '💳', 'wallet' => '👛', 'paymob' => '🏦'];
+@endphp
+
 
 @section('content')
 
@@ -284,8 +290,9 @@
                                 <div class="co-pay-pending">🕐 &nbsp; Need Approval</div>
                             @else
                                 <div class="co-pay-options">
-                                    <label class="co-pay-opt"><input type="radio" name="payment_method" value="visa"   @checked(old('payment_method')==='visa')   required><span class="pay-icon">💳</span><span class="pay-name">Visa / Card</span></label>
-                                    <label class="co-pay-opt"><input type="radio" name="payment_method" value="wallet" @checked(old('payment_method')==='wallet') required><span class="pay-icon">👛</span><span class="pay-name">Wallet</span></label>
+                                    @foreach($enabledPaymentMethods as $method)
+                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method }}" @checked(old('payment_method')===$method) required><span class="pay-icon">{{ $paymentMethodIcons[$method] ?? '💰' }}</span><span class="pay-name">{{ $paymentMethodLabels[$method] ?? ucfirst($method) }}</span></label>
+                                    @endforeach
                                 </div>
                             @endif
                         </div>
@@ -393,8 +400,9 @@
                             </div>
                             <div id="pay-now-box" style="display:none;">
                                 <div class="co-pay-options">
-                                    <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="visa">  <span class="pay-icon">💳</span><span class="pay-name">Visa / Card</span></label>
-                                    <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="wallet"><span class="pay-icon">👛</span><span class="pay-name">Wallet</span></label>
+                                    @foreach($enabledPaymentMethods as $method)
+                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method }}"> <span class="pay-icon">{{ $paymentMethodIcons[$method] ?? '💰' }}</span><span class="pay-name">{{ $paymentMethodLabels[$method] ?? ucfirst($method) }}</span></label>
+                                    @endforeach
                                 </div>
                             </div>
                             <div class="co-flow-note" id="checkout-flow-note"></div>

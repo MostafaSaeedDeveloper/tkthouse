@@ -18,6 +18,14 @@
                         </ul>
                         <h5>Total: {{ number_format($order->total_amount, 2) }} EGP</h5>
 
+                                                @if($errors->has('payment'))
+                            <div class="alert alert-danger">{{ $errors->first('payment') }}</div>
+                        @endif
+
+                        @if($paymobEnabled)
+                            <a class="btn btn-primary w-100 mb-2" href="{{ route('front.orders.payment.paymob', ['order' => $order, 'token' => $order->payment_link_token]) }}">Pay with Paymob</a>
+                        @endif
+
                         <form method="POST" action="{{ route('front.orders.payment.confirm', ['order' => $order, 'token' => $order->payment_link_token]) }}">
                             @csrf
                             <button class="btn btn-warning w-100">Confirm Payment</button>

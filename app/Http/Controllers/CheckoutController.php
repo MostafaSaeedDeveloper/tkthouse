@@ -7,6 +7,8 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\PaymobService;
+use App\Support\SystemSettings;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -85,7 +87,25 @@ class CheckoutController extends Controller
 
         $order->load(['items', 'customer']);
 
-        return view('front.payment', compact('order'));
+        return view('front.payment', [
+            'order' => $order,
+            'paymobEnabled' => (bool) SystemSettings::get('paymob_enabled', false),
+        ]);
+    }
+
+    public function paymobRedirect(Request $request, Order $order, string $token, PaymobService $paymobService)
+    {
+        abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
+        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
+        abort_unless($order->status === 'pending_payment', 404);
+
+        try {
+            $url = $paymobService->createCheckoutUrl($order->loadMissing('customer'));
+        } catch (\Throwable $exception) {
+            return back()->withErrors(['payment' => $exception->getMessage()]);
+        }
+
+        return redirect()->away($url);
     }
 
     public function confirmPayment(Request $request, Order $order, string $token)
@@ -160,7 +180,7 @@ class CheckoutController extends Controller
 
         if (! $requiresApproval) {
             $request->validate([
-                'payment_method' => ['required', 'in:visa,wallet'],
+                    'payment_method' => ['required', 'in:'.implode(',', SystemSettings::paymentMethods())],
             ]);
         }
 
@@ -264,7 +284,7 @@ class CheckoutController extends Controller
 
         if (! $requiresApproval) {
             $request->validate([
-                'payment_method' => ['required', 'in:visa,wallet'],
+                'payment_method' => ['required', 'in:'.implode(',', SystemSettings::paymentMethods())],
             ]);
         }
 

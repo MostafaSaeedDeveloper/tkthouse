@@ -8,7 +8,7 @@
   <div class="content-header bg-white-5">
     <a href="{{ route('admin.dashboard') }}"
        style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;line-height:1;">
-                  <img style="height: 30px" src="{{asset('images/logo-light.png')}}" alt="">
+                  <img style="height: 30px" src="{{ \App\Support\SystemSettings::get('site_logo_light') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_light')) : asset('images/logo-light.png') }}" alt="{{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}">
 
     </a>
     <div class="d-flex align-items-center gap-1">
@@ -92,6 +92,15 @@
 
       {{-- Separator --}}
       <li class="nav-main-heading">System</li>
+
+
+      <li class="nav-main-item">
+        <a class="nav-main-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}"
+           href="{{ route('admin.settings.edit') }}">
+          <i class="nav-main-link-icon fa fa-gear"></i>
+          <span class="nav-main-link-name">Settings</span>
+        </a>
+      </li>
 
       {{-- Users submenu --}}
       <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
