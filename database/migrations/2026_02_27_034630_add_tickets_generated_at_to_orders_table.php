@@ -8,15 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->timestamp('tickets_generated_at')->nullable()->after('approved_at');
-        });
+        if (! Schema::hasColumn('orders', 'tickets_generated_at')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->timestamp('tickets_generated_at')->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn('tickets_generated_at');
-        });
+        if (Schema::hasColumn('orders', 'tickets_generated_at')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn('tickets_generated_at');
+            });
+        }
     }
 };
