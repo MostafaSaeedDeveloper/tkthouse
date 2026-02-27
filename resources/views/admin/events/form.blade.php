@@ -44,7 +44,6 @@
     <div class="col-md-6 mb-3">
         <label class="form-label">Slug</label>
         <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name">
-        <div class="form-text">Auto-generated from event name. You can edit it.</div>
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Map URL (Optional)</label>
@@ -252,11 +251,32 @@
             slugInput.value = slugify(nameInput.value);
         });
 
-        if (typeof Dashmix !== 'undefined' && typeof Dashmix.helpersOnLoad === 'function') {
-            Dashmix.helpersOnLoad(['js-flatpickr']);
-        } else if (typeof flatpickr !== 'undefined') {
-            flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d' });
+        const initEventDatePicker = () => {
+            if (typeof flatpickr === 'undefined') {
+                return;
+            }
+
+            const dateInputs = document.querySelectorAll('.js-flatpickr');
+            dateInputs.forEach((input) => {
+                if (input._flatpickr) {
+                    return;
+                }
+
+                flatpickr(input, {
+                    dateFormat: input.dataset.dateFormat || 'Y-m-d',
+                    allowInput: true,
+                    clickOpens: true,
+                });
+            });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initEventDatePicker);
+        } else {
+            initEventDatePicker();
         }
+
+        window.addEventListener('load', initEventDatePicker);
 
     })();
 </script>
