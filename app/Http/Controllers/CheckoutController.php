@@ -337,7 +337,8 @@ class CheckoutController extends Controller
     private function generateNumericOrderNumber(): string
     {
         do {
-            $candidate = now()->format('YmdHis').str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT);
+            // Short numeric format: yymmdd + 4 random digits (10 digits total)
+            $candidate = now()->format('ymd').str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
         } while (Order::query()->where('order_number', $candidate)->exists());
 
         return $candidate;
