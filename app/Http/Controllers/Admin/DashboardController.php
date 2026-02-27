@@ -74,6 +74,7 @@ class DashboardController extends Controller
             'this_month' => 'This Month',
             'last_month' => 'Last Month',
             'all' => 'All Time',
+            'custom' => 'Custom Range',
         ];
 
         return view('admin.index', compact(
