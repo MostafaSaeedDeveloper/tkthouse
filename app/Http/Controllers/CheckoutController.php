@@ -93,10 +93,22 @@ class CheckoutController extends Controller
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'approved_pending_payment', 404);
 
+        $oldStatus = $order->status;
+
         $order->update([
             'status' => 'paid',
             'payment_status' => 'paid',
         ]);
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties([
+                'from_status' => $oldStatus,
+                'to_status' => $order->status,
+                'payment_status' => $order->payment_status,
+            ])
+            ->log('Payment confirmed');
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Payment completed successfully.');
     }
@@ -185,6 +197,16 @@ class CheckoutController extends Controller
             }
 
             $order->update(['total_amount' => $total]);
+
+            activity('orders')
+                ->performedOn($order)
+                ->causedBy($request->user())
+                ->withProperties([
+                    'to_status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'total_amount' => (float) $order->total_amount,
+                ])
+                ->log('Order submitted');
         });
 
         session()->forget('checkout.event_selection');
@@ -296,6 +318,16 @@ class CheckoutController extends Controller
             }
 
             $order->update(['total_amount' => $total]);
+
+            activity('orders')
+                ->performedOn($order)
+                ->causedBy($request->user())
+                ->withProperties([
+                    'to_status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'total_amount' => (float) $order->total_amount,
+                ])
+                ->log('Order submitted');
         });
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');

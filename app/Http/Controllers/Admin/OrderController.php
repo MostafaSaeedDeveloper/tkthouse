@@ -31,7 +31,40 @@ class OrderController extends Controller
         $notes = $activities->where('log_name', 'order_notes')->values();
         $history = $activities->where('log_name', '!=', 'order_notes')->values();
 
-        return view('admin.orders.show', compact('order', 'notes', 'history'));
+        $statusTransitions = $history
+            ->filter(fn ($log) => filled(data_get($log->properties, 'to_status')))
+            ->sortBy('created_at')
+            ->values();
+
+        $submittedAt = optional($history->firstWhere('description', 'Order submitted'))->created_at ?? $order->created_at;
+        $approvalQueuedAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_approval'))->created_at;
+        $paymentLinkSentAt = optional($statusTransitions->firstWhere('properties.to_status', 'approved_pending_payment'))->created_at;
+        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'paid'))->created_at;
+
+        $activityTimeline = collect([
+            [
+                'label' => 'Order submitted',
+                'at' => $submittedAt,
+                'done' => true,
+            ],
+            [
+                'label' => $order->requires_approval ? 'Awaiting admin approval' : 'Awaiting payment',
+                'at' => $order->requires_approval ? ($approvalQueuedAt ?? $order->created_at) : $order->created_at,
+                'done' => true,
+            ],
+            [
+                'label' => 'Payment link sent',
+                'at' => $paymentLinkSentAt,
+                'done' => filled($paymentLinkSentAt),
+            ],
+            [
+                'label' => 'Payment confirmed',
+                'at' => $paymentConfirmedAt,
+                'done' => filled($paymentConfirmedAt),
+            ],
+        ]);
+
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline'));
     }
 
     public function edit(Order $order)
@@ -55,6 +88,10 @@ class OrderController extends Controller
             'items.*.holder_email' => ['required', 'email', 'max:255'],
             'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $oldStatus = $order->status;
+        $oldPaymentStatus = $order->payment_status;
+        $oldPaymentMethod = $order->payment_method;
 
         $order->update([
             'status' => $validated['status'],
@@ -92,15 +129,29 @@ class OrderController extends Controller
             ->performedOn($order)
             ->causedBy($request->user())
             ->withProperties([
-                'status' => $order->status,
-                'payment_status' => $order->payment_status,
+                'from_status' => $oldStatus,
+                'to_status' => $order->status,
+                'from_payment_status' => $oldPaymentStatus,
+                'to_payment_status' => $order->payment_status,
+                'from_payment_method' => $oldPaymentMethod,
+                'to_payment_method' => $order->payment_method,
                 'total_amount' => (float) $order->total_amount,
             ])
             ->log('Order updated');
 
+        if ($oldStatus !== $order->status) {
+            activity('orders')
+                ->performedOn($order)
+                ->causedBy($request->user())
+                ->withProperties([
+                    'from_status' => $oldStatus,
+                    'to_status' => $order->status,
+                ])
+                ->log('Order status changed');
+        }
+
         return redirect()->route('admin.orders.show', $order)->with('success', 'Order updated successfully.');
     }
-
 
     public function storeNote(Request $request, Order $order)
     {
@@ -123,6 +174,8 @@ class OrderController extends Controller
             return back()->with('error', 'Only pending approval orders can be approved.');
         }
 
+        $oldStatus = $order->status;
+
         $order->update([
             'status' => 'approved_pending_payment',
             'approved_at' => now(),
@@ -132,6 +185,10 @@ class OrderController extends Controller
         activity('orders')
             ->performedOn($order)
             ->causedBy($request->user())
+            ->withProperties([
+                'from_status' => $oldStatus,
+                'to_status' => $order->status,
+            ])
             ->log('Order approved and payment link created');
 
         $paymentLink = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
