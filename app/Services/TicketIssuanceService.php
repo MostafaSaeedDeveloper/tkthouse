@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
+use App\Models\Ticket;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -18,13 +19,13 @@ class TicketIssuanceService
         $order->unsetRelation('issuedTickets');
         $order->load(['items', 'customer']);
 
-        if ($order->status !== 'paid' && $order->payment_status !== 'paid') {
+        if ($order->status !== 'complete' || $order->payment_status !== 'paid') {
             return;
         }
 
         foreach ($order->items as $item) {
             for ($seatIndex = 1; $seatIndex <= (int) $item->quantity; $seatIndex++) {
-                IssuedTicket::firstOrCreate(
+                $issuedTicket = IssuedTicket::firstOrCreate(
                     [
                         'order_item_id' => $item->id,
                         'seat_index' => $seatIndex,
@@ -38,6 +39,25 @@ class TicketIssuanceService
                         'holder_phone' => $item->holder_phone,
                         'ticket_name' => $item->ticket_name,
                         'ticket_price' => $item->ticket_price,
+                    ]
+                );
+
+                Ticket::firstOrCreate(
+                    [
+                        'ticket_number' => $issuedTicket->ticket_number,
+                    ],
+                    [
+                        'order_id' => $order->id,
+                        'order_item_id' => $item->id,
+                        'name' => $item->ticket_name,
+                        'price' => $item->ticket_price,
+                        'description' => 'Issued from order #'.$order->order_number,
+                        'status' => 'active',
+                        'holder_name' => $item->holder_name,
+                        'holder_email' => $item->holder_email,
+                        'holder_phone' => $item->holder_phone,
+                        'qr_payload' => route('front.tickets.show', $issuedTicket),
+                        'issued_at' => now(),
                     ]
                 );
             }

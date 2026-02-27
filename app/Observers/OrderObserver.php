@@ -18,6 +18,6 @@ class OrderObserver
 
     private function isPaid(Order $order): bool
     {
-        return $order->status === 'paid' || $order->payment_status === 'paid';
+        return $order->status === 'complete' && $order->payment_status === 'paid';
     }
 }

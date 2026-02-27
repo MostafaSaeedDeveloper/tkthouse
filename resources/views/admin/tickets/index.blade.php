@@ -11,11 +11,20 @@
         <div class="block-content p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-vcenter mb-0">
-                    <thead><tr><th>Name</th><th>Price</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Ticket #</th><th>Holder</th><th>QR</th><th>Price</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
                     <tbody>
                         @forelse($tickets as $ticket)
                         <tr>
                             <td>{{ $ticket->name }}</td>
+                            <td>{{ $ticket->ticket_number ?? '-' }}</td>
+                            <td>{{ $ticket->holder_name ?? '-' }}</td>
+                            <td>
+                                @if($ticket->qr_payload)
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data={{ urlencode($ticket->qr_payload) }}" alt="QR" style="width:52px;height:52px;">
+                                @else
+                                    -
+                                @endif
+                            </td>
                             <td>{{ number_format($ticket->price,2) }}</td>
                             <td>{{ ucfirst($ticket->status) }}</td>
                             <td class="text-end">
@@ -24,7 +33,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="4" class="text-center py-4 text-muted">No tickets found.</td></tr>
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No tickets found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

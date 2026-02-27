@@ -81,7 +81,7 @@ class CheckoutController extends Controller
     {
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-        abort_unless($order->status === 'approved_pending_payment', 404);
+        abort_unless($order->status === 'pending_payment', 404);
 
         $order->load(['items', 'customer']);
 
@@ -92,12 +92,12 @@ class CheckoutController extends Controller
     {
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-        abort_unless($order->status === 'approved_pending_payment', 404);
+        abort_unless($order->status === 'pending_payment', 404);
 
         $oldStatus = $order->status;
 
         $order->update([
-            'status' => 'paid',
+            'status' => 'complete',
             'payment_status' => 'paid',
         ]);
 

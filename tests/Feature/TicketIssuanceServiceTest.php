@@ -32,7 +32,7 @@ class TicketIssuanceServiceTest extends TestCase
             'customer_id' => $customer->id,
             'user_id' => $user->id,
             'order_number' => '2602270001',
-            'status' => 'paid',
+            'status' => 'complete',
             'requires_approval' => false,
             'payment_method' => 'visa',
             'payment_status' => 'paid',
@@ -53,15 +53,16 @@ class TicketIssuanceServiceTest extends TestCase
         app(TicketIssuanceService::class)->issueIfPaid($order);
 
         $this->assertDatabaseCount('issued_tickets', 2);
+        $this->assertDatabaseCount('tickets', 2);
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
-            'status' => 'paid',
+            'status' => 'complete',
         ]);
 
         Mail::assertSent(OrderTicketsIssuedMail::class, 1);
     }
 
-    public function test_it_generates_tickets_when_payment_status_becomes_paid_even_if_status_not_paid(): void
+    public function test_it_generates_tickets_only_when_status_is_complete_and_payment_is_paid(): void
     {
         Mail::fake();
 
@@ -99,7 +100,14 @@ class TicketIssuanceServiceTest extends TestCase
             'payment_status' => 'paid',
         ]);
 
+        $this->assertDatabaseCount('issued_tickets', 0);
+
+        $order->update([
+            'status' => 'complete',
+        ]);
+
         $this->assertDatabaseCount('issued_tickets', 1);
+        $this->assertDatabaseCount('tickets', 1);
 
         Mail::assertSent(OrderTicketsIssuedMail::class, 1);
     }

@@ -39,8 +39,8 @@ class OrderController extends Controller
 
         $submittedAt = optional($history->firstWhere('description', 'Order submitted'))->created_at ?? $order->created_at;
         $approvalQueuedAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_approval'))->created_at;
-        $paymentLinkSentAt = optional($statusTransitions->firstWhere('properties.to_status', 'approved_pending_payment'))->created_at;
-        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'paid'))->created_at;
+        $paymentLinkSentAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_payment'))->created_at;
+        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'complete'))->created_at;
 
         $activityTimeline = collect([
             [
@@ -78,9 +78,9 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'status' => ['required', 'string', 'max:100'],
+            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,complete,canceled,rejected'],
             'payment_method' => ['required', 'string', 'max:100'],
-            'payment_status' => ['required', 'string', 'max:100'],
+            'payment_status' => ['required', 'in:unpaid,pending,paid,refunded,partially_refunded'],
             'requires_approval' => ['nullable', 'boolean'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
@@ -99,7 +99,7 @@ class OrderController extends Controller
             'payment_method' => $validated['payment_method'],
             'payment_status' => $validated['payment_status'],
             'requires_approval' => (bool) ($validated['requires_approval'] ?? false),
-            'approved_at' => $validated['status'] === 'approved_pending_payment' ? ($order->approved_at ?? now()) : null,
+            'approved_at' => $validated['status'] === 'pending_payment' ? ($order->approved_at ?? now()) : null,
         ]);
 
         $total = 0;
@@ -180,7 +180,7 @@ class OrderController extends Controller
         $oldStatus = $order->status;
 
         $order->update([
-            'status' => 'approved_pending_payment',
+            'status' => 'pending_payment',
             'approved_at' => now(),
             'payment_link_token' => Str::random(40),
         ]);

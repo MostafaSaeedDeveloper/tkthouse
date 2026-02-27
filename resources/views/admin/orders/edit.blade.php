@@ -5,11 +5,12 @@
   $displayOrderNumber = preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number;
 
   $statusOptions = [
-    'pending'                   => 'Pending',
-    'pending_approval'          => 'Pending Approval',
-    'approved_pending_payment'  => 'Approved – Pending Payment',
-    'paid'                      => 'Paid',
-    'rejected'                  => 'Rejected',
+    'pending_approval' => 'Pending Approval',
+    'pending_payment' => 'Pending Payment',
+    'on_hold' => 'On Hold',
+    'complete' => 'Complete',
+    'canceled' => 'Canceled',
+    'rejected' => 'Rejected',
   ];
 
   $paymentMethodOptions = [
@@ -178,9 +179,10 @@
   font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
   letter-spacing: 0.5px; padding: 4px 12px; border-radius: 99px;
 }
-.status-pending, .status-pending_approval { color: #f5b800; background: rgba(245,184,0,.12); border: 1px solid rgba(245,184,0,.25); }
-.status-approved_pending_payment, .status-paid { color: #22c55e; background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.25); }
-.status-rejected { color: #e8445a; background: rgba(232,68,90,.10); border: 1px solid rgba(232,68,90,.25); }
+.status-pending_approval, .status-pending_payment { color: #f5b800; background: rgba(245,184,0,.12); border: 1px solid rgba(245,184,0,.25); }
+.status-on_hold { color: #60a5fa; background: rgba(96,165,250,.10); border: 1px solid rgba(96,165,250,.25); }
+.status-complete { color: #22c55e; background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.25); }
+.status-canceled, .status-rejected { color: #e8445a; background: rgba(232,68,90,.10); border: 1px solid rgba(232,68,90,.25); }
 </style>
 
 <div class="content oe-wrap">
@@ -432,11 +434,12 @@
 
   // Status badge live preview
   const statusMap = {
-    pending:                   'Pending',
-    pending_approval:          'Pending Approval',
-    approved_pending_payment:  'Approved – Pending Payment',
-    paid:                      'Paid',
-    rejected:                  'Rejected',
+    pending_approval: 'Pending Approval',
+    pending_payment:  'Pending Payment',
+    on_hold:          'On Hold',
+    complete:         'Complete',
+    canceled:         'Canceled',
+    rejected:         'Rejected',
   };
   const sel   = document.getElementById('statusSelect');
   const badge = document.getElementById('statusBadge');
