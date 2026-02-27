@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Event;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class EventsSeeder extends Seeder
 {
@@ -15,7 +16,7 @@ class EventsSeeder extends Seeder
                 'event_date' => now()->addWeeks(3)->toDateString(),
                 'event_time' => '21:00:00',
                 'location' => 'Cairo, Egypt',
-                'map_url' => null,
+                'map_url' => 'https://maps.google.com/?q=Cairo+Egypt',
                 'description' => 'Sideral event seeded from ticket-easy reference source.',
                 'house_rules' => 'No outside food or drinks. Respect venue rules. 18+ entry.',
                 'status' => 'active',
@@ -33,7 +34,7 @@ class EventsSeeder extends Seeder
                 'event_date' => now()->addWeeks(5)->toDateString(),
                 'event_time' => '22:00:00',
                 'location' => 'Alexandria, Egypt',
-                'map_url' => null,
+                'map_url' => 'https://maps.google.com/?q=Alexandria+Egypt',
                 'description' => 'Pulsed event seeded from ticket-easy reference source.',
                 'house_rules' => 'No re-entry. Keep your ticket QR available at gate.',
                 'status' => 'active',
@@ -53,6 +54,7 @@ class EventsSeeder extends Seeder
             $event = Event::updateOrCreate(
                 ['name' => $item['name']],
                 [
+                    'slug' => Str::slug($item['name']),
                     'event_date' => $item['event_date'],
                     'event_time' => $item['event_time'],
                     'location' => $item['location'],

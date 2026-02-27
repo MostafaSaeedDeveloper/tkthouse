@@ -61,6 +61,12 @@ class Event extends Model
         return $slug;
     }
 
+
+    public function getRouteKey(): mixed
+    {
+        return $this->slug ?: $this->getKey();
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';
