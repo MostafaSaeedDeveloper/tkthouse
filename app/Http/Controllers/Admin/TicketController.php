@@ -11,11 +11,46 @@ use Illuminate\Support\Facades\Mail;
 
 class TicketController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tickets = Ticket::query()->with('order')->latest()->paginate(15);
+        $query = Ticket::query()->with('order');
 
-        return view('admin.tickets.index', compact('tickets'));
+        if (filled($request->status)) {
+            $query->where('status', $request->string('status'));
+        }
+
+        if (filled($request->event_name)) {
+            $eventName = trim((string) $request->input('event_name'));
+            $query->where(function ($builder) use ($eventName) {
+                $builder->where('name', 'like', $eventName.' - %')
+                    ->orWhere('name', $eventName);
+            });
+        }
+
+        if (filled($request->search)) {
+            $search = trim((string) $request->input('search'));
+            $query->where(function ($builder) use ($search) {
+                $builder->where('ticket_number', 'like', "%{$search}%")
+                    ->orWhere('holder_name', 'like', "%{$search}%")
+                    ->orWhere('holder_email', 'like', "%{$search}%")
+                    ->orWhereHas('order', fn ($orderQuery) => $orderQuery->where('order_number', 'like', "%{$search}%"));
+            });
+        }
+
+        $tickets = $query->latest()->paginate(15)->withQueryString();
+
+        $eventOptions = Ticket::query()
+            ->whereNotNull('name')
+            ->get(['name'])
+            ->map(function (Ticket $ticket): string {
+                return $ticket->eventLabel();
+            })
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        return view('admin.tickets.index', compact('tickets', 'eventOptions'));
     }
 
     public function create()

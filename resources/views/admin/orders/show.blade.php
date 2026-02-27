@@ -7,6 +7,7 @@
   $statusLabel = ucwords(str_replace('_', ' ', (string) $order->status));
   $customerName = $order->customer?->full_name ?: 'N/A';
   $customerInitials = collect(explode(' ', $customerName))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('');
+  $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
 @endphp
 
 <style>
@@ -69,7 +70,10 @@
     <div class="d-flex gap-2">
       @if($order->status === 'pending_approval')
         <form method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
-          <button class="od-btn-approve" type="submit"><i class="fa fa-check"></i> Approve & Send Payment Link</button>
+          <button class="od-btn-approve" type="submit" title="Approve"><i class="fa fa-check"></i></button>
+        </form>
+        <form method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
+          <button class="od-btn-back" type="submit" title="Reject"><i class="fa fa-times"></i></button>
         </form>
       @endif
       <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
@@ -89,6 +93,9 @@
           <div class="od-info-row"><span class="od-info-label">Date</span><span class="od-info-val">{{ $order->created_at?->format('d M Y, H:i') }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_method)) }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Payment Status</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_status)) }}</span></div>
+          @if($order->status === 'pending_payment' && $paymentLink)
+            <div class="od-info-row"><span class="od-info-label">Payment Link</span><span class="od-info-val"><a href="{{ $paymentLink }}" target="_blank">Open Link</a></span></div>
+          @endif
         </div>
       </div>
 

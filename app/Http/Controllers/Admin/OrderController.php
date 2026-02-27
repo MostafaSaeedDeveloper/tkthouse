@@ -12,9 +12,31 @@ use Spatie\Activitylog\Models\Activity;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::withCount('items')->with('customer')->latest()->paginate(15);
+        $query = Order::query()->withCount('items')->with('customer');
+
+        if (filled($request->status)) {
+            $query->where('status', $request->string('status'));
+        }
+
+        if (filled($request->payment_status)) {
+            $query->where('payment_status', $request->string('payment_status'));
+        }
+
+        if (filled($request->search)) {
+            $search = trim((string) $request->input('search'));
+            $query->where(function ($builder) use ($search) {
+                $builder->where('order_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('full_name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $query->latest()->paginate(15)->withQueryString();
 
         return view('admin.orders.index', compact('orders'));
     }
@@ -205,5 +227,31 @@ class OrderController extends Controller
         );
 
         return back()->with('success', 'Order approved and payment email sent successfully.');
+    }
+
+    public function reject(Request $request, Order $order)
+    {
+        if ($order->status !== 'pending_approval') {
+            return back()->with('error', 'Only pending approval orders can be rejected.');
+        }
+
+        $oldStatus = $order->status;
+
+        $order->update([
+            'status' => 'rejected',
+            'approved_at' => null,
+            'payment_link_token' => null,
+        ]);
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties([
+                'from_status' => $oldStatus,
+                'to_status' => $order->status,
+            ])
+            ->log('Order rejected by admin');
+
+        return back()->with('success', 'Order rejected successfully.');
     }
 }

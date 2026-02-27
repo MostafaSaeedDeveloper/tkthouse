@@ -15,6 +15,7 @@
 
   {{-- 2. TKT House theme — must come AFTER dashmix to override --}}
   <link rel="stylesheet" href="{{ asset('admin/assets/css/custom.css') }}">
+  <link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/select2/css/select2.min.css') }}">
 
   <script src="{{ asset('admin/assets/js/setTheme.js') }}"></script>
 </head>
@@ -133,6 +134,7 @@
 <script src="{{ asset('admin/assets/js/dashmix.app.min.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
+<script src="{{ asset('admin/assets/js/plugins/select2/js/select2.full.min.js') }}"></script>
 <script>
 (() => {
   if (typeof ClassicEditor === 'undefined') return;
@@ -177,6 +179,18 @@
         confirmButtonText: 'Yes, delete it', cancelButtonText: 'Cancel',
       }).then(r => { if (r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); } });
     });
+  });
+})();
+</script>
+
+
+<script>
+(() => {
+  if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
+  jQuery('main select').each(function () {
+    if (this.dataset.noSelect2 === '1' || this.dataset.select2Applied === '1') return;
+    jQuery(this).select2({ width: '100%', placeholder: this.dataset.placeholder || '' });
+    this.dataset.select2Applied = '1';
   });
 })();
 </script>
