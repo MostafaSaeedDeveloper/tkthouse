@@ -30,14 +30,13 @@
 .db-page-title span { color: var(--gold); }
 .db-date { font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; white-space: nowrap; }
 
-.db-filters { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; align-items:center; }
-.db-filter-form { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.db-filter-select,
-.db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 10px; font-size:12px; }
-.db-filter-select { min-width: 180px; }
+.db-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; align-items:center; }
+.db-filter-btn { font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 12px; text-decoration:none; transition:all .2s; }
+.db-filter-btn:hover { color:var(--gold); border-color:rgba(245,184,0,0.3); }
+.db-filter-btn.active { color:#111; background:var(--gold); border-color:var(--gold); font-weight:700; }
+.db-filter-form { display:flex; gap:8px; align-items:center; }
+.db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
-.db-custom-range { display:flex; gap:8px; align-items:center; }
-.db-custom-range.hidden { display:none; }
 
 
 /* ── Stat cards ── */
@@ -139,18 +138,14 @@
     </div>
 
     <div class="db-filters fade-up">
+        @foreach($rangeOptions as $key => $label)
+            <a href="{{ route('admin.dashboard', ['range' => $key]) }}" class="db-filter-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+
         <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
-            <select name="range" id="rangeSelect" class="db-filter-select">
-                @foreach($rangeOptions as $key => $label)
-                    <option value="{{ $key }}" @selected($selectedRange === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
-
-            <div id="customRangeFields" class="db-custom-range {{ $selectedRange === 'custom' ? '' : 'hidden' }}">
-                <input type="date" name="from" class="db-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}">
-                <input type="date" name="to" class="db-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}">
-            </div>
-
+            <input type="hidden" name="range" value="custom">
+            <input type="date" name="from" class="db-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}">
+            <input type="date" name="to" class="db-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}">
             <button type="submit" class="db-filter-apply">Apply</button>
         </form>
     </div>
@@ -372,29 +367,7 @@
      ║   (same for orders chart)            ║
      ╚══════════════════════════════════════╝ --}}
 <script>
-window.addEventListener('load', function () {
-    const rangeSelect = document.getElementById('rangeSelect');
-    const customFields = document.getElementById('customRangeFields');
-
-    if (rangeSelect && customFields) {
-        const toggleCustomFields = () => {
-            customFields.classList.toggle('hidden', rangeSelect.value !== 'custom');
-        };
-        rangeSelect.addEventListener('change', toggleCustomFields);
-        toggleCustomFields();
-    }
-
-    if (typeof Chart === 'undefined') {
-        console.warn('Chart.js is not loaded');
-        return;
-    }
-
-    const revenueCanvas = document.getElementById('revenueChart');
-    const ordersCanvas = document.getElementById('ordersChart');
-    if (!revenueCanvas || !ordersCanvas) {
-        return;
-    }
-
+(function () {
     const gold    = '#f5b800';
     const goldDim = 'rgba(245,184,0,0.15)';
     const gridCol = 'rgba(255,255,255,0.05)';
@@ -420,7 +393,7 @@ window.addEventListener('load', function () {
         }
     };
 
-    new Chart(revenueCanvas, {
+    new Chart(document.getElementById('revenueChart'), {
         type: 'line',
         data: {
             labels  : @json($labels),
@@ -439,7 +412,7 @@ window.addEventListener('load', function () {
         options: { ...sharedOpts }
     });
 
-    new Chart(ordersCanvas, {
+    new Chart(document.getElementById('ordersChart'), {
         type: 'bar',
         data: {
             labels  : @json($labels),
@@ -453,7 +426,7 @@ window.addEventListener('load', function () {
         },
         options: { ...sharedOpts }
     });
-});
+})();
 </script>
 
 @endsection
