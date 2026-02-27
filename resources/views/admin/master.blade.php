@@ -152,9 +152,12 @@
                   <div role="separator" class="dropdown-divider"></div>
 
                   <div role="separator" class="dropdown-divider"></div>
-                  <a class="dropdown-item" href="op_auth_signin.html">
-                    <i class="far fa-fw fa-arrow-alt-circle-left me-1"></i> Sign Out
-                  </a>
+                  <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="dropdown-item">
+                      <i class="far fa-fw fa-arrow-alt-circle-left me-1"></i> Sign Out
+                    </button>
+                  </form>
                 </div>
               </div>
             </div>

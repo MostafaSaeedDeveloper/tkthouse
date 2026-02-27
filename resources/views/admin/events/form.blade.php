@@ -53,6 +53,13 @@
             <option value="sold_out" @selected(old('status', $event->status ?? '') === 'sold_out')>Sold Out</option>
         </select>
     </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Checkout Flow</label>
+        <select name="requires_booking_approval" class="form-select">
+            <option value="1" @selected((int) old('requires_booking_approval', $event->requires_booking_approval ?? 1) === 1)>Require admin approval before payment</option>
+            <option value="0" @selected((int) old('requires_booking_approval', $event->requires_booking_approval ?? 1) === 0)>Allow direct payment at checkout</option>
+        </select>
+    </div>
     <div class="col-md-8 mb-3">
         <label class="form-label">Event Image</label>
         <input type="file" name="cover_image" class="form-control" {{ isset($event) ? '' : 'required' }}>

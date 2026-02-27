@@ -46,7 +46,7 @@
         <link href="{{ asset('css/responsive.css') }}" rel="stylesheet">
     </head>
 
-    <body class="msl-black">
+    <body class="msl-black" data-authenticated="{{ auth()->check() ? "1" : "0" }}">
         <div id="loader-wrapper">
             <div id="loader"></div>
             <div class="loader-section section-left"></div>
@@ -76,7 +76,17 @@
                         </div>
                         <div class="pull-right">
                             <ul class="playlist_menu_bar">
-                                <li><a href="#" data-toggle="modal" data-target="#login-register1"><i class="fa fa-user-circle"></i></a></li>
+                                @auth
+                                    <li><a href="{{ route('front.account.dashboard') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
+                                    <li>
+                                        <form action="{{ route('front.customer.logout') }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" style="background:none;border:0;color:#fff;" title="Logout"><i class="fa fa-sign-out"></i></button>
+                                        </form>
+                                    </li>
+                                @else
+                                    <li><a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a></li>
+                                @endauth
                             </ul>
                             <div id="kode-responsive-navigation" class="dl-menuwrapper">
                                 <button class="dl-trigger"></button>

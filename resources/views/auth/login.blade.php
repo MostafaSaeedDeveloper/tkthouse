@@ -20,8 +20,7 @@
                   <a class="link-fx fw-bold fs-1" href="{{ route('front.home') }}">
                     <span class="text-dark">TKT</span><span class="text-primary">House</span>
                   </a>
-                  <p class="text-uppercase fw-bold fs-sm text-muted mb-2">Sign In</p>
-                  <p class="fs-sm text-muted mb-0">Default credentials: <strong>admin</strong> / <strong>123456789</strong></p>
+                  <p class="text-uppercase fw-bold fs-sm text-muted mb-2">Dashboard Sign In</p>
                 </div>
 
                 <div class="row g-0 justify-content-center">
@@ -31,32 +30,12 @@
 
                       <div class="py-3">
                         <div class="mb-4">
-                          <input
-                            type="text"
-                            class="form-control form-control-lg form-control-alt @error('username') is-invalid @enderror"
-                            id="username"
-                            name="username"
-                            value="{{ old('username') }}"
-                            placeholder="Username"
-                            required
-                            autofocus
-                          >
-                          @error('username')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                          @enderror
+                          <input type="text" class="form-control form-control-lg form-control-alt @error('username') is-invalid @enderror" id="username" name="username" value="{{ old('username') }}" placeholder="Username" required autofocus>
+                          @error('username')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="mb-4">
-                          <input
-                            type="password"
-                            class="form-control form-control-lg form-control-alt @error('password') is-invalid @enderror"
-                            id="password"
-                            name="password"
-                            placeholder="Password"
-                            required
-                          >
-                          @error('password')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                          @enderror
+                          <input type="password" class="form-control form-control-lg form-control-alt @error('password') is-invalid @enderror" id="password" name="password" placeholder="Password" required>
+                          @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                       </div>
 
