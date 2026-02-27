@@ -116,6 +116,7 @@ class EventController extends Controller
             'tickets.*.name' => ['required_with:tickets', 'string', 'max:255'],
             'tickets.*.price' => ['required_with:tickets', 'numeric', 'min:0'],
             'tickets.*.status' => ['required_with:tickets', 'in:active,inactive,sold_out'],
+            'tickets.*.color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'tickets.*.label' => ['nullable', 'string', 'max:255'],
             'tickets.*.description' => ['nullable', 'string'],
             'fees' => ['nullable', 'array'],
@@ -134,6 +135,7 @@ class EventController extends Controller
 
         foreach ($tickets as $ticket) {
             if (! empty($ticket['name'])) {
+                $ticket['color'] = $ticket['color'] ?? '#0d6efd';
                 $event->tickets()->create($ticket);
             }
         }

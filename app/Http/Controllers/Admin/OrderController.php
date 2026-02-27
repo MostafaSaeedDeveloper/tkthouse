@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EventTicket;
 use App\Models\Order;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $ordersQuery = Order::query()->withCount('items')->with('customer');
+        $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
 
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
@@ -42,7 +43,13 @@ class OrderController extends Controller
 
         $orders = $ordersQuery->latest()->paginate(15)->withQueryString();
 
-        return view('admin.orders.index', compact('orders'));
+        $ticketColorMap = EventTicket::query()
+            ->select('name', 'color')
+            ->get()
+            ->mapWithKeys(fn (EventTicket $ticket) => [mb_strtolower(trim($ticket->name)) => $ticket->color ?: '#0d6efd'])
+            ->all();
+
+        return view('admin.orders.index', compact('orders', 'ticketColorMap'));
     }
 
     public function show(Order $order)
