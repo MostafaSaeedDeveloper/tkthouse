@@ -90,7 +90,7 @@ class EventController extends Controller
 
     private function validateEvent(Request $request, bool $isUpdate = false): array
     {
-        $coverRule = $isUpdate ? ['nullable', 'image', 'max:2048'] : ['required', 'image', 'max:2048'];
+        $coverRule = ['nullable', 'image', 'max:2048'];
 
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],

@@ -61,8 +61,25 @@
         </select>
     </div>
     <div class="col-md-8 mb-3">
-        <label class="form-label">Event Image</label>
-        <input type="file" name="cover_image" class="form-control" {{ isset($event) ? '' : 'required' }}>
+        <label class="form-label">Event Image (Optional)</label>
+        <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
+        <div class="form-text">Upload an image to be shown as the event cover.</div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Image Preview</label>
+        <div class="border rounded p-2 text-center bg-body-light">
+            <img
+                id="cover-image-preview"
+                data-has-existing="{{ isset($event) && $event->cover_image ? 1 : 0 }}"
+                src="{{ isset($event) && $event->cover_image ? asset($event->cover_image) : '' }}"
+                alt="Event cover preview"
+                class="img-fluid rounded {{ isset($event) && $event->cover_image ? '' : 'd-none' }}"
+                style="max-height: 180px; object-fit: cover;"
+            >
+            <div id="cover-image-placeholder" class="small text-muted {{ isset($event) && $event->cover_image ? 'd-none' : '' }}">
+                No image selected.
+            </div>
+        </div>
     </div>
     <div class="col-12 mb-3">
         <label class="form-label">Description (Optional)</label>
@@ -173,6 +190,31 @@
             }
 
             btn.closest('.ticket-row, .fee-row')?.remove();
+        });
+
+        const coverInput = document.getElementById('cover_image');
+        const coverPreview = document.getElementById('cover-image-preview');
+        const coverPlaceholder = document.getElementById('cover-image-placeholder');
+
+        coverInput?.addEventListener('change', (event) => {
+            const file = event.target.files?.[0];
+
+            if (!file) {
+                const hasExistingImage = coverPreview?.dataset.hasExisting === '1';
+                if (!hasExistingImage) {
+                    coverPreview?.classList.add('d-none');
+                    coverPlaceholder?.classList.remove('d-none');
+                }
+                return;
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            if (coverPreview) {
+                coverPreview.src = objectUrl;
+                coverPreview.classList.remove('d-none');
+                coverPreview.dataset.hasExisting = '1';
+            }
+            coverPlaceholder?.classList.add('d-none');
         });
     })();
 </script>
