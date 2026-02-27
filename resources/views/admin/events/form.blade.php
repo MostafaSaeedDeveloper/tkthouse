@@ -31,7 +31,7 @@
     </div>
     <div class="col-md-3 mb-3">
         <label class="form-label">Date</label>
-        <input type="date" name="event_date" class="form-control" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" required>
+        <input type="text" name="event_date" class="form-control js-flatpickr" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d" required>
     </div>
     <div class="col-md-3 mb-3">
         <label class="form-label">Time</label>
@@ -44,7 +44,7 @@
     <div class="col-md-6 mb-3">
         <label class="form-label">Slug</label>
         <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name">
-        <div class="form-text">يتم توليده تلقائياً من اسم الايفنت ويمكنك تعديله.</div>
+        <div class="form-text">Auto-generated from event name. You can edit it.</div>
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Map URL (Optional)</label>
@@ -251,6 +251,12 @@
 
             slugInput.value = slugify(nameInput.value);
         });
+
+        if (typeof Dashmix !== 'undefined' && typeof Dashmix.helpersOnLoad === 'function') {
+            Dashmix.helpersOnLoad(['js-flatpickr']);
+        } else if (typeof flatpickr !== 'undefined') {
+            flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d' });
+        }
 
     })();
 </script>
