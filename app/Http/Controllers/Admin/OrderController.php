@@ -12,9 +12,35 @@ use Spatie\Activitylog\Models\Activity;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::withCount('items')->with('customer')->latest()->paginate(15);
+        $ordersQuery = Order::query()->withCount('items')->with('customer');
+
+        if ($request->filled('status')) {
+            $ordersQuery->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('payment_status')) {
+            $ordersQuery->where('payment_status', $request->string('payment_status'));
+        }
+
+        if ($request->filled('payment_method')) {
+            $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $ordersQuery->where(function ($query) use ($search) {
+                $query->where('order_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('email', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $ordersQuery->latest()->paginate(15)->withQueryString();
 
         return view('admin.orders.index', compact('orders'));
     }
@@ -100,6 +126,7 @@ class OrderController extends Controller
             'payment_status' => $validated['payment_status'],
             'requires_approval' => (bool) ($validated['requires_approval'] ?? false),
             'approved_at' => $validated['status'] === 'pending_payment' ? ($order->approved_at ?? now()) : null,
+            'payment_link_token' => $validated['status'] === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
         ]);
 
         $total = 0;
@@ -205,5 +232,29 @@ class OrderController extends Controller
         );
 
         return back()->with('success', 'Order approved and payment email sent successfully.');
+    }
+
+    public function reject(Request $request, Order $order)
+    {
+        if ($order->status !== 'pending_approval') {
+            return back()->with('error', 'Only pending approval orders can be rejected.');
+        }
+
+        $oldStatus = $order->status;
+        $order->update([
+            'status' => 'rejected',
+            'approved_at' => null,
+        ]);
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties([
+                'from_status' => $oldStatus,
+                'to_status' => $order->status,
+            ])
+            ->log('Order rejected');
+
+        return back()->with('success', 'Order rejected successfully.');
     }
 }

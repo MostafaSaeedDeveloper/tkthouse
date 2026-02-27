@@ -21,6 +21,8 @@
     'bank_transfer' => 'Bank Transfer',
   ];
 
+  $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
+
   $paymentStatusOptions = [
     'unpaid'           => 'Unpaid',
     'pending'          => 'Pending',
@@ -364,6 +366,17 @@
 
             <hr class="oe-divider">
 
+            @if($order->status === 'pending_payment' && $paymentLink)
+              <div class="oe-field">
+                <label class="oe-label">Payment Link</label>
+                <div class="input-group">
+                  <input class="oe-input" type="text" readonly value="{{ $paymentLink }}" onclick="this.select()">
+                  <button class="btn btn-alt-secondary" type="button" onclick="navigator.clipboard.writeText('{{ $paymentLink }}')">Copy</button>
+                </div>
+              </div>
+            @endif
+
+            <hr class="oe-divider">
             <div class="oe-field">
               <input type="hidden" name="requires_approval" value="0">
               <label class="oe-check-label">
