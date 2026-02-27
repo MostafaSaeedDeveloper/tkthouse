@@ -14,9 +14,11 @@ class TicketIssuanceService
 {
     public function issueIfPaid(Order $order): void
     {
-        $order->loadMissing(['items', 'customer', 'issuedTickets']);
+        $order->unsetRelation('items');
+        $order->unsetRelation('issuedTickets');
+        $order->load(['items', 'customer']);
 
-        if ($order->status !== 'paid') {
+        if ($order->status !== 'paid' && $order->payment_status !== 'paid') {
             return;
         }
 
