@@ -230,7 +230,7 @@
         <div class="ev-grid">
 
             @forelse($events as $event)
-                <a class="ev-card" href="{{ route('front.events.show', $event) }}">
+                <a class="ev-card" href="{{ route('front.events.show', ['event' => $event->slug]) }}">
 
                     {{-- Cover --}}
                     <div class="ev-card-img">
