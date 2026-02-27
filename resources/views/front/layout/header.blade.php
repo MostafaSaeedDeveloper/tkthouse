@@ -50,54 +50,42 @@
 
             @media (max-width: 767px) {
                 .header-style-3 .header-2st-row > .container {
-                    display: grid;
-                    grid-template-columns: 44px 1fr 44px;
+                    display: flex;
                     align-items: center;
-                    column-gap: 12px;
+                    justify-content: space-between;
                 }
                 .header-style-3 .center-logo {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    float: none;
-                    width: 100%;
+                    flex: 1;
                     text-align: center;
                 }
                 .header-style-3 .header-2st-row .logo {
                     float: none;
-                    margin: 0;
+                    margin: 0 auto;
                     display: inline-block;
                 }
                 .header-style-3 .header-2st-row .logo img {
-                    max-height: 54px;
+                    max-height: 64px;
                     width: auto;
                 }
-                .header-style-3 .header-2st-row .logo .logo-light { display: block; }
-                .header-style-3 .header-2st-row .logo .logo-drak { display: none; }
-
                 .mobile-account-icon {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    display: block;
+                    min-width: 44px;
                 }
-                .mobile-account-icon a {
+                .mobile-account-icon a,
+                .header-style-3 .playlist_menu_bar li a {
                     font-size: 38px;
                     line-height: 1;
                 }
-
                 .header-style-3 .playlist_menu_bar {
-                    display: none !important;
+                    margin: 0;
+                }
+                .header-style-3 .playlist_menu_bar .desktop-account {
+                    display: none;
                 }
                 .header-style-3 .header-2st-row .pull-right {
                     display: flex;
                     align-items: center;
-                    justify-content: flex-end;
-                    float: none;
-                    width: auto;
-                }
-                .header-style-3 .header-2st-row .pull-right .dl-menuwrapper {
-                    float: none;
-                    margin: 0;
+                    gap: 10px;
                 }
             }
         </style>
