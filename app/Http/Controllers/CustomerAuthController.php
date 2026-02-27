@@ -84,7 +84,7 @@ class CustomerAuthController extends Controller
             }
         }
 
-        return redirect()->intended(route('front.account.dashboard'));
+        return redirect()->route('front.account.dashboard');
     }
 
     private function generateUsername(string $email): string

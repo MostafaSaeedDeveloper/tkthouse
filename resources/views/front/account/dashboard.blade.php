@@ -15,7 +15,13 @@
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="text-warning mb-0">My Orders</h4>
-            <a href="{{ route('front.checkout') }}" class="btn btn-warning">New Checkout</a>
+            <div class="d-flex gap-2">
+                <a href="{{ route('front.checkout') }}" class="btn btn-warning">New Checkout</a>
+                <form method="POST" action="{{ route('front.customer.logout') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-light">Logout</button>
+                </form>
+            </div>
         </div>
 
         <div class="card bg-dark border-secondary">
