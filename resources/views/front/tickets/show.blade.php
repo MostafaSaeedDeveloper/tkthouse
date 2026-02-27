@@ -19,7 +19,7 @@
 
                         <div class="d-flex gap-2 justify-content-center">
                             <a href="{{ route('front.tickets.download', $ticket) }}" class="btn btn-warning">Download PDF</a>
-                            <a href="{{ route('front.account.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+                            <a href="{{ route('front.account.profile') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
                         </div>
                     </div>
                 </div>

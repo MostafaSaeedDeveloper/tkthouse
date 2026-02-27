@@ -77,7 +77,7 @@
                         <div class="pull-right">
                             <ul class="playlist_menu_bar">
                                 @auth
-                                    <li><a href="{{ route('front.account.dashboard') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
+                                    <li><a href="{{ route('front.account.profile') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
                                 @else
                                     <li><a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a></li>
                                 @endauth

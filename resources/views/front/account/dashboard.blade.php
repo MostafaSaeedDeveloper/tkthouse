@@ -3,75 +3,21 @@
 @section('content')
 <div class="sub-banner">
     <div class="container">
-        <h6>My Dashboard</h6>
+        <h6>My Account</h6>
     </div>
 </div>
 
 <section class="py-5" style="background:#090909;color:#fff;">
     <div class="container">
-        @if(session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
-
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="text-warning mb-0">My Orders</h4>
-            <div class="d-flex gap-2">
-                <a href="{{ route('front.checkout') }}" class="btn btn-warning">New Checkout</a>
-                <form method="POST" action="{{ route('front.customer.logout') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-light">Logout</button>
-                </form>
-            </div>
-        </div>
+        @include('front.account.partials.navigation')
 
         <div class="card bg-dark border-secondary">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0 align-middle">
-                        <thead>
-                            <tr>
-                                <th>Order #</th>
-                                <th>Status</th>
-                                <th>Payment</th>
-                                <th>Total</th>
-                                <th>Date</th>
-                                <th>Tickets</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($orders as $order)
-                                <tr>
-                                    <td>{{ $order->order_number }}</td>
-                                    <td>{{ ucwords(str_replace('_', ' ', $order->status)) }}</td>
-                                    <td>{{ ucwords(str_replace('_', ' ', $order->payment_status)) }}</td>
-                                    <td>{{ number_format($order->total_amount, 2) }} EGP</td>
-                                    <td>{{ $order->created_at?->format('Y-m-d H:i') }}</td>
-                                    <td>
-                                        @if($order->issuedTickets->isNotEmpty())
-                                            <div class="d-flex flex-column gap-1">
-                                                @foreach($order->issuedTickets as $ticket)
-                                                    <a class="text-warning" href="{{ route('front.tickets.show', $ticket) }}">
-                                                        {{ $ticket->ticket_number }}
-                                                    </a>
-                                                @endforeach
-                                            </div>
-                                        @else
-                                            <span class="text-muted">Not generated yet</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">No orders yet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+            <div class="card-body text-center py-5">
+                <h4 class="text-warning mb-3">Account Home Moved</h4>
+                <p class="text-muted mb-4">Please use Profile, Orders, or Tickets from the account navigation.</p>
+                <a href="{{ route('front.account.profile') }}" class="btn btn-warning">Go to Profile</a>
             </div>
         </div>
-
-        <div class="mt-3">{{ $orders->links() }}</div>
     </div>
 </section>
 @endsection
