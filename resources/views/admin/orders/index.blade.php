@@ -80,6 +80,12 @@
                                             <i class="fa fa-circle-check"></i>
                                         </button>
                                     </form>
+                                    <form action="{{ route('admin.orders.reject', $order) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-alt-danger" title="Reject Order">
+                                            <i class="fa fa-times"></i>
+                                        </button>
+                                    </form>
                                 @endif
                                 <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
                                 <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>

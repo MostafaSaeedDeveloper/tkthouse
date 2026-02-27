@@ -224,4 +224,30 @@ class OrderController extends Controller
 
         return back()->with('success', 'Order approved and payment email sent successfully.');
     }
+    public function reject(Request $request, Order $order)
+    {
+        if ($order->status !== 'pending_approval') {
+            return back()->with('error', 'Only pending approval orders can be rejected.');
+        }
+
+        $oldStatus = $order->status;
+
+        $order->update([
+            'status' => 'rejected',
+            'approved_at' => null,
+            'payment_link_token' => null,
+        ]);
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties([
+                'from_status' => $oldStatus,
+                'to_status' => $order->status,
+            ])
+            ->log('Order rejected');
+
+        return back()->with('success', 'Order rejected successfully.');
+    }
+
 }
