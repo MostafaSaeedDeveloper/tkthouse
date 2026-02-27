@@ -126,7 +126,7 @@
             <h1 class="db-page-title">Dashboard <span>Overview</span></h1>
         </div>
         {{-- WIRE: {{ now()->format('D, d M Y') }} --}}
-        <div class="db-date"><i class="fa fa-calendar-alt me-1"></i> Fri, 27 Feb 2026</div>
+        <div class="db-date"><i class="fa fa-calendar-alt me-1"></i> {{ now()->format('D, d M Y') }}</div>
     </div>
 
     {{-- ╔══════════════════════════════════════╗
@@ -134,12 +134,13 @@
          ║   WIRE: show only if $pendingOrders > 0
          ║   href="{{ route('admin.orders.index', ['status'=>'pending']) }}"
          ╚══════════════════════════════════════╝ --}}
-    <a href="#" class="db-pending-alert fade-up delay-1">
+    @if($pendingOrders > 0)
+    <a href="{{ route('admin.orders.index') }}" class="db-pending-alert fade-up delay-1">
         <div class="db-pending-dot"></div>
-        {{-- WIRE: <strong>{{ $pendingOrders }} order(s)</strong> --}}
-        <span><strong>5 orders</strong> pending your review — click to view</span>
+        <span><strong>{{ $pendingOrders }} order(s)</strong> pending your review — click to view</span>
         <i class="fa fa-arrow-right ms-auto"></i>
     </a>
+    @endif
 
     {{-- ╔══════════════════════════════════════╗
          ║          STAT CARDS                  ║
@@ -156,7 +157,7 @@
                 <div class="db-stat-label">Total Orders</div>
                 <div class="db-stat-icon">🧾</div>
             </div>
-            <div class="db-stat-val">1,284</div>
+            <div class="db-stat-val">{{ number_format($totalOrders) }}</div>
             <div class="db-stat-sub">All time orders</div>
         </div>
 
@@ -165,7 +166,7 @@
                 <div class="db-stat-label">Revenue</div>
                 <div class="db-stat-icon">💰</div>
             </div>
-            <div class="db-stat-val">48,500</div>
+            <div class="db-stat-val">{{ number_format($totalRevenue, 0) }} EGP</div>
             <div class="db-stat-sub">Total collected</div>
         </div>
 
@@ -174,7 +175,7 @@
                 <div class="db-stat-label">Customers</div>
                 <div class="db-stat-icon">👥</div>
             </div>
-            <div class="db-stat-val">873</div>
+            <div class="db-stat-val">{{ number_format($totalCustomers) }}</div>
             <div class="db-stat-sub">Registered buyers</div>
         </div>
 
@@ -183,7 +184,7 @@
                 <div class="db-stat-label">Active Events</div>
                 <div class="db-stat-icon">🎟️</div>
             </div>
-            <div class="db-stat-val">12</div>
+            <div class="db-stat-val">{{ number_format($totalEvents) }}</div>
             <div class="db-stat-sub">Published events</div>
         </div>
 
@@ -251,49 +252,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="muted">#1041</td>
-                            <td>Ahmed Youssef</td>
-                            <td class="muted">Sideral</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">1,100.00</td>
-                            <td><span class="db-badge pending">Pending</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1040</td>
-                            <td>Sara Khalil</td>
-                            <td class="muted">Axis Festival</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">650.00</td>
-                            <td><span class="db-badge approved">Approved</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1039</td>
-                            <td>Omar Nasser</td>
-                            <td class="muted">Sideral</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">450.00</td>
-                            <td><span class="db-badge paid">Paid</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1038</td>
-                            <td>Nour Hassan</td>
-                            <td class="muted">Club Night Vol.3</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">900.00</td>
-                            <td><span class="db-badge rejected">Rejected</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1037</td>
-                            <td>Karim Adel</td>
-                            <td class="muted">Axis Festival</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">1,300.00</td>
-                            <td><span class="db-badge approved">Approved</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1036</td>
-                            <td>Hana Samy</td>
-                            <td class="muted">Sideral</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">450.00</td>
-                            <td><span class="db-badge pending">Pending</span></td>
-                        </tr>
-                    </tbody>
+                        @forelse($recentOrders as $order)
+                            @php
+                                $eventName = $order->items->first()?->ticket_name;
+                                $eventName = $eventName && str_contains($eventName, ' - ') ? strstr($eventName, ' - ', true) : ($eventName ?: '—');
+                                $statusClass = in_array($order->status, ['pending', 'pending_approval', 'pending_payment']) ? 'pending' : (in_array($order->status, ['approved', 'approved_pending_payment']) ? 'approved' : (in_array($order->status, ['paid']) ? 'paid' : 'rejected'));
+                            @endphp
+                            <tr>
+                                <td class="muted">#{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->id }}</td>
+                                <td>{{ $order->customer?->full_name ?: 'N/A' }}</td>
+                                <td class="muted">{{ $eventName }}</td>
+                                <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">{{ number_format((float) $order->total_amount, 2) }} EGP</td>
+                                <td><span class="db-badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="muted" style="padding:16px;">No orders yet.</td></tr>
+                        @endforelse
+                                        </tbody>
                 </table>
             </div>
         </div>
@@ -321,41 +296,20 @@
                 </div>
                 <div class="db-card-body" style="padding:4px 22px 16px;">
 
+                    @forelse($topEvents as $i => $event)
                     <div class="db-event-row">
-                        <div class="db-event-rank">1</div>
+                        <div class="db-event-rank">{{ $i + 1 }}</div>
                         <div class="db-event-info">
-                            <div class="db-event-name">Sideral</div>
-                            <div class="db-event-meta">38 orders</div>
+                            <div class="db-event-name">{{ $event['name'] }}</div>
+                            <div class="db-event-meta">{{ $event['orders_count'] }} orders</div>
                         </div>
-                        <div class="db-event-revenue">18,500</div>
+                        <div class="db-event-revenue">{{ number_format($event['revenue'], 0) }} EGP</div>
                     </div>
-
+                    @empty
                     <div class="db-event-row">
-                        <div class="db-event-rank">2</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">Axis Festival</div>
-                            <div class="db-event-meta">24 orders</div>
-                        </div>
-                        <div class="db-event-revenue">14,200</div>
+                        <div class="db-event-info"><div class="db-event-name">No data yet</div></div>
                     </div>
-
-                    <div class="db-event-row">
-                        <div class="db-event-rank">3</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">Club Night Vol.3</div>
-                            <div class="db-event-meta">17 orders</div>
-                        </div>
-                        <div class="db-event-revenue">9,800</div>
-                    </div>
-
-                    <div class="db-event-row">
-                        <div class="db-event-rank">4</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">Neon Sessions</div>
-                            <div class="db-event-meta">11 orders</div>
-                        </div>
-                        <div class="db-event-revenue">6,000</div>
-                    </div>
+                    @endforelse
 
                 </div>
             </div>
@@ -421,9 +375,9 @@
     new Chart(document.getElementById('revenueChart'), {
         type: 'line',
         data: {
-            labels  : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+            labels  : @json($labels),
             datasets: [{
-                data                : [4200, 5800, 3900, 7200, 6100, 9400, 8800],
+                data                : @json($revenueData),
                 borderColor         : gold,
                 backgroundColor     : goldDim,
                 borderWidth         : 2,
@@ -440,9 +394,9 @@
     new Chart(document.getElementById('ordersChart'), {
         type: 'bar',
         data: {
-            labels  : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+            labels  : @json($labels),
             datasets: [{
-                data           : [38, 54, 31, 67, 58, 89, 82],
+                data           : @json($ordersData),
                 backgroundColor: 'rgba(245,184,0,0.22)',
                 borderColor    : gold,
                 borderWidth    : 1.5,

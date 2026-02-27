@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\CustomerAuthController;
@@ -40,7 +41,7 @@ Route::middleware('auth')->group(function () {
 Auth::routes(['register' => false]);
 
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
-    Route::view('/dashboard', 'admin.index')->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('users', UserController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
     Route::resource('permissions', PermissionController::class)->except('show');
