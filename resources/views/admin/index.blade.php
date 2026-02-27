@@ -30,6 +30,15 @@
 .db-page-title span { color: var(--gold); }
 .db-date { font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; white-space: nowrap; }
 
+.db-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; align-items:center; }
+.db-filter-btn { font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 12px; text-decoration:none; transition:all .2s; }
+.db-filter-btn:hover { color:var(--gold); border-color:rgba(245,184,0,0.3); }
+.db-filter-btn.active { color:#111; background:var(--gold); border-color:var(--gold); font-weight:700; }
+.db-filter-form { display:flex; gap:8px; align-items:center; }
+.db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
+.db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
+
+
 /* ── Stat cards ── */
 .db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 @media (max-width: 900px) { .db-stats { grid-template-columns: repeat(2, 1fr); } }
@@ -125,8 +134,20 @@
             <div class="db-page-eyebrow">Admin Panel</div>
             <h1 class="db-page-title">Dashboard <span>Overview</span></h1>
         </div>
-        {{-- WIRE: {{ now()->format('D, d M Y') }} --}}
         <div class="db-date"><i class="fa fa-calendar-alt me-1"></i> {{ now()->format('D, d M Y') }}</div>
+    </div>
+
+    <div class="db-filters fade-up">
+        @foreach($rangeOptions as $key => $label)
+            <a href="{{ route('admin.dashboard', ['range' => $key]) }}" class="db-filter-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+
+        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
+            <input type="hidden" name="range" value="custom">
+            <input type="date" name="from" class="db-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}">
+            <input type="date" name="to" class="db-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}">
+            <button type="submit" class="db-filter-apply">Apply</button>
+        </form>
     </div>
 
     {{-- ╔══════════════════════════════════════╗
@@ -158,7 +179,7 @@
                 <div class="db-stat-icon">🧾</div>
             </div>
             <div class="db-stat-val">{{ number_format($totalOrders) }}</div>
-            <div class="db-stat-sub">All time orders</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
         </div>
 
         <div class="db-stat green fade-up delay-2">
@@ -167,7 +188,7 @@
                 <div class="db-stat-icon">💰</div>
             </div>
             <div class="db-stat-val">{{ number_format($totalRevenue, 0) }} EGP</div>
-            <div class="db-stat-sub">Total collected</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
         </div>
 
         <div class="db-stat blue fade-up delay-3">
@@ -176,7 +197,7 @@
                 <div class="db-stat-icon">👥</div>
             </div>
             <div class="db-stat-val">{{ number_format($totalCustomers) }}</div>
-            <div class="db-stat-sub">Registered buyers</div>
+            <div class="db-stat-sub">New in {{ $rangeLabel }}</div>
         </div>
 
         <div class="db-stat red fade-up delay-4">
@@ -197,7 +218,7 @@
 
         <div class="db-card">
             <div class="db-card-head">
-                <div class="db-card-title">Revenue Over Time</div>
+                <div class="db-card-title">Revenue Trend ({{ $rangeLabel }})</div>
                 <a href="{{ route('admin.orders.index') }}" class="db-card-action">View Orders →</a>
             </div>
             <div class="db-card-body">
@@ -207,7 +228,7 @@
 
         <div class="db-card">
             <div class="db-card-head">
-                <div class="db-card-title">Orders / Month</div>
+                <div class="db-card-title">Orders Trend ({{ $rangeLabel }})</div>
             </div>
             <div class="db-card-body">
                 <div class="chart-container"><canvas id="ordersChart"></canvas></div>
@@ -237,7 +258,7 @@
         ── --}}
         <div class="db-card">
             <div class="db-card-head">
-                <div class="db-card-title">Recent Orders</div>
+                <div class="db-card-title">Recent Orders ({{ $rangeLabel }})</div>
                 <a href="{{ route('admin.orders.index') }}" class="db-card-action">All Orders →</a>
             </div>
             <div class="db-card-body" style="padding:0">
@@ -291,7 +312,7 @@
             ── --}}
             <div class="db-card">
                 <div class="db-card-head">
-                    <div class="db-card-title">Top Events</div>
+                    <div class="db-card-title">Top Events ({{ $rangeLabel }})</div>
                     <a href="{{ route('admin.events.index') }}" class="db-card-action">All →</a>
                 </div>
                 <div class="db-card-body" style="padding:4px 22px 16px;">
