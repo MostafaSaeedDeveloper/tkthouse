@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
@@ -19,6 +21,7 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
+        'profile_image',
         'password',
         'last_login_at',
         'last_login_ip',
@@ -38,10 +41,25 @@ class User extends Authenticatable
         ];
     }
 
+
+
+    public function profileImageUrl(): ?string
+    {
+        if (! $this->profile_image) {
+            return null;
+        }
+
+        if (Str::startsWith($this->profile_image, ['http://', 'https://'])) {
+            return $this->profile_image;
+        }
+
+        return Storage::disk('public')->url($this->profile_image);
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'username', 'email', 'last_login_at', 'last_login_ip'])
+            ->logOnly(['name', 'username', 'email', 'profile_image', 'last_login_at', 'last_login_ip'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
