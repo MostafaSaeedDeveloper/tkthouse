@@ -37,7 +37,7 @@ class Event extends Model
     protected static function booted(): void
     {
         static::saving(function (self $event) {
-            if ($event->isDirty('name') || empty($event->slug)) {
+            if (empty($event->slug)) {
                 $event->slug = static::generateUniqueSlug($event->name, $event->id);
             }
         });
@@ -61,23 +61,9 @@ class Event extends Model
         return $slug;
     }
 
-
-    public function getRouteKey(): mixed
-    {
-        return $this->slug ?: $this->getKey();
-    }
-
     public function getRouteKeyName(): string
     {
         return 'slug';
-    }
-
-    public function resolveRouteBinding($value, $field = null)
-    {
-        return $this->newQuery()
-            ->where($field ?? $this->getRouteKeyName(), $value)
-            ->orWhere('id', $value)
-            ->firstOrFail();
     }
 
     public function tickets()

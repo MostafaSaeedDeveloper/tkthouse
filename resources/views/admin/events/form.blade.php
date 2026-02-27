@@ -27,7 +27,7 @@
 <div class="row">
     <div class="col-md-6 mb-3">
         <label class="form-label">Event Name</label>
-        <input name="name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
+        <input name="name" id="event_name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
     </div>
     <div class="col-md-3 mb-3">
         <label class="form-label">Date</label>
@@ -40,6 +40,11 @@
     <div class="col-md-6 mb-3">
         <label class="form-label">Location</label>
         <input name="location" class="form-control" value="{{ old('location', $event->location ?? '') }}" required>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Slug</label>
+        <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name">
+        <div class="form-text">يتم توليده تلقائياً من اسم الايفنت ويمكنك تعديله.</div>
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Map URL (Optional)</label>
@@ -219,5 +224,33 @@
             }
             coverPlaceholder?.classList.add('d-none');
         });
+
+
+        const nameInput = document.getElementById('event_name');
+        const slugInput = document.getElementById('event_slug');
+
+        const slugify = (value) => value
+            .toString()
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+
+        let slugManuallyEdited = false;
+
+        slugInput?.addEventListener('input', () => {
+            slugManuallyEdited = slugInput.value.trim().length > 0;
+            slugInput.value = slugify(slugInput.value);
+        });
+
+        nameInput?.addEventListener('input', () => {
+            if (!slugInput || slugManuallyEdited) {
+                return;
+            }
+
+            slugInput.value = slugify(nameInput.value);
+        });
+
     })();
 </script>
