@@ -1,6 +1,5 @@
 @csrf
 <div class="row g-3">
-    <input type="hidden" name="name" value="{{ old('name', $ticket->name ?? 'Ticket') }}">
     <div class="col-md-6">
         <label class="form-label">Status</label>
         <select name="status" class="form-select">
