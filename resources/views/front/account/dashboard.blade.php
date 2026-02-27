@@ -43,7 +43,7 @@
                                     <td>{{ $order->order_number }}</td>
                                     <td>{{ ucwords(str_replace('_', ' ', $order->status)) }}</td>
                                     <td>{{ ucwords(str_replace('_', ' ', $order->payment_status)) }}</td>
-                                    <td>{{ number_format($order->total_amount, 2) }}</td>
+                                    <td>{{ number_format($order->total_amount, 2) }} EGP</td>
                                     <td>{{ $order->created_at?->format('Y-m-d H:i') }}</td>
                                 </tr>
                             @empty

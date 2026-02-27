@@ -2,6 +2,8 @@
 
 @section('content')
 
+<link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -29,6 +31,15 @@
 .db-page-title { font-family: var(--font-h); font-size: clamp(22px, 3vw, 30px); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin: 0; }
 .db-page-title span { color: var(--gold); }
 .db-date { font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; white-space: nowrap; }
+
+.db-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; align-items:center; }
+.db-filter-btn { font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 12px; text-decoration:none; transition:all .2s; }
+.db-filter-btn:hover { color:var(--gold); border-color:rgba(245,184,0,0.3); }
+.db-filter-btn.active { color:#111; background:var(--gold); border-color:var(--gold); font-weight:700; }
+.db-filter-form { display:flex; gap:8px; align-items:center; }
+.db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
+.db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
+
 
 /* ── Stat cards ── */
 .db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -125,8 +136,20 @@
             <div class="db-page-eyebrow">Admin Panel</div>
             <h1 class="db-page-title">Dashboard <span>Overview</span></h1>
         </div>
-        {{-- WIRE: {{ now()->format('D, d M Y') }} --}}
-        <div class="db-date"><i class="fa fa-calendar-alt me-1"></i> Fri, 27 Feb 2026</div>
+        <div class="db-date"><i class="fa fa-calendar-alt me-1"></i> {{ now()->format('D, d M Y') }}</div>
+    </div>
+
+    <div class="db-filters fade-up">
+        @foreach($rangeOptions as $key => $label)
+            <a href="{{ route('admin.dashboard', ['range' => $key]) }}" class="db-filter-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+
+        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
+            <input type="hidden" name="range" value="custom">
+            <input type="text" name="from" class="db-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
+            <input type="text" name="to" class="db-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
+            <button type="submit" class="db-filter-apply">Apply</button>
+        </form>
     </div>
 
     {{-- ╔══════════════════════════════════════╗
@@ -134,12 +157,13 @@
          ║   WIRE: show only if $pendingOrders > 0
          ║   href="{{ route('admin.orders.index', ['status'=>'pending']) }}"
          ╚══════════════════════════════════════╝ --}}
-    <a href="#" class="db-pending-alert fade-up delay-1">
+    @if($pendingOrders > 0)
+    <a href="{{ route('admin.orders.index') }}" class="db-pending-alert fade-up delay-1">
         <div class="db-pending-dot"></div>
-        {{-- WIRE: <strong>{{ $pendingOrders }} order(s)</strong> --}}
-        <span><strong>5 orders</strong> pending your review — click to view</span>
+        <span><strong>{{ $pendingOrders }} order(s)</strong> pending your review — click to view</span>
         <i class="fa fa-arrow-right ms-auto"></i>
     </a>
+    @endif
 
     {{-- ╔══════════════════════════════════════╗
          ║          STAT CARDS                  ║
@@ -156,8 +180,8 @@
                 <div class="db-stat-label">Total Orders</div>
                 <div class="db-stat-icon">🧾</div>
             </div>
-            <div class="db-stat-val">1,284</div>
-            <div class="db-stat-sub">All time orders</div>
+            <div class="db-stat-val">{{ number_format($totalOrders) }}</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
         </div>
 
         <div class="db-stat green fade-up delay-2">
@@ -165,8 +189,8 @@
                 <div class="db-stat-label">Revenue</div>
                 <div class="db-stat-icon">💰</div>
             </div>
-            <div class="db-stat-val">48,500</div>
-            <div class="db-stat-sub">Total collected</div>
+            <div class="db-stat-val">{{ number_format($totalRevenue, 0) }} EGP</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
         </div>
 
         <div class="db-stat blue fade-up delay-3">
@@ -174,8 +198,8 @@
                 <div class="db-stat-label">Customers</div>
                 <div class="db-stat-icon">👥</div>
             </div>
-            <div class="db-stat-val">873</div>
-            <div class="db-stat-sub">Registered buyers</div>
+            <div class="db-stat-val">{{ number_format($totalCustomers) }}</div>
+            <div class="db-stat-sub">New in {{ $rangeLabel }}</div>
         </div>
 
         <div class="db-stat red fade-up delay-4">
@@ -183,7 +207,7 @@
                 <div class="db-stat-label">Active Events</div>
                 <div class="db-stat-icon">🎟️</div>
             </div>
-            <div class="db-stat-val">12</div>
+            <div class="db-stat-val">{{ number_format($totalEvents) }}</div>
             <div class="db-stat-sub">Published events</div>
         </div>
 
@@ -196,7 +220,7 @@
 
         <div class="db-card">
             <div class="db-card-head">
-                <div class="db-card-title">Revenue Over Time</div>
+                <div class="db-card-title">Revenue Trend ({{ $rangeLabel }})</div>
                 <a href="{{ route('admin.orders.index') }}" class="db-card-action">View Orders →</a>
             </div>
             <div class="db-card-body">
@@ -206,7 +230,7 @@
 
         <div class="db-card">
             <div class="db-card-head">
-                <div class="db-card-title">Orders / Month</div>
+                <div class="db-card-title">Orders Trend ({{ $rangeLabel }})</div>
             </div>
             <div class="db-card-body">
                 <div class="chart-container"><canvas id="ordersChart"></canvas></div>
@@ -236,7 +260,7 @@
         ── --}}
         <div class="db-card">
             <div class="db-card-head">
-                <div class="db-card-title">Recent Orders</div>
+                <div class="db-card-title">Recent Orders ({{ $rangeLabel }})</div>
                 <a href="{{ route('admin.orders.index') }}" class="db-card-action">All Orders →</a>
             </div>
             <div class="db-card-body" style="padding:0">
@@ -251,49 +275,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="muted">#1041</td>
-                            <td>Ahmed Youssef</td>
-                            <td class="muted">Sideral</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">1,100.00</td>
-                            <td><span class="db-badge pending">Pending</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1040</td>
-                            <td>Sara Khalil</td>
-                            <td class="muted">Axis Festival</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">650.00</td>
-                            <td><span class="db-badge approved">Approved</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1039</td>
-                            <td>Omar Nasser</td>
-                            <td class="muted">Sideral</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">450.00</td>
-                            <td><span class="db-badge paid">Paid</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1038</td>
-                            <td>Nour Hassan</td>
-                            <td class="muted">Club Night Vol.3</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">900.00</td>
-                            <td><span class="db-badge rejected">Rejected</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1037</td>
-                            <td>Karim Adel</td>
-                            <td class="muted">Axis Festival</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">1,300.00</td>
-                            <td><span class="db-badge approved">Approved</span></td>
-                        </tr>
-                        <tr>
-                            <td class="muted">#1036</td>
-                            <td>Hana Samy</td>
-                            <td class="muted">Sideral</td>
-                            <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">450.00</td>
-                            <td><span class="db-badge pending">Pending</span></td>
-                        </tr>
-                    </tbody>
+                        @forelse($recentOrders as $order)
+                            @php
+                                $eventName = $order->items->first()?->ticket_name;
+                                $eventName = $eventName && str_contains($eventName, ' - ') ? strstr($eventName, ' - ', true) : ($eventName ?: '—');
+                                $statusClass = in_array($order->status, ['pending', 'pending_approval', 'pending_payment']) ? 'pending' : (in_array($order->status, ['approved', 'approved_pending_payment']) ? 'approved' : (in_array($order->status, ['paid']) ? 'paid' : 'rejected'));
+                            @endphp
+                            <tr>
+                                <td class="muted">#{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->id }}</td>
+                                <td>{{ $order->customer?->full_name ?: 'N/A' }}</td>
+                                <td class="muted">{{ $eventName }}</td>
+                                <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">{{ number_format((float) $order->total_amount, 2) }} EGP</td>
+                                <td><span class="db-badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" class="muted" style="padding:16px;">No orders yet.</td></tr>
+                        @endforelse
+                                        </tbody>
                 </table>
             </div>
         </div>
@@ -316,46 +314,25 @@
             ── --}}
             <div class="db-card">
                 <div class="db-card-head">
-                    <div class="db-card-title">Top Events</div>
+                    <div class="db-card-title">Top Events ({{ $rangeLabel }})</div>
                     <a href="{{ route('admin.events.index') }}" class="db-card-action">All →</a>
                 </div>
                 <div class="db-card-body" style="padding:4px 22px 16px;">
 
+                    @forelse($topEvents as $i => $event)
                     <div class="db-event-row">
-                        <div class="db-event-rank">1</div>
+                        <div class="db-event-rank">{{ $i + 1 }}</div>
                         <div class="db-event-info">
-                            <div class="db-event-name">Sideral</div>
-                            <div class="db-event-meta">38 orders</div>
+                            <div class="db-event-name">{{ $event['name'] }}</div>
+                            <div class="db-event-meta">{{ $event['orders_count'] }} orders</div>
                         </div>
-                        <div class="db-event-revenue">18,500</div>
+                        <div class="db-event-revenue">{{ number_format($event['revenue'], 0) }} EGP</div>
                     </div>
-
+                    @empty
                     <div class="db-event-row">
-                        <div class="db-event-rank">2</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">Axis Festival</div>
-                            <div class="db-event-meta">24 orders</div>
-                        </div>
-                        <div class="db-event-revenue">14,200</div>
+                        <div class="db-event-info"><div class="db-event-name">No data yet</div></div>
                     </div>
-
-                    <div class="db-event-row">
-                        <div class="db-event-rank">3</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">Club Night Vol.3</div>
-                            <div class="db-event-meta">17 orders</div>
-                        </div>
-                        <div class="db-event-revenue">9,800</div>
-                    </div>
-
-                    <div class="db-event-row">
-                        <div class="db-event-rank">4</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">Neon Sessions</div>
-                            <div class="db-event-meta">11 orders</div>
-                        </div>
-                        <div class="db-event-revenue">6,000</div>
-                    </div>
+                    @endforelse
 
                 </div>
             </div>
@@ -391,8 +368,31 @@
      ║   data:   {!! json_encode($revenueData) !!}
      ║   (same for orders chart)            ║
      ╚══════════════════════════════════════╝ --}}
+<script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
 <script>
-(function () {
+window.addEventListener('load', function () {
+    if (window.Dashmix && typeof Dashmix.helpersOnLoad === 'function') {
+        Dashmix.helpersOnLoad(['js-flatpickr']);
+    } else if (typeof flatpickr !== 'undefined') {
+        flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y' });
+    }
+});
+</script>
+
+<script>
+window.addEventListener('load', function () {
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js is not loaded');
+        return;
+    }
+
+    const revenueCanvas = document.getElementById('revenueChart');
+    const ordersCanvas = document.getElementById('ordersChart');
+    if (!revenueCanvas || !ordersCanvas) {
+        return;
+    }
+
+
     const gold    = '#f5b800';
     const goldDim = 'rgba(245,184,0,0.15)';
     const gridCol = 'rgba(255,255,255,0.05)';
@@ -418,12 +418,12 @@
         }
     };
 
-    new Chart(document.getElementById('revenueChart'), {
+    new Chart(revenueCanvas, {
         type: 'line',
         data: {
-            labels  : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+            labels  : @json($labels),
             datasets: [{
-                data                : [4200, 5800, 3900, 7200, 6100, 9400, 8800],
+                data                : @json($revenueData),
                 borderColor         : gold,
                 backgroundColor     : goldDim,
                 borderWidth         : 2,
@@ -437,12 +437,12 @@
         options: { ...sharedOpts }
     });
 
-    new Chart(document.getElementById('ordersChart'), {
+    new Chart(ordersCanvas, {
         type: 'bar',
         data: {
-            labels  : ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+            labels  : @json($labels),
             datasets: [{
-                data           : [38, 54, 31, 67, 58, 89, 82],
+                data           : @json($ordersData),
                 backgroundColor: 'rgba(245,184,0,0.22)',
                 borderColor    : gold,
                 borderWidth    : 1.5,
@@ -451,7 +451,7 @@
         },
         options: { ...sharedOpts }
     });
-})();
+});
 </script>
 
 @endsection
