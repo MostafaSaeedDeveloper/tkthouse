@@ -35,13 +35,21 @@
 
     .tkt-booking-section .section-title {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 52px;
+        font-size: 40px;
         letter-spacing: 4px;
         color: #fff;
         margin: 0 0 40px;
         line-height: 1;
     }
     .tkt-booking-section .section-title span { color: #f4c430; }
+
+    @media (max-width: 575px) {
+        .tkt-booking-section .section-title {
+            font-size: 32px;
+            letter-spacing: 3px;
+            margin-bottom: 24px;
+        }
+    }
 
     /* ── TICKET CARDS ─────────────────────────────────────── */
     .tkt-ticket-cards { display: flex; flex-direction: column; gap: 14px; }
@@ -529,6 +537,16 @@
         color: rgba(255,255,255,0.5);
         line-height: 1.5;
     }
+
+    .tkt-house-rules-mobile { display: none; }
+
+    @media (max-width: 767px) {
+        .tkt-house-rules-desktop { display: none; }
+        .tkt-house-rules-mobile {
+            display: block;
+            margin-top: 20px;
+        }
+    }
 </style>
 
 <!-- Sub Banner -->
@@ -641,7 +659,7 @@
                 </div><!-- /tkt-ticket-cards -->
 
                 <!-- House Rules -->
-                <div class="tkt-house-rules">
+                <div class="tkt-house-rules tkt-house-rules-desktop">
                     <div class="rules-header">
                         <i class="fa fa-exclamation-triangle"></i>
                         <h4>HOUSE RULES</h4>
@@ -695,6 +713,26 @@
                         <p class="summary-note">
                             <i class="fa fa-lock"></i>Secure checkout · No hidden fees
                         </p>
+                    </div>
+                </div>
+
+                <div class="tkt-house-rules tkt-house-rules-mobile">
+                    <div class="rules-header">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <h4>HOUSE RULES</h4>
+                    </div>
+                    <div class="tkt-rules-grid">
+                        @php
+                            $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))
+                                ->map(fn ($rule) => trim($rule))
+                                ->filter();
+                        @endphp
+                        @forelse($rules as $rule)
+                            <div class="rule-item"><span>{{ $rule }}</span></div>
+                        @empty
+                            <div class="rule-item"><span>Follow venue instructions and security guidelines during the event.</span></div>
+                            <div class="rule-item"><span>Please arrive early to complete the entry process smoothly.</span></div>
+                        @endforelse
                     </div>
                 </div>
             </div><!-- /col-md-4 -->
