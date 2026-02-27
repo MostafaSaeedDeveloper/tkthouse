@@ -10,6 +10,40 @@
             <a href="{{ route('admin.tickets.create') }}" class="btn btn-primary">Create Ticket</a>
         </div>
     </div>
+
+    <div class="block block-rounded block-bordered mb-3">
+        <div class="block-content py-3">
+            <form method="GET" action="{{ route('admin.tickets.index') }}" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Ticket #, holder, order #">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select js-select2" data-placeholder="All statuses" style="width: 100%;">
+                        <option value="">All statuses</option>
+                        @foreach(['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'] as $value => $label)
+                            <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Event Name</label>
+                    <select name="event_name" class="form-select js-select2" data-placeholder="All events" style="width: 100%;">
+                        <option value="">All events</option>
+                        @foreach(($eventOptions ?? collect()) as $eventName)
+                            <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-primary w-100" type="submit"><i class="fa fa-filter me-1"></i> Filter</button>
+                    <a href="{{ route('admin.tickets.index') }}" class="btn btn-alt-secondary w-100">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="block block-rounded">
         <div class="block-content p-0">
             <div class="table-responsive">

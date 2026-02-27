@@ -28,6 +28,8 @@
     'refunded'         => 'Refunded',
     'partially_refunded' => 'Partially Refunded',
   ];
+
+  $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
 @endphp
 
 <style>
@@ -396,6 +398,15 @@
               <span class="oe-pricing-label">Email</span>
               <span class="oe-pricing-val" style="font-size:12px;">{{ $order->customer?->email ?: '-' }}</span>
             </div>
+            @if($order->status === 'pending_payment' && $paymentLink)
+              <div class="oe-field mt-3">
+                <label class="oe-label">Payment Link</label>
+                <div class="input-group">
+                  <input type="text" class="oe-input" id="paymentLinkField" value="{{ $paymentLink }}" readonly>
+                  <button type="button" class="oe-btn" id="copyPaymentLinkBtn"><i class="fa fa-copy"></i> Copy</button>
+                </div>
+              </div>
+            @endif
           </div>
         </div>
       </div>
@@ -448,6 +459,21 @@
     badge.className = 'oe-status-preview status-' + this.value;
     badge.textContent = statusMap[this.value] || this.value;
   });
+
+  const copyBtn = document.getElementById('copyPaymentLinkBtn');
+  const paymentField = document.getElementById('paymentLinkField');
+  if (copyBtn && paymentField) {
+    copyBtn.addEventListener('click', async function () {
+      try {
+        await navigator.clipboard.writeText(paymentField.value);
+        this.innerHTML = '<i class="fa fa-check"></i> Copied';
+      } catch (e) {
+        paymentField.select();
+        document.execCommand('copy');
+      }
+    });
+  }
+
 })();
 </script>
 @endsection
