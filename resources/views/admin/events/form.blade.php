@@ -67,13 +67,13 @@
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">Image Preview</label>
-        <div class="border rounded p-2 bg-body-light d-flex align-items-center justify-content-center" style="min-height: 140px;">
+        <div class="border rounded p-2 bg-body-light d-flex align-items-center justify-content-center" style="height: 120px;">
             <img
                 id="cover_image_preview"
                 data-original-src="{{ $event->cover_image_url ?? '' }}"
                 src="{{ $event->cover_image_url ?? '' }}"
                 alt="Cover image preview"
-                style="max-height: 130px; width: 100%; object-fit: cover; {{ isset($event) && $event->cover_image_url ? '' : 'display:none;' }}"
+                style="max-height: 100px; max-width: 100%; width: auto; object-fit: contain; {{ isset($event) && $event->cover_image_url ? '' : 'display:none;' }}"
             >
             <span id="cover_image_placeholder" class="text-muted small {{ isset($event) && $event->cover_image_url ? 'd-none' : '' }}">No image selected</span>
         </div>
