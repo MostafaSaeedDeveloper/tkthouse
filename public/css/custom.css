@@ -158,3 +158,504 @@ body.msl-black .customer-auth-modal .auth-panel-register {
         border-radius: 4px;
     }
 }
+
+/* ================================================================
+   TKT House Admin — Custom Theme Override for Dashmix
+   Overwrites the default Dashmix colors with the dark-gold identity
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+/* ── Variables ─────────────────────────────────────────────────── */
+:root {
+  --tkth-bg:       #060608;
+  --tkth-surface:  #0e0e12;
+  --tkth-surface2: #16161d;
+  --tkth-border:   rgba(255, 255, 255, 0.07);
+  --tkth-gold:     #f5b800;
+  --tkth-gold-dim: #c99300;
+  --tkth-text:     #e8e8ef;
+  --tkth-muted:    #6b6b7e;
+  --tkth-red:      #e8445a;
+  --tkth-green:    #22c55e;
+  --tkth-blue:     #3b82f6;
+  --tkth-radius:   10px;
+  --tkth-font-h:   'Syne', sans-serif;
+  --tkth-font-b:   'DM Sans', sans-serif;
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+body {
+  background-color: var(--tkth-bg) !important;
+  font-family: var(--tkth-font-b) !important;
+  color: var(--tkth-text) !important;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+#sidebar,
+#sidebar .bg-header-dark,
+.bg-header-dark {
+  background-color: var(--tkth-surface) !important;
+  border-right: 1px solid var(--tkth-border) !important;
+}
+
+/* Sidebar header / logo area */
+#sidebar .content-header,
+#sidebar .bg-white-5 {
+  background: rgba(245, 184, 0, 0.04) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+}
+
+/* Nav items */
+.nav-main .nav-main-link {
+  color: var(--tkth-muted) !important;
+  font-family: var(--tkth-font-b) !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  margin: 1px 8px !important;
+  padding: 9px 12px !important;
+  transition: background 0.18s, color 0.18s !important;
+}
+
+.nav-main .nav-main-link:hover {
+  background: rgba(245, 184, 0, 0.07) !important;
+  color: var(--tkth-text) !important;
+}
+
+.nav-main .nav-main-link.active {
+  background: rgba(245, 184, 0, 0.12) !important;
+  color: var(--tkth-gold) !important;
+}
+
+.nav-main .nav-main-link-icon {
+  color: var(--tkth-muted) !important;
+  transition: color 0.18s;
+}
+.nav-main .nav-main-link.active .nav-main-link-icon,
+.nav-main .nav-main-link:hover .nav-main-link-icon {
+  color: var(--tkth-gold) !important;
+}
+
+/* Submenu */
+.nav-main-submenu {
+  background: transparent !important;
+  padding-left: 18px !important;
+}
+.nav-main-submenu .nav-main-link {
+  font-size: 12px !important;
+  padding: 7px 12px !important;
+}
+
+/* Sidebar scroll area */
+.js-sidebar-scroll,
+.content-side {
+  background: transparent !important;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+#page-header {
+  background: var(--tkth-surface) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+  box-shadow: none !important;
+}
+
+#page-header .content-header {
+  background: transparent !important;
+}
+
+/* Header buttons */
+#page-header .btn-alt-secondary {
+  background: var(--tkth-surface2) !important;
+  border: 1px solid var(--tkth-border) !important;
+  color: var(--tkth-muted) !important;
+  border-radius: 8px !important;
+  font-family: var(--tkth-font-b) !important;
+  font-size: 13px !important;
+  transition: border-color 0.2s, color 0.2s, background 0.2s !important;
+}
+#page-header .btn-alt-secondary:hover {
+  border-color: rgba(245, 184, 0, 0.3) !important;
+  color: var(--tkth-gold) !important;
+  background: rgba(245, 184, 0, 0.06) !important;
+}
+
+/* User dropdown header */
+.dropdown-menu .bg-primary-dark {
+  background: var(--tkth-surface2) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+  font-family: var(--tkth-font-h) !important;
+  font-size: 11px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: var(--tkth-gold) !important;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  background: var(--tkth-surface) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: var(--tkth-radius) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+.dropdown-item {
+  color: var(--tkth-muted) !important;
+  font-size: 13px !important;
+  font-family: var(--tkth-font-b) !important;
+  border-radius: 6px !important;
+  margin: 1px 4px !important;
+  padding: 8px 12px !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+.dropdown-item:hover, .dropdown-item:focus {
+  background: rgba(245, 184, 0, 0.08) !important;
+  color: var(--tkth-gold) !important;
+}
+.dropdown-divider {
+  border-color: var(--tkth-border) !important;
+}
+
+/* ── Main content area ─────────────────────────────────────────── */
+#main-container {
+  background: var(--tkth-bg) !important;
+}
+
+.content {
+  background: transparent !important;
+}
+
+/* ── Footer ────────────────────────────────────────────────────── */
+#page-footer {
+  background: var(--tkth-surface) !important;
+  border-top: 1px solid var(--tkth-border) !important;
+  color: var(--tkth-muted) !important;
+  font-size: 12px !important;
+}
+#page-footer a {
+  color: var(--tkth-muted) !important;
+  transition: color 0.2s;
+}
+#page-footer a:hover {
+  color: var(--tkth-gold) !important;
+}
+
+/* ── Generic Blocks (Dashmix .block) ───────────────────────────── */
+.block {
+  background: var(--tkth-surface) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: var(--tkth-radius) !important;
+  color: var(--tkth-text) !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s, transform 0.2s !important;
+}
+.block:hover {
+  border-color: rgba(245, 184, 0, 0.2) !important;
+}
+.block-link-shadow:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.3) !important;
+}
+
+.block-header,
+.block-header-default {
+  background: var(--tkth-surface2) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+  color: var(--tkth-text) !important;
+  font-family: var(--tkth-font-h) !important;
+}
+
+.block-title {
+  font-family: var(--tkth-font-h) !important;
+  font-size: 13px !important;
+  letter-spacing: 1px !important;
+  color: var(--tkth-text) !important;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────── */
+.table {
+  color: var(--tkth-text) !important;
+  border-color: var(--tkth-border) !important;
+}
+.table thead th {
+  background: var(--tkth-surface2) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+  color: var(--tkth-muted) !important;
+  font-family: var(--tkth-font-h) !important;
+  font-size: 10px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+}
+.table tbody tr {
+  border-bottom: 1px solid var(--tkth-border) !important;
+  transition: background 0.15s !important;
+}
+.table tbody tr:hover {
+  background: rgba(255,255,255,0.02) !important;
+}
+.table td, .table th {
+  border-color: var(--tkth-border) !important;
+  padding: 12px 16px !important;
+  vertical-align: middle !important;
+  font-size: 13px !important;
+}
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: rgba(255,255,255,0.015) !important;
+  color: var(--tkth-text) !important;
+}
+
+/* ── Forms ──────────────────────────────────────────────────────── */
+.form-control,
+.form-select {
+  background: var(--tkth-surface2) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: 8px !important;
+  color: var(--tkth-text) !important;
+  font-family: var(--tkth-font-b) !important;
+  font-size: 13px !important;
+  padding: 10px 14px !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.form-control:focus,
+.form-select:focus {
+  background: var(--tkth-surface2) !important;
+  border-color: var(--tkth-gold-dim) !important;
+  box-shadow: 0 0 0 3px rgba(245, 184, 0, 0.1) !important;
+  color: var(--tkth-text) !important;
+}
+.form-control::placeholder { color: var(--tkth-muted) !important; }
+.form-label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  color: var(--tkth-muted) !important;
+  margin-bottom: 6px !important;
+}
+.form-control.is-invalid { border-color: var(--tkth-red) !important; }
+.invalid-feedback { color: #f0849a !important; font-size: 12px !important; }
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+.btn-primary,
+.btn-hero.btn-primary {
+  background: var(--tkth-gold) !important;
+  border-color: var(--tkth-gold) !important;
+  color: #000 !important;
+  font-family: var(--tkth-font-h) !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  transition: background 0.2s, transform 0.1s !important;
+}
+.btn-primary:hover,
+.btn-hero.btn-primary:hover {
+  background: #ffc820 !important;
+  border-color: #ffc820 !important;
+  color: #000 !important;
+}
+
+.btn-secondary,
+.btn-alt-secondary {
+  background: var(--tkth-surface2) !important;
+  border: 1px solid var(--tkth-border) !important;
+  color: var(--tkth-muted) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  transition: border-color 0.2s, color 0.2s !important;
+}
+.btn-secondary:hover,
+.btn-alt-secondary:hover {
+  border-color: rgba(245, 184, 0, 0.3) !important;
+  color: var(--tkth-gold) !important;
+  background: rgba(245, 184, 0, 0.06) !important;
+}
+
+.btn-danger {
+  background: var(--tkth-red) !important;
+  border-color: var(--tkth-red) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+.btn-success {
+  background: var(--tkth-green) !important;
+  border-color: var(--tkth-green) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+.btn-sm { font-size: 12px !important; padding: 6px 12px !important; }
+
+/* ── Badges ─────────────────────────────────────────────────────── */
+.badge.bg-primary  { background: rgba(245,184,0,0.15) !important; color: var(--tkth-gold) !important; }
+.badge.bg-success  { background: rgba(34,197,94,0.15) !important; color: var(--tkth-green) !important; }
+.badge.bg-danger   { background: rgba(232,68,90,0.15) !important; color: var(--tkth-red) !important; }
+.badge.bg-warning  { background: rgba(245,184,0,0.15) !important; color: var(--tkth-gold) !important; }
+.badge.bg-info     { background: rgba(59,130,246,0.15) !important; color: var(--tkth-blue) !important; }
+.badge.bg-secondary{ background: var(--tkth-surface2) !important; color: var(--tkth-muted) !important; }
+
+/* ── Cards ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--tkth-surface) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: var(--tkth-radius) !important;
+  color: var(--tkth-text) !important;
+}
+.card-header {
+  background: var(--tkth-surface2) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+  font-family: var(--tkth-font-h) !important;
+  font-size: 11px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: var(--tkth-gold) !important;
+}
+.card-body { color: var(--tkth-text) !important; }
+
+/* ── Alerts ─────────────────────────────────────────────────────── */
+.alert-success {
+  background: rgba(34,197,94,0.08) !important;
+  border: 1px solid rgba(34,197,94,0.25) !important;
+  color: #6ee7a0 !important;
+  border-radius: 8px !important;
+}
+.alert-danger, .alert-error {
+  background: rgba(232,68,90,0.08) !important;
+  border: 1px solid rgba(232,68,90,0.3) !important;
+  color: #f0849a !important;
+  border-radius: 8px !important;
+}
+.alert-warning {
+  background: rgba(245,184,0,0.08) !important;
+  border: 1px solid rgba(245,184,0,0.25) !important;
+  color: var(--tkth-gold) !important;
+  border-radius: 8px !important;
+}
+.alert-info {
+  background: rgba(59,130,246,0.08) !important;
+  border: 1px solid rgba(59,130,246,0.25) !important;
+  color: #93c5fd !important;
+  border-radius: 8px !important;
+}
+
+/* ── Pagination ─────────────────────────────────────────────────── */
+.pagination .page-link {
+  background: var(--tkth-surface2) !important;
+  border: 1px solid var(--tkth-border) !important;
+  color: var(--tkth-muted) !important;
+  font-size: 13px !important;
+  transition: all 0.2s !important;
+}
+.pagination .page-link:hover {
+  background: rgba(245,184,0,0.08) !important;
+  border-color: rgba(245,184,0,0.3) !important;
+  color: var(--tkth-gold) !important;
+}
+.pagination .page-item.active .page-link {
+  background: var(--tkth-gold) !important;
+  border-color: var(--tkth-gold) !important;
+  color: #000 !important;
+  font-weight: 700 !important;
+}
+.pagination .page-item.disabled .page-link {
+  opacity: 0.3 !important;
+}
+
+/* ── Modals ─────────────────────────────────────────────────────── */
+.modal-content {
+  background: var(--tkth-surface) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: var(--tkth-radius) !important;
+  color: var(--tkth-text) !important;
+}
+.modal-header {
+  background: var(--tkth-surface2) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+  font-family: var(--tkth-font-h) !important;
+}
+.modal-title {
+  font-family: var(--tkth-font-h) !important;
+  font-size: 13px !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  color: var(--tkth-gold) !important;
+}
+.modal-footer {
+  border-top: 1px solid var(--tkth-border) !important;
+  background: transparent !important;
+}
+.btn-close { filter: invert(1) !important; opacity: 0.5 !important; }
+
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--tkth-bg); }
+::-webkit-scrollbar-thumb { background: var(--tkth-surface2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(245,184,0,0.3); }
+
+/* ── Headings / Text ────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--tkth-font-h) !important;
+  color: #fff !important;
+}
+.text-muted { color: var(--tkth-muted) !important; }
+.text-primary { color: var(--tkth-gold) !important; }
+.text-success { color: var(--tkth-green) !important; }
+.text-danger  { color: var(--tkth-red) !important; }
+.fw-bold, .fw-semibold { font-family: var(--tkth-font-h) !important; }
+
+/* Link */
+a { color: var(--tkth-text); }
+a:hover { color: var(--tkth-gold); }
+
+/* ── Header logo area tweak ─────────────────────────────────────── */
+.fw-semibold.text-white.tracking-wide {
+  font-family: var(--tkth-font-h) !important;
+  font-size: 18px !important;
+  letter-spacing: -0.5px !important;
+}
+
+/* ── Sub-banner (front pages inherited in admin views) ──────────── */
+.sub-banner {
+  background: linear-gradient(135deg, #0b0b10, #12120a) !important;
+  border-bottom: 1px solid var(--tkth-border) !important;
+}
+
+/* ── SweetAlert2 theme fix ──────────────────────────────────────── */
+.swal2-popup {
+  background: var(--tkth-surface) !important;
+  color: var(--tkth-text) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: var(--tkth-radius) !important;
+  font-family: var(--tkth-font-b) !important;
+}
+.swal2-title { color: #fff !important; font-family: var(--tkth-font-h) !important; }
+.swal2-html-container { color: var(--tkth-muted) !important; }
+.swal2-confirm {
+  background: var(--tkth-gold) !important;
+  color: #000 !important;
+  font-family: var(--tkth-font-h) !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+}
+.swal2-cancel {
+  background: var(--tkth-surface2) !important;
+  color: var(--tkth-muted) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: 8px !important;
+}
+.swal2-icon.swal2-warning { border-color: var(--tkth-gold) !important; color: var(--tkth-gold) !important; }
+
+/* ── Select2 (if used) ──────────────────────────────────────────── */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+  background: var(--tkth-surface2) !important;
+  border: 1px solid var(--tkth-border) !important;
+  border-radius: 8px !important;
+  color: var(--tkth-text) !important;
+  min-height: 42px !important;
+}
+.select2-dropdown {
+  background: var(--tkth-surface) !important;
+  border: 1px solid var(--tkth-border) !important;
+}
+.select2-results__option { color: var(--tkth-text) !important; font-size: 13px !important; }
+.select2-results__option--highlighted {
+  background: rgba(245,184,0,0.1) !important;
+  color: var(--tkth-gold) !important;
+}
