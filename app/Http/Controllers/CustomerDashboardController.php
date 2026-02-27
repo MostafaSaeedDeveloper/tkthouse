@@ -12,7 +12,7 @@ class CustomerDashboardController extends Controller
         $user = $request->user();
 
         $orders = Order::query()
-            ->with(['items', 'customer'])
+            ->with(['items', 'customer', 'issuedTickets'])
             ->where(function ($query) use ($user) {
                 $query->where('user_id', $user->id)
                     ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));

@@ -1,17 +1,18 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\EventController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TicketController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
+use App\Http\Controllers\FrontTicketController;
 use App\Http\Controllers\PagesController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
     Route::get('/orders/{order}/payment/{token}', [CheckoutController::class, 'paymentPage'])->name('front.orders.payment');
     Route::post('/orders/{order}/payment/{token}', [CheckoutController::class, 'confirmPayment'])->name('front.orders.payment.confirm');
+    Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
+    Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
 });
 
 Auth::routes(['register' => false]);

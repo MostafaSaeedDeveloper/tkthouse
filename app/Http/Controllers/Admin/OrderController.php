@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -149,6 +150,8 @@ class OrderController extends Controller
                 ])
                 ->log('Order status changed');
         }
+
+        app(TicketIssuanceService::class)->issueIfPaid($order);
 
         return redirect()->route('admin.orders.show', $order)->with('success', 'Order updated successfully.');
     }

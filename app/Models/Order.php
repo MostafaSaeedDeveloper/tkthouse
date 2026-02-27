@@ -19,6 +19,7 @@ class Order extends Model
         'payment_status',
         'payment_link_token',
         'approved_at',
+        'tickets_generated_at',
         'total_amount',
     ];
 
@@ -27,6 +28,7 @@ class Order extends Model
         return [
             'requires_approval' => 'boolean',
             'approved_at' => 'datetime',
+            'tickets_generated_at' => 'datetime',
         ];
     }
 
@@ -43,5 +45,10 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function issuedTickets()
+    {
+        return $this->hasMany(IssuedTicket::class);
     }
 }

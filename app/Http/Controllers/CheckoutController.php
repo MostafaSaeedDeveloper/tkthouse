@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -99,6 +100,8 @@ class CheckoutController extends Controller
             'status' => 'paid',
             'payment_status' => 'paid',
         ]);
+
+        app(TicketIssuanceService::class)->issueIfPaid($order);
 
         activity('orders')
             ->performedOn($order)
@@ -332,7 +335,6 @@ class CheckoutController extends Controller
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
     }
-
 
     private function generateNumericOrderNumber(): string
     {

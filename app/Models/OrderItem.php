@@ -32,4 +32,9 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Ticket::class);
     }
+
+    public function issuedTickets()
+    {
+        return $this->hasMany(IssuedTicket::class);
+    }
 }
