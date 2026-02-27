@@ -35,6 +35,7 @@
                                 <th>Payment</th>
                                 <th>Total</th>
                                 <th>Date</th>
+                                <th>Tickets</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -45,10 +46,23 @@
                                     <td>{{ ucwords(str_replace('_', ' ', $order->payment_status)) }}</td>
                                     <td>{{ number_format($order->total_amount, 2) }} EGP</td>
                                     <td>{{ $order->created_at?->format('Y-m-d H:i') }}</td>
+                                    <td>
+                                        @if($order->issuedTickets->isNotEmpty())
+                                            <div class="d-flex flex-column gap-1">
+                                                @foreach($order->issuedTickets as $ticket)
+                                                    <a class="text-warning" href="{{ route('front.tickets.show', $ticket) }}">
+                                                        {{ $ticket->ticket_number }}
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <span class="text-muted">Not generated yet</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">No orders yet.</td>
+                                    <td colspan="6" class="text-center text-muted py-4">No orders yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>

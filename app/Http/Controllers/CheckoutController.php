@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -80,7 +81,7 @@ class CheckoutController extends Controller
     {
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-        abort_unless($order->status === 'approved_pending_payment', 404);
+        abort_unless($order->status === 'pending_payment', 404);
 
         $order->load(['items', 'customer']);
 
@@ -91,14 +92,16 @@ class CheckoutController extends Controller
     {
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-        abort_unless($order->status === 'approved_pending_payment', 404);
+        abort_unless($order->status === 'pending_payment', 404);
 
         $oldStatus = $order->status;
 
         $order->update([
-            'status' => 'paid',
+            'status' => 'complete',
             'payment_status' => 'paid',
         ]);
+
+        app(TicketIssuanceService::class)->issueIfPaid($order);
 
         activity('orders')
             ->performedOn($order)
@@ -332,7 +335,6 @@ class CheckoutController extends Controller
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
     }
-
 
     private function generateNumericOrderNumber(): string
     {
