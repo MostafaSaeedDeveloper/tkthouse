@@ -44,51 +44,6 @@
 
         <!-- Responsive CSS -->
         <link href="{{ asset('css/responsive.css') }}" rel="stylesheet">
-
-        <style>
-            .mobile-account-icon { display: none; }
-
-            @media (max-width: 767px) {
-                .header-style-3 .header-2st-row > .container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                }
-                .header-style-3 .center-logo {
-                    flex: 1;
-                    text-align: center;
-                }
-                .header-style-3 .header-2st-row .logo {
-                    float: none;
-                    margin: 0 auto;
-                    display: inline-block;
-                }
-                .header-style-3 .header-2st-row .logo img {
-                    max-height: 64px;
-                    width: auto;
-                }
-                .mobile-account-icon {
-                    display: block;
-                    min-width: 44px;
-                }
-                .mobile-account-icon a,
-                .header-style-3 .playlist_menu_bar li a {
-                    font-size: 38px;
-                    line-height: 1;
-                }
-                .header-style-3 .playlist_menu_bar {
-                    margin: 0;
-                }
-                .header-style-3 .playlist_menu_bar .desktop-account {
-                    display: none;
-                }
-                .header-style-3 .header-2st-row .pull-right {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-            }
-        </style>
     </head>
 
     <body class="msl-black" data-authenticated="{{ auth()->check() ? "1" : "0" }}">
@@ -102,12 +57,17 @@
             <header class="header-style-3">
                 <div class="header-2st-row ">
                     <div class="container">
-                        <div class="mobile-account-icon">
-                            @auth
-                                <a href="{{ route('front.account.profile') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a>
-                            @else
-                                <a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a>
-                            @endauth
+                        <div class="pull-left">
+                            <div class="social-icons">
+                                <strong>FOLLOW US:</strong>
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-twitter" aria-hidden="true"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-linkedin" aria-hidden="true"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-youtube" aria-hidden="true"></i></a></li>
+                                    <li><a href="#"><i class="fa fa-soundcloud" aria-hidden="true"></i></a></li>
+                                </ul>
+                            </div>
                         </div>
                         <div class="center-logo">
                             <div class="logo">
@@ -117,9 +77,9 @@
                         <div class="pull-right">
                             <ul class="playlist_menu_bar">
                                 @auth
-                                    <li class="desktop-account"><a href="{{ route('front.account.profile') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
+                                    <li><a href="{{ route('front.account.profile') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
                                 @else
-                                    <li class="desktop-account"><a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a></li>
+                                    <li><a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a></li>
                                 @endauth
                             </ul>
                             <div id="kode-responsive-navigation" class="dl-menuwrapper">
