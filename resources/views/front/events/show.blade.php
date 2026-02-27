@@ -35,13 +35,21 @@
 
     .tkt-booking-section .section-title {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 52px;
+        font-size: 40px;
         letter-spacing: 4px;
         color: #fff;
         margin: 0 0 40px;
         line-height: 1;
     }
     .tkt-booking-section .section-title span { color: #f4c430; }
+
+    @media (max-width: 575px) {
+        .tkt-booking-section .section-title {
+            font-size: 32px;
+            letter-spacing: 3px;
+            margin-bottom: 24px;
+        }
+    }
 
     /* ── TICKET CARDS ─────────────────────────────────────── */
     .tkt-ticket-cards { display: flex; flex-direction: column; gap: 14px; }
@@ -240,6 +248,64 @@
     }
     .tkt-add-btn:hover { background: #e0b020; transform: scale(1.02); }
     .tkt-add-btn:active { transform: scale(0.98); }
+
+    .tkt-card-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 991px) {
+        .tkt-ticket-card .card-info {
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .tkt-ticket-card .card-meta {
+            width: 100%;
+        }
+
+        .tkt-ticket-card .card-price {
+            text-align: left;
+        }
+
+        .tkt-card-actions {
+            width: 100%;
+            margin-left: 0;
+            justify-content: space-between;
+        }
+    }
+
+    @media (max-width: 575px) {
+        .tkt-ticket-card::before { display: none; }
+
+        .tkt-ticket-card .card-badge {
+            width: 64px;
+            padding: 16px 8px;
+        }
+
+        .tkt-ticket-card .card-info {
+            padding: 18px 14px;
+            gap: 12px;
+        }
+
+        .tkt-ticket-card .card-info .ticket-name { font-size: 18px; }
+        .tkt-ticket-card .card-price .price-amount { font-size: 26px; }
+
+        .tkt-card-actions { gap: 10px; }
+
+        .tkt-qty-counter {
+            flex: 1;
+            max-width: 130px;
+        }
+
+        .tkt-add-btn {
+            flex: 1;
+            padding: 0 12px;
+        }
+    }
 
     /* ── ORDER SUMMARY SIDEBAR ────────────────────────────── */
     .tkt-summary-box {
@@ -471,6 +537,16 @@
         color: rgba(255,255,255,0.5);
         line-height: 1.5;
     }
+
+    .tkt-house-rules-mobile { display: none; }
+
+    @media (max-width: 767px) {
+        .tkt-house-rules-desktop { display: none; }
+        .tkt-house-rules-mobile {
+            display: block;
+            margin-top: 20px;
+        }
+    }
 </style>
 
 <!-- Sub Banner -->
@@ -552,14 +628,16 @@
                                     <span class="price-amount">${{ number_format($ticket->price, 2) }}</span>
                                     <span class="price-label">per ticket</span>
                                 </div>
-                                <div class="tkt-qty-counter">
-                                    <button class="qty-btn qty-minus" type="button">−</button>
-                                    <input class="qty-val" type="text" value="1" readonly>
-                                    <button class="qty-btn qty-plus" type="button">+</button>
+                                <div class="tkt-card-actions">
+                                    <div class="tkt-qty-counter">
+                                        <button class="qty-btn qty-minus" type="button">−</button>
+                                        <input class="qty-val" type="text" value="1" readonly>
+                                        <button class="qty-btn qty-plus" type="button">+</button>
+                                    </div>
+                                    <button class="tkt-add-btn" type="button">
+                                        <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
+                                    </button>
                                 </div>
-                                <button class="tkt-add-btn" type="button">
-                                    <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
-                                </button>
                             </div>
                         </div>
                     @empty
@@ -581,7 +659,7 @@
                 </div><!-- /tkt-ticket-cards -->
 
                 <!-- House Rules -->
-                <div class="tkt-house-rules">
+                <div class="tkt-house-rules tkt-house-rules-desktop">
                     <div class="rules-header">
                         <i class="fa fa-exclamation-triangle"></i>
                         <h4>HOUSE RULES</h4>
@@ -635,6 +713,26 @@
                         <p class="summary-note">
                             <i class="fa fa-lock"></i>Secure checkout · No hidden fees
                         </p>
+                    </div>
+                </div>
+
+                <div class="tkt-house-rules tkt-house-rules-mobile">
+                    <div class="rules-header">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <h4>HOUSE RULES</h4>
+                    </div>
+                    <div class="tkt-rules-grid">
+                        @php
+                            $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))
+                                ->map(fn ($rule) => trim($rule))
+                                ->filter();
+                        @endphp
+                        @forelse($rules as $rule)
+                            <div class="rule-item"><span>{{ $rule }}</span></div>
+                        @empty
+                            <div class="rule-item"><span>Follow venue instructions and security guidelines during the event.</span></div>
+                            <div class="rule-item"><span>Please arrive early to complete the entry process smoothly.</span></div>
+                        @endforelse
                     </div>
                 </div>
             </div><!-- /col-md-4 -->
