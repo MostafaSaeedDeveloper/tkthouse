@@ -155,7 +155,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
-                'order_number' => 'ORD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT),
+                'order_number' => $this->generateNumericOrderNumber(),
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
@@ -249,7 +249,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
-                'order_number' => 'ORD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT),
+                'order_number' => $this->generateNumericOrderNumber(),
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
@@ -299,6 +299,16 @@ class CheckoutController extends Controller
         });
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
+    }
+
+
+    private function generateNumericOrderNumber(): string
+    {
+        do {
+            $candidate = now()->format('YmdHis').str_pad((string) random_int(1, 999), 3, '0', STR_PAD_LEFT);
+        } while (Order::query()->where('order_number', $candidate)->exists());
+
+        return $candidate;
     }
 
     private function upsertCustomer(array $baseValidated): Customer
