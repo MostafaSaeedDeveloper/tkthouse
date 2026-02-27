@@ -26,9 +26,8 @@ class TicketController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateTicket($request);
-        $validated['name'] = $request->input('name', $validated['holder_name'] ?? 'Ticket');
 
-        Ticket::create($validated);
+        Ticket::create($validated + ['name' => $validated['holder_name'] ?? 'Ticket']);
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket created successfully.');
     }
@@ -50,7 +49,6 @@ class TicketController extends Controller
     public function update(Request $request, Ticket $ticket)
     {
         $validated = $this->validateTicket($request);
-        $validated['name'] = $request->input('name', $ticket->name);
 
         $ticket->update($validated);
 
