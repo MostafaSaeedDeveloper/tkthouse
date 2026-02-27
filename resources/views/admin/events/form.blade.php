@@ -62,7 +62,21 @@
     </div>
     <div class="col-md-8 mb-3">
         <label class="form-label">Event Image</label>
-        <input type="file" name="cover_image" class="form-control" {{ isset($event) ? '' : 'required' }}>
+        <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
+        <div class="form-text">Optional. Uploading a new image will replace the current cover image.</div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Image Preview</label>
+        <div class="border rounded p-2 bg-body-light d-flex align-items-center justify-content-center" style="min-height: 140px;">
+            <img
+                id="cover_image_preview"
+                data-original-src="{{ $event->cover_image_url ?? '' }}"
+                src="{{ $event->cover_image_url ?? '' }}"
+                alt="Cover image preview"
+                style="max-height: 130px; width: 100%; object-fit: cover; {{ isset($event) && $event->cover_image_url ? '' : 'display:none;' }}"
+            >
+            <span id="cover_image_placeholder" class="text-muted small {{ isset($event) && $event->cover_image_url ? 'd-none' : '' }}">No image selected</span>
+        </div>
     </div>
     <div class="col-12 mb-3">
         <label class="form-label">Description</label>
@@ -172,6 +186,38 @@
             }
 
             btn.closest('.ticket-row, .fee-row')?.remove();
+        });
+
+        const coverInput = document.getElementById('cover_image');
+        const coverPreview = document.getElementById('cover_image_preview');
+        const coverPlaceholder = document.getElementById('cover_image_placeholder');
+
+        coverInput?.addEventListener('change', (event) => {
+            const [file] = event.target.files || [];
+
+            if (!file) {
+                const originalSrc = coverPreview?.dataset.originalSrc || '';
+
+                if (originalSrc) {
+                    coverPreview.src = originalSrc;
+                    coverPreview.style.display = '';
+                    coverPlaceholder?.classList.add('d-none');
+                } else {
+                    coverPreview.style.display = 'none';
+                    coverPlaceholder?.classList.remove('d-none');
+                }
+
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = ({ target }) => {
+                coverPreview.src = target?.result || '';
+                coverPreview.style.display = '';
+                coverPlaceholder?.classList.add('d-none');
+            };
+
+            reader.readAsDataURL(file);
         });
     })();
 </script>
