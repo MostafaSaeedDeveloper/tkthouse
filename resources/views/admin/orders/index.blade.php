@@ -65,7 +65,7 @@
                 <table class="table table-hover table-vcenter mb-0">
                     <thead>
                         <tr>
-                            <th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Payment</th><th class="text-end">Action</th>
+                            <th>Order #</th><th>Customer</th><th>Items</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment</th><th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,6 +78,17 @@
                             </td>
                             <td>{{ $order->customer?->full_name }}<br><span class="fs-sm text-muted">{{ $order->customer?->email }}</span></td>
                             <td>{{ $order->items_count }}</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach($order->items->pluck('ticket_name')->unique() as $ticketType)
+                                        @php
+                                            $normalizedType = \Illuminate\Support\Str::lower(trim((string) \Illuminate\Support\Str::afterLast($ticketType, ' - ')));
+                                            $ticketColor = $ticketColorMap[$normalizedType] ?? '#6c757d';
+                                        @endphp
+                                        <span class="badge" style="background-color: {{ $ticketColor }}; color: #fff;">{{ $ticketType }}</span>
+                                    @endforeach
+                                </div>
+                            </td>
                             <td>{{ number_format($order->total_amount, 2) }} EGP</td>
                             <td><span class="badge bg-info">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
                             <td>{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</td>
@@ -95,7 +106,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="7" class="text-center py-4 text-muted">No orders found.</td></tr>
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No orders found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

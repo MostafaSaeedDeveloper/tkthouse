@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('price', 10, 2)->default(0);
             $table->string('status')->default('active');
+            $table->string('color', 7)->default('#0d6efd');
             $table->string('label')->nullable();
             $table->text('description')->nullable();
             $table->timestamps();

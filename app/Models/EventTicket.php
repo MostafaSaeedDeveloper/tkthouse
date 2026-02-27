@@ -14,6 +14,7 @@ class EventTicket extends Model
         'name',
         'price',
         'status',
+        'color',
         'label',
         'description',
     ];
