@@ -241,6 +241,64 @@
     .tkt-add-btn:hover { background: #e0b020; transform: scale(1.02); }
     .tkt-add-btn:active { transform: scale(0.98); }
 
+    .tkt-card-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 991px) {
+        .tkt-ticket-card .card-info {
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .tkt-ticket-card .card-meta {
+            width: 100%;
+        }
+
+        .tkt-ticket-card .card-price {
+            text-align: left;
+        }
+
+        .tkt-card-actions {
+            width: 100%;
+            margin-left: 0;
+            justify-content: space-between;
+        }
+    }
+
+    @media (max-width: 575px) {
+        .tkt-ticket-card::before { display: none; }
+
+        .tkt-ticket-card .card-badge {
+            width: 64px;
+            padding: 16px 8px;
+        }
+
+        .tkt-ticket-card .card-info {
+            padding: 18px 14px;
+            gap: 12px;
+        }
+
+        .tkt-ticket-card .card-info .ticket-name { font-size: 18px; }
+        .tkt-ticket-card .card-price .price-amount { font-size: 26px; }
+
+        .tkt-card-actions { gap: 10px; }
+
+        .tkt-qty-counter {
+            flex: 1;
+            max-width: 130px;
+        }
+
+        .tkt-add-btn {
+            flex: 1;
+            padding: 0 12px;
+        }
+    }
+
     /* ── ORDER SUMMARY SIDEBAR ────────────────────────────── */
     .tkt-summary-box {
         background: #111;
@@ -552,14 +610,16 @@
                                     <span class="price-amount">${{ number_format($ticket->price, 2) }}</span>
                                     <span class="price-label">per ticket</span>
                                 </div>
-                                <div class="tkt-qty-counter">
-                                    <button class="qty-btn qty-minus" type="button">−</button>
-                                    <input class="qty-val" type="text" value="1" readonly>
-                                    <button class="qty-btn qty-plus" type="button">+</button>
+                                <div class="tkt-card-actions">
+                                    <div class="tkt-qty-counter">
+                                        <button class="qty-btn qty-minus" type="button">−</button>
+                                        <input class="qty-val" type="text" value="1" readonly>
+                                        <button class="qty-btn qty-plus" type="button">+</button>
+                                    </div>
+                                    <button class="tkt-add-btn" type="button">
+                                        <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
+                                    </button>
                                 </div>
-                                <button class="tkt-add-btn" type="button">
-                                    <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
-                                </button>
                             </div>
                         </div>
                     @empty
