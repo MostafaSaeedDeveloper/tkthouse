@@ -299,7 +299,7 @@
                         </div>
 
                         <button type="submit" class="co-btn-primary">
-                            {{ $requiresApproval ? 'Send Order' : 'Book Now' }}
+                            {{ $requiresApproval ? 'Send Order' : 'Pay '.number_format($units->sum('ticket_price'),2).' EGP' }}
                         </button>
                     </div>
 
@@ -409,7 +409,7 @@
                             <div class="co-flow-note" id="checkout-flow-note"></div>
                         </div>
 
-                        <button type="submit" class="co-btn-primary" id="submit-order-btn">Send Order</button>
+                        <button type="submit" class="co-btn-primary" id="submit-order-btn">Pay 0.00 EGP</button>
                     </div>
 
                     {{-- RIGHT: Tickets --}}
@@ -431,14 +431,14 @@
                                                     @if($eventTickets->isNotEmpty())
                                                         <optgroup label="Event Tickets">
                                                             @foreach($eventTickets as $ticket)
-                                                                <option value="event:{{ $ticket->id }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
                                                     @if($legacyTickets->isNotEmpty())
                                                         <optgroup label="General Tickets">
                                                             @foreach($legacyTickets as $ticket)
-                                                                <option value="legacy:{{ $ticket->id }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
@@ -476,14 +476,14 @@
                                     @if($eventTickets->isNotEmpty())
                                         <optgroup label="Event Tickets">
                                             @foreach($eventTickets as $ticket)
-                                                <option value="event:{{ $ticket->id }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
                                     @if($legacyTickets->isNotEmpty())
                                         <optgroup label="General Tickets">
                                             @foreach($legacyTickets as $ticket)
-                                                <option value="legacy:{{ $ticket->id }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
@@ -517,22 +517,34 @@
                 const bindRemove = () => rows.querySelectorAll('.remove-row').forEach(b=>{
                     b.onclick=()=>{ if(rows.querySelectorAll('[data-row]').length<=1) return; b.closest('[data-row]').remove(); reindex(); flow(); };
                 });
+                const bindFlowInputs = () => {
+                    rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                    rows.querySelectorAll('input[data-name="quantity"], input[name$="[quantity]"]').forEach(i=>i.oninput=flow);
+                };
                 const flow = () => {
+                    const rowEls = [...rows.querySelectorAll('[data-row]')];
                     const req=[...rows.querySelectorAll('.ticket-select')].some(s=>s.options[s.selectedIndex]?.dataset.requiresApproval==='1');
+                    let total = 0;
+                    rowEls.forEach(r=>{
+                        const ticket = r.querySelector('.ticket-select');
+                        const qty = parseInt(r.querySelector('input[data-name="quantity"], input[name$="[quantity]"]')?.value || '1', 10);
+                        const price = parseFloat(ticket?.options[ticket.selectedIndex]?.dataset.price || '0');
+                        if (!Number.isNaN(price) && !Number.isNaN(qty)) total += price * Math.max(1, qty);
+                    });
                     payBox.style.display=req?'none':'block';
                     penBox.style.display=req?'block':'none';
                     document.querySelectorAll('.payment-method-input').forEach(i=>{i.required=!req;if(req)i.checked=false;});
-                    subBtn.textContent=req?'Send Order':'Book Now';
-                    note.textContent=req?'This order requires admin approval before payment.':'You can complete payment immediately.';
+                    subBtn.textContent=req?'Send Order':`Pay ${total.toFixed(2)} EGP`;
+                    note.textContent=req?'This order requires admin approval before payment.':'You will be redirected directly to secure payment.';
                 };
                 addBtn.addEventListener('click',()=>{
                     rows.appendChild(tpl.content.cloneNode(true));
                     reindex(); bindRemove();
-                    rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                    bindFlowInputs();
                     flow();
                 });
                 reindex(); bindRemove();
-                rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                bindFlowInputs();
                 flow();
             })();
             </script>
