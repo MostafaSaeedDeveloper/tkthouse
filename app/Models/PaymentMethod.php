@@ -11,6 +11,9 @@ class PaymentMethod extends Model
 
     protected $fillable = [
         'name',
+        'checkout_label',
+        'checkout_icon',
+        'checkout_description',
         'code',
         'provider',
         'is_active',

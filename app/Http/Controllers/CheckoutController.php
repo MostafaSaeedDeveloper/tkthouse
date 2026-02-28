@@ -33,7 +33,7 @@ class CheckoutController extends Controller
                 'mode' => 'event_locked',
                 'eventSelection' => $eventSelection,
                 'buyer' => $buyer,
-                'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code']),
+                'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
             ]);
         }
 
@@ -56,7 +56,7 @@ class CheckoutController extends Controller
             'legacyTickets' => $legacyTickets,
             'eventSelection' => null,
             'buyer' => $buyer,
-            'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code']),
+            'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
         ]);
     }
 

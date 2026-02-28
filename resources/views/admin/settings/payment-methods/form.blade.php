@@ -37,6 +37,20 @@
                 </div>
             </div>
 
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Checkout Label</label>
+                    <input class="form-control" name="checkout_label" value="{{ old('checkout_label', $method->checkout_label) }}" placeholder="Text shown in checkout">
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label">Checkout Icon</label>
+                    <input class="form-control" name="checkout_icon" value="{{ old('checkout_icon', $method->checkout_icon) }}" placeholder="💳">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Checkout Description (Optional)</label>
+                    <input class="form-control" name="checkout_description" value="{{ old('checkout_description', $method->checkout_description) }}" placeholder="Optional short description under payment method">
+                </div>
+            </div>
             <div class="form-check form-switch mb-4">
                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $method->is_active ?? true))>
                 <label class="form-check-label" for="is_active">Active</label>

@@ -55,6 +55,9 @@ class PaymentMethodController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
+            'checkout_label' => ['nullable', 'string', 'max:120'],
+            'checkout_icon' => ['nullable', 'string', 'max:16'],
+            'checkout_description' => ['nullable', 'string', 'max:255'],
             'code' => [
                 'required',
                 'string',
@@ -80,6 +83,9 @@ class PaymentMethodController extends Controller
 
         return [
             'name' => $validated['name'],
+            'checkout_label' => trim((string) ($validated['checkout_label'] ?? '')) ?: $validated['name'],
+            'checkout_icon' => trim((string) ($validated['checkout_icon'] ?? '')) ?: '💰',
+            'checkout_description' => trim((string) ($validated['checkout_description'] ?? '')) ?: null,
             'code' => strtolower($validated['code']),
             'provider' => $validated['provider'],
             'is_active' => $request->boolean('is_active'),

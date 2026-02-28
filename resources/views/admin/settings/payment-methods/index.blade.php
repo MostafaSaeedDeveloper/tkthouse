@@ -19,6 +19,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Code</th>
+                        <th>Checkout</th>
                         <th>Provider</th>
                         <th>Status</th>
                         <th class="text-end">Actions</th>
@@ -29,6 +30,7 @@
                         <tr>
                             <td>{{ $method->name }}</td>
                             <td><code>{{ $method->code }}</code></td>
+                            <td>{{ $method->checkout_icon ?: "💰" }} {{ $method->checkout_label ?: $method->name }}@if($method->checkout_description)<div class="fs-xs text-muted">{{ $method->checkout_description }}</div>@endif</td>
                             <td>{{ strtoupper($method->provider) }}</td>
                             <td>
                                 <span class="badge {{ $method->is_active ? 'bg-success' : 'bg-secondary' }}">
@@ -45,7 +47,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted">No payment methods found.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted">No payment methods found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
