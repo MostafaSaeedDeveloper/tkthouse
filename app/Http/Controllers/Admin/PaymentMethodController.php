@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class PaymentMethodController extends Controller
@@ -46,6 +47,10 @@ class PaymentMethodController extends Controller
 
     public function destroy(PaymentMethod $paymentMethod)
     {
+        if ($paymentMethod->checkout_icon && str_starts_with((string) $paymentMethod->checkout_icon, 'payment-method-icons/')) {
+            Storage::disk('public')->delete((string) $paymentMethod->checkout_icon);
+        }
+
         $paymentMethod->delete();
 
         return back()->with('success', 'Payment method deleted successfully.');
@@ -56,8 +61,8 @@ class PaymentMethodController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'checkout_label' => ['nullable', 'string', 'max:120'],
-            'checkout_icon' => ['nullable', 'string', 'max:16'],
             'checkout_description' => ['nullable', 'string', 'max:255'],
+            'checkout_icon_file' => ['nullable', 'image', 'max:2048'],
             'code' => [
                 'required',
                 'string',
@@ -81,10 +86,18 @@ class PaymentMethodController extends Controller
             ];
         }
 
+        $iconPath = $method?->checkout_icon;
+        if ($request->hasFile('checkout_icon_file')) {
+            if ($iconPath && str_starts_with((string) $iconPath, 'payment-method-icons/')) {
+                Storage::disk('public')->delete((string) $iconPath);
+            }
+            $iconPath = $request->file('checkout_icon_file')->store('payment-method-icons', 'public');
+        }
+
         return [
             'name' => $validated['name'],
             'checkout_label' => trim((string) ($validated['checkout_label'] ?? '')) ?: $validated['name'],
-            'checkout_icon' => trim((string) ($validated['checkout_icon'] ?? '')) ?: '💰',
+            'checkout_icon' => $iconPath,
             'checkout_description' => trim((string) ($validated['checkout_description'] ?? '')) ?: null,
             'code' => strtolower($validated['code']),
             'provider' => $validated['provider'],

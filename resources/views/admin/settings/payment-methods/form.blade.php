@@ -11,7 +11,7 @@
 
     @include('admin.partials.flash')
 
-    <form method="POST" action="{{ $method->exists ? route('admin.payment-methods.update', $method) : route('admin.payment-methods.store') }}" class="block block-rounded">
+    <form method="POST" enctype="multipart/form-data" action="{{ $method->exists ? route('admin.payment-methods.update', $method) : route('admin.payment-methods.store') }}" class="block block-rounded">
         @csrf
         @if($method->exists) @method('PUT') @endif
 
@@ -42,15 +42,19 @@
                     <label class="form-label">Checkout Label</label>
                     <input class="form-control" name="checkout_label" value="{{ old('checkout_label', $method->checkout_label) }}" placeholder="Text shown in checkout">
                 </div>
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">Checkout Icon</label>
-                    <input class="form-control" name="checkout_icon" value="{{ old('checkout_icon', $method->checkout_icon) }}" placeholder="💳">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Checkout Icon Image</label>
+                    <input type="file" class="form-control" name="checkout_icon_file" accept="image/*">
+                    @if($method->checkout_icon && str_contains($method->checkout_icon, '/'))
+                        <div class="mt-2"><img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="icon" style="height:36px;width:36px;object-fit:contain;border-radius:6px;background:#fff"></div>
+                    @endif
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Checkout Description (Optional)</label>
                     <input class="form-control" name="checkout_description" value="{{ old('checkout_description', $method->checkout_description) }}" placeholder="Optional short description under payment method">
                 </div>
             </div>
+
             <div class="form-check form-switch mb-4">
                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $method->is_active ?? true))>
                 <label class="form-check-label" for="is_active">Active</label>

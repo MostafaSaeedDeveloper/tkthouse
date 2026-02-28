@@ -289,7 +289,7 @@
                             @else
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><span class="pay-icon">{{ $method->checkout_icon ?: '💰' }}</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
+                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><span class="pay-icon">@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
                                     @endforeach
                                 </div>
                             @endif
@@ -399,7 +399,7 @@
                             <div id="pay-now-box" style="display:none;">
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <span class="pay-icon">{{ $method->checkout_icon ?: '💰' }}</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
+                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <span class="pay-icon">@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
                                     @endforeach
                                 </div>
                             </div>
