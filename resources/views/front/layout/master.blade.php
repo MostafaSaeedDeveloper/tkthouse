@@ -183,6 +183,10 @@
                         <button class="auth-tab" data-auth-tab="register">Create Account</button>
                     </div>
 
+                    @if(session('success'))
+                        <div style="margin:12px 22px 0;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:10px 12px;color:#86efac;font-size:12px;">{{ session('success') }}</div>
+                    @endif
+
                     {{-- Sign In Panel --}}
                     <div class="auth-panel active" id="auth-panel-login">
                         <div class="auth-heading">
@@ -194,12 +198,16 @@
                             <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
                             <div class="auth-field">
                                 <label>Email or Username</label>
-                                <input type="text" name="login" placeholder="you@example.com" required>
+                                <input type="text" name="login" placeholder="you@example.com" value="{{ old('login') }}" required>
                             </div>
                             <div class="auth-field">
                                 <label>Password</label>
                                 <input type="password" name="password" placeholder="••••••••" required>
                             </div>
+                            @error('login')
+                                <div style="margin-top:6px;color:#f0849a;font-size:12px;">{{ $message }}</div>
+                            @enderror
+
                             <button class="auth-submit" type="submit">Sign In →</button>
                         </form>
                         <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
@@ -220,11 +228,11 @@
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                                 <div class="auth-field" style="margin-bottom:0">
                                     <label>Full Name</label>
-                                    <input type="text" name="name" placeholder="John Doe" required>
+                                    <input type="text" name="name" placeholder="John Doe" value="{{ old('name') }}" required>
                                 </div>
                                 <div class="auth-field" style="margin-bottom:0">
                                     <label>Email Address</label>
-                                    <input type="email" name="email" placeholder="you@example.com" required>
+                                    <input type="email" name="email" placeholder="you@example.com" value="{{ old('email') }}" required>
                                 </div>
                             </div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
@@ -237,6 +245,13 @@
                                     <input type="password" name="password_confirmation" placeholder="••••••••" required>
                                 </div>
                             </div>
+                            @if ($errors->has('name') || $errors->has('email') || $errors->has('password'))
+                                <div style="margin-top:12px;background:rgba(232,68,90,0.08);border:1px solid rgba(232,68,90,0.3);border-radius:8px;padding:10px 12px;color:#f0849a;font-size:12px;">
+                                    @error('name')<div>{{ $message }}</div>@enderror
+                                    @error('email')<div>{{ $message }}</div>@enderror
+                                    @error('password')<div>{{ $message }}</div>@enderror
+                                </div>
+                            @endif
                             <button class="auth-submit" type="submit" style="margin-top:20px;">Create Account →</button>
                         </form>
                         <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
@@ -367,6 +382,20 @@
                 var isAuthenticated = document.body && document.body.dataset.authenticated === '1';
                 if (isAuthenticated) {
                     return;
+                }
+
+
+                var hasErrors = {{ $errors->any() ? 'true' : 'false' }};
+                if (hasErrors && window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
+                    window.jQuery('#login-register1').modal('show');
+
+                    var shouldOpenRegister = {{ ($errors->has('name') || $errors->has('email') || $errors->has('password') || old('name') || old('email')) ? 'true' : 'false' }};
+                    if (shouldOpenRegister) {
+                        var registerTab = document.querySelector('[data-auth-tab="register"]');
+                        if (registerTab) {
+                            registerTab.click();
+                        }
+                    }
                 }
 
                 document.addEventListener('click', function (event) {
