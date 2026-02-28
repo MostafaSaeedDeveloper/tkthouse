@@ -1,7 +1,7 @@
 @extends('front.layout.master')
 @php
     $enabledPaymentMethods = collect($activePaymentMethods ?? [])->values();
-    $paymentMethodIcons = ['visa' => '💳', 'wallet' => '👛', 'paymob' => '🏦'];
+    $paymentMethodIcons = ['visa' => '💳', 'wallet' => '👛', 'paymob_card' => '💳', 'paymob_wallet' => '📱', 'paymob_apple_pay' => '🍎'];
 @endphp
 
 

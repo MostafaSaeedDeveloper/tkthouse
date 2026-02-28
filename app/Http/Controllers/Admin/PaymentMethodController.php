@@ -66,8 +66,7 @@ class PaymentMethodController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'paymob_api_key' => ['nullable', 'string'],
             'paymob_iframe_id' => ['nullable', 'string', 'max:50'],
-            'paymob_integration_id_card' => ['nullable', 'string', 'max:50'],
-            'paymob_integration_id_wallet' => ['nullable', 'string', 'max:50'],
+            'paymob_integration_id' => ['nullable', 'string', 'max:50'],
         ]);
 
         $config = [];
@@ -75,8 +74,7 @@ class PaymentMethodController extends Controller
             $config = [
                 'api_key' => (string) ($validated['paymob_api_key'] ?? ''),
                 'iframe_id' => (string) ($validated['paymob_iframe_id'] ?? ''),
-                'integration_id_card' => (string) ($validated['paymob_integration_id_card'] ?? ''),
-                'integration_id_wallet' => (string) ($validated['paymob_integration_id_wallet'] ?? ''),
+                'integration_id' => (string) ($validated['paymob_integration_id'] ?? ''),
             ];
         }
 

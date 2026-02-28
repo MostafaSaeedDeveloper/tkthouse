@@ -12,38 +12,29 @@ class PaymobService
     public function createCheckoutUrl(Order $order): string
     {
         $paymobMethod = PaymentMethod::query()
-            ->where('code', 'paymob')
+            ->where('code', (string) $order->payment_method)
             ->where('provider', 'paymob')
             ->where('is_active', true)
             ->first();
 
         if (! $paymobMethod) {
-            throw new RuntimeException('Paymob payment method is disabled. Please enable it from Payment Methods settings.');
+            throw new RuntimeException('Selected Paymob payment method is disabled. Please enable it from Payment Methods settings.');
         }
 
         $config = $paymobMethod->config ?? [];
         $apiKey = (string) ($config['api_key'] ?? '');
         $iframeId = (string) ($config['iframe_id'] ?? '');
+        $integrationId = (string) ($config['integration_id'] ?? '');
 
-        if ($apiKey === '' || $iframeId === '') {
-            throw new RuntimeException('Paymob is not fully configured yet. Please complete Paymob settings in Payment Methods page.');
+        if ($apiKey === '' || $iframeId === '' || $integrationId === '') {
+            throw new RuntimeException('Paymob method is not fully configured yet. Please complete API key, iframe id and integration id.');
         }
 
-        $integrationId = $this->resolveIntegrationId((string) $order->payment_method, $config);
         $authToken = $this->authenticate($apiKey);
         $paymobOrderId = $this->registerOrder($authToken, $order);
         $paymentKey = $this->createPaymentKey($authToken, $order, $paymobOrderId, $integrationId);
 
         return 'https://accept.paymob.com/api/acceptance/iframes/'.$iframeId.'?payment_token='.$paymentKey;
-    }
-
-    private function resolveIntegrationId(string $method, array $config): string
-    {
-        if ($method === 'wallet') {
-            return (string) ($config['integration_id_wallet'] ?? '');
-        }
-
-        return (string) ($config['integration_id_card'] ?? '');
     }
 
     private function authenticate(string $apiKey): string
@@ -75,10 +66,6 @@ class PaymobService
 
     private function createPaymentKey(string $token, Order $order, int $paymobOrderId, string $integrationId): string
     {
-        if ($integrationId === '') {
-            throw new RuntimeException('Missing Paymob integration id for this payment method.');
-        }
-
         $customer = $order->customer;
 
         $response = Http::baseUrl('https://accept.paymob.com/api')

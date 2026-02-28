@@ -92,7 +92,7 @@ class CheckoutController extends Controller
 
         return view('front.payment', [
             'order' => $order,
-            'paymobEnabled' => (bool) PaymentMethod::query()->where('code', 'paymob')->where('is_active', true)->exists(),
+            'paymobEnabled' => (bool) PaymentMethod::query()->where('provider', 'paymob')->where('code', $order->payment_method)->where('is_active', true)->exists(),
         ]);
     }
 

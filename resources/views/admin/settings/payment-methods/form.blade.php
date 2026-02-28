@@ -26,7 +26,7 @@
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Code</label>
                     <input class="form-control" name="code" value="{{ old('code', $method->code) }}" required>
-                    <small class="text-muted">lowercase, numbers, underscore only (e.g. paymob)</small>
+                    <small class="text-muted">Examples: visa, wallet, paymob_card, paymob_wallet, paymob_apple_pay</small>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Provider</label>
@@ -47,8 +47,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3"><label class="form-label">API Key</label><input class="form-control" name="paymob_api_key" value="{{ old('paymob_api_key', $cfg['api_key'] ?? '') }}"></div>
                     <div class="col-md-3 mb-3"><label class="form-label">Iframe ID</label><input class="form-control" name="paymob_iframe_id" value="{{ old('paymob_iframe_id', $cfg['iframe_id'] ?? '') }}"></div>
-                    <div class="col-md-3 mb-3"><label class="form-label">Card Integration ID</label><input class="form-control" name="paymob_integration_id_card" value="{{ old('paymob_integration_id_card', $cfg['integration_id_card'] ?? '') }}"></div>
-                    <div class="col-md-3 mb-3"><label class="form-label">Wallet Integration ID</label><input class="form-control" name="paymob_integration_id_wallet" value="{{ old('paymob_integration_id_wallet', $cfg['integration_id_wallet'] ?? '') }}"></div>
+                    <div class="col-md-3 mb-3"><label class="form-label">Integration ID</label><input class="form-control" name="paymob_integration_id" value="{{ old('paymob_integration_id', $cfg['integration_id'] ?? '') }}"></div>
                 </div>
             </div>
         </div>
