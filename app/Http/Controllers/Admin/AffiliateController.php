@@ -67,22 +67,29 @@ class AffiliateController extends Controller
     {
         abort_if(! $affiliate->affiliate_code, 404);
 
-        $affiliate->loadCount(['referredUsers', 'affiliateOrders']);
+        $ordersBaseQuery = $affiliate->affiliateOrders();
+        $referredUsersBaseQuery = $affiliate->referredUsers();
 
-        $orders = $affiliate->affiliateOrders()
+        $orders = (clone $ordersBaseQuery)
             ->with(['customer', 'user'])
             ->latest()
             ->paginate(15);
 
-        $referredUsers = $affiliate->referredUsers()
+        $referredUsers = (clone $referredUsersBaseQuery)
             ->latest()
             ->paginate(15, ['*'], 'users_page');
 
         $stats = [
-            'orders_total' => (int) $affiliate->affiliateOrders_count,
-            'orders_paid' => (int) $affiliate->affiliateOrders()->where('payment_status', 'paid')->count(),
-            'revenue_paid' => (float) $affiliate->affiliateOrders()->where('payment_status', 'paid')->sum('total_amount'),
-            'referred_users' => (int) $affiliate->referredUsers_count,
+            'orders_total' => (int) (clone $ordersBaseQuery)->count(),
+            'orders_paid' => (int) (clone $ordersBaseQuery)
+                ->where('status', 'complete')
+                ->where('payment_status', 'paid')
+                ->count(),
+            'revenue_paid' => (float) (clone $ordersBaseQuery)
+                ->where('status', 'complete')
+                ->where('payment_status', 'paid')
+                ->sum('total_amount'),
+            'referred_users' => (int) (clone $referredUsersBaseQuery)->count(),
         ];
 
         return view('admin.affiliates.show', [
