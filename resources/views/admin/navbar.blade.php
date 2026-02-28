@@ -8,7 +8,7 @@
   <div class="content-header bg-white-5">
     <a href="{{ route('admin.dashboard') }}"
        style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;line-height:1;">
-                  <img style="height: 30px" src="{{asset('images/logo-light.png')}}" alt="">
+                  <img style="height: 30px" src="{{ \App\Support\SystemSettings::get('site_logo_light') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_light')) : asset('images/logo-light.png') }}" alt="{{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}">
 
     </a>
     <div class="d-flex align-items-center gap-1">
@@ -25,6 +25,9 @@
       || request()->routeIs('admin.roles.*')
       || request()->routeIs('admin.permissions.*')
       || request()->routeIs('admin.activity-logs.*');
+
+  $settingsMenuOpen = request()->routeIs('admin.settings.*')
+      || request()->routeIs('admin.payment-methods.*');
 @endphp
 
 {{-- ── Nav links ── --}}
@@ -93,8 +96,10 @@
       {{-- Separator --}}
       <li class="nav-main-heading">System</li>
 
+
       {{-- Users submenu --}}
       <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
+
         <a class="nav-main-link nav-main-link-submenu"
            data-toggle="submenu"
            aria-haspopup="true"
@@ -130,6 +135,33 @@
           </li>
         </ul>
       </li>
+
+      {{-- Settings submenu --}}
+      <li class="nav-main-item {{ $settingsMenuOpen ? 'open' : '' }}">
+        <a class="nav-main-link nav-main-link-submenu"
+           data-toggle="submenu"
+           aria-haspopup="true"
+           aria-expanded="{{ $settingsMenuOpen ? 'true' : 'false' }}"
+           href="#">
+          <i class="nav-main-link-icon fa fa-gear"></i>
+          <span class="nav-main-link-name">Settings</span>
+        </a>
+        <ul class="nav-main-submenu">
+          <li class="nav-main-item">
+            <a class="nav-main-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}"
+               href="{{ route('admin.settings.edit') }}">
+              <span class="nav-main-link-name">General Settings</span>
+            </a>
+          </li>
+          <li class="nav-main-item">
+            <a class="nav-main-link {{ request()->routeIs('admin.payment-methods.*') ? 'active' : '' }}"
+               href="{{ route('admin.payment-methods.index') }}">
+              <span class="nav-main-link-name">Payment Methods</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+
 
     </ul>
   </div>

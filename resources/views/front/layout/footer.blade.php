@@ -39,7 +39,7 @@
             <!--Flicker Slider Wrap End-->
            <footer class="msl-footer">
                 <div class="logo">
-                    <a href="{{ route('front.home') }}"><img style="height: 70px" src="{{ asset('images/footer-logo.png') }}" alt="TKT House"></a>
+                    <a href="{{ route('front.home') }}"><img style="height: 70px" src="{{ \App\Support\SystemSettings::get('site_logo_footer') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_footer')) : asset('images/footer-logo.png') }}" alt="{{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}"></a>
                 </div>
                 <div class="text">
                     <ul class="msl-social">
@@ -55,6 +55,6 @@
 
             <div class="msl-copyright theme-bg">
                 <div class="container">
-                    <p class="text-center" style="color:#000">© 2026 TKT House. All rights reserved.</p>
+                    <p class="text-center" style="color:#000">© {{ date('Y') }} {{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}. All rights reserved.</p>
                 </div>
             </div>

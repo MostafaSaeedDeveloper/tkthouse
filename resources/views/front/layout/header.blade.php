@@ -1,10 +1,18 @@
 <!DOCTYPE html>
+@php
+    $siteName = \App\Support\SystemSettings::get('site_name', 'TKT House');
+    $primaryColor = \App\Support\SystemSettings::get('primary_color', '#f5b800');
+    $secondaryColor = \App\Support\SystemSettings::get('secondary_color', '#111111');
+    $logoLight = \App\Support\SystemSettings::get('site_logo_light') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_light')) : asset('images/logo-light.png');
+    $logoDark = \App\Support\SystemSettings::get('site_logo_dark') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_dark')) : asset('images/logo-dark.png');
+@endphp
+
 <html lang="en">
 <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>TKT House | Techno Events & Ticket Booking</title>
+        <title>{{ $siteName }} | Techno Events & Ticket Booking</title>
         <!-- Bootstrap core CSS -->
         <link href="{{ asset('css/bootstrap.css') }}" rel="stylesheet">
         <!-- Preloader CSS -->
@@ -39,6 +47,7 @@
         <!-- Custom Main StyleSheet CSS -->
         <link href="{{ asset('style.css') }}" rel="stylesheet">
         <link href="{{ asset('css/custom.css') }}" rel="stylesheet">
+        <style>:root{--gold: {{ $primaryColor }};--theme-dark: {{ $secondaryColor }};}</style>
         <!-- Color CSS -->
         <link href="{{ asset('css/color.css') }}" rel="stylesheet">
 
@@ -71,7 +80,7 @@
                         </div>
                         <div class="center-logo">
                             <div class="logo">
-                                <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="{{ asset('images/logo-light.png') }}" alt="TKT House"><img class="logo-drak" src="{{ asset('images/logo-dark.png') }}" alt="TKT House"></a></h1>
+                                <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="{{ $logoLight }}" alt="{{ $siteName }}"><img class="logo-drak" src="{{ $logoDark }}" alt="{{ $siteName }}"></a></h1>
                             </div>
                         </div>
                         <div class="pull-right">

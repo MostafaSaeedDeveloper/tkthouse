@@ -3,7 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>TKT House — Admin</title>
+  @php
+  $siteName = \App\Support\SystemSettings::get('site_name', 'TKT House');
+  $primaryColor = \App\Support\SystemSettings::get('primary_color', '#f5b800');
+  $secondaryColor = \App\Support\SystemSettings::get('secondary_color', '#111111');
+  $logoLight = \App\Support\SystemSettings::get('site_logo_light') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_light')) : asset('images/logo-light.png');
+@endphp
+  <title>{{ $siteName }} — Admin</title>
   <meta name="robots" content="noindex, nofollow">
 
   <link rel="shortcut icon"                         href="{{ asset('admin/assets/media/favicons/favicon.png') }}">
@@ -19,6 +25,7 @@
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
   <script src="{{ asset('admin/assets/js/setTheme.js') }}"></script>
+  <style>:root{--brand-primary: {{ $primaryColor }};--brand-secondary: {{ $secondaryColor }};}</style>
 </head>
 
 <body>
@@ -118,7 +125,7 @@
       <div class="row align-items-center">
         <div class="col-sm-6 text-center text-sm-start">
           <a href="{{ route('front.home') }}" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.5px;">
-            <img style="height: 20px" src="{{asset('images/logo-light.png')}}" alt="">
+            <img style="height: 20px" src="{{ $logoLight }}" alt="{{ $siteName }}">
         </a>
           <span class="ms-2" style="font-size:11px;"> &copy; {{ date('Y') }}</span>
         </div>

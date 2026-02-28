@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\SystemSettingController;
+use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
@@ -22,6 +24,8 @@ Route::get('/about', [PagesController::class, 'about'])->name('front.about');
 Route::get('/events', [PagesController::class, 'events'])->name('front.events');
 Route::get('/events/{event:slug}', [PagesController::class, 'eventShow'])->name('front.events.show');
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
+
+Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
 
 Route::middleware('guest')->group(function () {
     Route::get('/account/login', [CustomerAuthController::class, 'showLogin'])->name('front.customer.login');
@@ -42,6 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
     Route::get('/orders/{order}/payment/{token}', [CheckoutController::class, 'paymentPage'])->name('front.orders.payment');
     Route::post('/orders/{order}/payment/{token}', [CheckoutController::class, 'confirmPayment'])->name('front.orders.payment.confirm');
+    Route::get('/orders/{order}/payment/{token}/paymob', [CheckoutController::class, 'paymobRedirect'])->name('front.orders.payment.paymob');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
 });
@@ -72,6 +77,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
+    Route::put('settings', [SystemSettingController::class, 'update'])->name('settings.update');
+    Route::resource('payment-methods', PaymentMethodController::class)->except('show');
 });
 
 Route::redirect('/dashboard', '/admin/dashboard');
