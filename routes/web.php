@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
@@ -75,6 +76,10 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->name('orders.reject');
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+    Route::get('affiliates', [AffiliateController::class, 'index'])->name('affiliates.index');
+    Route::get('affiliates/create', [AffiliateController::class, 'create'])->name('affiliates.create');
+    Route::post('affiliates', [AffiliateController::class, 'store'])->name('affiliates.store');
+    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');

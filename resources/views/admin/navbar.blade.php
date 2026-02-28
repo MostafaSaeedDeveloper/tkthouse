@@ -83,6 +83,16 @@
         </a>
       </li>
 
+
+      {{-- Affiliate --}}
+      <li class="nav-main-item">
+        <a class="nav-main-link {{ request()->routeIs('admin.affiliates.*') ? 'active' : '' }}"
+           href="{{ route('admin.affiliates.index') }}">
+          <i class="nav-main-link-icon fa fa-link"></i>
+          <span class="nav-main-link-name">Affiliate</span>
+        </a>
+      </li>
+
       {{-- Tickets --}}
       <li class="nav-main-item">
         <a class="nav-main-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}"

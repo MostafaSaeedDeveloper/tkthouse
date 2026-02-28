@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -26,12 +27,19 @@ class CustomerAuthController extends Controller
         $field = filter_var($validated['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
         if (! Auth::attempt([$field => $validated['login'], 'password' => $validated['password']], $request->boolean('remember'))) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Invalid credentials.',
+                    'errors' => ['login' => ['Invalid credentials.']],
+                ], 422);
+            }
+
             return back()->withErrors(['login' => 'Invalid credentials.'])->onlyInput('login');
         }
 
         $request->session()->regenerate();
 
-        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null);
+        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Welcome back, you are now signed in.');
     }
 
     public function showRegister()
@@ -48,17 +56,23 @@ class CustomerAuthController extends Controller
             'redirect_to' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $referrerId = (int) $request->session()->get('affiliate.referrer_id');
+
         $user = User::create([
             'name' => $validated['name'],
             'username' => $this->generateUsername($validated['email']),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'referred_by_user_id' => $referrerId > 0 ? $referrerId : null,
         ]);
+
+        $request->session()->forget('affiliate.referrer_id');
+        $request->session()->forget('affiliate.referrer_code');
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null);
+        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Account created successfully. Welcome to TKT House.');
     }
 
     public function logout(Request $request)
@@ -72,19 +86,28 @@ class CustomerAuthController extends Controller
     }
 
 
-    private function redirectAfterAuth(Request $request, ?string $redirectTo)
+    private function redirectAfterAuth(Request $request, ?string $redirectTo, ?string $successMessage = null)
     {
+        $target = route('front.account.dashboard');
+
         if (is_string($redirectTo) && $redirectTo !== '') {
             if (str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
-                return redirect()->to($redirectTo);
+                $target = $redirectTo;
             }
 
             if (str_starts_with($redirectTo, url('/'))) {
-                return redirect()->to($redirectTo);
+                $target = $redirectTo;
             }
         }
 
-        return redirect()->route('front.account.profile');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $successMessage ?? 'Success.',
+                'redirect_to' => $target,
+            ]);
+        }
+
+        return redirect()->to($target)->with('success', $successMessage ?? 'Success.');
     }
 
     private function generateUsername(string $email): string

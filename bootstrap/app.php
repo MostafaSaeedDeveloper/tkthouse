@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\StoreAffiliateReferral::class,
+        ]);
+
         $middleware->redirectGuestsTo(static function (Request $request): string {
             if ($request->is('admin') || $request->is('admin/*')) {
                 return route('login');

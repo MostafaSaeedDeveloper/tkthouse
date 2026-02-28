@@ -12,6 +12,7 @@ class Order extends Model
     protected $fillable = [
         'customer_id',
         'user_id',
+        'affiliate_user_id',
         'order_number',
         'status',
         'requires_approval',
@@ -45,6 +46,11 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function affiliateUser()
+    {
+        return $this->belongsTo(User::class, 'affiliate_user_id');
     }
 
     public function issuedTickets()
