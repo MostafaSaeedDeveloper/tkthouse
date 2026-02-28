@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\IssuedTicket;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,14 @@ class CustomerDashboardController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('front.account.orders', compact('user', 'orders'));
+        $paymentMethodLabels = PaymentMethod::query()
+            ->select(['code', 'checkout_label', 'name'])
+            ->get()
+            ->mapWithKeys(fn ($method) => [
+                (string) $method->code => trim((string) ($method->checkout_label ?: $method->name)),
+            ]);
+
+        return view('front.account.orders', compact('user', 'orders', 'paymentMethodLabels'));
     }
 
     public function tickets(Request $request)
