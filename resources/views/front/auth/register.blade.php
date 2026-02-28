@@ -98,6 +98,14 @@
                                 @error('email')<div class="auth-error">{{ $message }}</div>@enderror
                             </div>
 
+                            <div class="auth-field">
+                                <label>Phone Number</label>
+                                <input type="text" name="phone" value="{{ old('phone') }}"
+                                    placeholder="01XXXXXXXXX"
+                                    class="{{ $errors->has('phone') ? 'is-invalid' : '' }}" required>
+                                @error('phone')<div class="auth-error">{{ $message }}</div>@enderror
+                            </div>
+
                             <div class="auth-divider"></div>
 
                             <div class="auth-grid-2">

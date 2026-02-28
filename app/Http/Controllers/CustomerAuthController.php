@@ -52,6 +52,7 @@ class CustomerAuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'phone' => ['required', 'string', 'max:30'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'redirect_to' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -62,6 +63,7 @@ class CustomerAuthController extends Controller
             'name' => $validated['name'],
             'username' => $this->generateUsername($validated['email']),
             'email' => $validated['email'],
+            'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
             'referred_by_user_id' => $referrerId > 0 ? $referrerId : null,
         ]);
