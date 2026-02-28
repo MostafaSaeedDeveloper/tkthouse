@@ -316,7 +316,7 @@
               <select class="oe-select" name="status" id="statusSelect">
                 @foreach($statusOptions as $val => $label)
                   <option value="{{ $val }}" {{ old('status', $order->status) === $val ? 'selected' : '' }}>
-                    {{ $method->name }}
+                    {{ $label }}
                   </option>
                 @endforeach
               </select>
