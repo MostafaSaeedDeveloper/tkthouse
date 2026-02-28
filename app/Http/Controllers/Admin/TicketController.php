@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
@@ -96,14 +97,12 @@ class TicketController extends Controller
         $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri'))->output();
         $showUrl = route('admin.tickets.show', $ticket);
 
-        Mail::raw(
-            "Your ticket {$ticket->ticket_number} is attached as PDF.\n\nView ticket: {$showUrl}",
-            static function ($message) use ($data, $pdf, $ticket) {
-                $message->to($data['email'])
-                    ->subject('Your Ticket #'.$ticket->ticket_number)
-                    ->attachData($pdf, 'ticket-'.$ticket->ticket_number.'.pdf', ['mime' => 'application/pdf']);
-            }
-        );
+        Mail::to($data['email'])->send(new AdminTicketIssuedMail(
+            ticket: $ticket,
+            showUrl: $showUrl,
+            recipientEmail: $data['email'],
+            pdfBinary: $pdf,
+        ));
 
         return back()->with('success', 'Ticket sent by email successfully.');
     }
