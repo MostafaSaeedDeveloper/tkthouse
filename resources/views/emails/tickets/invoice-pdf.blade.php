@@ -3,12 +3,15 @@
 <head>
     <meta charset="utf-8">
     <style>
+        .logo { text-align:center; margin-bottom: 14px; }
+        .logo img { width: 146px; height: auto; margin: 0 auto; }
         body { font-family: DejaVu Sans, sans-serif; color:#111; }
         table { width:100%; border-collapse: collapse; margin-top: 12px; }
         th,td { border:1px solid #ccc; padding:8px; text-align:left; }
     </style>
 </head>
 <body>
+    <div class="logo"><img src="{{ public_path('images/logo-light.png') }}" alt="TKT House"></div>
     <h2>Invoice - Order #{{ $order->order_number }}</h2>
     <p><strong>Customer:</strong> {{ $order->customer->full_name }}</p>
     <p><strong>Email:</strong> {{ $order->customer->email }}</p>
