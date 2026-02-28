@@ -333,11 +333,6 @@
                   </option>
                 @endforeach
               </select>
-              <div style="margin-top:8px;">
-                <span class="oe-status-preview status-{{ old('status', $order->status) }}" id="statusBadge">
-                  {{ $statusOptions[old('status', $order->status)] ?? ucwords(str_replace('_',' ',$order->status)) }}
-                </span>
-              </div>
             </div>
 
             <hr class="oe-divider">
@@ -376,15 +371,6 @@
               </div>
             @endif
 
-            <hr class="oe-divider">
-            <div class="oe-field">
-              <input type="hidden" name="requires_approval" value="0">
-              <label class="oe-check-label">
-                <input type="checkbox" name="requires_approval" value="1"
-                  {{ old('requires_approval', $order->requires_approval) ? 'checked' : '' }}>
-                Requires Approval
-              </label>
-            </div>
 
           </div>
         </div>
@@ -445,22 +431,6 @@
   [dFixed, dPct, fees].forEach(el => el.addEventListener('input', recalc));
   recalc();
 
-  // Status badge live preview
-  const statusMap = {
-    pending_approval: 'Pending Approval',
-    pending_payment:  'Pending Payment',
-    on_hold:          'On Hold',
-    complete:         'Complete',
-    canceled:         'Canceled',
-    rejected:         'Rejected',
-  };
-  const sel   = document.getElementById('statusSelect');
-  const badge = document.getElementById('statusBadge');
-
-  sel.addEventListener('change', function () {
-    badge.className = 'oe-status-preview status-' + this.value;
-    badge.textContent = statusMap[this.value] || this.value;
-  });
 })();
 </script>
 @endsection

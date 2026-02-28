@@ -131,7 +131,9 @@ class OrderController extends Controller
             'status' => $validated['status'],
             'payment_method' => $validated['payment_method'],
             'payment_status' => $validated['payment_status'],
-            'requires_approval' => (bool) ($validated['requires_approval'] ?? false),
+            'requires_approval' => array_key_exists('requires_approval', $validated)
+                ? (bool) $validated['requires_approval']
+                : (bool) $order->requires_approval,
             'approved_at' => $validated['status'] === 'pending_payment' ? ($order->approved_at ?? now()) : null,
             'payment_link_token' => $validated['status'] === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
         ]);
