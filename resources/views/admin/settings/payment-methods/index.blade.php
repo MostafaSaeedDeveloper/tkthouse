@@ -30,7 +30,7 @@
                         <tr>
                             <td>{{ $method->name }}</td>
                             <td><code>{{ $method->code }}</code></td>
-                            <td>@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="icon" style="height:20px;width:20px;object-fit:contain;vertical-align:middle">@else<span>💰</span>@endif <span class="ms-1">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<div class="fs-xs text-muted">{{ $method->checkout_description }}</div>@endif</td>
+                            <td>@if($method->checkout_icon_url)<img src="{{ $method->checkout_icon_url }}" alt="icon" style="height:20px;width:20px;object-fit:contain;vertical-align:middle">@else<span>💰</span>@endif <span class="ms-1">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<div class="fs-xs text-muted">{{ $method->checkout_description }}</div>@endif</td>
                             <td>{{ strtoupper($method->provider) }}</td>
                             <td>
                                 <span class="badge {{ $method->is_active ? 'bg-success' : 'bg-secondary' }}">

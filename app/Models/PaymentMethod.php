@@ -34,4 +34,22 @@ class PaymentMethod extends Model
 
         return empty($codes) ? ['visa', 'wallet'] : $codes;
     }
+
+    public function getCheckoutIconUrlAttribute(): ?string
+    {
+        $iconPath = trim((string) $this->checkout_icon);
+        if ($iconPath === '') {
+            return null;
+        }
+
+        if (str_starts_with($iconPath, 'http://') || str_starts_with($iconPath, 'https://')) {
+            return $iconPath;
+        }
+
+        if (str_starts_with($iconPath, 'payment-method-icons/')) {
+            return asset('storage/'.$iconPath);
+        }
+
+        return asset(ltrim($iconPath, '/'));
+    }
 }

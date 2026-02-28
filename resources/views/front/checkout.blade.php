@@ -76,11 +76,14 @@
 
 /* Payment */
 .co-pay-options { display: flex; flex-direction: column; gap: 10px; }
-.co-pay-opt { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.co-pay-opt { display: flex; align-items: flex-start; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
 .co-pay-opt:hover { border-color: var(--border-h); background: rgba(245,184,0,0.04); }
 .co-pay-opt input[type=radio] { accent-color: var(--gold); width: 16px; height: 16px; flex-shrink: 0; }
-.co-pay-opt .pay-icon { font-size: 18px; }
-.co-pay-opt .pay-name { font-size: 14px; font-weight: 500; flex: 1; }
+.co-pay-opt .pay-main { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.co-pay-opt .pay-brand { display: flex; align-items: center; gap: 10px; }
+.co-pay-opt .pay-icon { font-size: 18px; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.co-pay-opt .pay-name { font-size: 14px; font-weight: 500; line-height: 1.3; }
+.co-pay-opt .pay-desc { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 0; }
 .co-pay-pending { background: rgba(245,184,0,0.06); border: 1px dashed rgba(245,184,0,0.3); border-radius: 8px; padding: 13px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gold); }
 .co-flow-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; min-height: 16px; }
 
@@ -289,7 +292,7 @@
                             @else
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><span class="pay-icon">@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
+                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><div class="pay-main"><span class="pay-brand"><span class="pay-icon">@if($method->checkout_icon_url)<img src="{{ $method->checkout_icon_url }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span></span>@if($method->checkout_description)<small class="pay-desc">{{ $method->checkout_description }}</small>@endif</div></label>
                                     @endforeach
                                 </div>
                             @endif
@@ -399,7 +402,7 @@
                             <div id="pay-now-box" style="display:none;">
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <span class="pay-icon">@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
+                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <div class="pay-main"><span class="pay-brand"><span class="pay-icon">@if($method->checkout_icon_url)<img src="{{ $method->checkout_icon_url }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span></span>@if($method->checkout_description)<small class="pay-desc">{{ $method->checkout_description }}</small>@endif</div></label>
                                     @endforeach
                                 </div>
                             </div>
