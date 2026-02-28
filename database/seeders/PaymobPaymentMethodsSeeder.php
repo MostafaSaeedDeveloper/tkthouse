@@ -29,6 +29,11 @@ class PaymobPaymentMethodsSeeder extends Seeder
             ],
         ];
 
+
+        DB::table('payment_methods')
+            ->whereIn('code', ['visa', 'wallet'])
+            ->delete();
+
         foreach ($definitions as $code => $data) {
             DB::table('payment_methods')->updateOrInsert(
                 ['code' => $code],
