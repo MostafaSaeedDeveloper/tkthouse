@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
@@ -78,9 +79,12 @@ class CheckoutController extends Controller
         return $this->storeFromOpenSelection($request, $baseValidated);
     }
 
-    public function thankYou()
+    public function thankYou(Request $request)
     {
-        return view('front.checkout-thank-you');
+        return view('front.checkout-thank-you', [
+            'flow' => (string) $request->query('flow', 'pending_review'),
+            'orderNumber' => (string) $request->query('order'),
+        ]);
     }
 
     public function paymentPage(Request $request, Order $order, string $token)
@@ -147,12 +151,20 @@ class CheckoutController extends Controller
         if ($merchantOrderId === '') {
             Log::warning('Paymob callback received without merchant_order_id.', ['payload' => $payload]);
 
+            if ($request->isMethod('get')) {
+                return redirect()->route('front.checkout.thank-you', ['flow' => 'payment_failed']);
+            }
+
             return response()->json(['received' => true, 'updated' => false]);
         }
 
         $order = Order::query()->where('order_number', $merchantOrderId)->first();
         if (! $order) {
             Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
+
+            if ($request->isMethod('get')) {
+                return redirect()->route('front.checkout.thank-you', ['flow' => 'payment_failed', 'order' => $merchantOrderId]);
+            }
 
             return response()->json(['received' => true, 'updated' => false]);
         }
@@ -169,6 +181,13 @@ class CheckoutController extends Controller
             'merchant_order_id' => $merchantOrderId,
             'success' => $isSuccess,
         ]);
+
+        if ($request->isMethod('get')) {
+            return redirect()->route('front.checkout.thank-you', [
+                'flow' => $isSuccess ? 'payment_success' : 'payment_failed',
+                'order' => $order->order_number,
+            ]);
+        }
 
         return response()->json(['received' => true, 'updated' => $isSuccess]);
     }
@@ -255,7 +274,7 @@ class CheckoutController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval) {
+        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval) {
             $customer = $this->upsertCustomer($baseValidated);
 
             $order = Order::create([
@@ -266,6 +285,7 @@ class CheckoutController extends Controller
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
+                'payment_link_token' => $requiresApproval ? null : Str::random(40),
                 'total_amount' => 0,
             ]);
 
@@ -300,11 +320,18 @@ class CheckoutController extends Controller
                     'total_amount' => (float) $order->total_amount,
                 ])
                 ->log('Order submitted');
+
+            return $order;
         });
 
         session()->forget('checkout.event_selection');
 
-        return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
+        if ($order->status === 'pending_payment' && $order->payment_link_token) {
+            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+        }
+
+        return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
+            ->with('success', 'Your order has been submitted successfully.');
     }
 
     private function storeFromOpenSelection(Request $request, array $baseValidated)
@@ -358,7 +385,7 @@ class CheckoutController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request, $baseValidated, $grouped, $eventTickets, $legacyTickets, $requiresApproval) {
+        $order = DB::transaction(function () use ($request, $baseValidated, $grouped, $eventTickets, $legacyTickets, $requiresApproval) {
             $customer = $this->upsertCustomer($baseValidated);
 
             $order = Order::create([
@@ -369,6 +396,7 @@ class CheckoutController extends Controller
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
+                'payment_link_token' => $requiresApproval ? null : Str::random(40),
                 'total_amount' => 0,
             ]);
 
@@ -420,9 +448,16 @@ class CheckoutController extends Controller
                     'total_amount' => (float) $order->total_amount,
                 ])
                 ->log('Order submitted');
+
+            return $order;
         });
 
-        return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
+        if ($order->status === 'pending_payment' && $order->payment_link_token) {
+            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+        }
+
+        return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
+            ->with('success', 'Your order has been submitted successfully.');
     }
 
     private function activePaymentMethodCodes(): array

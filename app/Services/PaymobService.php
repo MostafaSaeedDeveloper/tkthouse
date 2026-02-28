@@ -22,8 +22,8 @@ class PaymobService
         }
 
         $config = $paymobMethod->config ?? [];
-        $apiKey = (string) ($config['api_key'] ?? '');
-        $iframeId = (string) ($config['iframe_id'] ?? '');
+        $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
+        $iframeId = (string) ($config['iframe_id'] ?? config('services.paymob.iframe_id', ''));
         $integrationId = (string) ($config['integration_id'] ?? '');
 
         if ($apiKey === '' || $iframeId === '' || $integrationId === '') {
@@ -76,9 +76,10 @@ class PaymobService
                 'order_id' => $paymobOrderId,
                 'currency' => 'EGP',
                 'integration_id' => (int) $integrationId,
+                'redirection_url' => route('front.paymob.callback'),
                 'billing_data' => [
-                    'first_name' => $customer->name ?: 'Customer',
-                    'last_name' => '-',
+                    'first_name' => $customer->first_name ?: 'Customer',
+                    'last_name' => $customer->last_name ?: '-',
                     'email' => $customer->email ?: 'customer@example.com',
                     'phone_number' => $customer->phone ?: '01000000000',
                     'apartment' => 'NA',

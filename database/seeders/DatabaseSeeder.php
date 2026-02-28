@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             EventsSeeder::class,
+            PaymobPaymentMethodsSeeder::class,
         ]);
 
         $admin = User::updateOrCreate(
