@@ -26,7 +26,7 @@
                 <div class="acc-card-title">Order History</div>
             </div>
             <div style="overflow-x:auto;">
-                <table class="acc-table">
+                <table class="acc-table acc-orders-table">
                     <thead>
                         <tr>
                             <th>Order #</th>
@@ -34,6 +34,7 @@
                             <th>Payment Method</th>
                             <th>Total</th>
                             <th>Date</th>
+                            <th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -45,15 +46,26 @@
                                     default                => 'acc-badge-pending',
                                 };
                             @endphp
+                            @php
+                                $methodCode = (string) ($order->payment_method ?? '');
+                                $methodLabel = $paymentMethodLabels[$methodCode] ?? ucwords(str_replace('_', ' ', $methodCode ?: 'N/A'));
+                            @endphp
                             <tr>
                                 <td class="acc-mono">{{ $order->order_number }}</td>
                                 <td><span class="acc-badge {{ $sc }}">{{ ucwords(str_replace('_',' ',$order->status)) }}</span></td>
-                                <td><span class="acc-badge acc-badge-default">{{ ucwords(str_replace('_',' ',$order->payment_method ?? 'N/A')) }}</span></td>
+                                <td><span class="acc-badge acc-badge-method">{{ $methodLabel }}</span></td>
                                 <td style="font-weight:600;color:#fff;">{{ number_format($order->total_amount,2) }} <span style="color:var(--muted);font-size:11px;">EGP</span></td>
                                 <td style="color:var(--muted);font-size:12px;">{{ $order->created_at?->format('d M Y, g:i A') }}</td>
+                                <td class="text-end">
+                                    @if($order->status === 'pending_payment' && $order->payment_link_token)
+                                        <a href="{{ route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) }}" class="acc-paynow-btn">Pay Now</a>
+                                    @else
+                                        <span style="color:var(--muted);font-size:11px;">—</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5"><div class="acc-empty"><i class="fa fa-bag-shopping"></i><span>No orders yet.</span></div></td></tr>
+                            <tr><td colspan="6"><div class="acc-empty"><i class="fa fa-bag-shopping"></i><span>No orders yet.</span></div></td></tr>
                         @endforelse
                     </tbody>
                 </table>

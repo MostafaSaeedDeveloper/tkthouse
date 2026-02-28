@@ -45,8 +45,8 @@
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Checkout Icon Image</label>
                     <input type="file" class="form-control" name="checkout_icon_file" accept="image/*">
-                    @if($method->checkout_icon && str_contains($method->checkout_icon, '/'))
-                        <div class="mt-2"><img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="icon" style="height:36px;width:36px;object-fit:contain;border-radius:6px;background:#fff"></div>
+                    @if($method->checkout_icon_url)
+                        <div class="mt-2"><img src="{{ $method->checkout_icon_url }}" alt="icon" style="height:36px;width:36px;object-fit:contain;border-radius:6px;background:#fff"></div>
                     @endif
                 </div>
                 <div class="col-md-4 mb-3">

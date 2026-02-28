@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentMethod;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -47,9 +49,7 @@ class PaymentMethodController extends Controller
 
     public function destroy(PaymentMethod $paymentMethod)
     {
-        if ($paymentMethod->checkout_icon && str_starts_with((string) $paymentMethod->checkout_icon, 'payment-method-icons/')) {
-            Storage::disk('public')->delete((string) $paymentMethod->checkout_icon);
-        }
+        $this->deleteCheckoutIcon($paymentMethod->checkout_icon);
 
         $paymentMethod->delete();
 
@@ -86,12 +86,10 @@ class PaymentMethodController extends Controller
             ];
         }
 
-        $iconPath = $method?->checkout_icon;
+        $iconPath = $this->migrateLegacyCheckoutIconToPublic($method?->checkout_icon);
         if ($request->hasFile('checkout_icon_file')) {
-            if ($iconPath && str_starts_with((string) $iconPath, 'payment-method-icons/')) {
-                Storage::disk('public')->delete((string) $iconPath);
-            }
-            $iconPath = $request->file('checkout_icon_file')->store('payment-method-icons', 'public');
+            $this->deleteCheckoutIcon($iconPath);
+            $iconPath = $this->storeCheckoutIcon($request->file('checkout_icon_file'));
         }
 
         return [
@@ -104,5 +102,64 @@ class PaymentMethodController extends Controller
             'is_active' => $request->boolean('is_active'),
             'config' => $config,
         ];
+    }
+
+
+    private function migrateLegacyCheckoutIconToPublic(?string $iconPath): ?string
+    {
+        if (! $iconPath || ! str_starts_with($iconPath, 'payment-method-icons/')) {
+            return $iconPath;
+        }
+
+        if (! Storage::disk('public')->exists($iconPath)) {
+            return $iconPath;
+        }
+
+        $sourcePath = Storage::disk('public')->path($iconPath);
+        $directory = 'uploads/payment-method-icons';
+        $targetDirectory = public_path($directory);
+        File::ensureDirectoryExists($targetDirectory);
+
+        $filename = basename($sourcePath);
+        $targetPath = $targetDirectory.'/'.$filename;
+
+        if (File::exists($targetPath)) {
+            $filename = pathinfo($filename, PATHINFO_FILENAME).'-'.uniqid().'.'.pathinfo($filename, PATHINFO_EXTENSION);
+            $targetPath = $targetDirectory.'/'.$filename;
+        }
+
+        File::copy($sourcePath, $targetPath);
+        Storage::disk('public')->delete($iconPath);
+
+        return $directory.'/'.$filename;
+    }
+
+    private function storeCheckoutIcon(UploadedFile $file): string
+    {
+        $directory = 'uploads/payment-method-icons';
+        $targetDirectory = public_path($directory);
+        File::ensureDirectoryExists($targetDirectory);
+
+        $filename = $file->hashName();
+        $file->move($targetDirectory, $filename);
+
+        return $directory.'/'.$filename;
+    }
+
+    private function deleteCheckoutIcon(?string $iconPath): void
+    {
+        if (! $iconPath) {
+            return;
+        }
+
+        if (str_starts_with($iconPath, 'payment-method-icons/')) {
+            Storage::disk('public')->delete($iconPath);
+
+            return;
+        }
+
+        if (str_starts_with($iconPath, 'uploads/payment-method-icons/')) {
+            File::delete(public_path($iconPath));
+        }
     }
 }

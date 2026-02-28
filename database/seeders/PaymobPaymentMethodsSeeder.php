@@ -16,18 +16,23 @@ class PaymobPaymentMethodsSeeder extends Seeder
             'paymob_card' => [
                 'name' => 'Paymob Card',
                 'label' => 'Credit / Debit Card',
-                'icon' => '💳',
+                'icon' => 'public/uploads/payment-method-icons/card.webp',
                 'description' => 'Secure online payment with Visa / Mastercard.',
                 'integration_id' => (string) config('services.paymob.integration_card', ''),
             ],
             'paymob_wallet' => [
                 'name' => 'Paymob Wallet',
                 'label' => 'Mobile Wallet',
-                'icon' => '📱',
+                'icon' => 'public/uploads/payment-method-icons/wallet.webp',
                 'description' => 'Pay instantly using your mobile wallet.',
                 'integration_id' => (string) config('services.paymob.integration_wallet', ''),
             ],
         ];
+
+
+        DB::table('payment_methods')
+            ->whereIn('code', ['visa', 'wallet'])
+            ->delete();
 
         foreach ($definitions as $code => $data) {
             DB::table('payment_methods')->updateOrInsert(

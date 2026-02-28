@@ -76,11 +76,14 @@
 
 /* Payment */
 .co-pay-options { display: flex; flex-direction: column; gap: 10px; }
-.co-pay-opt { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.co-pay-opt { display: flex; align-items: flex-start; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
 .co-pay-opt:hover { border-color: var(--border-h); background: rgba(245,184,0,0.04); }
 .co-pay-opt input[type=radio] { accent-color: var(--gold); width: 16px; height: 16px; flex-shrink: 0; }
-.co-pay-opt .pay-icon { font-size: 18px; }
-.co-pay-opt .pay-name { font-size: 14px; font-weight: 500; flex: 1; }
+.co-pay-opt .pay-main { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.co-pay-opt .pay-brand { display: flex; align-items: center; gap: 10px; }
+.co-pay-opt .pay-icon { font-size: 18px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 3px; }
+.co-pay-opt .pay-name { font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--gold); }
+.co-pay-opt .pay-desc { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 0; }
 .co-pay-pending { background: rgba(245,184,0,0.06); border: 1px dashed rgba(245,184,0,0.3); border-radius: 8px; padding: 13px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gold); }
 .co-flow-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; min-height: 16px; }
 
@@ -289,14 +292,14 @@
                             @else
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><span class="pay-icon">@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
+                                        <label class="co-pay-opt"><input type="radio" name="payment_method" value="{{ $method->code }}" @checked(old('payment_method')===$method->code) required><div class="pay-main"><span class="pay-brand"><span class="pay-icon">@if($method->checkout_icon_url)<img src="{{ $method->checkout_icon_url }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:24px;width:24px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span></span>@if($method->checkout_description)<small class="pay-desc">{{ $method->checkout_description }}</small>@endif</div></label>
                                     @endforeach
                                 </div>
                             @endif
                         </div>
 
                         <button type="submit" class="co-btn-primary">
-                            {{ $requiresApproval ? '📨 Send Order' : '✅ Complete Order' }}
+                            {{ $requiresApproval ? 'Send Order' : 'Pay '.number_format($units->sum('ticket_price'),2).' EGP' }}
                         </button>
                     </div>
 
@@ -399,14 +402,14 @@
                             <div id="pay-now-box" style="display:none;">
                                 <div class="co-pay-options">
                                     @foreach($enabledPaymentMethods as $method)
-                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <span class="pay-icon">@if($method->checkout_icon && str_contains($method->checkout_icon, '/'))<img src="{{ asset('storage/'.$method->checkout_icon) }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:20px;width:20px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<small class="d-block text-muted" style="font-size:11px">{{ $method->checkout_description }}</small>@endif</label>
+                                        <label class="co-pay-opt"><input class="payment-method-input" type="radio" name="payment_method" value="{{ $method->code }}"> <div class="pay-main"><span class="pay-brand"><span class="pay-icon">@if($method->checkout_icon_url)<img src="{{ $method->checkout_icon_url }}" alt="{{ $method->checkout_label ?: $method->name }}" style="height:24px;width:24px;object-fit:contain">@else💰@endif</span><span class="pay-name">{{ $method->checkout_label ?: $method->name }}</span></span>@if($method->checkout_description)<small class="pay-desc">{{ $method->checkout_description }}</small>@endif</div></label>
                                     @endforeach
                                 </div>
                             </div>
                             <div class="co-flow-note" id="checkout-flow-note"></div>
                         </div>
 
-                        <button type="submit" class="co-btn-primary" id="submit-order-btn">📨 Send Order</button>
+                        <button type="submit" class="co-btn-primary" id="submit-order-btn">Pay 0.00 EGP</button>
                     </div>
 
                     {{-- RIGHT: Tickets --}}
@@ -428,14 +431,14 @@
                                                     @if($eventTickets->isNotEmpty())
                                                         <optgroup label="Event Tickets">
                                                             @foreach($eventTickets as $ticket)
-                                                                <option value="event:{{ $ticket->id }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
                                                     @if($legacyTickets->isNotEmpty())
                                                         <optgroup label="General Tickets">
                                                             @foreach($legacyTickets as $ticket)
-                                                                <option value="legacy:{{ $ticket->id }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
@@ -473,14 +476,14 @@
                                     @if($eventTickets->isNotEmpty())
                                         <optgroup label="Event Tickets">
                                             @foreach($eventTickets as $ticket)
-                                                <option value="event:{{ $ticket->id }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
                                     @if($legacyTickets->isNotEmpty())
                                         <optgroup label="General Tickets">
                                             @foreach($legacyTickets as $ticket)
-                                                <option value="legacy:{{ $ticket->id }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
@@ -514,22 +517,34 @@
                 const bindRemove = () => rows.querySelectorAll('.remove-row').forEach(b=>{
                     b.onclick=()=>{ if(rows.querySelectorAll('[data-row]').length<=1) return; b.closest('[data-row]').remove(); reindex(); flow(); };
                 });
+                const bindFlowInputs = () => {
+                    rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                    rows.querySelectorAll('input[data-name="quantity"], input[name$="[quantity]"]').forEach(i=>i.oninput=flow);
+                };
                 const flow = () => {
+                    const rowEls = [...rows.querySelectorAll('[data-row]')];
                     const req=[...rows.querySelectorAll('.ticket-select')].some(s=>s.options[s.selectedIndex]?.dataset.requiresApproval==='1');
+                    let total = 0;
+                    rowEls.forEach(r=>{
+                        const ticket = r.querySelector('.ticket-select');
+                        const qty = parseInt(r.querySelector('input[data-name="quantity"], input[name$="[quantity]"]')?.value || '1', 10);
+                        const price = parseFloat(ticket?.options[ticket.selectedIndex]?.dataset.price || '0');
+                        if (!Number.isNaN(price) && !Number.isNaN(qty)) total += price * Math.max(1, qty);
+                    });
                     payBox.style.display=req?'none':'block';
                     penBox.style.display=req?'block':'none';
                     document.querySelectorAll('.payment-method-input').forEach(i=>{i.required=!req;if(req)i.checked=false;});
-                    subBtn.textContent=req?'📨 Send Order':'✅ Complete Order';
-                    note.textContent=req?'This order requires admin approval before payment.':'You can complete payment immediately.';
+                    subBtn.textContent=req?'Send Order':`Pay ${total.toFixed(2)} EGP`;
+                    note.textContent=req?'This order requires admin approval before payment.':'You will be redirected directly to secure payment.';
                 };
                 addBtn.addEventListener('click',()=>{
                     rows.appendChild(tpl.content.cloneNode(true));
                     reindex(); bindRemove();
-                    rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                    bindFlowInputs();
                     flow();
                 });
                 reindex(); bindRemove();
-                rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                bindFlowInputs();
                 flow();
             })();
             </script>

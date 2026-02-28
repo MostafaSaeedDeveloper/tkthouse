@@ -327,7 +327,7 @@ class CheckoutController extends Controller
         session()->forget('checkout.event_selection');
 
         if ($order->status === 'pending_payment' && $order->payment_link_token) {
-            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+            return $this->redirectToImmediatePayment($order);
         }
 
         return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
@@ -453,12 +453,33 @@ class CheckoutController extends Controller
         });
 
         if ($order->status === 'pending_payment' && $order->payment_link_token) {
-            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+            return $this->redirectToImmediatePayment($order);
         }
 
         return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
             ->with('success', 'Your order has been submitted successfully.');
     }
+
+
+
+    private function redirectToImmediatePayment(Order $order)
+    {
+        $method = PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('code', $order->payment_method)
+            ->first(['code', 'provider']);
+
+        if ($method && $method->provider === 'paymob') {
+            return redirect()->route('front.orders.payment.paymob', [
+                'order' => $order,
+                'token' => $order->payment_link_token,
+                'method' => $method->code,
+            ]);
+        }
+
+        return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+    }
+
 
 
     private function findOrderFromMerchantOrderId(string $merchantOrderId): ?Order
@@ -515,11 +536,15 @@ class CheckoutController extends Controller
         $customer = Customer::query()->where('email', $user->email)->first();
         $nameParts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
 
+        $accountFirstName = trim((string) ($nameParts[0] ?? ''));
+        $accountLastName = trim((string) ($nameParts[1] ?? ''));
+        $accountPhone = trim((string) ($user->phone ?? ''));
+
         return [
-            'first_name' => $customer?->first_name ?? ($nameParts[0] ?? ''),
-            'last_name' => $customer?->last_name ?? ($nameParts[1] ?? ''),
+            'first_name' => $accountFirstName !== '' ? $accountFirstName : ($customer?->first_name ?? ''),
+            'last_name' => $accountLastName !== '' ? $accountLastName : ($customer?->last_name ?? ''),
             'email' => $user->email,
-            'phone' => $customer?->phone ?? '',
+            'phone' => $accountPhone !== '' ? $accountPhone : ($customer?->phone ?? ''),
         ];
     }
 

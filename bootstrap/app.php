@@ -16,8 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\StoreAffiliateReferral::class,
         ]);
 
+        $middleware->alias([
+            'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
+            'customer.account' => \App\Http\Middleware\EnsureCustomerAccountAccess::class,
+        ]);
+
         $middleware->redirectGuestsTo(static function (Request $request): string {
-            if ($request->is('admin') || $request->is('admin/*')) {
+            if ($request->is('dashboard') || $request->is('dashboard/*') || $request->is('admin') || $request->is('admin/*')) {
                 return route('login');
             }
 

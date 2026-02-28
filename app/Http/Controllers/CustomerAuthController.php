@@ -11,6 +11,16 @@ use Illuminate\Validation\Rule;
 
 class CustomerAuthController extends Controller
 {
+    private const ADMIN_ROLES = [
+        'admin',
+        'event_manager',
+        'ticket_manager',
+        'support',
+        'scanner',
+        'super_admin',
+        'super admin',
+    ];
+
     public function showLogin()
     {
         return view('front.auth.login');
@@ -44,6 +54,10 @@ class CustomerAuthController extends Controller
 
     public function showRegister()
     {
+        if (Auth::check() && ! $this->isAdminUser(Auth::user())) {
+            return redirect()->route('front.account.dashboard');
+        }
+
         return view('front.auth.register');
     }
 
@@ -71,10 +85,22 @@ class CustomerAuthController extends Controller
         $request->session()->forget('affiliate.referrer_id');
         $request->session()->forget('affiliate.referrer_code');
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        $currentUser = Auth::user();
+        if (! $this->isAdminUser($currentUser)) {
+            Auth::login($user);
+            $request->session()->regenerate();
 
-        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Account created successfully. Welcome to TKT House.');
+            return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Account created successfully. Welcome to TKT House.');
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Customer account created successfully.',
+                'created_user_id' => $user->id,
+            ], 201);
+        }
+
+        return back()->with('success', 'Customer account created successfully.');
     }
 
     public function logout(Request $request)
@@ -124,5 +150,10 @@ class CustomerAuthController extends Controller
         }
 
         return $username;
+    }
+
+    private function isAdminUser($user): bool
+    {
+        return $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(self::ADMIN_ROLES);
     }
 }

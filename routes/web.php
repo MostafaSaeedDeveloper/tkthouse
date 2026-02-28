@@ -31,9 +31,10 @@ Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::c
 Route::middleware('guest')->group(function () {
     Route::get('/account/login', [CustomerAuthController::class, 'showLogin'])->name('front.customer.login');
     Route::post('/account/login', [CustomerAuthController::class, 'login'])->name('front.customer.login.store');
-    Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
-    Route::post('/account/register', [CustomerAuthController::class, 'register'])->name('front.customer.register.store');
 });
+
+Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
+Route::post('/account/register', [CustomerAuthController::class, 'register'])->name('front.customer.register.store');
 
 Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
@@ -54,8 +55,8 @@ Route::middleware('auth')->group(function () {
 
 Auth::routes(['register' => false]);
 
-Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('users', UserController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
     Route::resource('permissions', PermissionController::class)->except('show');
@@ -87,5 +88,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::resource('payment-methods', PaymentMethodController::class)->except('show');
 });
 
-Route::redirect('/dashboard', '/admin/dashboard');
-Route::redirect('/home', '/admin/dashboard');
+Route::redirect('/admin', '/dashboard');
+Route::redirect('/admin/dashboard', '/dashboard');
+Route::redirect('/home', '/dashboard');

@@ -197,7 +197,9 @@
 <script>
 (() => {
   if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
-  jQuery('select').not('.no-select2').each(function () {
+  jQuery('select').not('.no-select2, .swal2-select').filter(function () {
+    return jQuery(this).closest('.swal2-container').length === 0;
+  }).each(function () {
     const $el = jQuery(this);
     if ($el.data('select2')) return;
     $el.addClass('js-select2').select2({ width: '100%' });

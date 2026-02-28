@@ -44,7 +44,7 @@
                         </div>
                     @endif
                     <div class="acc-avatar-name">{{ $user->name }}</div>
-                    <div class="acc-avatar-username">@{{ $user->username }}</div>
+                    <div class="acc-avatar-username">{{ $user->username }}</div>
                     <div style="margin-top:10px;font-size:12px;color:var(--muted);">{{ $user->email }}</div>
 
                     {{-- Quick links --}}

@@ -108,6 +108,10 @@
 .acc-badge-rejected { color:var(--red);   background:rgba(232,68,90,.10); border:1px solid rgba(232,68,90,.25); }
 .acc-badge-default  { color:var(--muted); background:rgba(107,107,126,.1); border:1px solid rgba(107,107,126,.2); }
 
+.acc-badge-method { color:#d7d9ea; background:rgba(107,107,126,.18); border:1px solid rgba(107,107,126,.35); font-size:11px; }
+.acc-paynow-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:11px; font-weight:800; padding:7px 14px; border-radius:8px; background:var(--gold); border:1px solid var(--gold); color:#000; text-decoration:none; font-family:var(--fh); letter-spacing:.4px; text-transform:uppercase; transition:all .18s; }
+.acc-paynow-btn:hover { background:#ffc820; color:#000; text-decoration:none; }
+
 /* ── Buttons ── */
 .acc-btn { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:6px 13px; border-radius:7px; background:rgba(245,184,0,.08); border:1px solid rgba(245,184,0,.22); color:var(--gold); text-decoration:none; transition:all .18s; font-family:var(--fh); }
 .acc-btn:hover { background:rgba(245,184,0,.16); border-color:rgba(245,184,0,.45); color:var(--gold); text-decoration:none; }
@@ -160,4 +164,16 @@
 /* ── Dashboard tables grid ── */
 .acc-tables-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 @media(max-width:768px){ .acc-tables-grid { grid-template-columns:1fr; } }
+
+/* ── Orders table polish ── */
+.acc-orders-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.acc-orders-table thead th { background: linear-gradient(180deg, rgba(255,255,255,.015) 0%, rgba(255,255,255,0) 100%); }
+.acc-orders-table th,
+.acc-orders-table td { border-right: 1px solid rgba(255,255,255,.08); }
+.acc-orders-table th:last-child,
+.acc-orders-table td:last-child { border-right: none; }
+.acc-orders-table tbody tr td { border-bottom: 1px solid rgba(255,255,255,.035); }
+.acc-orders-table tbody tr:last-child td { border-bottom: none; }
+.acc-orders-table tbody tr:hover { background: rgba(245,184,0,.03); }
 </style>
+
