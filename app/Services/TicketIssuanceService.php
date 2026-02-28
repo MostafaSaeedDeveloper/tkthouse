@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Symfony\Component\Mailer\Exception\UnexpectedResponseException;
+use Throwable;
 
 class TicketIssuanceService
 {
@@ -80,10 +82,16 @@ class TicketIssuanceService
             ->groupBy(fn (IssuedTicket $ticket) => mb_strtolower(trim((string) $ticket->holder_email)));
 
         foreach ($groupedByHolder as $holderEmail => $tickets) {
-            Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail));
+            $this->sendMailWithRetry(
+                fn () => Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail)),
+                ['order_id' => $order->id, 'recipient' => $holderEmail, 'mail_type' => 'holder_tickets_issued']
+            );
         }
 
-        Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order));
+        $this->sendMailWithRetry(
+            fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
+            ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
+        );
         $this->sendWhatsapp($order);
 
         $order->issuedTickets()->whereNull('sent_at')->update(['sent_at' => now()]);
@@ -119,5 +127,41 @@ class TicketIssuanceService
                 'tickets' => $tickets,
             ])
             ->throw();
+    }
+
+    private function sendMailWithRetry(callable $send, array $context = []): void
+    {
+        $maxAttempts = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $send();
+
+                return;
+            } catch (UnexpectedResponseException $exception) {
+                $isRateLimited = $exception->getCode() === 550
+                    && str_contains(mb_strtolower($exception->getMessage()), 'too many emails per second');
+
+                if (! $isRateLimited || $attempt === $maxAttempts) {
+                    Log::error('Mail send failed.', [
+                        ...$context,
+                        'attempt' => $attempt,
+                        'error' => $exception->getMessage(),
+                    ]);
+
+                    return;
+                }
+
+                usleep($attempt * 500000);
+            } catch (Throwable $exception) {
+                Log::error('Mail send failed.', [
+                    ...$context,
+                    'attempt' => $attempt,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return;
+            }
+        }
     }
 }
