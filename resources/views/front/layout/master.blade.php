@@ -237,6 +237,10 @@
                                     <input type="email" name="email" placeholder="you@example.com" value="{{ old('email') }}" required>
                                 </div>
                             </div>
+                            <div class="auth-field" style="margin-top:14px;margin-bottom:0">
+                                <label>Phone Number</label>
+                                <input type="text" name="phone" placeholder="+1 234 567 890" value="{{ old('phone') }}" required>
+                            </div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
                                 <div class="auth-field" style="margin-bottom:0">
                                     <label>Password</label>
@@ -247,10 +251,11 @@
                                     <input type="password" name="password_confirmation" placeholder="••••••••" required>
                                 </div>
                             </div>
-                            @if ($errors->has('name') || $errors->has('email') || $errors->has('password'))
+                            @if ($errors->has('name') || $errors->has('email') || $errors->has('phone') || $errors->has('password'))
                                 <div style="margin-top:12px;background:rgba(232,68,90,0.08);border:1px solid rgba(232,68,90,0.3);border-radius:8px;padding:10px 12px;color:#f0849a;font-size:12px;">
                                     @error('name')<div>{{ $message }}</div>@enderror
                                     @error('email')<div>{{ $message }}</div>@enderror
+                                    @error('phone')<div>{{ $message }}</div>@enderror
                                     @error('password')<div>{{ $message }}</div>@enderror
                                 </div>
                             @endif
