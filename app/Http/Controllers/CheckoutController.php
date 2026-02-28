@@ -13,6 +13,7 @@ use App\Support\SystemSettings;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
@@ -109,6 +110,43 @@ class CheckoutController extends Controller
         }
 
         return redirect()->away($url);
+    }
+
+
+    public function paymobCallback(Request $request)
+    {
+        $payload = $request->all();
+        $merchantOrderId = (string) data_get($payload, 'obj.order.merchant_order_id', data_get($payload, 'merchant_order_id', ''));
+        $isSuccess = (bool) data_get($payload, 'obj.success', data_get($payload, 'success', false));
+
+        if ($merchantOrderId === '') {
+            Log::warning('Paymob callback received without merchant_order_id.', ['payload' => $payload]);
+
+            return response()->json(['received' => true, 'updated' => false]);
+        }
+
+        $order = Order::query()->where('order_number', $merchantOrderId)->first();
+        if (! $order) {
+            Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
+
+            return response()->json(['received' => true, 'updated' => false]);
+        }
+
+        if ($isSuccess && $order->payment_status !== 'paid') {
+            $order->update([
+                'status' => 'complete',
+                'payment_status' => 'paid',
+            ]);
+            app(TicketIssuanceService::class)->issueIfPaid($order);
+        }
+
+        Log::info('Paymob callback processed.', [
+            'order_id' => $order->id,
+            'merchant_order_id' => $merchantOrderId,
+            'success' => $isSuccess,
+        ]);
+
+        return response()->json(['received' => true, 'updated' => $isSuccess]);
     }
 
     public function confirmPayment(Request $request, Order $order, string $token)

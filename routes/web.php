@@ -25,6 +25,8 @@ Route::get('/events', [PagesController::class, 'events'])->name('front.events');
 Route::get('/events/{event:slug}', [PagesController::class, 'eventShow'])->name('front.events.show');
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
 
+Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
+
 Route::middleware('guest')->group(function () {
     Route::get('/account/login', [CustomerAuthController::class, 'showLogin'])->name('front.customer.login');
     Route::post('/account/login', [CustomerAuthController::class, 'login'])->name('front.customer.login.store');

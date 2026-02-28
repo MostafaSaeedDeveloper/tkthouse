@@ -67,6 +67,13 @@
                     <div class="col-md-3 mb-3"><label class="form-label">Iframe ID</label><input class="form-control" name="paymob_iframe_id" value="{{ old('paymob_iframe_id', $cfg['iframe_id'] ?? '') }}"></div>
                     <div class="col-md-3 mb-3"><label class="form-label">Integration ID</label><input class="form-control" name="paymob_integration_id" value="{{ old('paymob_integration_id', $cfg['integration_id'] ?? '') }}"></div>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">Callback URL (Copy & add in Paymob dashboard)</label>
+                    <div class="input-group">
+                        <input id="paymob-callback-url" type="text" class="form-control" readonly value="{{ route('front.paymob.callback') }}">
+                        <button class="btn btn-alt-secondary" type="button" id="copy-paymob-callback">Copy</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -82,8 +89,20 @@
 (() => {
   const provider = document.getElementById('provider-select');
   const paymobBox = document.getElementById('paymob-config');
+  const copyBtn = document.getElementById('copy-paymob-callback');
+  const callbackInput = document.getElementById('paymob-callback-url');
   const toggle = () => { paymobBox.style.display = provider.value === 'paymob' ? 'block' : 'none'; };
   provider.addEventListener('change', toggle);
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(callbackInput.value);
+      copyBtn.textContent = 'Copied';
+      setTimeout(() => copyBtn.textContent = 'Copy', 1200);
+    } catch (e) {
+      callbackInput.select();
+      document.execCommand('copy');
+    }
+  });
   toggle();
 })();
 </script>
