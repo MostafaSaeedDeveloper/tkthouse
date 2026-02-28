@@ -205,6 +205,9 @@
                                 <label>Password</label>
                                 <input type="password" name="password" placeholder="••••••••" required>
                             </div>
+                            <div style="text-align:right;margin:-6px 0 12px;">
+                                <a href="{{ route('password.request', ['redirect' => request('redirect')]) }}" style="color:#f5b800;font-size:12px;text-decoration:none;">Forgot password?</a>
+                            </div>
                             @error('login')
                                 <div style="margin-top:6px;color:#f0849a;font-size:12px;">{{ $message }}</div>
                             @enderror
