@@ -158,7 +158,7 @@ class CheckoutController extends Controller
             return response()->json(['received' => true, 'updated' => false]);
         }
 
-        $order = Order::query()->where('order_number', $merchantOrderId)->first();
+        $order = $this->findOrderFromMerchantOrderId($merchantOrderId);
         if (! $order) {
             Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
 
@@ -458,6 +458,22 @@ class CheckoutController extends Controller
 
         return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
             ->with('success', 'Your order has been submitted successfully.');
+    }
+
+
+    private function findOrderFromMerchantOrderId(string $merchantOrderId): ?Order
+    {
+        $direct = Order::query()->where('order_number', $merchantOrderId)->first();
+        if ($direct) {
+            return $direct;
+        }
+
+        $baseOrderNumber = trim((string) strtok($merchantOrderId, '-'));
+        if ($baseOrderNumber !== '') {
+            return Order::query()->where('order_number', $baseOrderNumber)->first();
+        }
+
+        return null;
     }
 
     private function activePaymentMethodCodes(): array
