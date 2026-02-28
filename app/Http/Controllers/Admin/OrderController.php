@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderApprovedMail;
+use App\Mail\OrderRejectedMail;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
@@ -246,13 +248,8 @@ class OrderController extends Controller
 
         $paymentLink = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
 
-        Mail::raw(
-            "Your order {$order->order_number} has been approved and is now waiting for payment.\n\nPay now: {$paymentLink}",
-            static function ($message) use ($order) {
-                $message->to($order->customer->email)
-                    ->subject('Order approved - payment required');
-            }
-        );
+        Mail::to($order->customer->email)
+            ->send(new OrderApprovedMail($order, $paymentLink));
 
         return back()->with('success', 'Order approved and payment email sent successfully.');
     }
@@ -278,6 +275,9 @@ class OrderController extends Controller
             ])
             ->log('Order rejected');
 
-        return back()->with('success', 'Order rejected successfully.');
+        Mail::to($order->customer->email)
+            ->send(new OrderRejectedMail($order));
+
+        return back()->with('success', 'Order rejected and email sent successfully.');
     }
 }

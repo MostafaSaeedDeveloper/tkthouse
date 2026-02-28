@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
+        'phone',
         'affiliate_code',
         'affiliate_target_url',
         'referred_by_user_id',
@@ -62,7 +63,7 @@ class User extends Authenticatable
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'username', 'email', 'profile_image', 'last_login_at', 'last_login_ip'])
+            ->logOnly(['name', 'username', 'email', 'phone', 'profile_image', 'last_login_at', 'last_login_ip'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
