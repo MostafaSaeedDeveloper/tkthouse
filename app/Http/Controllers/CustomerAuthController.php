@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,13 @@ class CustomerAuthController extends Controller
         $field = filter_var($validated['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
         if (! Auth::attempt([$field => $validated['login'], 'password' => $validated['password']], $request->boolean('remember'))) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Invalid credentials.',
+                    'errors' => ['login' => ['Invalid credentials.']],
+                ], 422);
+            }
+
             return back()->withErrors(['login' => 'Invalid credentials.'])->onlyInput('login');
         }
 
@@ -80,17 +88,26 @@ class CustomerAuthController extends Controller
 
     private function redirectAfterAuth(Request $request, ?string $redirectTo, ?string $successMessage = null)
     {
+        $target = route('front.account.dashboard');
+
         if (is_string($redirectTo) && $redirectTo !== '') {
             if (str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
-                return redirect()->to($redirectTo)->with('success', $successMessage ?? 'Success.');
+                $target = $redirectTo;
             }
 
             if (str_starts_with($redirectTo, url('/'))) {
-                return redirect()->to($redirectTo)->with('success', $successMessage ?? 'Success.');
+                $target = $redirectTo;
             }
         }
 
-        return redirect()->route('front.account.dashboard')->with('success', $successMessage ?? 'Success.');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $successMessage ?? 'Success.',
+                'redirect_to' => $target,
+            ]);
+        }
+
+        return redirect()->to($target)->with('success', $successMessage ?? 'Success.');
     }
 
     private function generateUsername(string $email): string

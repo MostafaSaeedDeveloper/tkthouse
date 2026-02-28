@@ -192,8 +192,9 @@
                         <div class="auth-heading">
                             <h3>Welcome back</h3>
                             <p>Sign in to your account to continue</p>
+                            <div data-auth-message="login" style="display:none;margin-top:10px;border-radius:8px;padding:10px 12px;font-size:12px;"></div>
                         </div>
-                        <form method="POST" action="{{ route('front.customer.login.store') }}">
+                        <form method="POST" action="{{ route('front.customer.login.store') }}" data-auth-ajax-form data-auth-type="login">
                             @csrf
                             <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
                             <div class="auth-field">
@@ -221,8 +222,9 @@
                         <div class="auth-heading">
                             <h3>Create your account</h3>
                             <p>Join us and start booking tickets</p>
+                            <div data-auth-message="register" style="display:none;margin-top:10px;border-radius:8px;padding:10px 12px;font-size:12px;"></div>
                         </div>
-                        <form method="POST" action="{{ route('front.customer.register.store') }}">
+                        <form method="POST" action="{{ route('front.customer.register.store') }}" data-auth-ajax-form data-auth-type="register">
                             @csrf
                             <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -384,6 +386,57 @@
                     return;
                 }
 
+                function setPanelMessage(type, kind, message) {
+                    var box = document.querySelector('[data-auth-message="' + type + '"]');
+                    if (!box) {
+                        return;
+                    }
+
+                    if (!message) {
+                        box.style.display = 'none';
+                        box.textContent = '';
+                        box.style.background = '';
+                        box.style.border = '';
+                        box.style.color = '';
+                        return;
+                    }
+
+                    box.style.display = 'block';
+                    box.textContent = message;
+                    if (kind === 'success') {
+                        box.style.background = 'rgba(34,197,94,.08)';
+                        box.style.border = '1px solid rgba(34,197,94,.25)';
+                        box.style.color = '#86efac';
+                    } else {
+                        box.style.background = 'rgba(232,68,90,0.08)';
+                        box.style.border = '1px solid rgba(232,68,90,0.3)';
+                        box.style.color = '#f0849a';
+                    }
+                }
+
+                function clearInlineErrors(form) {
+                    form.querySelectorAll('[data-auth-inline-error]').forEach(function (el) {
+                        el.remove();
+                    });
+                }
+
+                function showInlineError(form, field, message) {
+                    var input = form.querySelector('[name="' + field + '"]');
+                    if (!input) {
+                        return;
+                    }
+
+                    var div = document.createElement('div');
+                    div.setAttribute('data-auth-inline-error', '1');
+                    div.style.marginTop = '6px';
+                    div.style.color = '#f0849a';
+                    div.style.fontSize = '12px';
+                    div.textContent = message;
+                    var fieldWrap = input.closest('.auth-field');
+                    if (fieldWrap) {
+                        fieldWrap.appendChild(div);
+                    }
+                }
 
                 var hasErrors = {{ $errors->any() ? 'true' : 'false' }};
                 if (hasErrors && window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
@@ -397,6 +450,75 @@
                         }
                     }
                 }
+
+                document.querySelectorAll('form[data-auth-ajax-form]').forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();
+
+                        var type = form.getAttribute('data-auth-type') || 'login';
+                        var submitButton = form.querySelector('button[type="submit"]');
+                        var originalButtonText = submitButton ? submitButton.textContent : '';
+
+                        setPanelMessage(type, null, null);
+                        clearInlineErrors(form);
+
+                        if (submitButton) {
+                            submitButton.disabled = true;
+                            submitButton.textContent = 'Please wait...';
+                        }
+
+                        fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: new FormData(form),
+                            credentials: 'same-origin',
+                        })
+                            .then(function (response) {
+                                return response.json().catch(function () { return {}; }).then(function (data) {
+                                    return { status: response.status, ok: response.ok, data: data };
+                                });
+                            })
+                            .then(function (result) {
+                                if (result.ok) {
+                                    setPanelMessage(type, 'success', result.data.message || 'Success. Redirecting...');
+                                    var redirectTo = result.data.redirect_to || '{{ route('front.account.dashboard') }}';
+                                    window.location.href = redirectTo;
+                                    return;
+                                }
+
+                                var errors = result.data.errors || {};
+                                var firstError = null;
+                                Object.keys(errors).forEach(function (key) {
+                                    var message = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+                                    if (!firstError && message) {
+                                        firstError = message;
+                                    }
+                                    showInlineError(form, key, message || 'Invalid input.');
+                                });
+
+                                setPanelMessage(type, 'error', firstError || result.data.message || 'Something went wrong.');
+
+                                if (type === 'register') {
+                                    var registerTab = document.querySelector('[data-auth-tab="register"]');
+                                    if (registerTab) {
+                                        registerTab.click();
+                                    }
+                                }
+                            })
+                            .catch(function () {
+                                setPanelMessage(type, 'error', 'Unable to submit now. Please try again.');
+                            })
+                            .finally(function () {
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.textContent = originalButtonText;
+                                }
+                            });
+                    });
+                });
 
                 document.addEventListener('click', function (event) {
                     var link = event.target.closest('a.tkt-checkout-btn');
@@ -421,7 +543,6 @@
                 }, true);
             })();
         </script>
-
   </body>
 
 </html>

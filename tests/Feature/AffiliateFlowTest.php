@@ -79,4 +79,39 @@ class AffiliateFlowTest extends TestCase
         ])->assertRedirect('/checkout')
             ->assertSessionHas('success');
     }
+
+
+    public function test_login_supports_ajax_response_with_redirect(): void
+    {
+        User::factory()->create([
+            'username' => 'ajax_user',
+            'email' => 'ajax-user@example.com',
+            'password' => bcrypt('password123'),
+        ]);
+
+        $this->postJson(route('front.customer.login.store'), [
+            'login' => 'ajax_user',
+            'password' => 'password123',
+            'redirect_to' => '/checkout',
+        ])->assertOk()
+            ->assertJson([
+                'redirect_to' => '/checkout',
+            ])
+            ->assertJsonStructure(['message']);
+    }
+
+    public function test_register_supports_ajax_response_with_redirect(): void
+    {
+        $this->postJson(route('front.customer.register.store'), [
+            'name' => 'Ajax Register',
+            'email' => 'ajax-register@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'redirect_to' => '/checkout',
+        ])->assertOk()
+            ->assertJson([
+                'redirect_to' => '/checkout',
+            ])
+            ->assertJsonStructure(['message']);
+    }
 }
