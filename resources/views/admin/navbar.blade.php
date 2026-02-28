@@ -24,8 +24,9 @@
   $usersMenuOpen = request()->routeIs('admin.users.*')
       || request()->routeIs('admin.roles.*')
       || request()->routeIs('admin.permissions.*')
-      || request()->routeIs('admin.activity-logs.*')
-      || request()->routeIs('admin.settings.*')
+      || request()->routeIs('admin.activity-logs.*');
+
+  $settingsMenuOpen = request()->routeIs('admin.settings.*')
       || request()->routeIs('admin.payment-methods.*');
 @endphp
 
@@ -98,6 +99,7 @@
 
       {{-- Users submenu --}}
       <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
+
         <a class="nav-main-link nav-main-link-submenu"
            data-toggle="submenu"
            aria-haspopup="true"
@@ -126,6 +128,26 @@
             </a>
           </li>
           <li class="nav-main-item">
+            <a class="nav-main-link {{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}"
+               href="{{ route('admin.activity-logs.index') }}">
+              <span class="nav-main-link-name">Activity Logs</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      {{-- Settings submenu --}}
+      <li class="nav-main-item {{ $settingsMenuOpen ? 'open' : '' }}">
+        <a class="nav-main-link nav-main-link-submenu"
+           data-toggle="submenu"
+           aria-haspopup="true"
+           aria-expanded="{{ $settingsMenuOpen ? 'true' : 'false' }}"
+           href="#">
+          <i class="nav-main-link-icon fa fa-gear"></i>
+          <span class="nav-main-link-name">Settings</span>
+        </a>
+        <ul class="nav-main-submenu">
+          <li class="nav-main-item">
             <a class="nav-main-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}"
                href="{{ route('admin.settings.edit') }}">
               <span class="nav-main-link-name">General Settings</span>
@@ -137,14 +159,9 @@
               <span class="nav-main-link-name">Payment Methods</span>
             </a>
           </li>
-          <li class="nav-main-item">
-            <a class="nav-main-link {{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}"
-               href="{{ route('admin.activity-logs.index') }}">
-              <span class="nav-main-link-name">Activity Logs</span>
-            </a>
-          </li>
         </ul>
       </li>
+
 
     </ul>
   </div>
