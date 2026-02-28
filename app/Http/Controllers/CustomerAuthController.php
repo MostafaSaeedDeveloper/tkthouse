@@ -31,7 +31,7 @@ class CustomerAuthController extends Controller
 
         $request->session()->regenerate();
 
-        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null);
+        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Welcome back, you are now signed in.');
     }
 
     public function showRegister()
@@ -64,7 +64,7 @@ class CustomerAuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null);
+        return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Account created successfully. Welcome to TKT House.');
     }
 
     public function logout(Request $request)
@@ -78,19 +78,19 @@ class CustomerAuthController extends Controller
     }
 
 
-    private function redirectAfterAuth(Request $request, ?string $redirectTo)
+    private function redirectAfterAuth(Request $request, ?string $redirectTo, ?string $successMessage = null)
     {
         if (is_string($redirectTo) && $redirectTo !== '') {
             if (str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
-                return redirect()->to($redirectTo);
+                return redirect()->to($redirectTo)->with('success', $successMessage ?? 'Success.');
             }
 
             if (str_starts_with($redirectTo, url('/'))) {
-                return redirect()->to($redirectTo);
+                return redirect()->to($redirectTo)->with('success', $successMessage ?? 'Success.');
             }
         }
 
-        return redirect()->route('front.account.profile');
+        return redirect()->route('front.account.dashboard')->with('success', $successMessage ?? 'Success.');
     }
 
     private function generateUsername(string $email): string
