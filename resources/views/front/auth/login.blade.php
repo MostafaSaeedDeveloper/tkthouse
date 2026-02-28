@@ -107,6 +107,10 @@
                                 @error('password')<div class="auth-error">{{ $message }}</div>@enderror
                             </div>
 
+                            <div style="text-align:right;margin:-4px 0 10px;">
+                                <a href="{{ route('password.request') }}" style="color:var(--gold);font-size:12px;text-decoration:none;">Forgot password?</a>
+                            </div>
+
                             <button class="auth-submit" type="submit">
                                 Sign In →
                             </button>

@@ -205,6 +205,9 @@
                                 <label>Password</label>
                                 <input type="password" name="password" placeholder="••••••••" required>
                             </div>
+                            <div style="text-align:right;margin:-6px 0 12px;">
+                                <a href="#" data-auth-switch="forgot" style="color:#f5b800;font-size:12px;text-decoration:none;">Forgot password?</a>
+                            </div>
                             @error('login')
                                 <div style="margin-top:6px;color:#f0849a;font-size:12px;">{{ $message }}</div>
                             @enderror
@@ -263,6 +266,31 @@
                         </form>
                         <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
                             Already have an account?
+                            <a href="#" data-auth-switch="login" style="color:#f5b800;text-decoration:none;font-weight:500;">Sign in</a>
+                        </p>
+                    </div>
+
+                    {{-- Forgot Password Panel --}}
+                    <div class="auth-panel" id="auth-panel-forgot">
+                        <div class="auth-heading">
+                            <h3>Reset your password</h3>
+                            <p>Enter your account email and we'll send a reset link.</p>
+                            <div data-auth-message="forgot" style="display:none;margin-top:10px;border-radius:8px;padding:10px 12px;font-size:12px;"></div>
+                        </div>
+                        <form method="POST" action="{{ route('password.email') }}" data-auth-ajax-form data-auth-type="forgot">
+                            @csrf
+                            <div class="auth-field">
+                                <label>Email Address</label>
+                                <input type="email" name="email" placeholder="you@example.com" value="{{ old('email') }}" required>
+                            </div>
+                            @error('email')
+                                <div style="margin-top:6px;color:#f0849a;font-size:12px;">{{ $message }}</div>
+                            @enderror
+
+                            <button class="auth-submit" type="submit">Send Reset Link</button>
+                        </form>
+                        <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
+                            Remembered your password?
                             <a href="#" data-auth-switch="login" style="color:#f5b800;text-decoration:none;font-weight:500;">Sign in</a>
                         </p>
                     </div>
@@ -447,11 +475,17 @@
                 if (hasErrors && window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
                     window.jQuery('#login-register1').modal('show');
 
-                    var shouldOpenRegister = {{ ($errors->has('name') || $errors->has('email') || $errors->has('password') || old('name') || old('email')) ? 'true' : 'false' }};
+                    var shouldOpenRegister = {{ ($errors->has('name') || $errors->has('password') || old('name')) ? 'true' : 'false' }};
+                    var shouldOpenForgot = {{ ($errors->has('email') && !old('name')) ? 'true' : 'false' }};
                     if (shouldOpenRegister) {
                         var registerTab = document.querySelector('[data-auth-tab="register"]');
                         if (registerTab) {
                             registerTab.click();
+                        }
+                    } else if (shouldOpenForgot) {
+                        var forgotSwitch = document.querySelector('[data-auth-switch="forgot"]');
+                        if (forgotSwitch) {
+                            forgotSwitch.click();
                         }
                     }
                 }
@@ -488,6 +522,12 @@
                             })
                             .then(function (result) {
                                 if (result.ok) {
+                                    if (type === 'forgot') {
+                                        setPanelMessage(type, 'success', result.data.message || 'Password reset link sent successfully.');
+                                        form.reset();
+                                        return;
+                                    }
+
                                     setPanelMessage(type, 'success', result.data.message || 'Success. Redirecting...');
                                     var redirectTo = result.data.redirect_to || '{{ route('front.account.dashboard') }}';
                                     window.location.href = redirectTo;
@@ -510,6 +550,11 @@
                                     var registerTab = document.querySelector('[data-auth-tab="register"]');
                                     if (registerTab) {
                                         registerTab.click();
+                                    }
+                                } else if (type === 'forgot') {
+                                    var forgotSwitch = document.querySelector('[data-auth-switch="forgot"]');
+                                    if (forgotSwitch) {
+                                        forgotSwitch.click();
                                     }
                                 }
                             })
