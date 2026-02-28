@@ -2,9 +2,6 @@
 
 @section('content')
 <div class="content">
-    @php
-        $affiliateLink = $affiliate->affiliate_code ? route('front.customer.register', ['ref' => $affiliate->affiliate_code]) : null;
-    @endphp
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h2 class="h4 mb-1">Affiliate: {{ $affiliate->name }}</h2>
@@ -27,13 +24,16 @@
         <div class="block-content">
             @if($affiliateLink)
                 <a href="{{ $affiliateLink }}" target="_blank">{{ $affiliateLink }}</a>
+                <div class="text-muted mt-2">Target: <code>{{ $affiliate->affiliate_target_url ?: '/account/register' }}</code></div>
             @else
                 <p class="text-muted mb-0">No affiliate link generated yet.</p>
             @endif
             <form method="POST" action="{{ route('admin.affiliates.store') }}" class="mt-3">
                 @csrf
                 <input type="hidden" name="user_id" value="{{ $affiliate->id }}">
-                <button class="btn btn-alt-success" type="submit">{{ $affiliate->affiliate_code ? 'Regenerate Link' : 'Generate Link' }}</button>
+                <label class="form-label" for="target_url">Target Link</label>
+                <input id="target_url" name="target_url" class="form-control mb-2" value="{{ old('target_url', $affiliate->affiliate_target_url ?: '/account/register') }}" placeholder="/events/my-event">
+                <button class="btn btn-alt-success" type="submit">Update Link</button>
             </form>
         </div>
     </div>

@@ -22,6 +22,7 @@ class User extends Authenticatable
         'username',
         'email',
         'affiliate_code',
+        'affiliate_target_url',
         'referred_by_user_id',
         'profile_image',
         'password',

@@ -29,6 +29,15 @@
                     @enderror
                 </div>
 
+                <div class="mb-4">
+                    <label class="form-label" for="target_url">Target Link (from your site)</label>
+                    <input type="text" class="form-control @error('target_url') is-invalid @enderror" id="target_url" name="target_url" value="{{ old('target_url', '/account/register') }}" placeholder="/events/my-event">
+                    <div class="form-text">Example: <code>/events</code> or <code>/events/summer-festival</code>. This is the page where the affiliate link will open.</div>
+                    @error('target_url')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
                 <button type="submit" class="btn btn-alt-success">Generate Link</button>
             </form>
         </div>

@@ -27,12 +27,7 @@
                     </thead>
                     <tbody>
                         @forelse($affiliates as $affiliate)
-                            @php
-                                $affiliateLink = $affiliate->affiliate_code
-                                    ? route('front.customer.register', ['ref' => $affiliate->affiliate_code])
-                                    : null;
-                                $paidRevenue = (float) ($affiliate->affiliate_paid_revenue ?? 0);
-                            @endphp
+                            @php $paidRevenue = (float) ($affiliate->affiliate_paid_revenue ?? 0); @endphp
                             <tr>
                                 <td>{{ $affiliate->id }}</td>
                                 <td>
@@ -40,11 +35,7 @@
                                     <div class="text-muted small">{{ $affiliate->email }}</div>
                                 </td>
                                 <td>
-                                    @if($affiliateLink)
-                                        <a href="{{ $affiliateLink }}" target="_blank" class="small">{{ $affiliateLink }}</a>
-                                    @else
-                                        <span class="text-muted">Not generated yet</span>
-                                    @endif
+                                    <a href="{{ $affiliate->generated_affiliate_link }}" target="_blank" class="small">{{ $affiliate->generated_affiliate_link }}</a>
                                 </td>
                                 <td>{{ $affiliate->referred_users_count }}</td>
                                 <td>{{ $affiliate->affiliate_orders_count }}</td>
@@ -56,7 +47,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-center py-4 text-muted">No users found.</td></tr>
+                            <tr><td colspan="7" class="text-center py-4 text-muted">No affiliate links yet. Click Add New Link to create one.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -47,12 +47,29 @@ class AffiliateFlowTest extends TestCase
             ->assertSee($targetUser->email);
 
         $this->actingAs($admin)
-            ->post(route('admin.affiliates.store'), ['user_id' => $targetUser->id])
+            ->post(route('admin.affiliates.store'), [
+                'user_id' => $targetUser->id,
+                'target_url' => '/events/my-event',
+            ])
             ->assertRedirect(route('admin.affiliates.show', $targetUser));
 
-        $this->assertNotNull($targetUser->fresh()->affiliate_code);
+        $fresh = $targetUser->fresh();
+        $this->assertNotNull($fresh->affiliate_code);
+        $this->assertSame('/events/my-event', $fresh->affiliate_target_url);
     }
 
+    public function test_affiliate_index_lists_only_users_with_generated_links(): void
+    {
+        $admin = User::factory()->create();
+        User::factory()->create(['affiliate_code' => null, 'name' => 'No Link User']);
+        User::factory()->create(['affiliate_code' => 'CODE1234', 'affiliate_target_url' => '/events', 'name' => 'With Link User']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.affiliates.index'))
+            ->assertOk()
+            ->assertSee('With Link User')
+            ->assertDontSee('No Link User');
+    }
 
     public function test_login_and_register_keep_checkout_redirect_when_redirect_to_is_present(): void
     {
@@ -79,7 +96,6 @@ class AffiliateFlowTest extends TestCase
         ])->assertRedirect('/checkout')
             ->assertSessionHas('success');
     }
-
 
     public function test_login_supports_ajax_response_with_redirect(): void
     {

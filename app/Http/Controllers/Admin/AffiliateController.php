@@ -14,6 +14,7 @@ class AffiliateController extends Controller
     public function index()
     {
         $affiliates = User::query()
+            ->whereNotNull('affiliate_code')
             ->withCount('referredUsers')
             ->withCount('affiliateOrders')
             ->withSum([
@@ -21,20 +22,24 @@ class AffiliateController extends Controller
             ], 'total_amount')
             ->orderByDesc('affiliate_paid_revenue')
             ->orderByDesc('affiliate_orders_count')
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function (User $affiliate) {
+                $affiliate->generated_affiliate_link = $this->buildAffiliateLink($affiliate);
+
+                return $affiliate;
+            });
 
         return view('admin.affiliates.index', [
             'affiliates' => $affiliates,
         ]);
     }
 
-
     public function create()
     {
         return view('admin.affiliates.create', [
             'customers' => User::query()
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'affiliate_code']),
+                ->get(['id', 'name', 'email', 'affiliate_code', 'affiliate_target_url']),
         ]);
     }
 
@@ -42,12 +47,16 @@ class AffiliateController extends Controller
     {
         $validated = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
+            'target_url' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $affiliate = User::query()->findOrFail((int) $validated['user_id']);
 
+        $targetUrl = $this->normalizeTargetUrl((string) ($validated['target_url'] ?? ''), $affiliate->affiliate_target_url);
+
         $affiliate->update([
-            'affiliate_code' => $this->uniqueAffiliateCode(),
+            'affiliate_code' => $affiliate->affiliate_code ?: $this->uniqueAffiliateCode(),
+            'affiliate_target_url' => $targetUrl,
         ]);
 
         return redirect()->route('admin.affiliates.show', $affiliate)
@@ -56,6 +65,8 @@ class AffiliateController extends Controller
 
     public function show(User $affiliate)
     {
+        abort_if(! $affiliate->affiliate_code, 404);
+
         $affiliate->loadCount(['referredUsers', 'affiliateOrders']);
 
         $orders = $affiliate->affiliateOrders()
@@ -79,7 +90,42 @@ class AffiliateController extends Controller
             'orders' => $orders,
             'referredUsers' => $referredUsers,
             'stats' => $stats,
+            'affiliateLink' => $this->buildAffiliateLink($affiliate),
         ]);
+    }
+
+    private function buildAffiliateLink(User $affiliate): ?string
+    {
+        if (! $affiliate->affiliate_code) {
+            return null;
+        }
+
+        $targetUrl = $this->normalizeTargetUrl((string) ($affiliate->affiliate_target_url ?? ''), '/account/register');
+
+        return (string) url($targetUrl.(str_contains($targetUrl, '?') ? '&' : '?').'ref='.$affiliate->affiliate_code);
+    }
+
+    private function normalizeTargetUrl(string $candidate, ?string $fallback = null): string
+    {
+        $candidate = trim($candidate);
+        $fallback = trim((string) $fallback);
+
+        if ($candidate === '') {
+            return $fallback !== '' ? $fallback : '/account/register';
+        }
+
+        if (str_starts_with($candidate, url('/'))) {
+            $path = '/'.ltrim((string) parse_url($candidate, PHP_URL_PATH), '/');
+            $query = (string) parse_url($candidate, PHP_URL_QUERY);
+
+            return $query !== '' ? $path.'?'.$query : $path;
+        }
+
+        if (str_starts_with($candidate, '/')) {
+            return $candidate;
+        }
+
+        return '/'.ltrim($candidate, '/');
     }
 
     private function uniqueAffiliateCode(): string
