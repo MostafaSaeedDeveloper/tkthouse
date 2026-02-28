@@ -42,12 +42,18 @@ class PaymentMethod extends Model
             return null;
         }
 
+        $iconPath = str_replace('\\', '/', $iconPath);
+
         if (str_starts_with($iconPath, 'http://') || str_starts_with($iconPath, 'https://')) {
             return $iconPath;
         }
 
         if (str_starts_with($iconPath, 'payment-method-icons/')) {
             return asset('storage/'.$iconPath);
+        }
+
+        if (str_starts_with($iconPath, 'public/')) {
+            $iconPath = substr($iconPath, 7);
         }
 
         return asset(ltrim($iconPath, '/'));
