@@ -31,11 +31,12 @@ Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::c
 Route::middleware('guest')->group(function () {
     Route::get('/account/login', [CustomerAuthController::class, 'showLogin'])->name('front.customer.login');
     Route::post('/account/login', [CustomerAuthController::class, 'login'])->name('front.customer.login.store');
-    Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
-    Route::post('/account/register', [CustomerAuthController::class, 'register'])->name('front.customer.register.store');
 });
 
-Route::middleware(['auth', 'customer.account'])->group(function () {
+Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
+Route::post('/account/register', [CustomerAuthController::class, 'register'])->name('front.customer.register.store');
+
+Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
     Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
     Route::get('/account/profile', [CustomerDashboardController::class, 'profile'])->name('front.account.profile');
