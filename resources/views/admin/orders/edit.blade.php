@@ -15,13 +15,6 @@
     'rejected' => 'Rejected',
   ];
 
-  $paymentMethodOptions = [
-    'cash'          => 'Cash',
-    'card'          => 'Card',
-    'vodafone_cash' => 'Vodafone Cash',
-    'instapay'      => 'InstaPay',
-    'bank_transfer' => 'Bank Transfer',
-  ];
 
   $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
 @endphp
@@ -323,7 +316,7 @@
               <select class="oe-select" name="status" id="statusSelect">
                 @foreach($statusOptions as $val => $label)
                   <option value="{{ $val }}" {{ old('status', $order->status) === $val ? 'selected' : '' }}>
-                    {{ $label }}
+                    {{ $method->name }}
                   </option>
                 @endforeach
               </select>
@@ -334,9 +327,9 @@
             <div class="oe-field">
               <label class="oe-label">Payment Method</label>
               <select class="oe-select" name="payment_method">
-                @foreach($paymentMethodOptions as $val => $label)
-                  <option value="{{ $val }}" {{ old('payment_method', $order->payment_method) === $val ? 'selected' : '' }}>
-                    {{ $label }}
+                @foreach($paymentMethods as $method)
+                  <option value="{{ $method->code }}" {{ old('payment_method', $order->payment_method) === $method->code ? 'selected' : '' }}>
+                    {{ $method->name }}
                   </option>
                 @endforeach
               </select>
@@ -348,7 +341,7 @@
                 <label class="oe-label">Payment Link</label>
                 <div class="input-group">
                   <input class="oe-input" type="text" readonly value="{{ $paymentLink }}" onclick="this.select()">
-                  <button class="btn btn-alt-secondary" type="button" onclick="navigator.clipboard.writeText('{{ $paymentLink }}')">Copy</button>
+                  <button class="btn btn-alt-secondary" id="copyPaymentLinkBtn" type="button" data-payment-link="{{ $paymentLink }}">Copy Link</button>
                 </div>
               </div>
             @endif
@@ -412,6 +405,22 @@
 
   [dFixed, dPct, fees].forEach(el => el.addEventListener('input', recalc));
   recalc();
+  const copyBtn = document.getElementById('copyPaymentLinkBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async function () {
+      const originalText = this.textContent;
+      try {
+        await navigator.clipboard.writeText(this.dataset.paymentLink || '');
+        this.textContent = 'Copied ✓';
+      } catch (error) {
+        this.textContent = 'Copy failed';
+      }
+      setTimeout(() => {
+        this.textContent = originalText;
+      }, 1300);
+    });
+  }
+
 
 })();
 </script>

@@ -10,10 +10,10 @@ use App\Models\PaymentMethod;
 use App\Models\Ticket;
 use App\Services\PaymobService;
 use App\Services\TicketIssuanceService;
-use App\Support\SystemSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
@@ -34,7 +34,7 @@ class CheckoutController extends Controller
                 'mode' => 'event_locked',
                 'eventSelection' => $eventSelection,
                 'buyer' => $buyer,
-                'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
+                'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
             ]);
         }
 
@@ -57,7 +57,7 @@ class CheckoutController extends Controller
             'legacyTickets' => $legacyTickets,
             'eventSelection' => null,
             'buyer' => $buyer,
-            'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
+            'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
         ]);
     }
 
@@ -91,9 +91,20 @@ class CheckoutController extends Controller
 
         $order->load(['items', 'customer']);
 
+        $activePaymentMethods = PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('code', '!=', 'card')
+            ->orderBy('id')
+            ->get(['name', 'code', 'provider', 'checkout_label', 'checkout_icon', 'checkout_description']);
+
+        $selectedMethod = $activePaymentMethods->firstWhere('code', $order->payment_method)?->code
+            ?? $activePaymentMethods->first()?->code
+            ?? $order->payment_method;
+
         return view('front.payment', [
             'order' => $order,
-            'paymobEnabled' => (bool) PaymentMethod::query()->where('provider', 'paymob')->where('code', $order->payment_method)->where('is_active', true)->exists(),
+            'activePaymentMethods' => $activePaymentMethods,
+            'selectedMethod' => $selectedMethod,
         ]);
     }
 
@@ -102,6 +113,21 @@ class CheckoutController extends Controller
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'pending_payment', 404);
+
+        $method = (string) $request->query('method', $order->payment_method);
+        $isPaymobMethod = PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('provider', 'paymob')
+            ->where('code', $method)
+            ->exists();
+
+        if (! $isPaymobMethod) {
+            return back()->withErrors(['payment' => 'Selected payment method is not available for online gateway.']);
+        }
+
+        if ($order->payment_method !== $method) {
+            $order->update(['payment_method' => $method]);
+        }
 
         try {
             $url = $paymobService->createCheckoutUrl($order->loadMissing('customer'));
@@ -153,7 +179,15 @@ class CheckoutController extends Controller
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'pending_payment', 404);
 
+        $validated = $request->validate([
+            'payment_method' => ['required', Rule::in($this->activePaymentMethodCodes())],
+        ]);
+
         $oldStatus = $order->status;
+
+        if ($order->payment_method !== $validated['payment_method']) {
+            $order->update(['payment_method' => $validated['payment_method']]);
+        }
 
         $order->update([
             'status' => 'paid',
@@ -217,7 +251,7 @@ class CheckoutController extends Controller
 
         if (! $requiresApproval) {
             $request->validate([
-                'payment_method' => ['required', 'in:'.implode(',', SystemSettings::paymentMethods())],
+                'payment_method' => ['required', Rule::in($this->activePaymentMethodCodes())],
             ]);
         }
 
@@ -320,7 +354,7 @@ class CheckoutController extends Controller
 
         if (! $requiresApproval) {
             $request->validate([
-                'payment_method' => ['required', 'in:'.implode(',', SystemSettings::paymentMethods())],
+                'payment_method' => ['required', Rule::in($this->activePaymentMethodCodes())],
             ]);
         }
 
@@ -389,6 +423,17 @@ class CheckoutController extends Controller
         });
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Your order has been submitted successfully.');
+    }
+
+    private function activePaymentMethodCodes(): array
+    {
+        return PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('code', '!=', 'card')
+            ->orderBy('id')
+            ->pluck('code')
+            ->values()
+            ->all();
     }
 
     private function generateNumericOrderNumber(): string

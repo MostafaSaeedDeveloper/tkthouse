@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EventTicket;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -45,7 +46,13 @@ class OrderController extends Controller
             ->mapWithKeys(fn (EventTicket $ticket) => [mb_strtolower(trim($ticket->name)) => $ticket->color ?: '#0d6efd'])
             ->all();
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap'));
+        $paymentMethods = PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('code', '!=', 'card')
+            ->orderBy('id')
+            ->get(['code', 'name']);
+
+        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods'));
     }
 
     public function show(Order $order)
@@ -101,7 +108,13 @@ class OrderController extends Controller
     {
         $order->load(['customer', 'items.ticket', 'user']);
 
-        return view('admin.orders.edit', compact('order'));
+        $paymentMethods = PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('code', '!=', 'card')
+            ->orderBy('id')
+            ->get(['code', 'name']);
+
+        return view('admin.orders.edit', compact('order', 'paymentMethods'));
     }
 
     public function update(Request $request, Order $order)
