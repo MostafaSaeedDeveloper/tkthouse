@@ -11,7 +11,7 @@
 <div class="ew">
 
   <div class="eh">
-    <span class="logo"><span class="g">tkt</span><span class="w">house</span></span>
+    <img src="{{ asset('images/logo-light.png') }}" alt="TKT House" width="146" style="margin: 0 auto; height: auto;">
   </div>
 
   @isset($heroTitle)
