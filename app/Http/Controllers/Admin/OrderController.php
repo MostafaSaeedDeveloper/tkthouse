@@ -136,13 +136,23 @@ class OrderController extends Controller
             'payment_link_token' => $validated['status'] === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
         ]);
 
-        $total = 0;
         $itemsInput = collect($validated['items'] ?? [])->keyBy('id');
 
         $order->load('items');
+
+        $total = (float) $order->items->sum(static fn ($item) => (float) $item->line_total);
+
+        if ($itemsInput->isNotEmpty()) {
+            $total = 0;
+        }
+
         foreach ($order->items as $item) {
             $updated = $itemsInput->get($item->id);
             if (! $updated) {
+                if ($itemsInput->isNotEmpty()) {
+                    $total += (float) $item->line_total;
+                }
+
                 continue;
             }
 
