@@ -33,13 +33,17 @@
 .db-date { font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; white-space: nowrap; }
 
 .db-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; align-items:center; }
-.db-filter-btn,
-.db-filter-btn:visited,
-.db-filter-btn:focus { font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 12px; text-decoration:none; transition:all .2s; }
-.db-filter-btn:hover { color:var(--gold); border-color:rgba(245,184,0,0.3); }
-.db-filter-btn.active,
-.db-filter-btn.active:visited,
-.db-filter-btn.active:focus { color:#111; background:var(--gold); border-color:var(--gold); font-weight:700; }
+a.db-filter-btn,
+a.db-filter-btn:link,
+a.db-filter-btn:visited,
+a.db-filter-btn:focus,
+a.db-filter-btn:focus-visible { font-size:12px; color:var(--muted) !important; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 12px; text-decoration:none; transition:all .2s; }
+a.db-filter-btn:hover { color:var(--gold) !important; border-color:rgba(245,184,0,0.3); }
+a.db-filter-btn.active,
+a.db-filter-btn.active:link,
+a.db-filter-btn.active:visited,
+a.db-filter-btn.active:focus,
+a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--gold); border-color:var(--gold); font-weight:700; }
 .db-filter-form { display:flex; gap:8px; align-items:center; }
 .db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
@@ -111,11 +115,13 @@
 .db-event-revenue { font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--gold); white-space: nowrap; }
 
 /* ── Pending alert ── */
-.db-pending-alert,
-.db-pending-alert:visited,
-.db-pending-alert:focus { background: rgba(245,184,0,0.06); border: 1px dashed rgba(245,184,0,0.3); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gold); margin-bottom: 20px; text-decoration: none; transition: background 0.2s; }
-.db-pending-alert :is(span, strong, i) { color: inherit; }
-.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold); }
+a.db-pending-alert,
+a.db-pending-alert:link,
+a.db-pending-alert:visited,
+a.db-pending-alert:focus,
+a.db-pending-alert:focus-visible { background: rgba(245,184,0,0.06); border: 1px dashed rgba(245,184,0,0.3); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gold) !important; margin-bottom: 20px; text-decoration: none; transition: background 0.2s; }
+a.db-pending-alert :is(span, strong, i) { color: inherit !important; }
+a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !important; }
 .db-pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; animation: blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
