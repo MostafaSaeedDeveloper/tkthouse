@@ -26,7 +26,7 @@
                 <div class="acc-card-title">Order History</div>
             </div>
             <div style="overflow-x:auto;">
-                <table class="acc-table">
+                <table class="acc-table acc-orders-table">
                     <thead>
                         <tr>
                             <th>Order #</th>
