@@ -35,7 +35,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/account/register', [CustomerAuthController::class, 'register'])->name('front.customer.register.store');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'customer.account'])->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
     Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
     Route::get('/account/profile', [CustomerDashboardController::class, 'profile'])->name('front.account.profile');
@@ -54,8 +54,8 @@ Route::middleware('auth')->group(function () {
 
 Auth::routes(['register' => false]);
 
-Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('users', UserController::class)->except('show');
     Route::resource('roles', RoleController::class)->except('show');
     Route::resource('permissions', PermissionController::class)->except('show');
@@ -87,5 +87,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::resource('payment-methods', PaymentMethodController::class)->except('show');
 });
 
-Route::redirect('/dashboard', '/admin/dashboard');
-Route::redirect('/home', '/admin/dashboard');
+Route::redirect('/admin', '/dashboard');
+Route::redirect('/admin/dashboard', '/dashboard');
+Route::redirect('/home', '/dashboard');
