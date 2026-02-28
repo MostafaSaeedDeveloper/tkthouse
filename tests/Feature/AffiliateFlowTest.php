@@ -33,14 +33,20 @@ class AffiliateFlowTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_generate_affiliate_link_for_user(): void
+    public function test_admin_can_open_create_form_and_generate_affiliate_link_for_selected_customer(): void
     {
         $admin = User::factory()->create();
         $targetUser = User::factory()->create(['affiliate_code' => null]);
 
         $this->actingAs($admin)
-            ->post(route('admin.affiliates.generate-link', $targetUser))
-            ->assertRedirect();
+            ->get(route('admin.affiliates.create'))
+            ->assertOk()
+            ->assertSee('Add Affiliate Link')
+            ->assertSee($targetUser->email);
+
+        $this->actingAs($admin)
+            ->post(route('admin.affiliates.store'), ['user_id' => $targetUser->id])
+            ->assertRedirect(route('admin.affiliates.show', $targetUser));
 
         $this->assertNotNull($targetUser->fresh()->affiliate_code);
     }

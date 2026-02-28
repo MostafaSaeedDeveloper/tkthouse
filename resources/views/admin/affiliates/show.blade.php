@@ -30,8 +30,9 @@
             @else
                 <p class="text-muted mb-0">No affiliate link generated yet.</p>
             @endif
-            <form method="POST" action="{{ route('admin.affiliates.generate-link', $affiliate) }}" class="mt-3">
+            <form method="POST" action="{{ route('admin.affiliates.store') }}" class="mt-3">
                 @csrf
+                <input type="hidden" name="user_id" value="{{ $affiliate->id }}">
                 <button class="btn btn-alt-success" type="submit">{{ $affiliate->affiliate_code ? 'Regenerate Link' : 'Generate Link' }}</button>
             </form>
         </div>

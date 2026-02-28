@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class AffiliateController extends Controller
@@ -25,6 +26,32 @@ class AffiliateController extends Controller
         return view('admin.affiliates.index', [
             'affiliates' => $affiliates,
         ]);
+    }
+
+
+    public function create()
+    {
+        return view('admin.affiliates.create', [
+            'customers' => User::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'affiliate_code']),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $affiliate = User::query()->findOrFail((int) $validated['user_id']);
+
+        $affiliate->update([
+            'affiliate_code' => $this->uniqueAffiliateCode(),
+        ]);
+
+        return redirect()->route('admin.affiliates.show', $affiliate)
+            ->with('success', 'Affiliate link has been generated successfully.');
     }
 
     public function show(User $affiliate)
@@ -53,15 +80,6 @@ class AffiliateController extends Controller
             'referredUsers' => $referredUsers,
             'stats' => $stats,
         ]);
-    }
-
-    public function generateLink(User $affiliate): RedirectResponse
-    {
-        $affiliate->update([
-            'affiliate_code' => $this->uniqueAffiliateCode(),
-        ]);
-
-        return back()->with('success', 'Affiliate link has been generated successfully.');
     }
 
     private function uniqueAffiliateCode(): string

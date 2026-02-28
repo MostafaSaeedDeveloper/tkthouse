@@ -5,6 +5,11 @@
     <div class="block block-rounded">
         <div class="block-header block-header-default">
             <h3 class="block-title">Affiliate</h3>
+            <div class="block-options">
+                <a href="{{ route('admin.affiliates.create') }}" class="btn btn-sm btn-alt-success">
+                    <i class="fa fa-plus me-1"></i> Add New Link
+                </a>
+            </div>
         </div>
         <div class="block-content">
             <div class="table-responsive">
@@ -45,12 +50,6 @@
                                 <td>{{ $affiliate->affiliate_orders_count }}</td>
                                 <td>{{ number_format($paidRevenue, 2) }} EGP</td>
                                 <td class="text-end">
-                                    <form method="POST" action="{{ route('admin.affiliates.generate-link', $affiliate) }}" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-alt-success">
-                                            {{ $affiliate->affiliate_code ? 'Regenerate Link' : 'Generate Link' }}
-                                        </button>
-                                    </form>
                                     <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="btn btn-sm btn-alt-primary">
                                         <i class="fa fa-eye"></i>
                                     </a>
