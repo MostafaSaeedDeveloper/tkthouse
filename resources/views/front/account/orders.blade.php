@@ -31,7 +31,7 @@
                         <tr>
                             <th>Order #</th>
                             <th>Status</th>
-                            <th>Payment</th>
+                            <th>Payment Method</th>
                             <th>Total</th>
                             <th>Date</th>
                         </tr>
@@ -44,16 +44,11 @@
                                     'rejected','canceled'  => 'acc-badge-rejected',
                                     default                => 'acc-badge-pending',
                                 };
-                                $pc = match($order->payment_status ?? '') {
-                                    'paid'   => 'acc-badge-paid',
-                                    'failed' => 'acc-badge-rejected',
-                                    default  => 'acc-badge-default',
-                                };
                             @endphp
                             <tr>
                                 <td class="acc-mono">{{ $order->order_number }}</td>
                                 <td><span class="acc-badge {{ $sc }}">{{ ucwords(str_replace('_',' ',$order->status)) }}</span></td>
-                                <td><span class="acc-badge {{ $pc }}">{{ ucwords(str_replace('_',' ',$order->payment_status ?? 'pending')) }}</span></td>
+                                <td><span class="acc-badge acc-badge-default">{{ ucwords(str_replace('_',' ',$order->payment_method ?? 'N/A')) }}</span></td>
                                 <td style="font-weight:600;color:#fff;">{{ number_format($order->total_amount,2) }} <span style="color:var(--muted);font-size:11px;">EGP</span></td>
                                 <td style="color:var(--muted);font-size:12px;">{{ $order->created_at?->format('d M Y, g:i A') }}</td>
                             </tr>

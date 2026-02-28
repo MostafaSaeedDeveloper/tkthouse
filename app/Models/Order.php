@@ -17,7 +17,6 @@ class Order extends Model
         'status',
         'requires_approval',
         'payment_method',
-        'payment_status',
         'payment_link_token',
         'approved_at',
         'tickets_generated_at',

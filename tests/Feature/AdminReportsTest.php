@@ -27,10 +27,9 @@ class AdminReportsTest extends TestCase
             'customer_id' => $customer->id,
             'user_id' => $admin->id,
             'order_number' => '300001',
-            'status' => 'complete',
+            'status' => 'paid',
             'requires_approval' => false,
             'payment_method' => 'visa',
-            'payment_status' => 'paid',
             'total_amount' => 450,
         ]);
 
@@ -65,7 +64,6 @@ class AdminReportsTest extends TestCase
             'status' => 'pending_payment',
             'requires_approval' => false,
             'payment_method' => 'visa',
-            'payment_status' => 'unpaid',
             'total_amount' => 999,
         ]);
 

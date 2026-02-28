@@ -21,10 +21,6 @@ class OrderController extends Controller
             $ordersQuery->where('status', $request->string('status'));
         }
 
-        if ($request->filled('payment_status')) {
-            $ordersQuery->where('payment_status', $request->string('payment_status'));
-        }
-
         if ($request->filled('payment_method')) {
             $ordersQuery->where('payment_method', $request->string('payment_method'));
         }
@@ -73,7 +69,7 @@ class OrderController extends Controller
         $submittedAt = optional($history->firstWhere('description', 'Order submitted'))->created_at ?? $order->created_at;
         $approvalQueuedAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_approval'))->created_at;
         $paymentLinkSentAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_payment'))->created_at;
-        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'complete'))->created_at;
+        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'paid'))->created_at;
 
         $activityTimeline = collect([
             [
@@ -111,9 +107,8 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,complete,canceled,rejected'],
+            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
             'payment_method' => ['required', 'string', 'max:100'],
-            'payment_status' => ['required', 'in:unpaid,pending,paid,refunded,partially_refunded'],
             'requires_approval' => ['nullable', 'boolean'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
@@ -124,13 +119,11 @@ class OrderController extends Controller
         ]);
 
         $oldStatus = $order->status;
-        $oldPaymentStatus = $order->payment_status;
         $oldPaymentMethod = $order->payment_method;
 
         $order->update([
             'status' => $validated['status'],
             'payment_method' => $validated['payment_method'],
-            'payment_status' => $validated['payment_status'],
             'requires_approval' => array_key_exists('requires_approval', $validated)
                 ? (bool) $validated['requires_approval']
                 : (bool) $order->requires_approval,
@@ -178,8 +171,6 @@ class OrderController extends Controller
             ->withProperties([
                 'from_status' => $oldStatus,
                 'to_status' => $order->status,
-                'from_payment_status' => $oldPaymentStatus,
-                'to_payment_status' => $order->payment_status,
                 'from_payment_method' => $oldPaymentMethod,
                 'to_payment_method' => $order->payment_method,
                 'total_amount' => (float) $order->total_amount,

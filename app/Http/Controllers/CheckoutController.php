@@ -9,8 +9,8 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\Ticket;
 use App\Services\PaymobService;
-use App\Support\SystemSettings;
 use App\Services\TicketIssuanceService;
+use App\Support\SystemSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -112,7 +112,6 @@ class CheckoutController extends Controller
         return redirect()->away($url);
     }
 
-
     public function paymobCallback(Request $request)
     {
         $payload = $request->all();
@@ -132,10 +131,9 @@ class CheckoutController extends Controller
             return response()->json(['received' => true, 'updated' => false]);
         }
 
-        if ($isSuccess && $order->payment_status !== 'paid') {
+        if ($isSuccess && $order->status !== 'paid') {
             $order->update([
-                'status' => 'complete',
-                'payment_status' => 'paid',
+                'status' => 'paid',
             ]);
             app(TicketIssuanceService::class)->issueIfPaid($order);
         }
@@ -158,8 +156,7 @@ class CheckoutController extends Controller
         $oldStatus = $order->status;
 
         $order->update([
-            'status' => 'complete',
-            'payment_status' => 'paid',
+            'status' => 'paid',
         ]);
 
         app(TicketIssuanceService::class)->issueIfPaid($order);
@@ -170,7 +167,6 @@ class CheckoutController extends Controller
             ->withProperties([
                 'from_status' => $oldStatus,
                 'to_status' => $order->status,
-                'payment_status' => $order->payment_status,
             ])
             ->log('Payment confirmed');
 
@@ -221,7 +217,7 @@ class CheckoutController extends Controller
 
         if (! $requiresApproval) {
             $request->validate([
-                    'payment_method' => ['required', 'in:'.implode(',', SystemSettings::paymentMethods())],
+                'payment_method' => ['required', 'in:'.implode(',', SystemSettings::paymentMethods())],
             ]);
         }
 
@@ -236,7 +232,6 @@ class CheckoutController extends Controller
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
-                'payment_status' => 'unpaid',
                 'total_amount' => 0,
             ]);
 
@@ -268,7 +263,6 @@ class CheckoutController extends Controller
                 ->causedBy($request->user())
                 ->withProperties([
                     'to_status' => $order->status,
-                    'payment_status' => $order->payment_status,
                     'total_amount' => (float) $order->total_amount,
                 ])
                 ->log('Order submitted');
@@ -341,7 +335,6 @@ class CheckoutController extends Controller
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
-                'payment_status' => 'unpaid',
                 'total_amount' => 0,
             ]);
 
@@ -390,7 +383,6 @@ class CheckoutController extends Controller
                 ->causedBy($request->user())
                 ->withProperties([
                     'to_status' => $order->status,
-                    'payment_status' => $order->payment_status,
                     'total_amount' => (float) $order->total_amount,
                 ])
                 ->log('Order submitted');

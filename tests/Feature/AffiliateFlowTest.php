@@ -71,7 +71,6 @@ class AffiliateFlowTest extends TestCase
             ->assertDontSee('No Link User');
     }
 
-
     public function test_affiliate_show_stats_match_referred_users_and_orders(): void
     {
         $admin = User::factory()->create();
@@ -96,10 +95,9 @@ class AffiliateFlowTest extends TestCase
             'user_id' => $buyer->id,
             'affiliate_user_id' => $affiliate->id,
             'order_number' => '556677',
-            'status' => 'complete',
+            'status' => 'paid',
             'requires_approval' => false,
             'payment_method' => 'visa',
-            'payment_status' => 'paid',
             'total_amount' => 125.50,
         ]);
 

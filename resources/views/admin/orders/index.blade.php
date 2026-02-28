@@ -22,21 +22,11 @@
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select js-select2">
                         <option value="">All</option>
-                        @foreach(['pending_approval','pending_payment','on_hold','complete','canceled','rejected'] as $status)
+                        @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $status)
                             <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
                         @endforeach
                     </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Payment Status</label>
-                    <select name="payment_status" class="form-select js-select2">
-                        <option value="">All</option>
-                        @foreach(['unpaid','pending','paid','refunded','partially_refunded'] as $status)
-                            <option value="{{ $status }}" @selected(request('payment_status') === $status)>{{ str($status)->headline() }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
+                </div>                <div class="col-md-2">
                     <label class="form-label">Payment Method</label>
                     <select name="payment_method" class="form-select js-select2">
                         <option value="">All</option>

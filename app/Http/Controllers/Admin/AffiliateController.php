@@ -18,7 +18,7 @@ class AffiliateController extends Controller
             ->withCount('referredUsers')
             ->withCount('affiliateOrders')
             ->withSum([
-                'affiliateOrders as affiliate_paid_revenue' => fn (Builder $query) => $query->where('payment_status', 'paid'),
+                'affiliateOrders as affiliate_paid_revenue' => fn (Builder $query) => $query->where('status', 'paid'),
             ], 'total_amount')
             ->orderByDesc('affiliate_paid_revenue')
             ->orderByDesc('affiliate_orders_count')
@@ -82,12 +82,10 @@ class AffiliateController extends Controller
         $stats = [
             'orders_total' => (int) (clone $ordersBaseQuery)->count(),
             'orders_paid' => (int) (clone $ordersBaseQuery)
-                ->where('status', 'complete')
-                ->where('payment_status', 'paid')
+                ->where('status', 'paid')
                 ->count(),
             'revenue_paid' => (float) (clone $ordersBaseQuery)
-                ->where('status', 'complete')
-                ->where('payment_status', 'paid')
+                ->where('status', 'paid')
                 ->sum('total_amount'),
             'referred_users' => (int) (clone $referredUsersBaseQuery)->count(),
         ];

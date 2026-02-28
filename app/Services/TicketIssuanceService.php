@@ -19,7 +19,7 @@ class TicketIssuanceService
         $order->unsetRelation('issuedTickets');
         $order->load(['items', 'customer']);
 
-        if ($order->status !== 'complete' || $order->payment_status !== 'paid') {
+        if ($order->status !== 'paid') {
             return;
         }
 

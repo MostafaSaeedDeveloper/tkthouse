@@ -12,8 +12,7 @@ class ReportController extends Controller
     {
         $items = OrderItem::query()
             ->whereHas('order', fn ($query) => $query
-                ->where('status', 'complete')
-                ->where('payment_status', 'paid'))
+                ->where('status', 'paid'))
             ->get([
                 'ticket_name',
                 'quantity',
@@ -86,4 +85,3 @@ class ReportController extends Controller
         return [$parts[0], $parts[1] ?: 'General'];
     }
 }
-

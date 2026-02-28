@@ -30,7 +30,6 @@ class AdminOrderUpdateTest extends TestCase
             'status' => 'pending_payment',
             'requires_approval' => false,
             'payment_method' => 'cash',
-            'payment_status' => 'unpaid',
             'total_amount' => 300,
         ]);
 
@@ -48,7 +47,6 @@ class AdminOrderUpdateTest extends TestCase
         $response = $this->actingAs($admin)->put(route('admin.orders.update', $order), [
             'status' => 'pending_payment',
             'payment_method' => 'cash',
-            'payment_status' => 'unpaid',
             'requires_approval' => 0,
         ]);
 
