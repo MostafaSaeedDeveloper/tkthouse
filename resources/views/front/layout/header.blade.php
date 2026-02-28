@@ -29,7 +29,7 @@
         <!--black-style Css-->
         <link href="{{ asset('css/black-style.css') }}" rel="stylesheet" />
         <!-- Fav icon -->
-        <link rel="icon" type="icon" sizes="96x96" href="{{ asset('fonts/fav.png') }}">
+        <link rel="icon" type="icon" sizes="96x96" href="{{ asset('favicon.ico') }}">
         <link href="{{ asset('css/font-awesome.css') }}" rel="stylesheet">
         <link href="{{ asset('css/svg-icons.css') }}" rel="stylesheet">
         <!-- Pretty Photo CSS -->

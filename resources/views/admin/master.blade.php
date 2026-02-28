@@ -12,9 +12,9 @@
   <title>{{ $siteName }} — Admin</title>
   <meta name="robots" content="noindex, nofollow">
 
-  <link rel="shortcut icon"                         href="{{ asset('admin/assets/media/favicons/favicon.png') }}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('admin/assets/media/favicons/favicon-192x192.png') }}">
-  <link rel="apple-touch-icon" sizes="180x180"      href="{{ asset('admin/assets/media/favicons/apple-touch-icon-180x180.png') }}">
+  <link rel="shortcut icon"                         href="{{ asset('favicon.ico') }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('favicon.ico') }}">
+  <link rel="apple-touch-icon" sizes="180x180"      href="{{ asset('favicon.ico') }}">
 
   {{-- 1. Dashmix base (structure + layout) --}}
   <link rel="stylesheet" href="{{ asset('admin/assets/css/dashmix.min.css') }}">
