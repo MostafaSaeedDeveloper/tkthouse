@@ -8,28 +8,15 @@
     'pending_approval' => 'Pending Approval',
     'pending_payment' => 'Pending Payment',
     'on_hold' => 'On Hold',
-    'complete' => 'Complete',
+    'paid' => 'Paid',
+    'refunded' => 'Refunded',
+    'partially_refunded' => 'Partially Refunded',
     'canceled' => 'Canceled',
     'rejected' => 'Rejected',
   ];
 
-  $paymentMethodOptions = [
-    'cash'          => 'Cash',
-    'card'          => 'Card',
-    'vodafone_cash' => 'Vodafone Cash',
-    'instapay'      => 'InstaPay',
-    'bank_transfer' => 'Bank Transfer',
-  ];
 
   $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
-
-  $paymentStatusOptions = [
-    'unpaid'           => 'Unpaid',
-    'pending'          => 'Pending',
-    'paid'             => 'Paid',
-    'refunded'         => 'Refunded',
-    'partially_refunded' => 'Partially Refunded',
-  ];
 @endphp
 
 <style>
@@ -183,7 +170,7 @@
 }
 .status-pending_approval, .status-pending_payment { color: #f5b800; background: rgba(245,184,0,.12); border: 1px solid rgba(245,184,0,.25); }
 .status-on_hold { color: #60a5fa; background: rgba(96,165,250,.10); border: 1px solid rgba(96,165,250,.25); }
-.status-complete { color: #22c55e; background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.25); }
+.status-paid { color: #22c55e; background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.25); }
 .status-canceled, .status-rejected { color: #e8445a; background: rgba(232,68,90,.10); border: 1px solid rgba(232,68,90,.25); }
 </style>
 
@@ -333,11 +320,6 @@
                   </option>
                 @endforeach
               </select>
-              <div style="margin-top:8px;">
-                <span class="oe-status-preview status-{{ old('status', $order->status) }}" id="statusBadge">
-                  {{ $statusOptions[old('status', $order->status)] ?? ucwords(str_replace('_',' ',$order->status)) }}
-                </span>
-              </div>
             </div>
 
             <hr class="oe-divider">
@@ -345,25 +327,13 @@
             <div class="oe-field">
               <label class="oe-label">Payment Method</label>
               <select class="oe-select" name="payment_method">
-                @foreach($paymentMethodOptions as $val => $label)
-                  <option value="{{ $val }}" {{ old('payment_method', $order->payment_method) === $val ? 'selected' : '' }}>
-                    {{ $label }}
+                @foreach($paymentMethods as $method)
+                  <option value="{{ $method->code }}" {{ old('payment_method', $order->payment_method) === $method->code ? 'selected' : '' }}>
+                    {{ $method->name }}{{ $method->is_active ? '' : ' (Inactive)' }}
                   </option>
                 @endforeach
               </select>
             </div>
-
-            <div class="oe-field">
-              <label class="oe-label">Payment Status</label>
-              <select class="oe-select" name="payment_status">
-                @foreach($paymentStatusOptions as $val => $label)
-                  <option value="{{ $val }}" {{ old('payment_status', $order->payment_status) === $val ? 'selected' : '' }}>
-                    {{ $label }}
-                  </option>
-                @endforeach
-              </select>
-            </div>
-
             <hr class="oe-divider">
 
             @if($order->status === 'pending_payment' && $paymentLink)
@@ -371,20 +341,11 @@
                 <label class="oe-label">Payment Link</label>
                 <div class="input-group">
                   <input class="oe-input" type="text" readonly value="{{ $paymentLink }}" onclick="this.select()">
-                  <button class="btn btn-alt-secondary" type="button" onclick="navigator.clipboard.writeText('{{ $paymentLink }}')">Copy</button>
+                  <button class="btn btn-alt-secondary" id="copyPaymentLinkBtn" type="button" data-payment-link="{{ $paymentLink }}">Copy Link</button>
                 </div>
               </div>
             @endif
 
-            <hr class="oe-divider">
-            <div class="oe-field">
-              <input type="hidden" name="requires_approval" value="0">
-              <label class="oe-check-label">
-                <input type="checkbox" name="requires_approval" value="1"
-                  {{ old('requires_approval', $order->requires_approval) ? 'checked' : '' }}>
-                Requires Approval
-              </label>
-            </div>
 
           </div>
         </div>
@@ -444,23 +405,23 @@
 
   [dFixed, dPct, fees].forEach(el => el.addEventListener('input', recalc));
   recalc();
+  const copyBtn = document.getElementById('copyPaymentLinkBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async function () {
+      const originalText = this.textContent;
+      try {
+        await navigator.clipboard.writeText(this.dataset.paymentLink || '');
+        this.textContent = 'Copied ✓';
+      } catch (error) {
+        this.textContent = 'Copy failed';
+      }
+      setTimeout(() => {
+        this.textContent = originalText;
+      }, 1300);
+    });
+  }
 
-  // Status badge live preview
-  const statusMap = {
-    pending_approval: 'Pending Approval',
-    pending_payment:  'Pending Payment',
-    on_hold:          'On Hold',
-    complete:         'Complete',
-    canceled:         'Canceled',
-    rejected:         'Rejected',
-  };
-  const sel   = document.getElementById('statusSelect');
-  const badge = document.getElementById('statusBadge');
 
-  sel.addEventListener('change', function () {
-    badge.className = 'oe-status-preview status-' + this.value;
-    badge.textContent = statusMap[this.value] || this.value;
-  });
 })();
 </script>
 @endsection

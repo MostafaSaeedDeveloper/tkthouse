@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EventTicket;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -19,10 +20,6 @@ class OrderController extends Controller
 
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
-        }
-
-        if ($request->filled('payment_status')) {
-            $ordersQuery->where('payment_status', $request->string('payment_status'));
         }
 
         if ($request->filled('payment_method')) {
@@ -49,7 +46,13 @@ class OrderController extends Controller
             ->mapWithKeys(fn (EventTicket $ticket) => [mb_strtolower(trim($ticket->name)) => $ticket->color ?: '#0d6efd'])
             ->all();
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap'));
+        $paymentMethods = PaymentMethod::query()
+            ->where('code', '!=', 'card')
+            ->orderByDesc('is_active')
+            ->orderBy('id')
+            ->get(['code', 'name', 'is_active']);
+
+        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods'));
     }
 
     public function show(Order $order)
@@ -73,7 +76,7 @@ class OrderController extends Controller
         $submittedAt = optional($history->firstWhere('description', 'Order submitted'))->created_at ?? $order->created_at;
         $approvalQueuedAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_approval'))->created_at;
         $paymentLinkSentAt = optional($statusTransitions->firstWhere('properties.to_status', 'pending_payment'))->created_at;
-        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'complete'))->created_at;
+        $paymentConfirmedAt = optional($statusTransitions->firstWhere('properties.to_status', 'paid'))->created_at;
 
         $activityTimeline = collect([
             [
@@ -105,15 +108,20 @@ class OrderController extends Controller
     {
         $order->load(['customer', 'items.ticket', 'user']);
 
-        return view('admin.orders.edit', compact('order'));
+        $paymentMethods = PaymentMethod::query()
+            ->where('code', '!=', 'card')
+            ->orderByDesc('is_active')
+            ->orderBy('id')
+            ->get(['code', 'name', 'is_active']);
+
+        return view('admin.orders.edit', compact('order', 'paymentMethods'));
     }
 
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,complete,canceled,rejected'],
+            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
             'payment_method' => ['required', 'string', 'max:100'],
-            'payment_status' => ['required', 'in:unpaid,pending,paid,refunded,partially_refunded'],
             'requires_approval' => ['nullable', 'boolean'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
@@ -124,25 +132,35 @@ class OrderController extends Controller
         ]);
 
         $oldStatus = $order->status;
-        $oldPaymentStatus = $order->payment_status;
         $oldPaymentMethod = $order->payment_method;
 
         $order->update([
             'status' => $validated['status'],
             'payment_method' => $validated['payment_method'],
-            'payment_status' => $validated['payment_status'],
-            'requires_approval' => (bool) ($validated['requires_approval'] ?? false),
+            'requires_approval' => array_key_exists('requires_approval', $validated)
+                ? (bool) $validated['requires_approval']
+                : (bool) $order->requires_approval,
             'approved_at' => $validated['status'] === 'pending_payment' ? ($order->approved_at ?? now()) : null,
             'payment_link_token' => $validated['status'] === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
         ]);
 
-        $total = 0;
         $itemsInput = collect($validated['items'] ?? [])->keyBy('id');
 
         $order->load('items');
+
+        $total = (float) $order->items->sum(static fn ($item) => (float) $item->line_total);
+
+        if ($itemsInput->isNotEmpty()) {
+            $total = 0;
+        }
+
         foreach ($order->items as $item) {
             $updated = $itemsInput->get($item->id);
             if (! $updated) {
+                if ($itemsInput->isNotEmpty()) {
+                    $total += (float) $item->line_total;
+                }
+
                 continue;
             }
 
@@ -166,8 +184,6 @@ class OrderController extends Controller
             ->withProperties([
                 'from_status' => $oldStatus,
                 'to_status' => $order->status,
-                'from_payment_status' => $oldPaymentStatus,
-                'to_payment_status' => $order->payment_status,
                 'from_payment_method' => $oldPaymentMethod,
                 'to_payment_method' => $order->payment_method,
                 'total_amount' => (float) $order->total_amount,

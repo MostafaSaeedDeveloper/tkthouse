@@ -66,14 +66,14 @@
         <div class="block-content">
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
-                    <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment</th><th>Total</th><th class="text-end">View</th></tr></thead>
+                    <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment Method</th><th>Total</th><th class="text-end">View</th></tr></thead>
                     <tbody>
                         @forelse($orders as $order)
                             <tr>
                                 <td>{{ $order->order_number }}</td>
                                 <td>{{ $order->user?->name ?? '-' }}</td>
                                 <td>{{ ucfirst(str_replace('_', ' ', $order->status)) }}</td>
-                                <td>{{ ucfirst($order->payment_status) }}</td>
+                                <td>{{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}</td>
                                 <td>{{ number_format((float) $order->total_amount, 2) }} EGP</td>
                                 <td class="text-end"><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-alt-primary"><i class="fa fa-eye"></i></a></td>
                             </tr>
