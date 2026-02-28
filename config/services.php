@@ -40,4 +40,14 @@ return [
         'token' => env('WHATSAPP_WEBHOOK_TOKEN'),
     ],
 
+
+    'paymob' => [
+        'api_key' => env('PAYMOB_API_KEY'),
+        'secret_key' => env('PAYMOB_SECRET_KEY'),
+        'public_key' => env('PAYMOB_PUBLIC_KEY'),
+        'iframe_id' => env('PAYMOB_IFRAME_ID'),
+        'integration_card' => env('PAYMOB_INTEGRATION_CARD'),
+        'integration_wallet' => env('PAYMOB_INTEGRATION_WALLET'),
+    ],
+
 ];

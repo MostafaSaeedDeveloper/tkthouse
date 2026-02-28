@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -22,8 +23,8 @@ class PaymobService
         }
 
         $config = $paymobMethod->config ?? [];
-        $apiKey = (string) ($config['api_key'] ?? '');
-        $iframeId = (string) ($config['iframe_id'] ?? '');
+        $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
+        $iframeId = (string) ($config['iframe_id'] ?? config('services.paymob.iframe_id', ''));
         $integrationId = (string) ($config['integration_id'] ?? '');
 
         if ($apiKey === '' || $iframeId === '' || $integrationId === '') {
@@ -49,19 +50,38 @@ class PaymobService
 
     private function registerOrder(string $token, Order $order): int
     {
-        $response = Http::baseUrl('https://accept.paymob.com/api')
-            ->post('/ecommerce/orders', [
-                'auth_token' => $token,
-                'delivery_needed' => false,
-                'amount_cents' => (int) round(((float) $order->total_amount) * 100),
-                'currency' => 'EGP',
-                'merchant_order_id' => $order->order_number,
-                'items' => [],
-            ])
-            ->throw()
-            ->json();
+        $payload = [
+            'auth_token' => $token,
+            'delivery_needed' => false,
+            'amount_cents' => (int) round(((float) $order->total_amount) * 100),
+            'currency' => 'EGP',
+            'merchant_order_id' => $this->merchantOrderId($order),
+            'items' => [],
+        ];
+
+        try {
+            $response = Http::baseUrl('https://accept.paymob.com/api')
+                ->post('/ecommerce/orders', $payload)
+                ->throw()
+                ->json();
+        } catch (RequestException $exception) {
+            if ($exception->response?->status() !== 422) {
+                throw $exception;
+            }
+
+            $payload['merchant_order_id'] = $this->merchantOrderId($order);
+            $response = Http::baseUrl('https://accept.paymob.com/api')
+                ->post('/ecommerce/orders', $payload)
+                ->throw()
+                ->json();
+        }
 
         return (int) ($response['id'] ?? 0);
+    }
+
+    private function merchantOrderId(Order $order): string
+    {
+        return $order->order_number.'-'.strtolower(bin2hex(random_bytes(4)));
     }
 
     private function createPaymentKey(string $token, Order $order, int $paymobOrderId, string $integrationId): string
@@ -76,9 +96,10 @@ class PaymobService
                 'order_id' => $paymobOrderId,
                 'currency' => 'EGP',
                 'integration_id' => (int) $integrationId,
+                'redirection_url' => route('front.paymob.callback'),
                 'billing_data' => [
-                    'first_name' => $customer->name ?: 'Customer',
-                    'last_name' => '-',
+                    'first_name' => $customer->first_name ?: 'Customer',
+                    'last_name' => $customer->last_name ?: '-',
                     'email' => $customer->email ?: 'customer@example.com',
                     'phone_number' => $customer->phone ?: '01000000000',
                     'apartment' => 'NA',

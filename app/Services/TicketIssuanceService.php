@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use App\Mail\OrderTicketsIssuedMail;
+use App\Mail\HolderTicketsIssuedMail;
+use App\Mail\OrderInvoicePaidMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -73,7 +74,16 @@ class TicketIssuanceService
 
         $order->load('issuedTickets');
 
-        Mail::to($order->customer->email)->send(new OrderTicketsIssuedMail($order));
+        $groupedByHolder = $order->issuedTickets
+            ->whereNull('sent_at')
+            ->filter(fn (IssuedTicket $ticket) => filled($ticket->holder_email))
+            ->groupBy(fn (IssuedTicket $ticket) => mb_strtolower(trim((string) $ticket->holder_email)));
+
+        foreach ($groupedByHolder as $holderEmail => $tickets) {
+            Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail));
+        }
+
+        Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order));
         $this->sendWhatsapp($order);
 
         $order->issuedTickets()->whereNull('sent_at')->update(['sent_at' => now()]);

@@ -2,7 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Mail\OrderTicketsIssuedMail;
+use App\Mail\HolderTicketsIssuedMail;
+use App\Mail\OrderInvoicePaidMail;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -58,7 +59,8 @@ class TicketIssuanceServiceTest extends TestCase
             'status' => 'paid',
         ]);
 
-        Mail::assertSent(OrderTicketsIssuedMail::class, 1);
+        Mail::assertSent(HolderTicketsIssuedMail::class, 1);
+        Mail::assertSent(OrderInvoicePaidMail::class, 1);
     }
 
     public function test_it_generates_tickets_only_when_status_is_paid(): void
@@ -103,6 +105,7 @@ class TicketIssuanceServiceTest extends TestCase
         $this->assertDatabaseCount('issued_tickets', 1);
         $this->assertDatabaseCount('tickets', 1);
 
-        Mail::assertSent(OrderTicketsIssuedMail::class, 1);
+        Mail::assertSent(HolderTicketsIssuedMail::class, 1);
+        Mail::assertSent(OrderInvoicePaidMail::class, 1);
     }
 }

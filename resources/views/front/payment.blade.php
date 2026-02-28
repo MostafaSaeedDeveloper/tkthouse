@@ -36,9 +36,8 @@
             <div class="pm-alert">{{ $errors->first('payment') ?: $errors->first('payment_method') }}</div>
           @endif
 
-          <form id="paymentConfirmForm" method="POST" action="{{ route('front.orders.payment.confirm', ['order' => $order, 'token' => $order->payment_link_token]) }}">
-            @csrf
-            <input type="hidden" name="payment_method" id="selectedPaymentMethod" value="{{ $selected }}">
+          <div id="paymentSelection">
+            <input type="hidden" id="selectedPaymentMethod" value="{{ $selected }}">
 
             @forelse($methods as $method)
               @php
@@ -56,11 +55,10 @@
               <div class="pm-alert">No active payment methods available now.</div>
             @endforelse
 
-            <div style="display:flex;gap:10px;margin-top:14px;">
-              <button type="submit" class="pm-btn pm-btn-primary">Confirm Payment</button>
-              <button type="button" id="paymobBtn" class="pm-btn pm-btn-alt">Pay Online</button>
+            <div style="margin-top:14px;">
+              <button type="button" id="paymobBtn" class="pm-btn pm-btn-primary">Pay Now</button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
 
