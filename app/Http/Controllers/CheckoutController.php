@@ -536,11 +536,15 @@ class CheckoutController extends Controller
         $customer = Customer::query()->where('email', $user->email)->first();
         $nameParts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
 
+        $accountFirstName = trim((string) ($nameParts[0] ?? ''));
+        $accountLastName = trim((string) ($nameParts[1] ?? ''));
+        $accountPhone = trim((string) ($user->phone ?? ''));
+
         return [
-            'first_name' => $customer?->first_name ?? ($nameParts[0] ?? ''),
-            'last_name' => $customer?->last_name ?? ($nameParts[1] ?? ''),
+            'first_name' => $accountFirstName !== '' ? $accountFirstName : ($customer?->first_name ?? ''),
+            'last_name' => $accountLastName !== '' ? $accountLastName : ($customer?->last_name ?? ''),
             'email' => $user->email,
-            'phone' => $customer?->phone ?? '',
+            'phone' => $accountPhone !== '' ? $accountPhone : ($customer?->phone ?? ''),
         ];
     }
 
