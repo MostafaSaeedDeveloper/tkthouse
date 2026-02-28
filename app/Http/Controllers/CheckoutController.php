@@ -231,6 +231,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
+                'affiliate_user_id' => $request->user()->referred_by_user_id,
                 'order_number' => $this->generateNumericOrderNumber(),
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
@@ -335,6 +336,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
+                'affiliate_user_id' => $request->user()->referred_by_user_id,
                 'order_number' => $this->generateNumericOrderNumber(),
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,

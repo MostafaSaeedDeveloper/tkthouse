@@ -48,12 +48,18 @@ class CustomerAuthController extends Controller
             'redirect_to' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $referrerId = (int) $request->session()->get('affiliate.referrer_id');
+
         $user = User::create([
             'name' => $validated['name'],
             'username' => $this->generateUsername($validated['email']),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'referred_by_user_id' => $referrerId > 0 ? $referrerId : null,
         ]);
+
+        $request->session()->forget('affiliate.referrer_id');
+        $request->session()->forget('affiliate.referrer_code');
 
         Auth::login($user);
         $request->session()->regenerate();

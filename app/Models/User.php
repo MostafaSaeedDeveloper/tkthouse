@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
+        'affiliate_code',
+        'referred_by_user_id',
         'profile_image',
         'password',
         'last_login_at',
@@ -62,5 +64,20 @@ class User extends Authenticatable
             ->logOnly(['name', 'username', 'email', 'profile_image', 'last_login_at', 'last_login_ip'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    public function referredBy()
+    {
+        return $this->belongsTo(self::class, 'referred_by_user_id');
+    }
+
+    public function referredUsers()
+    {
+        return $this->hasMany(self::class, 'referred_by_user_id');
+    }
+
+    public function affiliateOrders()
+    {
+        return $this->hasMany(Order::class, 'affiliate_user_id');
     }
 }
