@@ -50,7 +50,7 @@
 
 /* Layout */
 .co-layout { display: grid; grid-template-columns: 1fr 420px; gap: 28px; padding: 40px 0 80px; align-items: start; }
-@media (max-width: 960px) { .co-layout { grid-template-columns: 1fr; } .co-sidebar { order: -1; } }
+@media (max-width: 960px) { .co-layout { grid-template-columns: 1fr; } }
 
 /* Section label */
 .co-label { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold); margin-bottom: 18px; }
