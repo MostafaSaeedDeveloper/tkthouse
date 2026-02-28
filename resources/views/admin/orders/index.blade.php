@@ -31,7 +31,7 @@
                     <select name="payment_method" class="form-select js-select2">
                         <option value="">All</option>
                         @foreach($paymentMethods as $method)
-                            <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->name }}</option>
+                            <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->name }}{{ $method->is_active ? '' : ' (Inactive)' }}</option>
                         @endforeach
                     </select>
                 </div>

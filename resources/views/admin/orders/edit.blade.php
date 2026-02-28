@@ -329,7 +329,7 @@
               <select class="oe-select" name="payment_method">
                 @foreach($paymentMethods as $method)
                   <option value="{{ $method->code }}" {{ old('payment_method', $order->payment_method) === $method->code ? 'selected' : '' }}>
-                    {{ $method->name }}
+                    {{ $method->name }}{{ $method->is_active ? '' : ' (Inactive)' }}
                   </option>
                 @endforeach
               </select>

@@ -47,10 +47,10 @@ class OrderController extends Controller
             ->all();
 
         $paymentMethods = PaymentMethod::query()
-            ->where('is_active', true)
             ->where('code', '!=', 'card')
+            ->orderByDesc('is_active')
             ->orderBy('id')
-            ->get(['code', 'name']);
+            ->get(['code', 'name', 'is_active']);
 
         return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods'));
     }
@@ -109,10 +109,10 @@ class OrderController extends Controller
         $order->load(['customer', 'items.ticket', 'user']);
 
         $paymentMethods = PaymentMethod::query()
-            ->where('is_active', true)
             ->where('code', '!=', 'card')
+            ->orderByDesc('is_active')
             ->orderBy('id')
-            ->get(['code', 'name']);
+            ->get(['code', 'name', 'is_active']);
 
         return view('admin.orders.edit', compact('order', 'paymentMethods'));
     }
