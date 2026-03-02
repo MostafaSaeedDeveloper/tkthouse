@@ -94,15 +94,13 @@
                 }
                 .msl-footer-social a:hover { background: #ffd44d; color: #132238; border-color: #ffd44d; }
 
-                .msl-footer-payment-placeholder {
+                .msl-footer-payment-methods {
+                    width: 100%;
+                    max-width: 280px;
+                    height: auto;
                     display: block;
-                    border: 1px dashed rgba(255,255,255,.28);
-                    border-radius: 10px;
-                    padding: 14px;
-                    color: #c8d7ee;
-                    font-size: 14px;
                     margin-bottom: 12px;
-                    text-align: center;
+                    border-radius: 8px;
                 }
                 .msl-footer-pci { max-width: 130px; height: auto; display: block; }
 
@@ -149,8 +147,8 @@
                                 </a>
                             </li>
                         </ul>
-                        <a href="#" class="msl-footer-payment-placeholder">Payment methods image placeholder</a>
-                        <img src="https://fawaterk.com/_next/static/media/pci.6bdbbd92.svg" alt="PCI DSS Compliant" class="msl-footer-pci">
+                        <img src="{{ asset('images/payments-methods.png') }}" alt="Payment Methods" class="msl-footer-payment-methods">
+                        <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
 
                     <div class="msl-footer-col-contact">
