@@ -329,7 +329,7 @@
                                         <div class="pm-summary-item-name">{{ $item->ticket_name }}</div>
                                         <div class="pm-summary-item-qty">× {{ $item->quantity }} ticket{{ $item->quantity > 1 ? 's' : '' }}</div>
                                     </div>
-                                    <div class="pm-summary-item-price">{{ number_format($item->line_total, 2) }}</div>
+                                    <div class="pm-summary-item-price">{{ number_format($item->line_total, 2) }} EGP</div>
                                 </div>
                             @endforeach
                         </div>

@@ -48,6 +48,7 @@ return [
         'iframe_id' => env('PAYMOB_IFRAME_ID'),
         'integration_card' => env('PAYMOB_INTEGRATION_CARD'),
         'integration_wallet' => env('PAYMOB_INTEGRATION_WALLET'),
+        'currency' => env('PAYMOB_CURRENCY', 'EGP'),
     ],
 
 ];

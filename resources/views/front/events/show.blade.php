@@ -652,7 +652,7 @@
                                     <span class="tkt-avail-badge {{ $badgeType }}">{{ str($ticket->status)->replace('_', ' ')->title() }}</span>
                                 </div>
                                 <div class="card-price">
-                                    <span class="price-amount">${{ number_format($ticket->price, 2) }}</span>
+                                    <span class="price-amount">{{ number_format($ticket->price, 2) }} EGP</span>
                                     <span class="price-label">per ticket</span>
                                 </div>
                                 <div class="tkt-card-actions">
@@ -844,7 +844,7 @@
                     '<span class="si-qty">× ' + item.qty + ' ticket' + (item.qty > 1 ? 's' : '') + '</span>' +
                 '</div>' +
                 '<div style="display:flex;align-items:center;gap:8px;">' +
-                    '<span class="si-right">$' + sub.toFixed(2) + '</span>' +
+                    '<span class="si-right">' + sub.toFixed(2) + ' EGP</span>' +
                     '<button class="si-remove" data-id="' + id + '" title="Remove">✕</button>' +
                 '</div>';
             summaryItems.appendChild(div);
@@ -862,7 +862,7 @@
             });
         });
 
-        summaryTotal.textContent = '$' + total.toFixed(2);
+        summaryTotal.textContent = total.toFixed(2) + ' EGP';
 
         updateCheckoutLink();
 

@@ -431,14 +431,14 @@
                                                     @if($eventTickets->isNotEmpty())
                                                         <optgroup label="Event Tickets">
                                                             @foreach($eventTickets as $ticket)
-                                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
                                                     @if($legacyTickets->isNotEmpty())
                                                         <optgroup label="General Tickets">
                                                             @foreach($legacyTickets as $ticket)
-                                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
@@ -476,14 +476,14 @@
                                     @if($eventTickets->isNotEmpty())
                                         <optgroup label="Event Tickets">
                                             @foreach($eventTickets as $ticket)
-                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
                                     @if($legacyTickets->isNotEmpty())
                                         <optgroup label="General Tickets">
                                             @foreach($legacyTickets as $ticket)
-                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }}</option>
+                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
