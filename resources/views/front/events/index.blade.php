@@ -37,6 +37,17 @@
     background-position: center;
 }
 
+.ev-section-title {
+    font-family: var(--font-head);
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 800;
+    color: #fff;
+    margin: 52px 0 10px;
+}
+.ev-section-title:first-of-type {
+    margin-top: 20px;
+}
+
 /* ── Grid ── */
 .ev-grid {
     display: grid;
@@ -235,6 +246,8 @@
 <div class="kode_content_wrap ev-page">
     <section>
         <div class="container">
+        <h2 class="ev-section-title">Upcoming Events</h2>
+
         <div class="ev-grid">
 
             @forelse($events as $event)
@@ -316,7 +329,49 @@
             </div>
         @endif
 
+
+
+        <h2 class="ev-section-title">Previous Events</h2>
+
+        <div class="ev-grid">
+            @forelse($previousEvents as $event)
+                <a class="ev-card" href="{{ route('front.events.show', $event) }}">
+                    <div class="ev-card-img">
+                        <img src="{{ $event->cover_image_url ?? asset('extra-images/concert1.jpg') }}" alt="{{ $event->name }}" loading="lazy">
+                        <div class="ev-card-date-badge">
+                            <span class="day">{{ $event->event_date->format('d') }}</span>
+                            <span class="mon">{{ $event->event_date->format('M') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="ev-card-body">
+                        <div class="ev-card-title">{{ $event->name }}</div>
+                        <div class="ev-card-meta">
+                            <span class="ev-meta-pill">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}
+                            </span>
+                            <span class="ev-meta-pill">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                {{ $event->location }}
+                            </span>
+                        </div>
+
+                        <span class="ev-card-btn">
+                            View Event
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </span>
+                    </div>
+                </a>
+            @empty
+                <div class="ev-empty">
+                    <div class="ev-empty-icon">🕒</div>
+                    <h3>No previous events</h3>
+                    <p>Finished events will appear here after their date passes.</p>
+                </div>
+            @endforelse
         </div>
+
         </div>
     </section>
 </div>

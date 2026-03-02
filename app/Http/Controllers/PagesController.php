@@ -49,7 +49,15 @@ class PagesController extends Controller
             ->orderBy('event_time')
             ->paginate(10);
 
-        return view('front.events.index', compact('events'));
+        $previousEvents = Event::query()
+            ->where('status', 'active')
+            ->whereDate('event_date', '<', now()->toDateString())
+            ->orderByDesc('event_date')
+            ->orderByDesc('event_time')
+            ->take(10)
+            ->get();
+
+        return view('front.events.index', compact('events', 'previousEvents'));
     }
 
     public function eventShow(Event $event)
