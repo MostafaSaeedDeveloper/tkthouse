@@ -33,6 +33,20 @@
             <style>
             @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
+            .banner_slider .slide {
+                position: relative;
+                height: clamp(320px, 50vw, 560px);
+                overflow: hidden;
+            }
+
+            .banner_slider .slide > img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
+                display: block;
+            }
+
             :root {
                 --ev-bg:       #060608;
                 --ev-surface:  #0e0e12;
