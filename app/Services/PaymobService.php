@@ -26,14 +26,15 @@ class PaymobService
         $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
         $iframeId = (string) ($config['iframe_id'] ?? config('services.paymob.iframe_id', ''));
         $integrationId = (string) ($config['integration_id'] ?? '');
+        $currency = strtoupper((string) config('services.paymob.currency', 'EGP'));
 
         if ($apiKey === '' || $iframeId === '' || $integrationId === '') {
             throw new RuntimeException('Paymob method is not fully configured yet. Please complete API key, iframe id and integration id.');
         }
 
         $authToken = $this->authenticate($apiKey);
-        $paymobOrderId = $this->registerOrder($authToken, $order);
-        $paymentKey = $this->createPaymentKey($authToken, $order, $paymobOrderId, $integrationId);
+        $paymobOrderId = $this->registerOrder($authToken, $order, $currency);
+        $paymentKey = $this->createPaymentKey($authToken, $order, $paymobOrderId, $integrationId, $currency);
 
         return 'https://accept.paymob.com/api/acceptance/iframes/'.$iframeId.'?payment_token='.$paymentKey;
     }
@@ -48,13 +49,13 @@ class PaymobService
         return (string) ($response['token'] ?? '');
     }
 
-    private function registerOrder(string $token, Order $order): int
+    private function registerOrder(string $token, Order $order, string $currency): int
     {
         $payload = [
             'auth_token' => $token,
             'delivery_needed' => false,
             'amount_cents' => (int) round(((float) $order->total_amount) * 100),
-            'currency' => 'EGP',
+            'currency' => $currency,
             'merchant_order_id' => $this->merchantOrderId($order),
             'items' => [],
         ];
@@ -84,7 +85,7 @@ class PaymobService
         return $order->order_number.'-'.strtolower(bin2hex(random_bytes(4)));
     }
 
-    private function createPaymentKey(string $token, Order $order, int $paymobOrderId, string $integrationId): string
+    private function createPaymentKey(string $token, Order $order, int $paymobOrderId, string $integrationId, string $currency): string
     {
         $customer = $order->customer;
 
@@ -94,7 +95,7 @@ class PaymobService
                 'amount_cents' => (int) round(((float) $order->total_amount) * 100),
                 'expiration' => 3600,
                 'order_id' => $paymobOrderId,
-                'currency' => 'EGP',
+                'currency' => $currency,
                 'integration_id' => (int) $integrationId,
                 'redirection_url' => route('front.paymob.callback'),
                 'billing_data' => [
