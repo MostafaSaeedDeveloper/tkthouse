@@ -91,6 +91,22 @@
 }
 .ev-card:hover .ev-card-img img { transform: scale(1.05); }
 
+/* Status badge */
+.ev-card-status {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: rgba(6,6,8,0.85);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #c9c9d6;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.ev-card-status.sold-out { color: #ff7a7a; border-color: rgba(255,122,122,0.45); }
+
 /* Date badge */
 .ev-card-date-badge {
     position: absolute;
@@ -262,6 +278,7 @@
                             <span class="day">{{ $event->event_date->format('d') }}</span>
                             <span class="mon">{{ $event->event_date->format('M') }}</span>
                         </div>
+                        <div class="ev-card-status {{ $event->status === 'sold_out' ? 'sold-out' : '' }}">{{ str($event->status)->replace('_', ' ')->title() }}</div>
                     </div>
 
                     {{-- Body --}}
@@ -342,6 +359,7 @@
                             <span class="day">{{ $event->event_date->format('d') }}</span>
                             <span class="mon">{{ $event->event_date->format('M') }}</span>
                         </div>
+                        <div class="ev-card-status {{ $event->status === 'sold_out' ? 'sold-out' : '' }}">{{ str($event->status)->replace('_', ' ')->title() }}</div>
                     </div>
 
                     <div class="ev-card-body">
