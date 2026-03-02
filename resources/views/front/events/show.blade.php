@@ -699,7 +699,7 @@
                         @php
                             $isTicketSoldOut = $ticket->status === 'sold_out';
                             $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
-                            $badgeType = $isTicketSoldOut ? 'sold-out' : ($loop->first ? 'limited' : 'available');
+                            $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
                         @endphp
                         <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}">
                             <div class="card-stripe"></div>
