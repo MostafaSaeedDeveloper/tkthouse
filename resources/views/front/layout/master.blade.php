@@ -227,7 +227,7 @@
                             <p>Join us and start booking tickets</p>
                             <div data-auth-message="register" style="display:none;margin-top:10px;border-radius:8px;padding:10px 12px;font-size:12px;"></div>
                         </div>
-                        <form method="POST" action="{{ route('front.customer.register.store') }}" data-auth-ajax-form data-auth-type="register">
+                        <form method="POST" action="{{ route('front.customer.register.request-otp') }}" data-auth-ajax-form data-auth-type="register" data-otp-request-url="{{ route('front.customer.register.request-otp') }}" data-otp-verify-url="{{ route('front.customer.register.verify-otp') }}">
                             @csrf
                             <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -254,6 +254,13 @@
                                     <input type="password" name="password_confirmation" placeholder="••••••••" required>
                                 </div>
                             </div>
+
+                            <div class="auth-field" style="margin-top:14px;display:none;" data-otp-field-wrap>
+                                <label>Email OTP</label>
+                                <input type="text" name="otp" placeholder="Enter 6-digit code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6">
+                                <div style="margin-top:8px;font-size:12px;color:#9a9ab2;">We sent a verification code to your email. Your account will be created only after OTP verification.</div>
+                            </div>
+
                             @if ($errors->has('name') || $errors->has('email') || $errors->has('phone') || $errors->has('password'))
                                 <div style="margin-top:12px;background:rgba(232,68,90,0.08);border:1px solid rgba(232,68,90,0.3);border-radius:8px;padding:10px 12px;color:#f0849a;font-size:12px;">
                                     @error('name')<div>{{ $message }}</div>@enderror
@@ -506,7 +513,14 @@
                             submitButton.textContent = 'Please wait...';
                         }
 
-                        fetch(form.action, {
+                        var endpoint = form.action;
+                        if (type === 'register') {
+                            endpoint = form.dataset.otpStage === 'verify'
+                                ? (form.dataset.otpVerifyUrl || form.action)
+                                : (form.dataset.otpRequestUrl || form.action);
+                        }
+
+                        fetch(endpoint, {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
@@ -525,6 +539,21 @@
                                     if (type === 'forgot') {
                                         setPanelMessage(type, 'success', result.data.message || 'Password reset link sent successfully.');
                                         form.reset();
+                                        return;
+                                    }
+
+                                    if (type === 'register' && result.data.otp_required) {
+                                        form.dataset.otpStage = 'verify';
+                                        var otpWrap = form.querySelector('[data-otp-field-wrap]');
+                                        if (otpWrap) {
+                                            otpWrap.style.display = 'block';
+                                        }
+                                        var otpInput = form.querySelector('[name="otp"]');
+                                        if (otpInput) {
+                                            otpInput.required = true;
+                                            otpInput.focus();
+                                        }
+                                        setPanelMessage(type, 'success', result.data.message || 'OTP sent successfully.');
                                         return;
                                     }
 

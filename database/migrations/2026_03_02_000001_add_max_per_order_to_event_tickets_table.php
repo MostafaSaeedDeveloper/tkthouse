@@ -10,13 +10,14 @@ return new class extends Migration
     {
         Schema::table('event_tickets', function (Blueprint $table) {
             $table->unsignedInteger('max_per_order')->default(10)->after('description');
+            $table->boolean('is_couple')->default(false)->after('max_per_order');
         });
     }
 
     public function down(): void
     {
         Schema::table('event_tickets', function (Blueprint $table) {
-            $table->dropColumn('max_per_order');
+            $table->dropColumn(['max_per_order', 'is_couple']);
         });
     }
 };

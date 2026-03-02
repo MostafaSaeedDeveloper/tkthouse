@@ -172,6 +172,7 @@
     .tkt-avail-badge.limited     { background: rgba(231,76,60,0.12);   color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); }
     .tkt-avail-badge.selling     { background: rgba(243,156,18,0.12);  color: #f39c12; border: 1px solid rgba(243,156,18,0.25); }
     .tkt-avail-badge.sold-out    { background: rgba(231,76,60,0.16); color: #ff6b6b; border: 1px solid rgba(231,76,60,0.4); }
+    .tkt-avail-badge.couples-only { background: rgba(142,68,173,0.16); color: #d7a8ff; border: 1px solid rgba(142,68,173,0.45); }
 
     /* Price block */
     .tkt-ticket-card .card-price {
@@ -700,9 +701,11 @@
                             $isTicketSoldOut = $ticket->status === 'sold_out';
                             $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
                             $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
-                            $maxQuantity = max(1, (int) ($ticket->max_per_order ?? 10));
+                            $statusLabel = $ticket->status === 'active' ? 'Available' : str($ticket->status)->replace('_', ' ')->title();
+                            $isCoupleTicket = (bool) $ticket->is_couple;
+                            $maxQuantity = $isCoupleTicket ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
                         @endphp
-                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}">
+                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}" data-is-couple="{{ $isCoupleTicket ? 1 : 0 }}">
                             <div class="card-stripe"></div>
                             <div class="card-badge">
                                 <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
@@ -712,18 +715,27 @@
                                 <div class="card-meta">
                                     <span class="ticket-name">{{ strtoupper($ticket->name) }}</span>
                                     <span class="ticket-desc">{{ $ticket->description ?: 'General admission ticket' }}</span>
-                                    <span class="tkt-avail-badge {{ $badgeType }}">{{ str($ticket->status)->replace('_', ' ')->title() }}</span>
+                                    <span class="tkt-avail-badge {{ $badgeType }}">{{ $statusLabel }}</span>
+                                    @if($isCoupleTicket)
+                                        <span class="tkt-avail-badge couples-only">Couples Only</span>
+                                    @endif
                                 </div>
                                 <div class="card-price">
                                     <span class="price-amount">{{ number_format($ticket->price, 2) }} EGP</span>
                                     <span class="price-label">per ticket</span>
                                 </div>
                                 <div class="tkt-card-actions">
+                                    @if(! $isCoupleTicket)
                                     <div class="tkt-qty-counter {{ $isTicketDisabled ? 'is-disabled' : '' }}">
                                         <button class="qty-btn qty-minus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>−</button>
                                         <input class="qty-val" type="text" value="1" readonly>
                                         <button class="qty-btn qty-plus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>+</button>
                                     </div>
+                                    @else
+                                    <div class="tkt-qty-counter is-disabled">
+                                        <input class="qty-val" type="text" value="2" readonly>
+                                    </div>
+                                    @endif
                                     <button class="tkt-add-btn {{ $isTicketDisabled ? 'is-disabled' : '' }}" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>
                                         <i class="fa fa-plus" style="margin-right:6px;"></i>{{ $isTicketDisabled ? 'SOLD OUT' : 'ADD' }}
                                     </button>
@@ -850,16 +862,18 @@
         var plus  = card.querySelector('.qty-plus');
         var val   = card.querySelector('.qty-val');
         var addBtn = card.querySelector('.tkt-add-btn');
+        var isCouple = card.dataset.isCouple === '1';
         var maxQty = parseInt(card.dataset.maxQty || '10', 10);
 
         if (Number.isNaN(maxQty) || maxQty < 1) {
             maxQty = 10;
         }
 
-        if (!minus || !plus || !val || !addBtn || card.dataset.disabled === '1') {
+        if (!val || !addBtn || card.dataset.disabled === '1') {
             return;
         }
 
+        if (!isCouple && minus && plus) {
         minus.addEventListener('click', function(e) {
             e.stopPropagation();
             var v = parseInt(val.value);
@@ -870,6 +884,7 @@
             var v = parseInt(val.value);
             if (v < maxQty) val.value = v + 1;
         });
+        }
 
         // Add to cart
         addBtn.addEventListener('click', function(e) {
@@ -877,7 +892,7 @@
             var id     = card.dataset.id;
             var name   = card.dataset.ticket;
             var price  = parseFloat(card.dataset.price);
-            var qty    = parseInt(val.value);
+            var qty    = isCouple ? 2 : parseInt(val.value);
             var currentQty = cart[id] ? parseInt(cart[id].qty, 10) : 0;
             var remainingQty = Math.max(0, maxQty - currentQty);
 
@@ -890,7 +905,9 @@
                 qty = remainingQty;
             }
 
-            if (cart[id]) {
+            if (isCouple) {
+                cart[id] = { name: name, price: price, qty: 2 };
+            } else if (cart[id]) {
                 cart[id].qty += qty;
             } else {
                 cart[id] = { name: name, price: price, qty: qty };
@@ -898,7 +915,9 @@
 
             card.classList.add('selected');
             renderSummary();
-            if (qty < parseInt(val.value, 10)) {
+            if (isCouple) {
+                showToast(name + ' is couples only (2 tickets).');
+            } else if (qty < parseInt(val.value, 10)) {
                 showToast(name + ' limited to ' + maxQty + ' tickets.');
             } else {
                 showToast(name + ' × ' + qty + ' added!');

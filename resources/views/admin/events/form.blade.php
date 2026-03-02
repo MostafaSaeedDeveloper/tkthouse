@@ -7,10 +7,11 @@
         'label' => $ticket->label,
         'description' => $ticket->description,
         'max_per_order' => $ticket->max_per_order,
-    ])->toArray() : [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10]]);
+        'is_couple' => (bool) $ticket->is_couple,
+    ])->toArray() : [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10, 'is_couple' => false]]);
 
     if (empty($ticketRows)) {
-        $ticketRows = [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10]];
+        $ticketRows = [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10, 'is_couple' => false]];
     }
 
     $feeRows = old('fees', isset($event) ? $event->fees->map(fn($fee) => [
@@ -126,7 +127,14 @@
             <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
             <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
             <div class="col-lg-1 col-md-3"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
-            <div class="col-lg-12 col-md-3 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
+            <div class="col-lg-2 col-md-4">
+                <div class="form-check mt-4">
+                    <input type="hidden" name="tickets[{{ $index }}][is_couple]" value="0">
+                    <input class="form-check-input" type="checkbox" value="1" name="tickets[{{ $index }}][is_couple]" id="ticket-couple-{{ $index }}" @checked((bool) ($ticket['is_couple'] ?? false))>
+                    <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples Only</label>
+                </div>
+            </div>
+            <div class="col-lg-10 col-md-8 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
         </div>
     @endforeach
 </div>
@@ -156,7 +164,14 @@
         <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="__NAME__[label]"></div>
         <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
         <div class="col-lg-1 col-md-3"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="__NAME__[max_per_order]" value="10"></div>
-        <div class="col-lg-12 col-md-3 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
+        <div class="col-lg-2 col-md-4">
+            <div class="form-check mt-4">
+                <input type="hidden" name="__NAME__[is_couple]" value="0">
+                <input class="form-check-input" type="checkbox" value="1" name="__NAME__[is_couple]" id="__ID__">
+                <label class="form-check-label" for="__ID__">Couples Only</label>
+            </div>
+        </div>
+        <div class="col-lg-10 col-md-8 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
     </div>
 </template>
 
@@ -180,7 +195,8 @@
             }
 
             const nextIndex = Number(container.dataset.nextIndex || 0);
-            const html = template.innerHTML.replaceAll('__NAME__', `${prefix}[${nextIndex}]`);
+            let html = template.innerHTML.replaceAll('__NAME__', `${prefix}[${nextIndex}]`);
+            html = html.replaceAll('__ID__', `${prefix}-${nextIndex}-couple`);
             container.insertAdjacentHTML('beforeend', html);
             container.dataset.nextIndex = String(nextIndex + 1);
         };

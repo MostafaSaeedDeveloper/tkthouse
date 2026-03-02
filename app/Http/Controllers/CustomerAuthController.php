@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\RegisterOtpMail;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class CustomerAuthController extends Controller
@@ -20,6 +21,8 @@ class CustomerAuthController extends Controller
         'super_admin',
         'super admin',
     ];
+
+    private const REGISTER_OTP_SESSION_KEY = 'auth.register_otp';
 
     public function showLogin()
     {
@@ -61,7 +64,7 @@ class CustomerAuthController extends Controller
         return view('front.auth.register');
     }
 
-    public function register(Request $request)
+    public function requestRegisterOtp(Request $request)
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -71,36 +74,83 @@ class CustomerAuthController extends Controller
             'redirect_to' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $referrerId = (int) $request->session()->get('affiliate.referrer_id');
-
-        $user = User::create([
+        $otpCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $request->session()->put(self::REGISTER_OTP_SESSION_KEY, [
             'name' => $validated['name'],
-            'username' => $this->generateUsername($validated['email']),
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'password' => Hash::make($validated['password']),
-            'referred_by_user_id' => $referrerId > 0 ? $referrerId : null,
+            'password_hash' => Hash::make($validated['password']),
+            'redirect_to' => $validated['redirect_to'] ?? null,
+            'referrer_id' => (int) $request->session()->get('affiliate.referrer_id'),
+            'otp_hash' => Hash::make($otpCode),
+            'expires_at' => now()->addMinutes(10)->timestamp,
+        ]);
+
+        Mail::to($validated['email'])->send(new RegisterOtpMail($otpCode));
+
+        return response()->json([
+            'message' => 'OTP has been sent to your email. Enter it to complete registration.',
+            'otp_required' => true,
+        ]);
+    }
+
+    public function verifyRegisterOtp(Request $request)
+    {
+        $validated = $request->validate([
+            'otp' => ['required', 'digits:6'],
+            'redirect_to' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $pending = $request->session()->get(self::REGISTER_OTP_SESSION_KEY);
+        if (! is_array($pending) || empty($pending['email'])) {
+            return response()->json([
+                'message' => 'Registration session expired. Please register again.',
+                'errors' => ['otp' => ['Registration session expired. Please register again.']],
+            ], 422);
+        }
+
+        if ((int) ($pending['expires_at'] ?? 0) < now()->timestamp) {
+            $request->session()->forget(self::REGISTER_OTP_SESSION_KEY);
+
+            return response()->json([
+                'message' => 'OTP expired. Please request a new one.',
+                'errors' => ['otp' => ['OTP expired. Please request a new one.']],
+            ], 422);
+        }
+
+        if (! Hash::check($validated['otp'], (string) ($pending['otp_hash'] ?? ''))) {
+            return response()->json([
+                'message' => 'Invalid OTP code.',
+                'errors' => ['otp' => ['Invalid OTP code.']],
+            ], 422);
+        }
+
+        if (User::query()->where('email', $pending['email'])->exists()) {
+            $request->session()->forget(self::REGISTER_OTP_SESSION_KEY);
+
+            return response()->json([
+                'message' => 'This email is already registered. Please sign in.',
+                'errors' => ['email' => ['This email is already registered. Please sign in.']],
+            ], 422);
+        }
+
+        $user = User::create([
+            'name' => $pending['name'],
+            'username' => $this->generateUsername($pending['email']),
+            'email' => $pending['email'],
+            'phone' => $pending['phone'],
+            'password' => $pending['password_hash'],
+            'referred_by_user_id' => ((int) ($pending['referrer_id'] ?? 0)) > 0 ? (int) $pending['referrer_id'] : null,
         ]);
 
         $request->session()->forget('affiliate.referrer_id');
         $request->session()->forget('affiliate.referrer_code');
+        $request->session()->forget(self::REGISTER_OTP_SESSION_KEY);
 
-        $currentUser = Auth::user();
-        if (! $this->isAdminUser($currentUser)) {
-            Auth::login($user);
-            $request->session()->regenerate();
+        Auth::login($user);
+        $request->session()->regenerate();
 
-            return $this->redirectAfterAuth($request, $validated['redirect_to'] ?? null, 'Account created successfully. Welcome to TKT House.');
-        }
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Customer account created successfully.',
-                'created_user_id' => $user->id,
-            ], 201);
-        }
-
-        return back()->with('success', 'Customer account created successfully.');
+        return $this->redirectAfterAuth($request, $pending['redirect_to'] ?? ($validated['redirect_to'] ?? null), 'Account created successfully. Welcome to TKT House.');
     }
 
     public function logout(Request $request)
@@ -112,7 +162,6 @@ class CustomerAuthController extends Controller
 
         return redirect()->route('front.home');
     }
-
 
     private function redirectAfterAuth(Request $request, ?string $redirectTo, ?string $successMessage = null)
     {

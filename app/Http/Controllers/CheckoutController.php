@@ -598,6 +598,12 @@ class CheckoutController extends Controller
             }
 
             $maxQuantity = $this->maxAllowedQuantityForTicket($ticket);
+            if ((bool) ($ticket->is_couple ?? false) && (int) $row['qty'] !== 2) {
+                throw ValidationException::withMessages([
+                    'cart' => "{$ticket->name} is couples only and must be booked as 2 tickets.",
+                ]);
+            }
+
             if ((int) $row['qty'] > $maxQuantity) {
                 throw ValidationException::withMessages([
                     'cart' => "Maximum allowed quantity for {$ticket->name} is {$maxQuantity}.",
@@ -629,6 +635,10 @@ class CheckoutController extends Controller
     private function maxAllowedQuantityForTicket(EventTicket|Ticket|null $ticket): int
     {
         if ($ticket instanceof EventTicket) {
+            if ((bool) ($ticket->is_couple ?? false)) {
+                return 2;
+            }
+
             return max(1, (int) ($ticket->max_per_order ?? 10));
         }
 

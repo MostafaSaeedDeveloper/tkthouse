@@ -128,6 +128,7 @@ class EventController extends Controller
             'tickets.*.label' => ['nullable', 'string', 'max:255'],
             'tickets.*.description' => ['nullable', 'string'],
             'tickets.*.max_per_order' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'tickets.*.is_couple' => ['nullable', 'boolean'],
             'fees' => ['nullable', 'array'],
             'fees.*.name' => ['required_with:fees', 'string', 'max:255'],
             'fees.*.fee_type' => ['required_with:fees', 'in:percentage,fixed'],
@@ -145,7 +146,8 @@ class EventController extends Controller
         foreach ($tickets as $ticket) {
             if (! empty($ticket['name'])) {
                 $ticket['color'] = $ticket['color'] ?? '#0d6efd';
-                $ticket['max_per_order'] = max(1, (int) ($ticket['max_per_order'] ?? 10));
+                $ticket['is_couple'] = (bool) ($ticket['is_couple'] ?? false);
+                $ticket['max_per_order'] = $ticket['is_couple'] ? 2 : max(1, (int) ($ticket['max_per_order'] ?? 10));
                 $event->tickets()->create($ticket);
             }
         }
