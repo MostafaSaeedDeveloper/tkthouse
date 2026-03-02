@@ -251,7 +251,7 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="co-field"><label>Social Profile</label><input type="text" name="attendees[{{ $index }}][social_profile]" value="{{ old('attendees.'.$index.'.social_profile') }}"></div>
+                                    <div class="co-field"><label>Social Profile</label><input type="text" name="attendees[{{ $index }}][social_profile]" value="{{ old('attendees.'.$index.'.social_profile') }}" required></div>
                                 </div>
                             @endforeach
 

@@ -246,6 +246,7 @@ class CheckoutController extends Controller
             $phone = trim((string) ($attendee['phone'] ?? ''));
             $email = trim((string) ($attendee['email'] ?? ''));
             $gender = trim((string) ($attendee['gender'] ?? ''));
+            $socialProfile = trim((string) ($attendee['social_profile'] ?? ''));
 
             if ($name === '') {
                 $errors["attendees.$index.name"] = 'Name is required.';
@@ -258,6 +259,9 @@ class CheckoutController extends Controller
             }
             if (! in_array($gender, ['male', 'female'], true)) {
                 $errors["attendees.$index.gender"] = 'Gender is required.';
+            }
+            if ($socialProfile === '') {
+                $errors["attendees.$index.social_profile"] = 'Social profile is required.';
             }
         }
 
