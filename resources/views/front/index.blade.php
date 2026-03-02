@@ -10,7 +10,7 @@
                         <img src="{{ $event->cover_image_url ?? asset('extra-images/kf_slide_img14.jpg') }}" alt="{{ $event->name }}">
                         <div class="banner_content container">
                             <div class="b_title animated">{{ strtoupper($event->name) }}</div>
-                            <p class="animated">{{ $event->event_date->format('F d, Y') }} - {{ \\Carbon\\Carbon::parse($event->event_time)->format('g:i A') }} · {{ $event->location }}</p>
+                            <p class="animated">{{ $event->event_date->format('F d, Y') }} - {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }} · {{ $event->location }}</p>
                             <a href="{{ route('front.events.show', $event) }}" class="btn_normal border_btn animated">BOOK NOW</a>
                             <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
                         </div>
@@ -351,7 +351,7 @@
                                     <div class="ev-home-meta">
                                         <span class="ev-home-pill">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                            {{ \\Carbon\\Carbon::parse($event->event_time)->format('g:i A') }}
+                                            {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}
                                         </span>
                                         <span class="ev-home-pill">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
