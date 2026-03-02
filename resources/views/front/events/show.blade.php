@@ -172,6 +172,7 @@
     .tkt-avail-badge.limited     { background: rgba(231,76,60,0.12);   color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); }
     .tkt-avail-badge.selling     { background: rgba(243,156,18,0.12);  color: #f39c12; border: 1px solid rgba(243,156,18,0.25); }
     .tkt-avail-badge.sold-out    { background: rgba(231,76,60,0.16); color: #ff6b6b; border: 1px solid rgba(231,76,60,0.4); }
+    .tkt-avail-badge.couples-only { background: rgba(142,68,173,0.16); color: #d7a8ff; border: 1px solid rgba(142,68,173,0.45); }
 
     /* Price block */
     .tkt-ticket-card .card-price {
@@ -700,6 +701,7 @@
                             $isTicketSoldOut = $ticket->status === 'sold_out';
                             $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
                             $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
+                            $statusLabel = $ticket->status === 'active' ? 'Available' : str($ticket->status)->replace('_', ' ')->title();
                             $isCoupleTicket = (bool) $ticket->is_couple;
                             $maxQuantity = $isCoupleTicket ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
                         @endphp
@@ -713,9 +715,9 @@
                                 <div class="card-meta">
                                     <span class="ticket-name">{{ strtoupper($ticket->name) }}</span>
                                     <span class="ticket-desc">{{ $ticket->description ?: 'General admission ticket' }}</span>
-                                    <span class="tkt-avail-badge {{ $badgeType }}">{{ str($ticket->status)->replace('_', ' ')->title() }}</span>
+                                    <span class="tkt-avail-badge {{ $badgeType }}">{{ $statusLabel }}</span>
                                     @if($isCoupleTicket)
-                                        <span class="tkt-avail-badge available">Couples Only</span>
+                                        <span class="tkt-avail-badge couples-only">Couples Only</span>
                                     @endif
                                 </div>
                                 <div class="card-price">
