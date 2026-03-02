@@ -171,6 +171,7 @@
     .tkt-avail-badge.available   { background: rgba(39,174,96,0.15);  color: #27ae60; border: 1px solid rgba(39,174,96,0.3); }
     .tkt-avail-badge.limited     { background: rgba(231,76,60,0.12);   color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); }
     .tkt-avail-badge.selling     { background: rgba(243,156,18,0.12);  color: #f39c12; border: 1px solid rgba(243,156,18,0.25); }
+    .tkt-avail-badge.sold-out    { background: rgba(231,76,60,0.16); color: #ff6b6b; border: 1px solid rgba(231,76,60,0.4); }
 
     /* Price block */
     .tkt-ticket-card .card-price {
@@ -248,6 +249,9 @@
     }
     .tkt-add-btn:hover { background: #e0b020; transform: scale(1.02); }
     .tkt-add-btn:active { transform: scale(0.98); }
+    .tkt-add-btn.is-disabled, .tkt-add-btn:disabled { opacity: 0.45; cursor: not-allowed; background: rgba(244,196,48,0.2); color: rgba(255,255,255,0.6); }
+    .tkt-qty-counter.is-disabled { opacity: 0.45; }
+    .tkt-qty-counter.is-disabled button { pointer-events: none; }
 
     .tkt-card-actions {
         display: flex;
@@ -603,13 +607,64 @@
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
-                @if($event->map_url)
+                @php
+                    $mapEmbedUrl = null;
+
+                    if (! empty($event->map_url)) {
+                        $rawMapUrl = trim($event->map_url);
+
+                        if (filter_var($rawMapUrl, FILTER_VALIDATE_URL)) {
+                            $parsedMapUrl = parse_url($rawMapUrl);
+                            $mapHost = strtolower($parsedMapUrl['host'] ?? '');
+                            $mapPath = $parsedMapUrl['path'] ?? '';
+                            parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
+
+                            if (in_array($mapHost, ['maps.app.goo.gl', 'goo.gl'], true)) {
+                                try {
+                                    $resolvedResponse = \Illuminate\Support\Facades\Http::timeout(6)->get($rawMapUrl);
+                                    $resolvedUrl = (string) $resolvedResponse->effectiveUri();
+
+                                    if ($resolvedUrl !== '') {
+                                        $rawMapUrl = $resolvedUrl;
+                                        $parsedMapUrl = parse_url($rawMapUrl);
+                                        $mapHost = strtolower($parsedMapUrl['host'] ?? '');
+                                        $mapPath = $parsedMapUrl['path'] ?? '';
+                                        parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
+                                    }
+                                } catch (\Throwable $exception) {
+                                    // Fallback handled by generic query embedding below.
+                                }
+                            }
+
+                            if (str_contains($mapPath, '/maps/embed')) {
+                                $mapEmbedUrl = $rawMapUrl;
+                            } elseif (isset($mapQuery['q']) && $mapQuery['q'] !== '') {
+                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['q']).'&output=embed';
+                            } elseif (isset($mapQuery['query']) && $mapQuery['query'] !== '') {
+                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['query']).'&output=embed';
+                            } elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $rawMapUrl, $coords)) {
+                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($coords[1].','.$coords[2]).'&output=embed';
+                            } elseif (str_contains($mapPath, '/place/')) {
+                                $place = trim(urldecode(substr($mapPath, strpos($mapPath, '/place/') + 7)), '/');
+                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode(str_replace('+', ' ', $place)).'&output=embed';
+                            } elseif (str_contains($mapHost, 'google.')) {
+                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
+                            } else {
+                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
+                            }
+                        } else {
+                            $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
+                        }
+                    }
+                @endphp
+
+                @if($mapEmbedUrl)
                     <div class="tkt-event-map">
                         <h4>EVENT LOCATION MAP</h4>
                         <iframe
                             loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade"
-                            src="https://www.google.com/maps?q={{ urlencode($event->map_url) }}&output=embed"
+                            src="{{ $mapEmbedUrl }}"
                             allowfullscreen>
                         </iframe>
                     </div>
@@ -624,6 +679,11 @@
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!--  TICKET BOOKING SECTION                                      -->
 <!-- ═══════════════════════════════════════════════════════════ -->
+@php
+    $isPreviousEvent = $event->event_date->lt(now()->startOfDay());
+    $isEventSoldOut = $event->status === 'sold_out';
+    $isBookingClosed = $isPreviousEvent || $isEventSoldOut;
+@endphp
 <div class="tkt-booking-section">
     <div class="container">
 
@@ -637,9 +697,11 @@
                 <div class="tkt-ticket-cards">
                     @forelse($event->tickets as $ticket)
                         @php
-                            $badgeType = $loop->first ? 'limited' : 'available';
+                            $isTicketSoldOut = $ticket->status === 'sold_out';
+                            $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
+                            $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
                         @endphp
-                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}">
+                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}">
                             <div class="card-stripe"></div>
                             <div class="card-badge">
                                 <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
@@ -656,13 +718,13 @@
                                     <span class="price-label">per ticket</span>
                                 </div>
                                 <div class="tkt-card-actions">
-                                    <div class="tkt-qty-counter">
-                                        <button class="qty-btn qty-minus" type="button">−</button>
+                                    <div class="tkt-qty-counter {{ $isTicketDisabled ? 'is-disabled' : '' }}">
+                                        <button class="qty-btn qty-minus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>−</button>
                                         <input class="qty-val" type="text" value="1" readonly>
-                                        <button class="qty-btn qty-plus" type="button">+</button>
+                                        <button class="qty-btn qty-plus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>+</button>
                                     </div>
-                                    <button class="tkt-add-btn" type="button">
-                                        <i class="fa fa-plus" style="margin-right:6px;"></i>ADD
+                                    <button class="tkt-add-btn {{ $isTicketDisabled ? 'is-disabled' : '' }}" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>
+                                        <i class="fa fa-plus" style="margin-right:6px;"></i>{{ $isTicketDisabled ? 'SOLD OUT' : 'ADD' }}
                                     </button>
                                 </div>
                             </div>
@@ -733,12 +795,12 @@
                             <span class="tot-val" id="summaryTotal">$0.00</span>
                         </div>
 
-                        <a href="{{ route('front.checkout') }}" data-checkout-base="{{ route('front.checkout') }}" data-event-id="{{ $event->id }}" class="tkt-checkout-btn" id="checkoutBtn" style="pointer-events:none; background:rgba(244,196,48,0.2); color:rgba(0,0,0,0.4);">
-                            PROCEED TO CHECKOUT &nbsp;<i class="fa fa-arrow-right"></i>
+                        <a href="{{ route('front.checkout') }}" data-checkout-base="{{ route('front.checkout') }}" data-event-id="{{ $event->id }}" data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}" class="tkt-checkout-btn" id="checkoutBtn" style="pointer-events:none; background:rgba(244,196,48,0.2); color:rgba(0,0,0,0.4);">
+                            {{ $isBookingClosed ? 'BOOKING CLOSED' : 'PROCEED TO CHECKOUT' }} &nbsp;<i class="fa fa-arrow-right"></i>
                         </a>
 
                         <p class="summary-note">
-                            <i class="fa fa-lock"></i>Secure checkout · No hidden fees
+                            <i class="fa fa-lock"></i>{{ $isBookingClosed ? 'This event is sold out or already finished. Checkout disabled.' : 'Secure checkout · No hidden fees' }}
                         </p>
                     </div>
                 </div>
@@ -778,6 +840,8 @@
 (function() {
     // Cart state
     var cart = {};
+    var checkoutBtnInit = document.getElementById('checkoutBtn');
+    var bookingClosed = checkoutBtnInit && checkoutBtnInit.dataset.bookingClosed === '1';
 
     // Qty counters
     document.querySelectorAll('.tkt-ticket-card').forEach(function(card) {
@@ -786,7 +850,7 @@
         var val   = card.querySelector('.qty-val');
         var addBtn = card.querySelector('.tkt-add-btn');
 
-        if (!minus || !plus || !val || !addBtn) {
+        if (!minus || !plus || !val || !addBtn || card.dataset.disabled === '1') {
             return;
         }
 
@@ -866,6 +930,14 @@
 
         updateCheckoutLink();
 
+        if (bookingClosed) {
+            summaryBox.classList.remove('has-items');
+            checkoutBtn.style.pointerEvents = 'none';
+            checkoutBtn.style.background = 'rgba(244,196,48,0.2)';
+            checkoutBtn.style.color = 'rgba(0,0,0,0.4)';
+            return;
+        }
+
         if (keys.length > 0) {
             summaryBox.classList.add('has-items');
             checkoutBtn.style.pointerEvents = 'auto';
@@ -884,6 +956,10 @@
     function updateCheckoutLink() {
         var checkoutBtn  = document.getElementById('checkoutBtn');
         if (!checkoutBtn) return;
+        if (checkoutBtn.dataset.bookingClosed === '1') {
+            checkoutBtn.href = checkoutBtn.dataset.checkoutBase || checkoutBtn.href;
+            return;
+        }
 
         var payload = [];
         Object.keys(cart).forEach(function(id) {

@@ -9,14 +9,30 @@ class PagesController extends Controller
     public function home()
     {
         $upcomingEvents = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
             ->orderBy('event_date')
             ->orderBy('event_time')
             ->take(6)
             ->get();
 
-        return view('front.index', compact('upcomingEvents'));
+        $featuredEvents = Event::query()
+            ->whereIn('status', ['active', 'sold_out'])
+            ->whereDate('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date')
+            ->orderBy('event_time')
+            ->take(3)
+            ->get();
+
+        $previousEvents = Event::query()
+            ->whereIn('status', ['active', 'sold_out'])
+            ->whereDate('event_date', '<', now()->toDateString())
+            ->orderByDesc('event_date')
+            ->orderByDesc('event_time')
+            ->take(6)
+            ->get();
+
+        return view('front.index', compact('upcomingEvents', 'featuredEvents', 'previousEvents'));
     }
 
     public function about()
@@ -27,19 +43,27 @@ class PagesController extends Controller
     public function events()
     {
         $events = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
             ->orderBy('event_date')
             ->orderBy('event_time')
             ->paginate(10);
 
-        return view('front.events.index', compact('events'));
+        $previousEvents = Event::query()
+            ->whereIn('status', ['active', 'sold_out'])
+            ->whereDate('event_date', '<', now()->toDateString())
+            ->orderByDesc('event_date')
+            ->orderByDesc('event_time')
+            ->take(10)
+            ->get();
+
+        return view('front.events.index', compact('events', 'previousEvents'));
     }
 
     public function eventShow(Event $event)
     {
         $event->load([
-            'tickets' => fn ($query) => $query->where('status', 'active')->orderBy('price'),
+            'tickets' => fn ($query) => $query->whereIn('status', ['active', 'sold_out'])->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderBy('price'),
             'images',
         ]);
 

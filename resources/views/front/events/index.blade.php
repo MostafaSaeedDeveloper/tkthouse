@@ -29,6 +29,25 @@
     padding-bottom: 80px;
 }
 
+.sub-banner {
+    min-height: clamp(220px, 34vw, 360px);
+    display: flex;
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+}
+
+.ev-section-title {
+    font-family: var(--font-head);
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 800;
+    color: #fff;
+    margin: 52px 0 10px;
+}
+.ev-section-title:first-of-type {
+    margin-top: 20px;
+}
+
 /* ── Grid ── */
 .ev-grid {
     display: grid;
@@ -60,7 +79,7 @@
 /* Cover image */
 .ev-card-img {
     position: relative;
-    aspect-ratio: 16/9;
+    height: clamp(210px, 26vw, 300px);
     overflow: hidden;
     background: var(--surface2);
 }
@@ -71,6 +90,22 @@
     display: block;
 }
 .ev-card:hover .ev-card-img img { transform: scale(1.05); }
+
+/* Status badge */
+.ev-card-status {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: rgba(6,6,8,0.85);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #c9c9d6;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.ev-card-status.sold-out { color: #ff7a7a; border-color: rgba(255,122,122,0.45); }
 
 /* Date badge */
 .ev-card-date-badge {
@@ -227,6 +262,8 @@
 <div class="kode_content_wrap ev-page">
     <section>
         <div class="container">
+        <h2 class="ev-section-title">Upcoming Events</h2>
+
         <div class="ev-grid">
 
             @forelse($events as $event)
@@ -241,6 +278,7 @@
                             <span class="day">{{ $event->event_date->format('d') }}</span>
                             <span class="mon">{{ $event->event_date->format('M') }}</span>
                         </div>
+                        <div class="ev-card-status {{ $event->status === 'sold_out' ? 'sold-out' : '' }}">{{ str($event->status)->replace('_', ' ')->title() }}</div>
                     </div>
 
                     {{-- Body --}}
@@ -308,7 +346,50 @@
             </div>
         @endif
 
+
+
+        <h2 class="ev-section-title">Previous Events</h2>
+
+        <div class="ev-grid">
+            @forelse($previousEvents as $event)
+                <a class="ev-card" href="{{ route('front.events.show', $event) }}">
+                    <div class="ev-card-img">
+                        <img src="{{ $event->cover_image_url ?? asset('extra-images/concert1.jpg') }}" alt="{{ $event->name }}" loading="lazy">
+                        <div class="ev-card-date-badge">
+                            <span class="day">{{ $event->event_date->format('d') }}</span>
+                            <span class="mon">{{ $event->event_date->format('M') }}</span>
+                        </div>
+                        <div class="ev-card-status {{ $event->status === 'sold_out' ? 'sold-out' : '' }}">{{ str($event->status)->replace('_', ' ')->title() }}</div>
+                    </div>
+
+                    <div class="ev-card-body">
+                        <div class="ev-card-title">{{ $event->name }}</div>
+                        <div class="ev-card-meta">
+                            <span class="ev-meta-pill">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}
+                            </span>
+                            <span class="ev-meta-pill">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                {{ $event->location }}
+                            </span>
+                        </div>
+
+                        <span class="ev-card-btn">
+                            View Event
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </span>
+                    </div>
+                </a>
+            @empty
+                <div class="ev-empty">
+                    <div class="ev-empty-icon">🕒</div>
+                    <h3>No previous events</h3>
+                    <p>Finished events will appear here after their date passes.</p>
+                </div>
+            @endforelse
         </div>
+
         </div>
     </section>
 </div>
