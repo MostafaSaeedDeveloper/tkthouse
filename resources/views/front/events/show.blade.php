@@ -702,7 +702,7 @@
                             $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
                             $maxQuantity = max(1, (int) ($ticket->max_per_order ?? 10));
                         @endphp
-                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}">
+                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}" data-is-couple="{{ $ticket->is_couple ? 1 : 0 }}">
                             <div class="card-stripe"></div>
                             <div class="card-badge">
                                 <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
@@ -721,7 +721,7 @@
                                 <div class="tkt-card-actions">
                                     <div class="tkt-qty-counter {{ $isTicketDisabled ? 'is-disabled' : '' }}">
                                         <button class="qty-btn qty-minus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>−</button>
-                                        <input class="qty-val" type="text" value="1" readonly>
+                                        <input class="qty-val" type="text" value="{{ $ticket->is_couple ? 2 : 1 }}" readonly>
                                         <button class="qty-btn qty-plus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>+</button>
                                     </div>
                                     <button class="tkt-add-btn {{ $isTicketDisabled ? 'is-disabled' : '' }}" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>
@@ -851,6 +851,7 @@
         var val   = card.querySelector('.qty-val');
         var addBtn = card.querySelector('.tkt-add-btn');
         var maxQty = parseInt(card.dataset.maxQty || '10', 10);
+        var isCouple = card.dataset.isCouple === '1';
 
         if (Number.isNaN(maxQty) || maxQty < 1) {
             maxQty = 10;
@@ -858,6 +859,12 @@
 
         if (!minus || !plus || !val || !addBtn || card.dataset.disabled === '1') {
             return;
+        }
+
+        if (isCouple) {
+            val.value = '2';
+            minus.disabled = true;
+            plus.disabled = true;
         }
 
         minus.addEventListener('click', function(e) {
@@ -878,6 +885,10 @@
             var name   = card.dataset.ticket;
             var price  = parseFloat(card.dataset.price);
             var qty    = parseInt(val.value);
+            if (isCouple) {
+                qty = 2;
+            }
+
             var currentQty = cart[id] ? parseInt(cart[id].qty, 10) : 0;
             var remainingQty = Math.max(0, maxQty - currentQty);
 

@@ -387,6 +387,12 @@ class CheckoutController extends Controller
                     "items.$index.quantity" => "Maximum allowed quantity for {$ticketName} is {$maxQuantity}.",
                 ]);
             }
+
+            if ($ticket instanceof EventTicket && $ticket->is_couple && (int) $item['quantity'] !== 2) {
+                throw ValidationException::withMessages([
+                    "items.$index.quantity" => "{$ticketName} is a couple ticket and quantity must be exactly 2.",
+                ]);
+            }
         }
 
         $requiresApproval = $grouped
@@ -604,6 +610,12 @@ class CheckoutController extends Controller
                 ]);
             }
 
+            if ($ticket->is_couple && (int) $row['qty'] !== 2) {
+                throw ValidationException::withMessages([
+                    'cart' => "{$ticket->name} is a couple ticket and quantity must be exactly 2.",
+                ]);
+            }
+
             for ($i = 0; $i < $row['qty']; $i++) {
                 $units[] = [
                     'ticket_id' => $ticket->id,
@@ -629,6 +641,10 @@ class CheckoutController extends Controller
     private function maxAllowedQuantityForTicket(EventTicket|Ticket|null $ticket): int
     {
         if ($ticket instanceof EventTicket) {
+            if ((bool) $ticket->is_couple) {
+                return 2;
+            }
+
             return max(1, (int) ($ticket->max_per_order ?? 10));
         }
 

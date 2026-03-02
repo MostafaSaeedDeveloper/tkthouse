@@ -18,6 +18,7 @@ class EventTicket extends Model
         'label',
         'description',
         'max_per_order',
+        'is_couple',
     ];
 
     public function event()
