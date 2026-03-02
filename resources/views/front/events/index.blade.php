@@ -29,6 +29,14 @@
     padding-bottom: 80px;
 }
 
+.sub-banner {
+    min-height: clamp(220px, 34vw, 360px);
+    display: flex;
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+}
+
 /* ── Grid ── */
 .ev-grid {
     display: grid;
@@ -60,7 +68,7 @@
 /* Cover image */
 .ev-card-img {
     position: relative;
-    aspect-ratio: 16/9;
+    height: clamp(210px, 26vw, 300px);
     overflow: hidden;
     background: var(--surface2);
 }
