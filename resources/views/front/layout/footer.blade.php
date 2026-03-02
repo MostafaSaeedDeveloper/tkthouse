@@ -55,8 +55,16 @@
                 .msl-footer-col-social { grid-column: 3; }
                 .msl-footer-col-contact { grid-column: 4; }
 
-                .msl-footer-brand img { max-height: 70px; margin-bottom: 16px; }
-                .msl-footer-brand p { color: #b9c9e6; line-height: 1.7; margin: 0; font-size: 15px; }
+                .msl-footer-brand > a > img { max-height: 70px; margin-bottom: 16px; }
+                .msl-footer-payment-methods {
+                    width: 100%;
+                    max-width: 280px;
+                    height: auto;
+                    display: block;
+                    margin-bottom: 12px;
+                    border-radius: 8px;
+                }
+                .msl-footer-pci { max-width: 130px; height: auto; display: block; }
 
                 .msl-footer-title {
                     font-size: 20px;
@@ -94,16 +102,6 @@
                 }
                 .msl-footer-social a:hover { background: #ffd44d; color: #132238; border-color: #ffd44d; }
 
-                .msl-footer-payment-methods {
-                    width: 100%;
-                    max-width: 280px;
-                    height: auto;
-                    display: block;
-                    margin-bottom: 12px;
-                    border-radius: 8px;
-                }
-                .msl-footer-pci { max-width: 130px; height: auto; display: block; }
-
                 .msl-copyright {
                     background: #0b1320;
                     border-top: 1px solid rgba(255,255,255,.08);
@@ -128,7 +126,8 @@
                 <div class="container msl-footer-layout">
                     <div class="msl-footer-brand msl-footer-col-brand">
                         <a href="{{ route('front.home') }}"><img src="{{ \App\Support\SystemSettings::get('site_logo_footer') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_footer')) : asset('images/footer-logo.png') }}" alt="{{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}"></a>
-                        <p>Your access. Your moment.</p>
+                        <img src="{{ asset('images/payments-methods.png') }}" alt="Payment Methods" class="msl-footer-payment-methods">
+                        <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
 
                     <div class="msl-footer-col-links">
@@ -147,8 +146,6 @@
                                 </a>
                             </li>
                         </ul>
-                        <img src="{{ asset('images/payments-methods.png') }}" alt="Payment Methods" class="msl-footer-payment-methods">
-                        <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
 
                     <div class="msl-footer-col-contact">
