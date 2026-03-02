@@ -40,13 +40,14 @@
 
             <style>
                 .msl-footer {
-                    background: linear-gradient(90deg, #111927 0%, #1a2435 100%);
-                    padding: 52px 0 34px;
+                    background: linear-gradient(120deg, #0e1624 0%, #162238 55%, #1c2b44 100%);
+                    padding: 48px 0 30px;
+                    border-top: 1px solid rgba(255,255,255,.08);
                 }
                 .msl-footer-layout {
                     display: grid;
                     grid-template-columns: 1.4fr 1fr 1fr 1fr;
-                    gap: 28px;
+                    gap: 34px;
                     align-items: start;
                 }
                 .msl-footer-col-brand { grid-column: 1; }
@@ -55,26 +56,28 @@
                 .msl-footer-col-contact { grid-column: 4; }
 
                 .msl-footer-brand img { max-height: 70px; margin-bottom: 16px; }
-                .msl-footer-brand p { color: #d6deec; line-height: 1.6; margin: 0; font-size: 15px; }
+                .msl-footer-brand p { color: #b9c9e6; line-height: 1.7; margin: 0; font-size: 15px; }
 
                 .msl-footer-title {
-                    font-size: 32px;
-                    color: #fff;
+                    font-size: 20px;
+                    color: #ffffff;
                     font-family: 'Poppins', sans-serif;
-                    margin: 0 0 16px;
-                    line-height: 1.15;
+                    margin: 0 0 14px;
+                    line-height: 1.2;
+                    font-weight: 700;
+                    letter-spacing: .2px;
                 }
 
                 .msl-footer-links { list-style: none; padding: 0; margin: 0; }
                 .msl-footer-links li { margin-bottom: 10px; }
                 .msl-footer-links a,
                 .msl-footer-contact {
-                    color: #d6deec;
-                    font-size: 17px;
+                    color: #d1ddf2;
+                    font-size: 18px;
                     line-height: 1.6;
                 }
                 .msl-footer-links a:hover,
-                .msl-footer-contact:hover { color: #fff; }
+                .msl-footer-contact:hover { color: #ffd44d; }
 
                 .msl-footer-social { display: flex; gap: 10px; margin: 0 0 14px; list-style: none; padding: 0; }
                 .msl-footer-social a {
@@ -84,18 +87,19 @@
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    border: 1px solid rgba(255,255,255,.25);
+                    border: 1px solid rgba(255,255,255,.22);
+                    background: rgba(255,255,255,.04);
                     color: #fff;
                     font-size: 20px;
                 }
-                .msl-footer-social a:hover { background: #fff; color: #111927; }
+                .msl-footer-social a:hover { background: #ffd44d; color: #132238; border-color: #ffd44d; }
 
                 .msl-footer-payment-placeholder {
                     display: block;
-                    border: 1px dashed rgba(255,255,255,.35);
+                    border: 1px dashed rgba(255,255,255,.28);
                     border-radius: 10px;
                     padding: 14px;
-                    color: #d6deec;
+                    color: #c8d7ee;
                     font-size: 14px;
                     margin-bottom: 12px;
                     text-align: center;
@@ -103,10 +107,10 @@
                 .msl-footer-pci { max-width: 130px; height: auto; display: block; }
 
                 .msl-copyright {
-                    background: #111927;
-                    border-top: 1px solid rgba(255,255,255,.1);
+                    background: #0b1320;
+                    border-top: 1px solid rgba(255,255,255,.08);
                 }
-                .msl-copyright p { color: #fff !important; margin: 0; }
+                .msl-copyright p { color: #cfd8ea !important; margin: 0; font-size: 15px; }
 
                 @media (max-width: 1199px) {
                     .msl-footer-layout { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
@@ -116,9 +120,9 @@
                     .msl-footer-col-contact { grid-column: auto; }
                 }
                 @media (max-width: 575px) {
-                    .msl-footer { padding: 40px 0 24px; }
-                    .msl-footer-layout { grid-template-columns: 1fr; gap: 24px; }
-                    .msl-footer-title { font-size: 28px; }
+                    .msl-footer { padding: 38px 0 22px; }
+                    .msl-footer-layout { grid-template-columns: 1fr; gap: 22px; }
+                    .msl-footer-title { font-size: 22px; }
                 }
             </style>
 
@@ -156,8 +160,8 @@
                 </div>
             </footer>
 
-            <div class="msl-copyright theme-bg">
+            <div class="msl-copyright">
                 <div class="container">
-                    <p class="text-center" style="color:#000">© {{ date('Y') }} {{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}. All rights reserved.</p>
+                    <p class="text-center">© {{ date('Y') }} {{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}. All rights reserved.</p>
                 </div>
             </div>
