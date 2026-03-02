@@ -16,7 +16,23 @@ class PagesController extends Controller
             ->take(6)
             ->get();
 
-        return view('front.index', compact('upcomingEvents'));
+        $featuredEvents = Event::query()
+            ->where('status', 'active')
+            ->whereDate('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date')
+            ->orderBy('event_time')
+            ->take(3)
+            ->get();
+
+        $previousEvents = Event::query()
+            ->where('status', 'active')
+            ->whereDate('event_date', '<', now()->toDateString())
+            ->orderByDesc('event_date')
+            ->orderByDesc('event_time')
+            ->take(6)
+            ->get();
+
+        return view('front.index', compact('upcomingEvents', 'featuredEvents', 'previousEvents'));
     }
 
     public function about()

@@ -5,33 +5,27 @@
 
 
             <div class="banner_slider">
-                <div class="slide left-align">
-                    <img src="extra-images/kf_slide_img14.jpg" alt="banner img">
-                    <div class="banner_content container">
-                        <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
-                        <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                @forelse($featuredEvents as $event)
+                    <div class="slide left-align">
+                        <img src="{{ $event->cover_image_url ?? asset('extra-images/kf_slide_img14.jpg') }}" alt="{{ $event->name }}">
+                        <div class="banner_content container">
+                            <div class="b_title animated">{{ strtoupper($event->name) }}</div>
+                            <p class="animated">{{ $event->event_date->format('F d, Y') }} - {{ \\Carbon\\Carbon::parse($event->event_time)->format('g:i A') }} · {{ $event->location }}</p>
+                            <a href="{{ route('front.events.show', $event) }}" class="btn_normal border_btn animated">BOOK NOW</a>
+                            <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                        </div>
                     </div>
-                </div>
-                <div class="slide center-align">
-                    <img src="extra-images/kf_slide_img5.jpg" alt="banner img">
-                    <div class="banner_content container">
-                        <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
-                        <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                @empty
+                    <div class="slide left-align">
+                        <img src="extra-images/kf_slide_img14.jpg" alt="banner img">
+                        <div class="banner_content container">
+                            <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
+                            <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
+                            <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
+                            <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
+                        </div>
                     </div>
-                </div>
-                <div class="slide right-align">
-                    <img src="extra-images/kf_slide_img8.jpg" alt="banner img">
-                    <div class="banner_content container">
-                        <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
-                        <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                        <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
-                    </div>
-                </div>
+                @endforelse
             </div>
 
 
@@ -325,6 +319,55 @@
                         @endforelse
                     </div>
 
+                </div>
+            </section>
+
+            <section class="ev-home-section">
+                <div class="container">
+                    <div class="ev-home-header">
+                        <div>
+                            <div class="ev-home-eyebrow">TKTHouse</div>
+                            <h2 class="ev-home-title">Previous <em>Events</em></h2>
+                        </div>
+                        <a href="{{ route('front.events') }}" class="ev-see-all">
+                            View All
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </a>
+                    </div>
+
+                    <div class="ev-home-grid">
+                        @forelse($previousEvents as $event)
+                            <a class="ev-home-card" href="{{ route('front.events.show', $event) }}">
+                                <div class="ev-home-card-img">
+                                    <img src="{{ $event->cover_image_url ?? asset('extra-images/black-img/event-list6.jpg') }}" alt="{{ $event->name }}" loading="lazy">
+                                    <div class="ev-home-date-badge">
+                                        <span class="day">{{ $event->event_date->format('d') }}</span>
+                                        <span class="mon">{{ $event->event_date->format('M') }}</span>
+                                    </div>
+                                    <div class="ev-home-status">Finished</div>
+                                </div>
+                                <div class="ev-home-card-body">
+                                    <div class="ev-home-card-title">{{ $event->name }}</div>
+                                    <div class="ev-home-meta">
+                                        <span class="ev-home-pill">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            {{ \\Carbon\\Carbon::parse($event->event_time)->format('g:i A') }}
+                                        </span>
+                                        <span class="ev-home-pill">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            {{ $event->location }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </a>
+                        @empty
+                            <div class="ev-home-empty">
+                                <div class="ev-home-empty-icon">🕒</div>
+                                <h3>No previous events yet</h3>
+                                <p>Your event history will appear here.</p>
+                            </div>
+                        @endforelse
+                    </div>
                 </div>
             </section>
             <!--Main Content Wrap End-->
