@@ -69,16 +69,16 @@
                 .msl-footer-col-social { grid-column: 3; text-align: center; }
                 .msl-footer-col-contact { grid-column: 4; }
 
-                .msl-footer-brand > a > img { max-height: 70px; margin-bottom: 16px; }
+                .msl-footer-brand > a > img { max-height: 52px; margin: 0 auto 16px; display: block; }
                 .msl-footer-payment-methods {
                     width: 100%;
                     max-width: 280px;
                     height: auto;
                     display: block;
-                    margin-bottom: 12px;
+                    margin: 0 auto 12px;
                     border-radius: 8px;
                 }
-                .msl-footer-pci { max-width: 130px; height: auto; display: block; }
+                .msl-footer-pci { max-width: 130px; height: auto; display: block; margin: 0 auto; }
 
                 .msl-footer-title {
                     font-size: 20px;
@@ -102,6 +102,10 @@
                 .msl-footer-contact:hover { color: #ffd44d; }
 
                 .msl-footer-social { display: flex; gap: 10px; margin: 0 0 14px; list-style: none; padding: 0; justify-content: center; }
+                .msl-footer-col-brand,
+                .msl-footer-col-links {
+                    text-align: center;
+                }
                 .msl-footer-social a {
                     height: 42px;
                     width: 42px;

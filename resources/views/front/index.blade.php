@@ -35,6 +35,13 @@
                 display: block;
             }
 
+            .banner_slider .slide::before,
+            .banner_slider .slick-slide::before {
+                content: none !important;
+                display: none !important;
+                background: transparent !important;
+            }
+
             :root {
                 --ev-bg:       #060608;
                 --ev-surface:  #0e0e12;
