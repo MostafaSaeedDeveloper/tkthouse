@@ -35,6 +35,9 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
 Route::post('/account/register', [CustomerAuthController::class, 'register'])->name('front.customer.register.store');
+Route::get('/account/verify-otp', [CustomerAuthController::class, 'showVerifyOtp'])->name('front.customer.verify-otp.show');
+Route::post('/account/verify-otp', [CustomerAuthController::class, 'verifyOtp'])->name('front.customer.verify-otp.store');
+Route::post('/account/verify-otp/resend', [CustomerAuthController::class, 'resendOtp'])->name('front.customer.verify-otp.resend');
 
 Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');

@@ -431,14 +431,14 @@
                                                     @if($eventTickets->isNotEmpty())
                                                         <optgroup label="Event Tickets">
                                                             @foreach($eventTickets as $ticket)
-                                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
+                                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" data-is-couple="{{ $ticket->is_couple ? '1' : '0' }}" @selected(($item['ticket_key']??'')==='event:'.$ticket->id)>{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
                                                     @if($legacyTickets->isNotEmpty())
                                                         <optgroup label="General Tickets">
                                                             @foreach($legacyTickets as $ticket)
-                                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
+                                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" data-is-couple="0" @selected(($item['ticket_key']??'')==='legacy:'.$ticket->id)>{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif
@@ -476,14 +476,14 @@
                                     @if($eventTickets->isNotEmpty())
                                         <optgroup label="Event Tickets">
                                             @foreach($eventTickets as $ticket)
-                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
+                                                <option value="event:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="{{ $ticket->event?->requires_booking_approval?'1':'0' }}" data-is-couple="{{ $ticket->is_couple ? '1' : '0' }}">{{ $ticket->event?->name?$ticket->event->name.' — ':'' }}{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
                                     @if($legacyTickets->isNotEmpty())
                                         <optgroup label="General Tickets">
                                             @foreach($legacyTickets as $ticket)
-                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
+                                                <option value="legacy:{{ $ticket->id }}" data-price="{{ $ticket->price }}" data-requires-approval="0" data-is-couple="0">{{ $ticket->name }} · {{ number_format($ticket->price,2) }} EGP</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
@@ -518,14 +518,29 @@
                     b.onclick=()=>{ if(rows.querySelectorAll('[data-row]').length<=1) return; b.closest('[data-row]').remove(); reindex(); flow(); };
                 });
                 const bindFlowInputs = () => {
-                    rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=flow);
+                    rows.querySelectorAll('.ticket-select').forEach(s=>s.onchange=()=>{enforceCoupleQuantity(s.closest('[data-row]'));flow();});
                     rows.querySelectorAll('input[data-name="quantity"], input[name$="[quantity]"]').forEach(i=>i.oninput=flow);
+                };
+                const enforceCoupleQuantity = (row) => {
+                    if (!row) return;
+                    const ticket = row.querySelector('.ticket-select');
+                    const qtyInput = row.querySelector('input[data-name="quantity"], input[name$="[quantity]"]');
+                    if (!ticket || !qtyInput) return;
+                    const isCouple = ticket.options[ticket.selectedIndex]?.dataset.isCouple === '1';
+                    if (isCouple) {
+                        qtyInput.value = 2;
+                        qtyInput.readOnly = true;
+                    } else {
+                        qtyInput.readOnly = false;
+                        if (parseInt(qtyInput.value || '1', 10) < 1) qtyInput.value = 1;
+                    }
                 };
                 const flow = () => {
                     const rowEls = [...rows.querySelectorAll('[data-row]')];
                     const req=[...rows.querySelectorAll('.ticket-select')].some(s=>s.options[s.selectedIndex]?.dataset.requiresApproval==='1');
                     let total = 0;
                     rowEls.forEach(r=>{
+                        enforceCoupleQuantity(r);
                         const ticket = r.querySelector('.ticket-select');
                         const qty = parseInt(r.querySelector('input[data-name="quantity"], input[name$="[quantity]"]')?.value || '1', 10);
                         const price = parseFloat(ticket?.options[ticket.selectedIndex]?.dataset.price || '0');

@@ -7,10 +7,11 @@
         'label' => $ticket->label,
         'description' => $ticket->description,
         'max_per_order' => $ticket->max_per_order,
-    ])->toArray() : [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10]]);
+        'is_couple' => (bool) $ticket->is_couple,
+    ])->toArray() : [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10, 'is_couple' => false]]);
 
     if (empty($ticketRows)) {
-        $ticketRows = [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10]];
+        $ticketRows = [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10, 'is_couple' => false]];
     }
 
     $feeRows = old('fees', isset($event) ? $event->fees->map(fn($fee) => [
@@ -126,6 +127,12 @@
             <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
             <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
             <div class="col-lg-1 col-md-3"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
+            <div class="col-lg-1 col-md-3">
+                <div class="form-check mt-4 pt-1">
+                    <input class="form-check-input" type="checkbox" value="1" name="tickets[{{ $index }}][is_couple]" id="tickets_{{ $index }}_is_couple" @checked(!empty($ticket['is_couple']))>
+                    <label class="form-check-label" for="tickets_{{ $index }}_is_couple">Couple (Qty=2)</label>
+                </div>
+            </div>
             <div class="col-lg-12 col-md-3 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
         </div>
     @endforeach
@@ -156,6 +163,12 @@
         <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="__NAME__[label]"></div>
         <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
         <div class="col-lg-1 col-md-3"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="__NAME__[max_per_order]" value="10"></div>
+        <div class="col-lg-1 col-md-3">
+            <div class="form-check mt-4 pt-1">
+                <input class="form-check-input" type="checkbox" value="1" name="__NAME__[is_couple]" id="__NAME___is_couple">
+                <label class="form-check-label" for="__NAME___is_couple">Couple (Qty=2)</label>
+            </div>
+        </div>
         <div class="col-lg-12 col-md-3 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
     </div>
 </template>
