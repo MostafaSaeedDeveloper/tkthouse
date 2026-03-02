@@ -40,7 +40,9 @@
 
             <style>
                 .msl-footer {
-                    background: linear-gradient(120deg, #0e1624 0%, #162238 55%, #1c2b44 100%);
+                    background: linear-gradient(120deg, #0c1524 0%, #15233b 58%, #1c2b44 100%);
+                    position: relative;
+                    overflow: hidden;
                     padding: 48px 0 30px;
                     border-top: 1px solid rgba(255,255,255,.08);
                 }
@@ -50,9 +52,21 @@
                     gap: 34px;
                     align-items: start;
                 }
+                .msl-footer::after {
+                    content: "";
+                    position: absolute;
+                    width: 320px;
+                    height: 320px;
+                    right: -120px;
+                    bottom: -150px;
+                    border-radius: 50%;
+                    background: radial-gradient(circle, rgba(255,200,21,.45) 0%, rgba(255,200,21,.18) 38%, rgba(255,200,21,0) 75%);
+                    pointer-events: none;
+                }
+                .msl-footer-layout { position: relative; z-index: 1; }
                 .msl-footer-col-brand { grid-column: 1; }
                 .msl-footer-col-links { grid-column: 2; }
-                .msl-footer-col-social { grid-column: 3; }
+                .msl-footer-col-social { grid-column: 3; text-align: center; }
                 .msl-footer-col-contact { grid-column: 4; }
 
                 .msl-footer-brand > a > img { max-height: 70px; margin-bottom: 16px; }
@@ -87,7 +101,7 @@
                 .msl-footer-links a:hover,
                 .msl-footer-contact:hover { color: #ffd44d; }
 
-                .msl-footer-social { display: flex; gap: 10px; margin: 0 0 14px; list-style: none; padding: 0; }
+                .msl-footer-social { display: flex; gap: 10px; margin: 0 0 14px; list-style: none; padding: 0; justify-content: center; }
                 .msl-footer-social a {
                     height: 42px;
                     width: 42px;
@@ -133,7 +147,7 @@
                     <div class="msl-footer-col-links">
                         <h4 class="msl-footer-title">Links</h4>
                         <ul class="msl-footer-links">
-                            <li><a href="#">Terms and Condition</a></li>
+                            <li><a href="{{ route('front.terms') }}">Terms and Conditions</a></li>
                         </ul>
                     </div>
 

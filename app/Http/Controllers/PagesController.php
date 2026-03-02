@@ -75,6 +75,11 @@ class PagesController extends Controller
         return view('front.contact');
     }
 
+    public function terms()
+    {
+        return view('front.terms');
+    }
+
     public function checkout()
     {
         return view('front.checkout');
