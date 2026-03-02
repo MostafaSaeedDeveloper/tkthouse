@@ -1,6 +1,15 @@
 @extends('front.layout.master')
 
 @section('content')
+    <style>
+        .terms-page { color:#fff; }
+        .terms-page .terms-main-title { color:#FFC815; }
+        .terms-page ol { color:#e8edf7; }
+        .terms-page ol > li { margin-bottom:18px; }
+        .terms-page ol > li > strong { color:#FFC815; font-size:28px; }
+        .terms-page ul { margin-top:8px; }
+    </style>
+
     <div class="sub-banner">
         <div class="container">
             <h6>Terms and Conditions</h6>
@@ -8,14 +17,14 @@
         </div>
     </div>
 
-    <div class="kode_content_wrap">
+    <div class="kode_content_wrap terms-page">
         <section>
             <div class="container">
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
                         <div class="msl-black title-style-2" style="margin-bottom:25px;">
                             <div class="msl-heading light-color">
-                                <h5><span>TKTHOUSE Terms and Conditions</span></h5>
+                                <h5><span class="terms-main-title">TKTHOUSE Terms and Conditions</span></h5>
                             </div>
                         </div>
 

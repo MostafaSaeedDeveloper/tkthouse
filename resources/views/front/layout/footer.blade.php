@@ -82,7 +82,7 @@
 
                 .msl-footer-title {
                     font-size: 20px;
-                    color: #ffffff;
+                    color: #FFC815;
                     font-family: 'Poppins', sans-serif;
                     margin: 0 0 14px;
                     line-height: 1.2;
@@ -141,7 +141,6 @@
                     <div class="msl-footer-brand msl-footer-col-brand">
                         <a href="{{ route('front.home') }}"><img src="{{ \App\Support\SystemSettings::get('site_logo_footer') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_footer')) : asset('images/footer-logo.png') }}" alt="{{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}"></a>
                         <img src="{{ asset('images/payments-methods.png') }}" alt="Payment Methods" class="msl-footer-payment-methods">
-                        <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
 
                     <div class="msl-footer-col-links">
@@ -149,6 +148,7 @@
                         <ul class="msl-footer-links">
                             <li><a href="{{ route('front.terms') }}">Terms and Conditions</a></li>
                         </ul>
+                        <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
 
                     <div class="msl-footer-col-social">
