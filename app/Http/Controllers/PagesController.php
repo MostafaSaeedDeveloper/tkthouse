@@ -9,7 +9,7 @@ class PagesController extends Controller
     public function home()
     {
         $upcomingEvents = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
             ->orderBy('event_date')
             ->orderBy('event_time')
@@ -17,7 +17,7 @@ class PagesController extends Controller
             ->get();
 
         $featuredEvents = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
             ->orderBy('event_date')
             ->orderBy('event_time')
@@ -25,7 +25,7 @@ class PagesController extends Controller
             ->get();
 
         $previousEvents = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '<', now()->toDateString())
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
@@ -43,14 +43,14 @@ class PagesController extends Controller
     public function events()
     {
         $events = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
             ->orderBy('event_date')
             ->orderBy('event_time')
             ->paginate(10);
 
         $previousEvents = Event::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '<', now()->toDateString())
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
