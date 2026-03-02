@@ -619,6 +619,23 @@
                             $mapPath = $parsedMapUrl['path'] ?? '';
                             parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
 
+                            if (in_array($mapHost, ['maps.app.goo.gl', 'goo.gl'], true)) {
+                                try {
+                                    $resolvedResponse = \Illuminate\Support\Facades\Http::timeout(6)->get($rawMapUrl);
+                                    $resolvedUrl = (string) $resolvedResponse->effectiveUri();
+
+                                    if ($resolvedUrl !== '') {
+                                        $rawMapUrl = $resolvedUrl;
+                                        $parsedMapUrl = parse_url($rawMapUrl);
+                                        $mapHost = strtolower($parsedMapUrl['host'] ?? '');
+                                        $mapPath = $parsedMapUrl['path'] ?? '';
+                                        parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
+                                    }
+                                } catch (\Throwable $exception) {
+                                    // Fallback handled by generic query embedding below.
+                                }
+                            }
+
                             if (str_contains($mapPath, '/maps/embed')) {
                                 $mapEmbedUrl = $rawMapUrl;
                             } elseif (isset($mapQuery['q']) && $mapQuery['q'] !== '') {
