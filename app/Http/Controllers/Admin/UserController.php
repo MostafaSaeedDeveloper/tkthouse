@@ -67,18 +67,23 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['nullable', 'string', 'min:8'],
             'role' => ['nullable', 'exists:roles,name'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ]);
 
-        $user->update([
+        $data = [
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
+        ];
+
+        if (filled($validated['password'] ?? null)) {
+            $data['password'] = Hash::make($validated['password']);
+        }
+
+        $user->update($data);
 
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
