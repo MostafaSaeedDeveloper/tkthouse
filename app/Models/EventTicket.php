@@ -18,6 +18,11 @@ class EventTicket extends Model
         'label',
         'description',
         'max_per_order',
+        'is_couple',
+    ];
+
+    protected $casts = [
+        'is_couple' => 'boolean',
     ];
 
     public function event()
