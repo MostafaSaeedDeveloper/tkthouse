@@ -700,8 +700,9 @@
                             $isTicketSoldOut = $ticket->status === 'sold_out';
                             $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
                             $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
+                            $maxQuantity = max(1, (int) ($ticket->max_per_order ?? 10));
                         @endphp
-                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}">
+                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}">
                             <div class="card-stripe"></div>
                             <div class="card-badge">
                                 <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
@@ -849,6 +850,11 @@
         var plus  = card.querySelector('.qty-plus');
         var val   = card.querySelector('.qty-val');
         var addBtn = card.querySelector('.tkt-add-btn');
+        var maxQty = parseInt(card.dataset.maxQty || '10', 10);
+
+        if (Number.isNaN(maxQty) || maxQty < 1) {
+            maxQty = 10;
+        }
 
         if (!minus || !plus || !val || !addBtn || card.dataset.disabled === '1') {
             return;
@@ -862,7 +868,7 @@
         plus.addEventListener('click', function(e) {
             e.stopPropagation();
             var v = parseInt(val.value);
-            if (v < 10) val.value = v + 1;
+            if (v < maxQty) val.value = v + 1;
         });
 
         // Add to cart
@@ -872,6 +878,17 @@
             var name   = card.dataset.ticket;
             var price  = parseFloat(card.dataset.price);
             var qty    = parseInt(val.value);
+            var currentQty = cart[id] ? parseInt(cart[id].qty, 10) : 0;
+            var remainingQty = Math.max(0, maxQty - currentQty);
+
+            if (remainingQty <= 0) {
+                showToast('Maximum allowed for this ticket is ' + maxQty + '.');
+                return;
+            }
+
+            if (qty > remainingQty) {
+                qty = remainingQty;
+            }
 
             if (cart[id]) {
                 cart[id].qty += qty;
@@ -881,7 +898,11 @@
 
             card.classList.add('selected');
             renderSummary();
-            showToast(name + ' × ' + qty + ' added!');
+            if (qty < parseInt(val.value, 10)) {
+                showToast(name + ' limited to ' + maxQty + ' tickets.');
+            } else {
+                showToast(name + ' × ' + qty + ' added!');
+            }
         });
     });
 

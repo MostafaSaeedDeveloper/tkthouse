@@ -50,7 +50,7 @@
                                     <span class="badge bg-primary">{{ str($event->status)->replace('_', ' ')->title() }}</span>
                                 </td>
                                 <td class="text-end">
-                                    <a class="btn btn-sm btn-alt-info" href="{{ route('admin.events.show', $event) }}" title="View">
+                                    <a class="btn btn-sm btn-alt-info" href="{{ route('front.events.show', $event) }}" title="View on website" target="_blank" rel="noopener">
                                         <i class="fa fa-eye"></i>
                                     </a>
                                     <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.events.edit', $event) }}" title="Edit">
