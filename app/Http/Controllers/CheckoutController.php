@@ -375,6 +375,20 @@ class CheckoutController extends Controller
             ->get()
             ->keyBy('id');
 
+        foreach ($grouped as $index => $item) {
+            $ticket = $item['ticket_type'] === 'event'
+                ? $eventTickets->get($item['ticket_ref_id'])
+                : $legacyTickets->get($item['ticket_ref_id']);
+
+            $ticketName = (string) ($ticket?->name ?? 'ticket');
+            $maxQuantity = $this->maxAllowedQuantityForTicket($ticket);
+            if ((int) $item['quantity'] > $maxQuantity) {
+                throw ValidationException::withMessages([
+                    "items.$index.quantity" => "Maximum allowed quantity for {$ticketName} is {$maxQuantity}.",
+                ]);
+            }
+        }
+
         $requiresApproval = $grouped
             ->where('ticket_type', 'event')
             ->contains(fn ($item) => (bool) optional($eventTickets->get($item['ticket_ref_id']))->event?->requires_booking_approval);
@@ -583,6 +597,13 @@ class CheckoutController extends Controller
                 continue;
             }
 
+            $maxQuantity = $this->maxAllowedQuantityForTicket($ticket);
+            if ((int) $row['qty'] > $maxQuantity) {
+                throw ValidationException::withMessages([
+                    'cart' => "Maximum allowed quantity for {$ticket->name} is {$maxQuantity}.",
+                ]);
+            }
+
             for ($i = 0; $i < $row['qty']; $i++) {
                 $units[] = [
                     'ticket_id' => $ticket->id,
@@ -603,5 +624,14 @@ class CheckoutController extends Controller
             'requires_approval' => (bool) $event->requires_booking_approval,
             'units' => $units,
         ];
+    }
+
+    private function maxAllowedQuantityForTicket(EventTicket|Ticket|null $ticket): int
+    {
+        if ($ticket instanceof EventTicket) {
+            return max(1, (int) ($ticket->max_per_order ?? 10));
+        }
+
+        return 10;
     }
 }

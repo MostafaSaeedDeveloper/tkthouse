@@ -17,6 +17,7 @@ class EventTicket extends Model
         'color',
         'label',
         'description',
+        'max_per_order',
     ];
 
     public function event()

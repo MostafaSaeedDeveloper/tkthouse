@@ -124,7 +124,8 @@
             <div class="col-md-1 mb-2"><label class="form-label">Color</label><input type="color" class="form-control form-control-color w-100" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
             <div class="col-md-2 mb-2"><label class="form-label">Label</label><input class="form-control" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
             <div class="col-md-1 mb-2"><label class="form-label">Description</label><input class="form-control" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
-            <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
+            <div class="col-md-1 mb-2"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
+            <div class="col-md-12 mt-1 d-flex justify-content-end"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
         </div>
     @endforeach
 </div>
@@ -153,7 +154,8 @@
         <div class="col-md-1 mb-2"><label class="form-label">Color</label><input type="color" class="form-control form-control-color w-100" name="__NAME__[color]" value="#0d6efd"></div>
         <div class="col-md-2 mb-2"><label class="form-label">Label</label><input class="form-control" name="__NAME__[label]"></div>
         <div class="col-md-1 mb-2"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
-        <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
+        <div class="col-md-1 mb-2"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="__NAME__[max_per_order]" value="10"></div>
+        <div class="col-md-12 mt-1 d-flex justify-content-end"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
     </div>
 </template>
 
