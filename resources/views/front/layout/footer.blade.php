@@ -40,7 +40,7 @@
 
             <style>
                 .msl-footer {
-                    background: linear-gradient(120deg, #0c1524 0%, #15233b 58%, #1c2b44 100%);
+                    background: #000;
                     position: relative;
                     overflow: hidden;
                     padding: 48px 0 30px;
@@ -60,7 +60,7 @@
                     right: -120px;
                     bottom: -150px;
                     border-radius: 50%;
-                    background: radial-gradient(circle, rgba(255,200,21,.45) 0%, rgba(255,200,21,.18) 38%, rgba(255,200,21,0) 75%);
+                    background: none;
                     pointer-events: none;
                 }
                 .msl-footer-layout { position: relative; z-index: 1; }
@@ -132,7 +132,14 @@
                 @media (max-width: 575px) {
                     .msl-footer { padding: 38px 0 22px; }
                     .msl-footer-layout { grid-template-columns: 1fr; gap: 22px; }
-                    .msl-footer-title { font-size: 22px; }
+                    .msl-footer-title { font-size: 22px; text-align: center; }
+                    .msl-footer-col-brand,
+                    .msl-footer-col-links,
+                    .msl-footer-col-social,
+                    .msl-footer-col-contact { text-align: center; }
+                    .msl-footer-payment-methods,
+                    .msl-footer-pci { margin-left: auto; margin-right: auto; }
+                    .msl-footer-links { text-align: center; }
                 }
             </style>
 
