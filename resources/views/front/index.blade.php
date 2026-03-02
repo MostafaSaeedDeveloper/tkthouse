@@ -8,22 +8,10 @@
                 @forelse($featuredEvents as $event)
                     <div class="slide left-align">
                         <img src="{{ $event->cover_image_url ?? asset('extra-images/kf_slide_img14.jpg') }}" alt="{{ $event->name }}">
-                        <div class="banner_content container">
-                            <div class="b_title animated">{{ strtoupper($event->name) }}</div>
-                            <p class="animated">{{ $event->event_date->format('F d, Y') }} - {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }} · {{ $event->location }}</p>
-                            <a href="{{ route('front.events.show', $event) }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                            <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
-                        </div>
                     </div>
                 @empty
                     <div class="slide left-align">
                         <img src="extra-images/kf_slide_img14.jpg" alt="banner img">
-                        <div class="banner_content container">
-                            <div class="b_title animated">TKTHOUSE TECH EVENTS ARE LIVE!</div>
-                            <p class="animated">We organize technology events and provide easy ticket booking for every attendee.</p>
-                            <a href="{{ route('front.events') }}" class="btn_normal border_btn animated">BOOK NOW</a>
-                            <a href="{{ route('front.events') }}" class="btn_normal border_btn animated ">EXPLORE EVENTS</a>
-                        </div>
                     </div>
                 @endforelse
             </div>
