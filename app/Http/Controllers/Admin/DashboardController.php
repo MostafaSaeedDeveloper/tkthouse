@@ -12,8 +12,6 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    private const REVENUE_ORDER_STATUSES = ['paid', 'completed'];
-
     public function index(Request $request)
     {
         $selectedRange = (string) $request->input('range', 'last30');
@@ -33,9 +31,7 @@ class DashboardController extends Controller
         }
 
         $totalOrders = (clone $ordersQuery)->count();
-        $totalRevenue = (float) (clone $ordersQuery)
-            ->whereIn('status', self::REVENUE_ORDER_STATUSES)
-            ->sum('total_amount');
+        $totalRevenue = (float) (clone $ordersQuery)->sum('total_amount');
         $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'pending_approval', 'pending_payment'])->count();
         $totalCustomers = (clone $customersQuery)->count();
         $totalEvents = Event::where('status', 'active')->count();
@@ -48,8 +44,6 @@ class DashboardController extends Controller
 
         $topEventsQuery = OrderItem::query()->select(['ticket_name', 'line_total']);
         $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
-            $q->whereIn('status', self::REVENUE_ORDER_STATUSES);
-
             if ($startAt && $endAt) {
                 $q->whereBetween('created_at', [$startAt, $endAt]);
             }
@@ -153,7 +147,6 @@ class DashboardController extends Controller
             ->get(['created_at']);
 
         $revenueWindow = Order::query()
-            ->whereIn('status', self::REVENUE_ORDER_STATUSES)
             ->whereBetween('created_at', [$startAt, $endAt])
             ->get(['created_at', 'total_amount']);
 
@@ -204,4 +197,5 @@ class DashboardController extends Controller
 
         return [$labels, $ordersData, $revenueData];
     }
+
 }

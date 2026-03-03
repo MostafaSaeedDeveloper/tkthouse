@@ -14,7 +14,7 @@ class AdminDashboardRevenueTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_revenue_uses_only_paid_and_completed_orders(): void
+    public function test_dashboard_revenue_uses_all_orders(): void
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
@@ -26,18 +26,19 @@ class AdminDashboardRevenueTest extends TestCase
             'phone' => '01012345678',
         ]);
 
-        $paidOrder = Order::create([
+        $paidOnlyOrder = Order::create([
             'customer_id' => $customer->id,
             'user_id' => $admin->id,
             'order_number' => '500001',
             'status' => 'paid',
             'requires_approval' => false,
             'payment_method' => 'visa',
+            'payment_status' => 'paid',
             'total_amount' => 100,
         ]);
 
         OrderItem::create([
-            'order_id' => $paidOrder->id,
+            'order_id' => $paidOnlyOrder->id,
             'ticket_name' => 'Paid Event - VIP',
             'ticket_price' => 100,
             'quantity' => 1,
@@ -54,6 +55,7 @@ class AdminDashboardRevenueTest extends TestCase
             'status' => 'completed',
             'requires_approval' => false,
             'payment_method' => 'visa',
+            'payment_status' => 'paid',
             'total_amount' => 200,
         ]);
 
@@ -75,7 +77,30 @@ class AdminDashboardRevenueTest extends TestCase
             'status' => 'pending_payment',
             'requires_approval' => false,
             'payment_method' => 'visa',
+            'payment_status' => 'unpaid',
             'total_amount' => 999,
+        ]);
+
+        $completedUnpaidOrder = Order::create([
+            'customer_id' => $customer->id,
+            'user_id' => $admin->id,
+            'order_number' => '500004',
+            'status' => 'completed',
+            'requires_approval' => false,
+            'payment_method' => 'cash',
+            'payment_status' => 'unpaid',
+            'total_amount' => 500,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $completedUnpaidOrder->id,
+            'ticket_name' => 'Completed Unpaid Event - VIP',
+            'ticket_price' => 500,
+            'quantity' => 1,
+            'line_total' => 500,
+            'holder_name' => 'Completed Unpaid Holder',
+            'holder_email' => 'completed-unpaid-holder@example.com',
+            'holder_phone' => '01044444444',
         ]);
 
         OrderItem::create([
@@ -93,7 +118,7 @@ class AdminDashboardRevenueTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertViewHas('totalRevenue', 300.0)
-            ->assertViewHas('revenueData', fn (array $revenueData) => array_sum($revenueData) === 300.0);
+            ->assertViewHas('totalRevenue', 1799.0)
+            ->assertViewHas('revenueData', fn (array $revenueData) => array_sum($revenueData) === 1799.0);
     }
 }
