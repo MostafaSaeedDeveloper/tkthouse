@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class TicketController extends Controller
 {
@@ -93,8 +94,9 @@ class TicketController extends Controller
 
         $ticket->loadMissing('order');
         $qrDataUri = $this->qrDataUri($ticket);
+        $event = $this->resolveEvent($ticket->name ?? '');
 
-        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri'))->output();
+        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri', 'event'))->output();
         $showUrl = route('admin.tickets.show', $ticket);
 
         Mail::to($data['email'])->send(new AdminTicketIssuedMail(
@@ -132,8 +134,9 @@ class TicketController extends Controller
     {
         $ticket->loadMissing('order');
         $qrDataUri = $this->qrDataUri($ticket);
+        $event = $this->resolveEvent($ticket->name ?? '');
 
-        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri'));
+        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri', 'event'));
 
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
@@ -230,5 +233,27 @@ class TicketController extends Controller
         $allowedByPermission = method_exists($user, 'can') && $user->can('tickets.manage');
 
         abort_unless($allowedByRole || $allowedByPermission, 403);
+    }
+
+    private function resolveEvent(string $ticketName): ?Event
+    {
+        $candidates = collect([
+            trim((string) Str::beforeLast($ticketName, ' - ')),
+            trim((string) Str::before($ticketName, ' - ')),
+            trim($ticketName),
+        ])->filter()->unique()->values();
+
+        foreach ($candidates as $eventName) {
+            $event = Event::query()
+                ->with('images')
+                ->where('name', $eventName)
+                ->first();
+
+            if ($event) {
+                return $event;
+            }
+        }
+
+        return null;
     }
 }
