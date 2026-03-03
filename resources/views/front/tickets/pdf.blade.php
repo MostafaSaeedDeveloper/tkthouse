@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <style>
-@page { margin: 0; size: 760px auto; }
-html, body { margin: 0; padding: 0; background: transparent; }
+@page { margin: 0; size: A4 portrait; }
+html, body { margin: 0; padding: 0; width: 100%; background: #000; }
 @font-face {
     font-family: 'Glancyr';
     src: url('{{ public_path('fonts/Glancyr-Regular.otf') }}') format('opentype');
@@ -27,15 +27,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
 body {
     font-family: 'Glancyr', DejaVu Sans, sans-serif;
-    background: transparent;
+    background: #000;
     color: #fff;
-    width: 760px;
+    width: 100%;
     margin: 0;
     padding: 0;
 }
 
 .ticket-shell {
-    width: 760px;
     border-radius: 0;
     overflow: hidden;
     background: #0a0a0a;
@@ -46,13 +45,13 @@ body {
 /* ── HERO ── */
 .hero {
     position: relative;
-    width: 760px;
+    width: 100%;
     height: 280px;
     overflow: hidden;
     background: #0f0f0f;
 }
 .hero-img {
-    width: 760px;
+    width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
@@ -86,7 +85,7 @@ body {
 .info-grid,
 .info-grid-2 {
     display: table;
-    width: 760px;
+    width: 100%;
     border-spacing: 6px;
     margin: 0;
 }
@@ -151,7 +150,7 @@ body {
     border-top: 1px solid #212121;
     padding: 10px 14px 12px;
     display: table;
-    width: 760px;
+    width: 100%;
 }
 .footer-left,
 .footer-right {
