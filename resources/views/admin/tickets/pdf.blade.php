@@ -6,237 +6,204 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: DejaVu Sans, sans-serif;
+    font-family: 'Glancyr', DejaVu Sans, sans-serif;
     background: #000;
     color: #fff;
-    width: 600px;
+    width: 760px;
     margin: 0 auto;
+    padding: 10px 0;
+}
+
+.ticket-shell {
+    border-radius: 24px;
+    overflow: hidden;
+    background: #0a0a0a;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset;
 }
 
 /* ── HERO ── */
 .hero {
     position: relative;
     width: 100%;
-    height: 280px;
+    height: 390px;
     overflow: hidden;
-    background: #111;
+    background: #0f0f0f;
 }
 .hero-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    opacity: 0.75;
+    opacity: 0.58;
 }
 .hero-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%);
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.92) 86%);
 }
-/* Red corner dots like in image */
 .dot {
     position: absolute;
-    width: 12px; height: 12px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: #cc2200;
+    background: #8f1200;
 }
-.dot-tl { top: 14px; left: 14px; }
-.dot-tc { top: 14px; left: 50%; margin-left: -6px; }
-.dot-tr { top: 14px; right: 14px; }
-.dot-ml { top: 50%; left: 14px; margin-top: -6px; }
-.dot-mr { top: 50%; right: 14px; margin-top: -6px; }
+.dot-tl { top: 14px; left: 64px; }
+.dot-tc { top: 6px; left: 50%; margin-left: -7px; }
+.dot-tr { top: 8px; right: 62px; }
+.dot-tm { top: 72px; left: 50%; margin-left: -7px; }
+.dot-ml { top: 186px; left: 58px; }
+.dot-mr { top: 186px; right: 58px; }
 
 .hero-sub {
     position: absolute;
-    top: 18px; left: 0; right: 0;
+    top: 34px;
+    left: 0;
+    right: 0;
     text-align: center;
-    font-size: 11px;
-    letter-spacing: 4px;
+    font-size: 12px;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.33);
 }
 .hero-event-name {
     position: absolute;
-    bottom: 0; left: 0; right: 0;
+    left: 0;
+    right: 0;
+    top: 164px;
     text-align: center;
-    font-size: 72px;
+    font-size: 74px;
     font-weight: 900;
-    letter-spacing: 6px;
-    color: rgba(255,255,255,0.18);
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.35);
     text-transform: uppercase;
     line-height: 1;
-    padding-bottom: 8px;
-    /* strikethrough-like red line */
 }
 .hero-red-line {
     position: absolute;
-    left: 0; right: 0;
+    left: 70px;
+    right: 70px;
     height: 3px;
-    background: #cc2200;
-    top: 60%;
+    background: #8f1200;
+    top: 226px;
 }
 
-/* ── EVENT TITLE BAR ── */
 .title-bar {
-    background: #0a0a0a;
-    border-top: 1px solid #222;
-    padding: 16px 20px;
+    background: linear-gradient(to bottom, rgba(22,22,22,0.92), #121212);
+    padding: 22px 34px;
     display: table;
     width: 100%;
 }
-.title-bar-left {
+.title-bar-left, .title-bar-right {
     display: table-cell;
     vertical-align: middle;
 }
 .title-bar-right {
-    display: table-cell;
     text-align: right;
-    vertical-align: middle;
-    white-space: nowrap;
-    color: rgba(255,255,255,0.6);
-    font-size: 12px;
+    color: rgba(255,255,255,0.83);
+    font-size: 13px;
 }
 .event-title {
-    font-size: 20px;
+    font-size: 45px;
     font-weight: 900;
-    letter-spacing: 1px;
+    letter-spacing: .4px;
     text-transform: uppercase;
     color: #fff;
 }
 
-/* ── BODY ── */
 .body {
     background: #0f0f0f;
-    padding: 16px 20px 0;
+    padding: 14px;
 }
-
-/* ── INFO GRID ── */
-.info-grid {
-    display: table;
-    width: 100%;
-    margin-bottom: 12px;
-}
-.info-col {
-    display: table-cell;
-    width: 50%;
-    vertical-align: top;
-    padding: 14px 16px;
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
-}
-.info-col + .info-col {
-    border-left: none;
-}
-.info-section-title {
-    font-size: 11px;
-    letter-spacing: 1px;
-    color: rgba(255,255,255,0.45);
-    margin-bottom: 10px;
-    text-transform: uppercase;
-}
-.info-row {
-    font-size: 12px;
-    color: #ddd;
-    margin-bottom: 5px;
-    line-height: 1.4;
-}
-.info-row strong {
-    color: rgba(255,255,255,0.5);
-    font-weight: normal;
-}
-
-/* Second row of boxes */
+.info-grid,
 .info-grid-2 {
     display: table;
     width: 100%;
-    margin-bottom: 12px;
+    border-spacing: 10px;
+    margin: 0;
 }
+.info-col,
 .info-col-2 {
     display: table-cell;
     width: 50%;
     vertical-align: top;
-    padding: 14px 16px;
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
+    background: #171717;
+    border-radius: 16px;
+    padding: 16px;
 }
-.info-col-2 + .info-col-2 {
-    border-left: none;
+.info-section-title {
+    font-size: 13px;
+    color: #fff;
+    margin-bottom: 8px;
+}
+.info-row {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 6px;
+    line-height: 1.34;
+}
+.info-link {
+    color: #fff;
+    text-decoration: underline;
 }
 
-/* QR block */
 .qr-block {
     text-align: center;
-    padding: 10px;
 }
-.qr-label-top {
-    font-size: 11px;
-    letter-spacing: 2px;
+.qr-label-top,
+.qr-label-bottom {
+    font-size: 12px;
+    color: #fff;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
-    margin-bottom: 6px;
+    margin: 0 0 10px;
 }
 .qr-img {
-    width: 110px;
-    height: 110px;
+    width: 126px;
+    height: 126px;
     display: block;
-    margin: 0 auto;
+    margin: 0 auto 10px;
     background: #fff;
     padding: 4px;
 }
-.qr-label-bottom {
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.5);
-    margin-top: 6px;
-}
-
-/* Extra info */
 .extra-info {
-    padding: 10px 16px 14px;
+    margin-top: 8px;
     font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    line-height: 1.7;
-    border-top: 1px solid #2a2a2a;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.33;
+    text-align: left;
 }
 .extra-info strong {
-    color: rgba(255,255,255,0.5);
+    color: #fff;
     font-weight: normal;
 }
 
-/* ── FOOTER ── */
 .footer {
-    background: #0a0a0a;
-    border-top: 1px solid #1e1e1e;
-    padding: 14px 20px;
+    background: #101010;
+    border-top: 1px solid #212121;
+    padding: 14px 22px 16px;
     display: table;
     width: 100%;
 }
-.footer-left {
+.footer-left,
+.footer-right {
     display: table-cell;
     vertical-align: middle;
+}
+.footer-right {
+    text-align: right;
+    font-size: 10px;
+    color: rgba(255,255,255,0.62);
 }
 .footer-brand {
     font-size: 13px;
     font-weight: 700;
-    color: #f5b800;
-    letter-spacing: .5px;
+    color: #f0b20f;
 }
-.footer-tagline {
-    font-size: 10px;
-    color: rgba(255,255,255,0.35);
-    margin-top: 2px;
-}
-.footer-right {
-    display: table-cell;
-    text-align: right;
-    vertical-align: middle;
-    font-size: 10px;
-    color: rgba(255,255,255,0.3);
-}
+
 </style>
 </head>
 <body>
+<div class="ticket-shell">
 
 <!-- HERO -->
 <div class="hero">
@@ -251,13 +218,14 @@ body {
     <div class="dot dot-tl"></div>
     <div class="dot dot-tc"></div>
     <div class="dot dot-tr"></div>
+    <div class="dot dot-tm"></div>
     <div class="dot dot-ml"></div>
     <div class="dot dot-mr"></div>
 
     <div class="hero-sub">{{ strtoupper($ticket->order?->event?->organizer ?? 'TKTHouse') }}</div>
 
     <div class="hero-event-name">
-        {{ strtoupper(substr($ticket->order?->event?->name ?? 'Event', 0, 10)) }}
+        {{ strtoupper($ticket->order?->event?->name ?? 'Event') }}
         <div class="hero-red-line"></div>
     </div>
 </div>
@@ -269,8 +237,7 @@ body {
     </div>
     <div class="title-bar-right">
         @if($ticket->order?->event?->event_date)
-            {{ strtoupper($ticket->order->event->event_date->format('d F Y')) }}
-            at {{ \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g:i A') }}
+            {{ strtoupper($ticket->order->event->event_date->format('d M Y')) }} at {{ \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g:i A') }}
         @endif
     </div>
 </div>
@@ -299,61 +266,59 @@ body {
 
     <!-- Row 2: Event Info + Venue + QR -->
     <div class="info-grid-2">
-        <div class="info-col-2" style="width:33%;">
+        <div class="info-col-2">
             <div class="info-section-title">Event Information</div>
             <div class="info-row">Name: {{ $ticket->order?->event?->name ?? '-' }}</div>
-            <div class="info-row">Date &amp; Time: {{ $ticket->order?->event?->event_date?->format('d M Y') ?? '-' }}</div>
-            @if($ticket->order?->event?->event_time)
-                <div class="info-row">{{ \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g:i A') }}</div>
-            @endif
+            <div class="info-row">Date and Time: {{ $ticket->order?->event?->event_time ? \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g:i A') : '-' }} till 4 am</div>
 
             <div class="info-section-title" style="margin-top:12px;">Venue Information</div>
             <div class="info-row">Name: {{ $ticket->order?->event?->venue ?? $ticket->order?->event?->location ?? '-' }}</div>
             <div class="info-row">Address: {{ $ticket->order?->event?->location ?? '-' }}</div>
             @if($ticket->order?->event?->map_url)
-                <div class="info-row">Venue Location: <u>Get Directions</u></div>
+                <div class="info-row">Venue Location: <span class="info-link">Get Directions</span></div>
             @endif
         </div>
 
-        <div class="info-col-2" style="width:33%; border-left:none; text-align:center;">
+        <div class="info-col-2">
             <div class="qr-block">
                 <div class="qr-label-top">{{ strtoupper($ticket->name ?? $ticket->ticket_type ?? 'General') }}</div>
                 <img class="qr-img" src="{{ $qrDataUri }}" alt="QR Code">
                 <div class="qr-label-bottom">{{ strtoupper(str($ticket->status)->replace('_',' ')) }}</div>
             </div>
+
+            <!-- Extra attendee info if available -->
+            @php
+                $extras = collect([
+                    'Social Media Account URL' => $ticket->holder_social_link,
+                    'Email'                  => $ticket->holder_email,
+                    'Full Name'              => $ticket->holder_name,
+                    'Birthdate'              => $ticket->holder_birthdate,
+                    'Phone Number'           => $ticket->holder_phone,
+                    'Gender'                 => $ticket->holder_gender,
+                ])->filter();
+            @endphp
+            @if($extras->count())
+                <div class="extra-info">
+                    <strong>Extra Information</strong><br>
+                    @foreach($extras as $label => $val)
+                        {{ $label }}: {{ $val }}<br>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </div>
-
-    <!-- Extra attendee info if available -->
-    @php
-        $extras = collect([
-            'Full Name'    => $ticket->holder_name,
-            'Email'        => $ticket->holder_email,
-            'Phone Number' => $ticket->holder_phone,
-            'Birthdate'    => $ticket->holder_birthdate,
-            'Gender'       => $ticket->holder_gender,
-        ])->filter();
-    @endphp
-    @if($extras->count())
-        <div class="extra-info">
-            <strong>Extra Information</strong><br>
-            @foreach($extras as $label => $val)
-                {{ $label }}: {{ $val }}<br>
-            @endforeach
-        </div>
-    @endif
 
 </div>
 
 <!-- FOOTER -->
 <div class="footer">
     <div class="footer-left">
-        <div class="footer-brand">tkthouse</div>
-        <div class="footer-tagline">your access. your moment.</div>
+        <div class="footer-brand">tkthouse · Your Pass to the Pulse</div>
     </div>
     <div class="footer-right">
         Generated on: {{ now()->format('Y-m-d H:i:s') }}
     </div>
+</div>
 </div>
 
 </body>
