@@ -31,7 +31,7 @@ body {
     color: #fff;
     width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 0 0 56px 0;
 }
 
 .ticket-shell {
@@ -73,32 +73,10 @@ body {
 .dot-tc { top: 6px; left: 50%; margin-left: -7px; }
 .dot-tr { top: 8px; right: 62px; }
 .dot-tm { top: 72px; left: 50%; margin-left: -7px; }
-.dot-ml { top: 186px; left: 58px; }
-.dot-mr { top: 186px; right: 58px; }
+.dot-ml { top: 130px; left: 58px; }
+.dot-mr { top: 130px; right: 58px; }
 
 
-.title-bar {
-    background: linear-gradient(to bottom, rgba(22,22,22,0.92), #121212);
-    padding: 14px 20px;
-    display: table;
-    width: 100%;
-}
-.title-bar-left, .title-bar-right {
-    display: table-cell;
-    vertical-align: middle;
-}
-.title-bar-right {
-    text-align: right;
-    color: rgba(255,255,255,0.83);
-    font-size: 13px;
-}
-.event-title {
-    font-size: 20px;
-    font-weight: 900;
-    letter-spacing: .4px;
-    text-transform: uppercase;
-    color: #fff;
-}
 
 .body {
     background: #0f0f0f;
@@ -168,6 +146,10 @@ body {
 }
 
 .footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: #101010;
     border-top: 1px solid #212121;
     padding: 10px 14px 12px;
@@ -227,18 +209,6 @@ body {
     <div class="dot dot-tm"></div>
     <div class="dot dot-ml"></div>
     <div class="dot dot-mr"></div>
-</div>
-
-<!-- TITLE BAR -->
-<div class="title-bar">
-    <div class="title-bar-left">
-        <div class="event-title">{{ strtoupper($event?->name ?? 'Event') }}</div>
-    </div>
-    <div class="title-bar-right">
-        @if($event?->event_date)
-            {{ strtoupper($event->event_date->format('d M Y')) }} at {{ $event?->event_time ? \Carbon\Carbon::parse($event->event_time)->format('g:i A') : '-' }}
-        @endif
-    </div>
 </div>
 
 <!-- BODY -->
