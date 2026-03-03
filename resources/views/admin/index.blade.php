@@ -50,7 +50,7 @@ a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--g
 
 
 /* ── Stat cards ── */
-.db-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 @media (max-width: 1100px) { .db-stats { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 500px)  { .db-stats { grid-template-columns: 1fr; } }
 
