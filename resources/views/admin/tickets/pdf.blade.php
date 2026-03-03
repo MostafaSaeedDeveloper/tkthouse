@@ -75,17 +75,6 @@ body {
 .dot-ml { top: 186px; left: 58px; }
 .dot-mr { top: 186px; right: 58px; }
 
-.hero-sub {
-    position: absolute;
-    top: 34px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.33);
-}
 .hero-event-name {
     position: absolute;
     left: 0;
@@ -229,7 +218,18 @@ body {
 <!-- HERO -->
 <div class="hero">
     @php
-        $heroImage = $event?->cover_image_url ?: $event?->images?->first()?->path_url;
+        $heroImageSource = $event?->cover_image ?: $event?->images?->first()?->path;
+        $heroImage = null;
+
+        if ($heroImageSource) {
+            if (\Illuminate\Support\Str::startsWith($heroImageSource, ['http://', 'https://', 'data:'])) {
+                $heroImage = $heroImageSource;
+            } elseif (\Illuminate\Support\Str::startsWith($heroImageSource, 'uploads/')) {
+                $heroImage = public_path($heroImageSource);
+            } else {
+                $heroImage = public_path('storage/'.ltrim($heroImageSource, '/'));
+            }
+        }
     @endphp
     @if($heroImage)
         <img class="hero-img" src="{{ $heroImage }}" alt="">
@@ -246,7 +246,6 @@ body {
     <div class="dot dot-ml"></div>
     <div class="dot dot-mr"></div>
 
-    <div class="hero-sub">{{ strtoupper($event?->organizer ?? 'TKTHOUSE') }}</div>
 
     <div class="hero-event-name">
         {{ strtoupper($event?->name ?? 'Event') }}
