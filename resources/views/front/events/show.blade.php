@@ -805,7 +805,7 @@
 
                         <div class="summary-total-row">
                             <span class="tot-label">Total</span>
-                            <span class="tot-val" id="summaryTotal">$0.00</span>
+                            <span class="tot-val" id="summaryTotal">0.00 EGP</span>
                         </div>
 
                         <a href="{{ route('front.checkout') }}" data-checkout-base="{{ route('front.checkout') }}" data-event-id="{{ $event->id }}" data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}" class="tkt-checkout-btn" id="checkoutBtn" style="pointer-events:none; background:rgba(244,196,48,0.2); color:rgba(0,0,0,0.4);">
