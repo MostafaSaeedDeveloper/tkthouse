@@ -141,7 +141,7 @@
                                 </div>
                             @endif
 
-                            <form method="post" action="{{ route('front.contact.submit') }}" class="light_bg comment-form">
+                            <form method="post" action="{{ url('/contact') }}" class="light_bg comment-form">
                                 @csrf
                                 <div class="contact-grid">
                                     <div class="contact-field">
