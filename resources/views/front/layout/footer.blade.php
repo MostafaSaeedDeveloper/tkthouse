@@ -121,10 +121,10 @@
                 .msl-footer-social a:hover { background: #ffd44d; color: #132238; border-color: #ffd44d; }
 
                 .msl-copyright {
-                    background: #0b1320;
-                    border-top: 1px solid rgba(255,255,255,.08);
+                    background: #FFC815;
+                    border-top: 1px solid rgba(0,0,0,.12);
                 }
-                .msl-copyright p { color: #cfd8ea !important; margin: 0; font-size: 15px; }
+                .msl-copyright p { color: #000 !important; margin: 0; font-size: 15px; }
 
                 @media (max-width: 1199px) {
                     .msl-footer-layout { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
