@@ -37,8 +37,13 @@
 .od-btn-approve { background:#f5b800;color:#000; }
 .od-btn-back { background:#15151b;color:#5e5e72;border:1px solid rgba(255,255,255,0.07); }
 .od-ticket { background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:12px; }
-.od-ticket-name{color:#fff;font-weight:700}.od-ticket-holder-info{color:#dddde8;font-size:12px}.od-ticket-holder-info span{display:block;color:#5e5e72}
-.od-ticket-price{color:#f5b800;font-weight:700;text-align:right}.od-ticket-qty{font-size:11px;color:#5e5e72;text-align:right}
+.od-ticket-name{color:#fff;font-weight:700;font-size:17px;line-height:1.25;}
+.od-ticket-holder-info{color:#dddde8;font-size:15px;line-height:1.4;}
+.od-ticket-holder-info span{display:block;color:#9ba0bd;font-size:14px;}
+.od-ticket-social{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#f5b800;font-size:14px;text-decoration:none;word-break:break-all;}
+.od-ticket-social:hover{color:#ffd24d;text-decoration:underline;}
+.od-ticket-price{color:#f5b800;font-weight:700;text-align:right;font-size:18px;}
+.od-ticket-qty{font-size:13px;color:#9ba0bd;text-align:right}
 .od-total-bar { display:flex;justify-content:space-between;background:rgba(245,184,0,0.06);border:1px solid rgba(245,184,0,0.2);border-radius:10px;padding:14px 20px;margin-top:16px;color:#fff; }
 .od-note-item,.od-hist-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
 .od-note-item:last-child,.od-hist-item:last-child{border-bottom:0}
@@ -129,7 +134,22 @@
                 <div class="od-ticket-name">{{ $item->ticket_name }}</div>
                 <div class="od-ticket-holder">
                   <div class="od-ticket-holder-avatar">{{ collect(explode(' ', (string)$item->holder_name))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') }}</div>
-                  <div class="od-ticket-holder-info">{{ $item->holder_name }}<span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span></div>
+                  @php
+                    $socialProfileRaw = trim((string) $item->holder_social_profile);
+                    $socialProfileLink = $socialProfileRaw !== ''
+                      ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
+                      : null;
+                  @endphp
+                  <div class="od-ticket-holder-info">
+                    {{ $item->holder_name }}
+                    <span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span>
+                    @if($socialProfileLink)
+                      <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="od-ticket-social">
+                        <i class="fa fa-globe"></i>
+                        {{ $socialProfileRaw }}
+                      </a>
+                    @endif
+                  </div>
                 </div>
               </div>
               <div><div class="od-ticket-price">{{ number_format((float)$item->line_total,2) }} EGP</div><div class="od-ticket-qty">Qty × {{ $item->quantity }}</div></div>
