@@ -226,6 +226,8 @@ body {
                 $heroImage = $heroImageSource;
             } elseif (\Illuminate\Support\Str::startsWith($heroImageSource, 'uploads/')) {
                 $heroImage = public_path($heroImageSource);
+            } elseif (\Illuminate\Support\Str::startsWith($heroImageSource, 'storage/')) {
+                $heroImage = public_path($heroImageSource);
             } else {
                 $heroImage = public_path('storage/'.ltrim($heroImageSource, '/'));
             }

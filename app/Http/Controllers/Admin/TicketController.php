@@ -237,15 +237,23 @@ class TicketController extends Controller
 
     private function resolveEvent(string $ticketName): ?Event
     {
-        $eventName = trim((string) Str::before($ticketName, ' - '));
+        $candidates = collect([
+            trim((string) Str::beforeLast($ticketName, ' - ')),
+            trim((string) Str::before($ticketName, ' - ')),
+            trim($ticketName),
+        ])->filter()->unique()->values();
 
-        if ($eventName === '') {
-            return null;
+        foreach ($candidates as $eventName) {
+            $event = Event::query()
+                ->with('images')
+                ->where('name', $eventName)
+                ->first();
+
+            if ($event) {
+                return $event;
+            }
         }
 
-        return Event::query()
-            ->with('images')
-            ->where('name', $eventName)
-            ->first();
+        return null;
     }
 }
