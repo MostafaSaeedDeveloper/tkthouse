@@ -31,7 +31,7 @@ body {
     color: #fff;
     width: 100%;
     margin: 0;
-    padding: 0 0 56px 0;
+    padding: 0;
 }
 
 .ticket-shell {
@@ -146,10 +146,6 @@ body {
 }
 
 .footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
     background: #101010;
     border-top: 1px solid #212121;
     padding: 10px 14px 12px;
