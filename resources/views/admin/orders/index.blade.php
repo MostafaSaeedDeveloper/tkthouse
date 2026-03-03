@@ -55,7 +55,7 @@
                 <table class="table table-hover table-vcenter mb-0">
                     <thead>
                         <tr>
-                            <th>Order #</th><th>Customer</th><th>Items</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment</th><th class="text-end">Action</th>
+                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment</th><th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -70,12 +70,20 @@
                             <td>{{ $order->items_count }}</td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
-                                    @foreach($order->items->pluck('ticket_name')->unique() as $ticketType)
+                                    @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => str_contains((string) $ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : null)->filter()->unique() as $eventName)
+                                        <span class="badge bg-secondary">{{ $eventName }}</span>
+                                    @endforeach
+                                </div>
+                            </td>
+                            <td style="max-width: 260px;">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => trim((string) 
+                                        \Illuminate\Support\Str::afterLast((string) $ticketName, ' - ')))->unique() as $ticketType)
                                         @php
                                             $normalizedType = \Illuminate\Support\Str::lower(trim((string) \Illuminate\Support\Str::afterLast($ticketType, ' - ')));
                                             $ticketColor = $ticketColorMap[$normalizedType] ?? '#6c757d';
                                         @endphp
-                                        <span class="badge" style="background-color: {{ $ticketColor }}; color: #fff;">{{ $ticketType }}</span>
+                                        <span class="badge text-truncate" style="background-color: {{ $ticketColor }}; color: #fff; max-width: 220px;">{{ $ticketType }}</span>
                                     @endforeach
                                 </div>
                             </td>
@@ -104,7 +112,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="8" class="text-center py-4 text-muted">No orders found.</td></tr>
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No orders found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
