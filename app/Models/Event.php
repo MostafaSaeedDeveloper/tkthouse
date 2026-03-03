@@ -22,6 +22,8 @@ class Event extends Model
         'description',
         'house_rules',
         'cover_image',
+        'event_banner',
+        'venue_map',
         'status',
         'requires_booking_approval',
     ];
@@ -90,18 +92,33 @@ class Event extends Model
 
     public function getCoverImageUrlAttribute(): ?string
     {
-        if (! $this->cover_image) {
+        return $this->resolveImageUrl($this->cover_image);
+    }
+
+    public function getEventBannerUrlAttribute(): ?string
+    {
+        return $this->resolveImageUrl($this->event_banner);
+    }
+
+    public function getVenueMapUrlAttribute(): ?string
+    {
+        return $this->resolveImageUrl($this->venue_map);
+    }
+
+    private function resolveImageUrl(?string $path): ?string
+    {
+        if (! $path) {
             return null;
         }
 
-        if (Str::startsWith($this->cover_image, ['http://', 'https://'])) {
-            return $this->cover_image;
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
         }
 
-        if (Str::startsWith($this->cover_image, 'uploads/')) {
-            return asset($this->cover_image);
+        if (Str::startsWith($path, 'uploads/')) {
+            return asset($path);
         }
 
-        return asset('storage/'.$this->cover_image);
+        return asset('storage/'.$path);
     }
 }

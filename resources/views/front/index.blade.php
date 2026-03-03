@@ -6,9 +6,12 @@
 
             <div class="banner_slider">
                 @forelse($featuredEvents as $event)
+                    @php
+                        $homeBannerImage = $event->event_banner_url ?: ($event->cover_image_url ?: asset('extra-images/kf_slide_img14.jpg'));
+                    @endphp
                     <div class="slide left-align">
                         <a class="banner-slide-link" href="{{ route('front.events.show', $event) }}" aria-label="{{ $event->name }}">
-                            <img src="{{ $event->cover_image_url ?? asset('extra-images/kf_slide_img14.jpg') }}" alt="{{ $event->name }}">
+                            <img src="{{ $homeBannerImage }}" alt="{{ $event->name }}">
                         </a>
                     </div>
                 @empty
