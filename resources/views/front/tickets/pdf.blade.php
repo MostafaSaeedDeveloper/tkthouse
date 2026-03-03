@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>
-@page { margin: 0; }
+@page { margin: 0; size: A4 portrait; }
 html, body { margin: 0; padding: 0; width: 100%; background: #000; }
 @font-face {
     font-family: 'Glancyr';
@@ -39,13 +39,14 @@ body {
     overflow: hidden;
     background: #0a0a0a;
     box-shadow: none;
+    page-break-inside: avoid;
 }
 
 /* ── HERO ── */
 .hero {
     position: relative;
     width: 100%;
-    height: 390px;
+    height: 280px;
     overflow: hidden;
     background: #0f0f0f;
 }
@@ -75,31 +76,10 @@ body {
 .dot-ml { top: 186px; left: 58px; }
 .dot-mr { top: 186px; right: 58px; }
 
-.hero-event-name {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 164px;
-    text-align: center;
-    font-size: 74px;
-    font-weight: 900;
-    letter-spacing: 4px;
-    color: rgba(255,255,255,0.35);
-    text-transform: uppercase;
-    line-height: 1;
-}
-.hero-red-line {
-    position: absolute;
-    left: 70px;
-    right: 70px;
-    height: 3px;
-    background: #8f1200;
-    top: 226px;
-}
 
 .title-bar {
     background: linear-gradient(to bottom, rgba(22,22,22,0.92), #121212);
-    padding: 22px 34px;
+    padding: 14px 20px;
     display: table;
     width: 100%;
 }
@@ -113,7 +93,7 @@ body {
     font-size: 13px;
 }
 .event-title {
-    font-size: 45px;
+    font-size: 20px;
     font-weight: 900;
     letter-spacing: .4px;
     text-transform: uppercase;
@@ -122,13 +102,13 @@ body {
 
 .body {
     background: #0f0f0f;
-    padding: 14px;
+    padding: 10px;
 }
 .info-grid,
 .info-grid-2 {
     display: table;
     width: 100%;
-    border-spacing: 8px;
+    border-spacing: 6px;
     margin: 0;
 }
 .info-col,
@@ -138,7 +118,7 @@ body {
     vertical-align: top;
     background: #171717;
     border-radius: 16px;
-    padding: 14px 16px;
+    padding: 10px 12px;
 }
 .info-section-title {
     font-size: 12px;
@@ -168,8 +148,8 @@ body {
     margin: 0 0 10px;
 }
 .qr-img {
-    width: 126px;
-    height: 126px;
+    width: 108px;
+    height: 108px;
     display: block;
     margin: 0 auto 10px;
     background: #fff;
@@ -190,7 +170,7 @@ body {
 .footer {
     background: #101010;
     border-top: 1px solid #212121;
-    padding: 14px 22px 16px;
+    padding: 10px 14px 12px;
     display: table;
     width: 100%;
 }
@@ -247,12 +227,6 @@ body {
     <div class="dot dot-tm"></div>
     <div class="dot dot-ml"></div>
     <div class="dot dot-mr"></div>
-
-
-    <div class="hero-event-name">
-        {{ strtoupper($event?->name ?? 'Event') }}
-        <div class="hero-red-line"></div>
-    </div>
 </div>
 
 <!-- TITLE BAR -->
@@ -299,7 +273,7 @@ body {
             <div class="info-section-title" style="margin-top:12px;">Venue Information</div>
             <div class="info-row">Name: {{ $event?->venue ?? $event?->location ?? '-' }}</div>
             <div class="info-row">Address: {{ $event?->location ?? '-' }}</div>
-            <div class="info-row">Venue Location: <span class="info-link">Get Directions</span></div>
+            <div class="info-row">Venue Location: @if($event?->map_url)<a class="info-link" href="{{ $event->map_url }}">Get Directions</a>@else<span class="info-link">Get Directions</span>@endif</div>
         </div>
 
         <div class="info-col-2">
@@ -317,7 +291,7 @@ body {
                     'Full Name'              => $ticket->holder_name,
                     'Birthdate'              => $ticket->holder_birthdate,
                     'Phone Number'           => $ticket->holder_phone,
-                    'Gender'                 => $ticket->holder_gender,
+                    'Gender'                 => $ticket->holder_gender ?? $ticket->orderItem?->holder_gender,
                 ])->filter();
             @endphp
             @if($extras->count())
