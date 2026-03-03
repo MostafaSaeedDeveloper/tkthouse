@@ -5,6 +5,24 @@
 <style>
 @page { margin: 0; }
 html, body { margin: 0; padding: 0; width: 100%; background: #000; }
+@font-face {
+    font-family: 'Glancyr';
+    src: url('{{ public_path('fonts/Glancyr-Regular.otf') }}') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Glancyr';
+    src: url('{{ public_path('fonts/Glancyr-Medium.otf') }}') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Glancyr';
+    src: url('{{ public_path('fonts/Glancyr-Bold.otf') }}') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
