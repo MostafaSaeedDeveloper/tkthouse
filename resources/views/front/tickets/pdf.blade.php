@@ -230,8 +230,11 @@ body {
 
 <!-- HERO -->
 <div class="hero">
-    @if($ticket->order?->event?->cover_image_url)
-        <img class="hero-img" src="{{ $ticket->order->event->cover_image_url }}" alt="">
+    @php
+        $heroImage = $event?->cover_image_url ?: $event?->images?->first()?->path_url;
+    @endphp
+    @if($heroImage)
+        <img class="hero-img" src="{{ $heroImage }}" alt="">
     @else
         <div style="width:100%;height:100%;background:linear-gradient(135deg,#111 0%,#1e1a00 100%);"></div>
     @endif
@@ -245,10 +248,10 @@ body {
     <div class="dot dot-ml"></div>
     <div class="dot dot-mr"></div>
 
-    <div class="hero-sub">{{ strtoupper($ticket->order?->event?->organizer ?? 'TKTHouse') }}</div>
+    <div class="hero-sub">{{ strtoupper($event?->organizer ?? 'TKTHOUSE') }}</div>
 
     <div class="hero-event-name">
-        {{ strtoupper($ticket->order?->event?->name ?? 'Event') }}
+        {{ strtoupper($event?->name ?? 'Event') }}
         <div class="hero-red-line"></div>
     </div>
 </div>
@@ -256,11 +259,11 @@ body {
 <!-- TITLE BAR -->
 <div class="title-bar">
     <div class="title-bar-left">
-        <div class="event-title">{{ strtoupper($ticket->order?->event?->name ?? 'Event') }}</div>
+        <div class="event-title">{{ strtoupper($event?->name ?? 'Event') }}</div>
     </div>
     <div class="title-bar-right">
-        @if($ticket->order?->event?->event_date)
-            {{ strtoupper($ticket->order->event->event_date->format('d M Y')) }} at {{ \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g:i A') }}
+        @if($event?->event_date)
+            {{ strtoupper($event->event_date->format('d M Y')) }} at {{ $event?->event_time ? \Carbon\Carbon::parse($event->event_time)->format('g:i A') : '-' }}
         @endif
     </div>
 </div>
@@ -291,12 +294,12 @@ body {
     <div class="info-grid-2">
         <div class="info-col-2">
             <div class="info-section-title">Event Information</div>
-            <div class="info-row">Name: {{ $ticket->order?->event?->name ?? '-' }}</div>
-            <div class="info-row">Date and Time: {{ $ticket->order?->event?->event_time ? \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g a') : '-' }} till 4 am</div>
+            <div class="info-row">Name: {{ $event?->name ?? '-' }}</div>
+            <div class="info-row">Date and Time: @if($event?->event_date){{ $event->event_date->format('d M Y') }} @endif {{ $event?->event_time ? \Carbon\Carbon::parse($event->event_time)->format('g a') : '-' }}</div>
 
             <div class="info-section-title" style="margin-top:12px;">Venue Information</div>
-            <div class="info-row">Name: {{ $ticket->order?->event?->venue ?? $ticket->order?->event?->location ?? '-' }}</div>
-            <div class="info-row">Address: {{ $ticket->order?->event?->location ?? '-' }}</div>
+            <div class="info-row">Name: {{ $event?->venue ?? $event?->location ?? '-' }}</div>
+            <div class="info-row">Address: {{ $event?->location ?? '-' }}</div>
             <div class="info-row">Venue Location: <span class="info-link">Get Directions</span></div>
         </div>
 

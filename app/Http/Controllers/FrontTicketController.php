@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
 use App\Models\IssuedTicket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class FrontTicketController extends Controller
 {
@@ -19,7 +21,10 @@ class FrontTicketController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
 
-        $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket'));
+        $event = $this->resolveEvent($ticket->ticket_name ?? '');
+        $qrDataUri = $ticket->qrUrl();
+
+        $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
 
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
@@ -35,5 +40,19 @@ class FrontTicketController extends Controller
             || $ticket->order->customer?->email === $user->email;
 
         abort_unless($canView, 403);
+    }
+
+    private function resolveEvent(string $ticketName): ?Event
+    {
+        $eventName = trim((string) Str::before($ticketName, ' - '));
+
+        if ($eventName === '') {
+            return null;
+        }
+
+        return Event::query()
+            ->with('images')
+            ->where('name', $eventName)
+            ->first();
     }
 }
