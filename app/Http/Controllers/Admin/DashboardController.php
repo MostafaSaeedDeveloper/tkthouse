@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    private const REVENUE_ORDER_STATUSES = ['paid', 'completed'];
+
     public function index(Request $request)
     {
         $selectedRange = (string) $request->input('range', 'last30');
@@ -31,7 +33,9 @@ class DashboardController extends Controller
         }
 
         $totalOrders = (clone $ordersQuery)->count();
-        $totalRevenue = (float) (clone $ordersQuery)->sum('total_amount');
+        $totalRevenue = (float) (clone $ordersQuery)
+            ->whereIn('status', self::REVENUE_ORDER_STATUSES)
+            ->sum('total_amount');
         $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'pending_approval', 'pending_payment'])->count();
         $totalCustomers = (clone $customersQuery)->count();
         $totalEvents = Event::where('status', 'active')->count();
@@ -43,9 +47,13 @@ class DashboardController extends Controller
             ->get();
 
         $topEventsQuery = OrderItem::query()->select(['ticket_name', 'line_total']);
-        if ($startAt && $endAt) {
-            $topEventsQuery->whereHas('order', fn ($q) => $q->whereBetween('created_at', [$startAt, $endAt]));
-        }
+        $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
+            $q->whereIn('status', self::REVENUE_ORDER_STATUSES);
+
+            if ($startAt && $endAt) {
+                $q->whereBetween('created_at', [$startAt, $endAt]);
+            }
+        });
 
         $topEvents = $topEventsQuery->get()
             ->groupBy(function (OrderItem $item) {
@@ -142,6 +150,11 @@ class DashboardController extends Controller
 
         $ordersWindow = Order::query()
             ->whereBetween('created_at', [$startAt, $endAt])
+            ->get(['created_at']);
+
+        $revenueWindow = Order::query()
+            ->whereIn('status', self::REVENUE_ORDER_STATUSES)
+            ->whereBetween('created_at', [$startAt, $endAt])
             ->get(['created_at', 'total_amount']);
 
         $labels = [];
@@ -154,9 +167,10 @@ class DashboardController extends Controller
                 $slotStart = $startAt->copy()->hour($h)->minute(0)->second(0);
                 $slotEnd = $slotStart->copy()->addHours(2);
                 $bucket = $ordersWindow->filter(fn ($o) => Carbon::parse($o->created_at)->betweenIncluded($slotStart, $slotEnd));
+                $revenueBucket = $revenueWindow->filter(fn ($o) => Carbon::parse($o->created_at)->betweenIncluded($slotStart, $slotEnd));
                 $labels[] = $slotStart->format('H:i');
                 $ordersData[] = $bucket->count();
-                $revenueData[] = round((float) $bucket->sum('total_amount'), 2);
+                $revenueData[] = round((float) $revenueBucket->sum('total_amount'), 2);
             }
 
             return [$labels, $ordersData, $revenueData];
@@ -167,9 +181,10 @@ class DashboardController extends Controller
             while ($cursor->lte($endAt)) {
                 $day = $cursor->format('Y-m-d');
                 $bucket = $ordersWindow->filter(fn ($o) => Carbon::parse($o->created_at)->format('Y-m-d') === $day);
+                $revenueBucket = $revenueWindow->filter(fn ($o) => Carbon::parse($o->created_at)->format('Y-m-d') === $day);
                 $labels[] = $cursor->format('d M');
                 $ordersData[] = $bucket->count();
-                $revenueData[] = round((float) $bucket->sum('total_amount'), 2);
+                $revenueData[] = round((float) $revenueBucket->sum('total_amount'), 2);
                 $cursor->addDay();
             }
 
@@ -180,9 +195,10 @@ class DashboardController extends Controller
         while ($cursor->lte($endAt)) {
             $month = $cursor->format('Y-m');
             $bucket = $ordersWindow->filter(fn ($o) => Carbon::parse($o->created_at)->format('Y-m') === $month);
+            $revenueBucket = $revenueWindow->filter(fn ($o) => Carbon::parse($o->created_at)->format('Y-m') === $month);
             $labels[] = $cursor->format('M Y');
             $ordersData[] = $bucket->count();
-            $revenueData[] = round((float) $bucket->sum('total_amount'), 2);
+            $revenueData[] = round((float) $revenueBucket->sum('total_amount'), 2);
             $cursor->addMonthNoOverflow();
         }
 
