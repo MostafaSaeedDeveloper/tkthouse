@@ -32,6 +32,7 @@
 .od-status.approved,.od-status.paid { color: #22c55e; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25); }
 .od-status.rejected { color: #e8445a; background: rgba(232,68,90,0.10); border: 1px solid rgba(232,68,90,0.25); }
 .od-customer,.od-ticket-holder { display: flex; align-items: center; gap: 10px; }
+.od-ticket-holder { margin-top: 6px; }
 .od-avatar,.od-ticket-holder-avatar,.od-note-avatar,.od-hist-icon { width: 34px; height: 34px; border-radius: 50%; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); color: #f5b800; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
 .od-btn-approve,.od-btn-back { display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 16px;text-decoration:none;border:0; }
 .od-btn-approve { background:#f5b800;color:#000; }
