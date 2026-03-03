@@ -3,22 +3,24 @@
 <head>
 <meta charset="utf-8">
 <style>
+@page { margin: 0; }
+html, body { margin: 0; padding: 0; width: 100%; background: #000; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: 'Glancyr', DejaVu Sans, sans-serif;
     background: #000;
     color: #fff;
-    width: 760px;
-    margin: 0 auto;
-    padding: 10px 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .ticket-shell {
-    border-radius: 24px;
+    border-radius: 0;
     overflow: hidden;
     background: #0a0a0a;
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset;
+    box-shadow: none;
 }
 
 /* ── HERO ── */
@@ -119,7 +121,7 @@ body {
 .info-grid-2 {
     display: table;
     width: 100%;
-    border-spacing: 10px;
+    border-spacing: 8px;
     margin: 0;
 }
 .info-col,
@@ -129,18 +131,19 @@ body {
     vertical-align: top;
     background: #171717;
     border-radius: 16px;
-    padding: 16px;
+    padding: 14px 16px;
 }
 .info-section-title {
-    font-size: 13px;
+    font-size: 12px;
     color: #fff;
     margin-bottom: 8px;
+    font-weight: 700;
 }
 .info-row {
     font-size: 12px;
-    color: rgba(255,255,255,0.9);
-    margin-bottom: 6px;
-    line-height: 1.34;
+    color: rgba(255,255,255,0.95);
+    margin-bottom: 5px;
+    line-height: 1.3;
 }
 .info-link {
     color: #fff;
@@ -269,14 +272,12 @@ body {
         <div class="info-col-2">
             <div class="info-section-title">Event Information</div>
             <div class="info-row">Name: {{ $ticket->order?->event?->name ?? '-' }}</div>
-            <div class="info-row">Date and Time: {{ $ticket->order?->event?->event_time ? \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g:i A') : '-' }} till 4 am</div>
+            <div class="info-row">Date and Time: {{ $ticket->order?->event?->event_time ? \Carbon\Carbon::parse($ticket->order->event->event_time)->format('g a') : '-' }} till 4 am</div>
 
             <div class="info-section-title" style="margin-top:12px;">Venue Information</div>
             <div class="info-row">Name: {{ $ticket->order?->event?->venue ?? $ticket->order?->event?->location ?? '-' }}</div>
             <div class="info-row">Address: {{ $ticket->order?->event?->location ?? '-' }}</div>
-            @if($ticket->order?->event?->map_url)
-                <div class="info-row">Venue Location: <span class="info-link">Get Directions</span></div>
-            @endif
+            <div class="info-row">Venue Location: <span class="info-link">Get Directions</span></div>
         </div>
 
         <div class="info-col-2">
