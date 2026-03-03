@@ -25,6 +25,7 @@ Route::get('/about', [PagesController::class, 'about'])->name('front.about');
 Route::get('/events', [PagesController::class, 'events'])->name('front.events');
 Route::get('/events/{event:slug}', [PagesController::class, 'eventShow'])->name('front.events.show');
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
+Route::post('/contact', [PagesController::class, 'submitContact'])->name('front.contact.submit');
 Route::get('/terms-and-conditions', [PagesController::class, 'terms'])->name('front.terms');
 
 Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
