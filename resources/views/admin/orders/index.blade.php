@@ -55,7 +55,7 @@
                 <table class="table table-hover table-vcenter mb-0">
                     <thead>
                         <tr>
-                            <th>Order #</th><th>Customer</th><th>Items</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment</th><th class="text-end">Action</th>
+                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -68,14 +68,22 @@
                             </td>
                             <td>{{ $order->customer?->full_name }}<br><span class="fs-sm text-muted">{{ $order->customer?->email }}</span></td>
                             <td>{{ $order->items_count }}</td>
-                            <td>
+                            <td style="max-width: 320px;">
                                 <div class="d-flex flex-wrap gap-1">
-                                    @foreach($order->items->pluck('ticket_name')->unique() as $ticketType)
+                                    @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => str_contains((string) $ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : null)->filter()->unique() as $eventName)
+                                        <span class="badge bg-secondary" style="display: inline-block; white-space: normal; line-height: 1.2; max-width: 280px; word-break: break-word;">{{ $eventName }}</span>
+                                    @endforeach
+                                </div>
+                            </td>
+                            <td style="max-width: 260px;">
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => trim((string) 
+                                        \Illuminate\Support\Str::afterLast((string) $ticketName, ' - ')))->unique() as $ticketType)
                                         @php
                                             $normalizedType = \Illuminate\Support\Str::lower(trim((string) \Illuminate\Support\Str::afterLast($ticketType, ' - ')));
                                             $ticketColor = $ticketColorMap[$normalizedType] ?? '#6c757d';
                                         @endphp
-                                        <span class="badge" style="background-color: {{ $ticketColor }}; color: #fff;">{{ $ticketType }}</span>
+                                        <span class="badge" style="background-color: {{ $ticketColor }}; color: #fff; display: inline-block; white-space: normal; line-height: 1.2; max-width: 220px; word-break: break-word;">{{ $ticketType }}</span>
                                     @endforeach
                                 </div>
                             </td>
@@ -89,8 +97,8 @@
                                     };
                                 @endphp
                                 <td><span class="badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
-                            <td>{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</td>
-                            <td class="text-end">
+                            <td class="text-end" style="white-space: nowrap; min-width: 170px;">
+                                <div class="d-inline-flex flex-nowrap align-items-center gap-1">
                                 @if($order->status === 'pending_approval')
                                     <form class="d-inline" method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
                                         <button class="btn btn-sm btn-alt-success" type="submit" title="Approve"><i class="fa fa-check"></i></button>
@@ -101,6 +109,7 @@
                                 @endif
                                 <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
                                 <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
+                                </div>
                             </td>
                         </tr>
                         @empty

@@ -27,18 +27,29 @@
 .od-info-row:last-child { border-bottom: none; }
 .od-info-label { color: #5e5e72; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
 .od-info-val   { color: #dddde8; font-weight: 500; text-align: right; }
+.od-pay-link-wrap{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+.od-pay-copy-btn{border:1px solid rgba(255,255,255,.15);background:#15151b;color:#dddde8;border-radius:6px;padding:4px 10px;font-size:12px;white-space:nowrap;}
+.od-pay-copy-btn:hover{border-color:rgba(245,184,0,.4);color:#f5b800;}
 .od-status { display: inline-flex; align-items: center; gap: 6px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 11px; border-radius: 99px; }
 .od-status.pending,.od-status.pending_payment,.od-status.pending_approval { color: #f5b800; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); }
 .od-status.approved,.od-status.paid { color: #22c55e; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25); }
 .od-status.rejected { color: #e8445a; background: rgba(232,68,90,0.10); border: 1px solid rgba(232,68,90,0.25); }
 .od-customer,.od-ticket-holder { display: flex; align-items: center; gap: 10px; }
+.od-ticket-holder { margin-top: 6px; }
 .od-avatar,.od-ticket-holder-avatar,.od-note-avatar,.od-hist-icon { width: 34px; height: 34px; border-radius: 50%; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); color: #f5b800; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
 .od-btn-approve,.od-btn-back { display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 16px;text-decoration:none;border:0; }
 .od-btn-approve { background:#f5b800;color:#000; }
 .od-btn-back { background:#15151b;color:#5e5e72;border:1px solid rgba(255,255,255,0.07); }
 .od-ticket { background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:12px; }
-.od-ticket-name{color:#fff;font-weight:700}.od-ticket-holder-info{color:#dddde8;font-size:12px}.od-ticket-holder-info span{display:block;color:#5e5e72}
-.od-ticket-price{color:#f5b800;font-weight:700;text-align:right}.od-ticket-qty{font-size:11px;color:#5e5e72;text-align:right}
+.od-ticket-name-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
+.od-ticket-name{color:#fff;font-weight:700;font-size:17px;line-height:1.25;}
+.od-ticket-type-badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:700;line-height:1.2;}
+.od-ticket-holder-info{color:#dddde8;font-size:15px;line-height:1.4;}
+.od-ticket-holder-info span{display:block;color:#9ba0bd;font-size:14px;}
+.od-ticket-social{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#f5b800;font-size:14px;text-decoration:none;word-break:break-all;}
+.od-ticket-social:hover{color:#ffd24d;text-decoration:underline;}
+.od-ticket-price{color:#f5b800;font-weight:700;text-align:right;font-size:18px;}
+.od-ticket-qty{font-size:13px;color:#9ba0bd;text-align:right}
 .od-total-bar { display:flex;justify-content:space-between;background:rgba(245,184,0,0.06);border:1px solid rgba(245,184,0,0.2);border-radius:10px;padding:14px 20px;margin-top:16px;color:#fff; }
 .od-note-item,.od-hist-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
 .od-note-item:last-child,.od-hist-item:last-child{border-bottom:0}
@@ -96,7 +107,10 @@
             <div class="od-info-row">
               <span class="od-info-label">Payment Link</span>
               <span class="od-info-val" style="max-width:65%;">
-                <input type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" onclick="this.select();">
+                <span class="od-pay-link-wrap">
+                  <input type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" id="paymentLinkInput" onclick="this.select();">
+                  <button type="button" class="od-pay-copy-btn" id="copyPaymentLinkBtn" data-payment-link="{{ $paymentLink }}">Copy</button>
+                </span>
               </span>
             </div>
           @endif
@@ -126,10 +140,41 @@
           @forelse($order->items as $item)
             <div class="od-ticket">
               <div>
-                <div class="od-ticket-name">{{ $item->ticket_name }}</div>
+                @php
+                  $ticketName = trim((string) $item->ticket_name);
+                  $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
+                  $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
+                  $normalizedType = \Illuminate\Support\Str::lower($ticketType);
+                  $ticketTypeColor = [
+                    'early bird' => '#6c757d',
+                    'regular' => '#0d6efd',
+                    'phase 1' => '#0d6efd',
+                    'phase 2' => '#6f42c1',
+                    'vip' => '#f5b800',
+                  ][$normalizedType] ?? '#6c757d';
+                  $socialProfileRaw = trim((string) $item->holder_social_profile);
+                  $socialProfileLink = $socialProfileRaw !== ''
+                    ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
+                    : null;
+                @endphp
+                <div class="od-ticket-name-wrap">
+                  <div class="od-ticket-name">{{ $eventName }}</div>
+                  @if($ticketType !== '' && $ticketType !== $eventName)
+                    <span class="od-ticket-type-badge" style="background-color: {{ $ticketTypeColor }};">{{ $ticketType }}</span>
+                  @endif
+                </div>
                 <div class="od-ticket-holder">
                   <div class="od-ticket-holder-avatar">{{ collect(explode(' ', (string)$item->holder_name))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') }}</div>
-                  <div class="od-ticket-holder-info">{{ $item->holder_name }}<span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span></div>
+                  <div class="od-ticket-holder-info">
+                    {{ $item->holder_name }}
+                    <span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</span>
+                    @if($socialProfileLink)
+                      <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="od-ticket-social">
+                        <i class="fa fa-globe"></i>
+                        {{ $socialProfileRaw }}
+                      </a>
+                    @endif
+                  </div>
                 </div>
               </div>
               <div><div class="od-ticket-price">{{ number_format((float)$item->line_total,2) }} EGP</div><div class="od-ticket-qty">Qty × {{ $item->quantity }}</div></div>
@@ -215,4 +260,24 @@
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  const copyBtn = document.getElementById('copyPaymentLinkBtn');
+  if (!copyBtn) return;
+
+  copyBtn.addEventListener('click', async function () {
+    const originalText = this.textContent;
+    try {
+      await navigator.clipboard.writeText(this.dataset.paymentLink || '');
+      this.textContent = 'Copied ✓';
+    } catch (error) {
+      this.textContent = 'Copy failed';
+    }
+    setTimeout(() => {
+      this.textContent = originalText;
+    }, 1300);
+  });
+})();
+</script>
 @endsection

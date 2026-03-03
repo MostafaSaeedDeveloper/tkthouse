@@ -92,15 +92,19 @@
 .oe-invoice-table tbody td {
   padding: 14px 12px; vertical-align: middle; font-size: 13.5px;
 }
-.oe-inv-name { color: #fff; font-weight: 700; font-size: 14px; }
+.oe-inv-name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.oe-inv-name { color: #fff; font-weight: 700; font-size: 16px; line-height: 1.35; }
+.oe-ticket-type-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; line-height: 1.2; }
 .oe-inv-meta { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 8px; }
 .oe-inv-meta-chip {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px; color: #9ba0bd;
+  font-size: 13px; color: #9ba0bd;
   background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
   border-radius: 5px; padding: 2px 8px;
 }
-.oe-inv-meta-chip i { font-size: 9px; color: #5e5e72; }
+.oe-inv-meta-chip i { font-size: 10px; color: #5e5e72; }
+.oe-inv-meta-link { color: #f5b800; text-decoration: none; word-break: break-all; }
+.oe-inv-meta-link:hover { color: #ffd24d; text-decoration: underline; }
 .oe-inv-qty {
   display: inline-block;
   min-width: 40px; padding: 4px 10px;
@@ -108,8 +112,8 @@
   color: #f5b800; font-weight: 700; font-size: 13px;
   border-radius: 6px; text-align: center; white-space: nowrap;
 }
-.oe-inv-price { color: #dddde8; font-weight: 600; text-align: right; font-size: 14px; }
-.oe-inv-unit  { display: block; font-size: 11px; color: #5e5e72; text-align: right; margin-top: 2px; }
+.oe-inv-price { color: #dddde8; font-weight: 600; text-align: right; font-size: 16px; }
+.oe-inv-unit  { display: block; font-size: 13px; color: #7e84a3; text-align: right; margin-top: 3px; }
 
 /* ── Form Fields ──────────────────────────────────────── */
 .oe-field { margin-bottom: 14px; }
@@ -220,16 +224,45 @@
                 @forelse($order->items as $item)
                   <tr>
                     <td style="padding-left:0;">
-                      <div class="oe-inv-name">{{ $item->ticket_name }}</div>
+                      @php
+                        $ticketName = trim((string) $item->ticket_name);
+                        $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
+                        $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
+                        $normalizedType = \Illuminate\Support\Str::lower($ticketType);
+                        $ticketTypeColor = [
+                          'early bird' => '#6c757d',
+                          'regular' => '#0d6efd',
+                          'phase 1' => '#0d6efd',
+                          'phase 2' => '#6f42c1',
+                          'vip' => '#f5b800',
+                        ][$normalizedType] ?? '#6c757d';
+                      @endphp
+                      <div class="oe-inv-name-wrap">
+                        <div class="oe-inv-name">{{ $eventName }}</div>
+                        @if($ticketType !== '' && $ticketType !== $eventName)
+                          <span class="oe-ticket-type-badge" style="background-color: {{ $ticketTypeColor }};">{{ $ticketType }}</span>
+                        @endif
+                      </div>
                       <div class="oe-inv-meta">
                         @if($item->holder_name)
                           <span class="oe-inv-meta-chip"><i class="fa fa-user"></i> {{ $item->holder_name }}</span>
                         @endif
-                        @if($item->holder_email)
-                          <span class="oe-inv-meta-chip"><i class="fa fa-envelope"></i> {{ $item->holder_email }}</span>
+                        @if($item->holder_email || $item->holder_phone || $item->holder_gender)
+                          <span class="oe-inv-meta-chip"><i class="fa fa-id-card"></i> {{ $item->holder_email ?: '-' }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</span>
                         @endif
-                        @if($item->holder_phone)
-                          <span class="oe-inv-meta-chip"><i class="fa fa-phone"></i> {{ $item->holder_phone }}</span>
+                        @if($item->holder_social_profile)
+                          @php
+                            $socialProfileRaw = trim((string) $item->holder_social_profile);
+                            $socialProfileLink = $socialProfileRaw !== ''
+                              ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
+                              : null;
+                          @endphp
+                          @if($socialProfileLink)
+                            <span class="oe-inv-meta-chip">
+                              <i class="fa fa-globe"></i>
+                              <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="oe-inv-meta-link">{{ $socialProfileRaw }}</a>
+                            </span>
+                          @endif
                         @endif
                       </div>
                     </td>
