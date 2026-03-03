@@ -7,7 +7,9 @@
             <div class="banner_slider">
                 @forelse($featuredEvents as $event)
                     <div class="slide left-align">
-                        <img src="{{ $event->cover_image_url ?? asset('extra-images/kf_slide_img14.jpg') }}" alt="{{ $event->name }}">
+                        <a class="banner-slide-link" href="{{ route('front.events.show', $event) }}" aria-label="{{ $event->name }}">
+                            <img src="{{ $event->cover_image_url ?? asset('extra-images/kf_slide_img14.jpg') }}" alt="{{ $event->name }}">
+                        </a>
                     </div>
                 @empty
                     <div class="slide left-align">
@@ -33,6 +35,12 @@
                 object-fit: cover;
                 object-position: center;
                 display: block;
+            }
+
+            .banner_slider .banner-slide-link {
+                display: block;
+                width: 100%;
+                height: 100%;
             }
 
             .banner_slider .slide::before,
