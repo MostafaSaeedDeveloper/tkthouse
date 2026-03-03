@@ -55,7 +55,7 @@
                 <table class="table table-hover table-vcenter mb-0">
                     <thead>
                         <tr>
-                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment</th><th class="text-end">Action</th>
+                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,8 +97,8 @@
                                     };
                                 @endphp
                                 <td><span class="badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
-                            <td>{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</td>
-                            <td class="text-end">
+                            <td class="text-end" style="white-space: nowrap; min-width: 170px;">
+                                <div class="d-inline-flex flex-nowrap align-items-center gap-1">
                                 @if($order->status === 'pending_approval')
                                     <form class="d-inline" method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
                                         <button class="btn btn-sm btn-alt-success" type="submit" title="Approve"><i class="fa fa-check"></i></button>
@@ -109,10 +109,11 @@
                                 @endif
                                 <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
                                 <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
+                                </div>
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="9" class="text-center py-4 text-muted">No orders found.</td></tr>
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No orders found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
