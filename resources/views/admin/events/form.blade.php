@@ -78,13 +78,55 @@
             <img
                 id="cover-image-preview"
                 data-has-existing="{{ isset($event) && $event->cover_image ? 1 : 0 }}"
-                src="{{ isset($event) && $event->cover_image ? asset($event->cover_image) : '' }}"
+                src="{{ isset($event) ? ($event->cover_image_url ?? '') : '' }}"
                 alt="Event cover preview"
                 class="img-fluid rounded {{ isset($event) && $event->cover_image ? '' : 'd-none' }}"
                 style="max-height: 180px; object-fit: cover;"
             >
             <div id="cover-image-placeholder" class="small text-muted {{ isset($event) && $event->cover_image ? 'd-none' : '' }}">
                 No image selected.
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8 mb-3">
+        <label class="form-label">Event Banner (Optional)</label>
+        <input type="file" name="event_banner" id="event_banner" class="form-control" accept="image/*">
+        <div class="form-text">Upload a banner image to appear in the home page slider.</div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Banner Preview</label>
+        <div class="border rounded p-2 text-center bg-body-light">
+            <img
+                id="event-banner-preview"
+                data-has-existing="{{ isset($event) && $event->event_banner ? 1 : 0 }}"
+                src="{{ isset($event) ? ($event->event_banner_url ?? '') : '' }}"
+                alt="Event banner preview"
+                class="img-fluid rounded {{ isset($event) && $event->event_banner ? '' : 'd-none' }}"
+                style="max-height: 180px; object-fit: cover;"
+            >
+            <div id="event-banner-placeholder" class="small text-muted {{ isset($event) && $event->event_banner ? 'd-none' : '' }}">
+                No banner selected.
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8 mb-3">
+        <label class="form-label">Venue Map Image (Optional)</label>
+        <input type="file" name="venue_map" id="venue_map" class="form-control" accept="image/*">
+        <div class="form-text">Upload a venue map image to show before House Rules on the event page.</div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Venue Map Preview</label>
+        <div class="border rounded p-2 text-center bg-body-light">
+            <img
+                id="venue-map-preview"
+                data-has-existing="{{ isset($event) && $event->venue_map ? 1 : 0 }}"
+                src="{{ isset($event) ? ($event->venue_map_url ?? '') : '' }}"
+                alt="Venue map preview"
+                class="img-fluid rounded {{ isset($event) && $event->venue_map ? '' : 'd-none' }}"
+                style="max-height: 180px; object-fit: cover;"
+            >
+            <div id="venue-map-placeholder" class="small text-muted {{ isset($event) && $event->venue_map ? 'd-none' : '' }}">
+                No venue map selected.
             </div>
         </div>
     </div>
@@ -222,26 +264,40 @@
         const coverPreview = document.getElementById('cover-image-preview');
         const coverPlaceholder = document.getElementById('cover-image-placeholder');
 
-        coverInput?.addEventListener('change', (event) => {
-            const file = event.target.files?.[0];
+        const bindImagePreview = (input, preview, placeholder) => {
+            input?.addEventListener('change', (event) => {
+                const file = event.target.files?.[0];
 
-            if (!file) {
-                const hasExistingImage = coverPreview?.dataset.hasExisting === '1';
-                if (!hasExistingImage) {
-                    coverPreview?.classList.add('d-none');
-                    coverPlaceholder?.classList.remove('d-none');
+                if (!file) {
+                    const hasExistingImage = preview?.dataset.hasExisting === '1';
+                    if (!hasExistingImage) {
+                        preview?.classList.add('d-none');
+                        placeholder?.classList.remove('d-none');
+                    }
+                    return;
                 }
-                return;
-            }
 
-            const objectUrl = URL.createObjectURL(file);
-            if (coverPreview) {
-                coverPreview.src = objectUrl;
-                coverPreview.classList.remove('d-none');
-                coverPreview.dataset.hasExisting = '1';
-            }
-            coverPlaceholder?.classList.add('d-none');
-        });
+                const objectUrl = URL.createObjectURL(file);
+                if (preview) {
+                    preview.src = objectUrl;
+                    preview.classList.remove('d-none');
+                    preview.dataset.hasExisting = '1';
+                }
+                placeholder?.classList.add('d-none');
+            });
+        };
+
+        bindImagePreview(coverInput, coverPreview, coverPlaceholder);
+
+        const eventBannerInput = document.getElementById('event_banner');
+        const eventBannerPreview = document.getElementById('event-banner-preview');
+        const eventBannerPlaceholder = document.getElementById('event-banner-placeholder');
+        bindImagePreview(eventBannerInput, eventBannerPreview, eventBannerPlaceholder);
+
+        const venueMapInput = document.getElementById('venue_map');
+        const venueMapPreview = document.getElementById('venue-map-preview');
+        const venueMapPlaceholder = document.getElementById('venue-map-placeholder');
+        bindImagePreview(venueMapInput, venueMapPreview, venueMapPlaceholder);
 
 
         const nameInput = document.getElementById('event_name');

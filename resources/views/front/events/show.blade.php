@@ -545,6 +545,27 @@
 
     .tkt-house-rules-mobile { display: none; }
 
+    .tkt-venue-map-box {
+        background: #0d0d0d;
+        border: 1px solid rgba(255,255,255,0.06);
+        padding: 24px;
+        margin-top: 28px;
+    }
+    .tkt-venue-map-box h4 {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 22px;
+        letter-spacing: 3px;
+        color: #fff;
+        margin: 0 0 16px;
+    }
+    .tkt-venue-map-box img {
+        width: 100%;
+        max-height: 420px;
+        object-fit: contain;
+        background: rgba(255,255,255,0.02);
+    }
+    .tkt-venue-map-mobile { display: none; }
+
     .tkt-event-map {
         margin: 28px 0 12px;
     }
@@ -562,6 +583,8 @@
 
     @media (max-width: 767px) {
         .tkt-house-rules-desktop { display: none; }
+        .tkt-venue-map-desktop { display: none; }
+        .tkt-venue-map-mobile { display: block; }
         .tkt-house-rules-mobile {
             display: block;
             margin-top: 20px;
@@ -760,6 +783,13 @@
 
                 </div><!-- /tkt-ticket-cards -->
 
+                @if($event->venue_map_url)
+                    <div class="tkt-venue-map-box tkt-venue-map-desktop">
+                        <h4>VENUE MAP</h4>
+                        <img src="{{ $event->venue_map_url }}" alt="{{ $event->name }} venue map" loading="lazy">
+                    </div>
+                @endif
+
                 <!-- House Rules -->
                 <div class="tkt-house-rules tkt-house-rules-desktop">
                     <div class="rules-header">
@@ -817,6 +847,13 @@
                         </p>
                     </div>
                 </div>
+
+                @if($event->venue_map_url)
+                    <div class="tkt-venue-map-box tkt-venue-map-mobile">
+                        <h4>VENUE MAP</h4>
+                        <img src="{{ $event->venue_map_url }}" alt="{{ $event->name }} venue map" loading="lazy">
+                    </div>
+                @endif
 
                 <div class="tkt-house-rules tkt-house-rules-mobile">
                     <div class="rules-header">

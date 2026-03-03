@@ -31,7 +31,13 @@ class EventController extends Controller
 
         DB::transaction(function () use ($request, $validated) {
             $coverImage = $request->file('cover_image') ? $this->storePublicImage($request->file('cover_image'), 'uploads/events') : null;
-            $event = Event::create(array_merge($validated, ['cover_image' => $coverImage]));
+            $eventBanner = $request->file('event_banner') ? $this->storePublicImage($request->file('event_banner'), 'uploads/events/banners') : null;
+            $venueMap = $request->file('venue_map') ? $this->storePublicImage($request->file('venue_map'), 'uploads/events/maps') : null;
+            $event = Event::create(array_merge($validated, [
+                'cover_image' => $coverImage,
+                'event_banner' => $eventBanner,
+                'venue_map' => $venueMap,
+            ]));
 
             $this->syncTickets($event, $validated['tickets'] ?? []);
             $this->syncFees($event, $validated['fees'] ?? []);
@@ -64,6 +70,14 @@ class EventController extends Controller
         DB::transaction(function () use ($request, $validated, $event) {
             if ($request->hasFile('cover_image')) {
                 $validated['cover_image'] = $this->storePublicImage($request->file('cover_image'), 'uploads/events');
+            }
+
+            if ($request->hasFile('event_banner')) {
+                $validated['event_banner'] = $this->storePublicImage($request->file('event_banner'), 'uploads/events/banners');
+            }
+
+            if ($request->hasFile('venue_map')) {
+                $validated['venue_map'] = $this->storePublicImage($request->file('venue_map'), 'uploads/events/maps');
             }
 
             $event->update($validated);
@@ -119,6 +133,8 @@ class EventController extends Controller
             'status' => ['required', 'in:active,inactive,draft,sold_out'],
             'requires_booking_approval' => ['required', 'boolean'],
             'cover_image' => $coverRule,
+            'event_banner' => $coverRule,
+            'venue_map' => $coverRule,
             'gallery_images.*' => ['nullable', 'image', 'max:2048'],
             'tickets' => ['nullable', 'array'],
             'tickets.*.name' => ['required_with:tickets', 'string', 'max:255'],
