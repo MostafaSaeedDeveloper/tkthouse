@@ -27,6 +27,9 @@
 .od-info-row:last-child { border-bottom: none; }
 .od-info-label { color: #5e5e72; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
 .od-info-val   { color: #dddde8; font-weight: 500; text-align: right; }
+.od-pay-link-wrap{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+.od-pay-copy-btn{border:1px solid rgba(255,255,255,.15);background:#15151b;color:#dddde8;border-radius:6px;padding:4px 10px;font-size:12px;white-space:nowrap;}
+.od-pay-copy-btn:hover{border-color:rgba(245,184,0,.4);color:#f5b800;}
 .od-status { display: inline-flex; align-items: center; gap: 6px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 11px; border-radius: 99px; }
 .od-status.pending,.od-status.pending_payment,.od-status.pending_approval { color: #f5b800; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); }
 .od-status.approved,.od-status.paid { color: #22c55e; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25); }
@@ -104,7 +107,10 @@
             <div class="od-info-row">
               <span class="od-info-label">Payment Link</span>
               <span class="od-info-val" style="max-width:65%;">
-                <input type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" onclick="this.select();">
+                <span class="od-pay-link-wrap">
+                  <input type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" id="paymentLinkInput" onclick="this.select();">
+                  <button type="button" class="od-pay-copy-btn" id="copyPaymentLinkBtn" data-payment-link="{{ $paymentLink }}">Copy</button>
+                </span>
               </span>
             </div>
           @endif
@@ -254,4 +260,24 @@
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  const copyBtn = document.getElementById('copyPaymentLinkBtn');
+  if (!copyBtn) return;
+
+  copyBtn.addEventListener('click', async function () {
+    const originalText = this.textContent;
+    try {
+      await navigator.clipboard.writeText(this.dataset.paymentLink || '');
+      this.textContent = 'Copied ✓';
+    } catch (error) {
+      this.textContent = 'Copy failed';
+    }
+    setTimeout(() => {
+      this.textContent = originalText;
+    }, 1300);
+  });
+})();
+</script>
 @endsection
