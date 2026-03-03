@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class PagesController extends Controller
 {
@@ -73,6 +75,35 @@ class PagesController extends Controller
     public function contact()
     {
         return view('front.contact');
+    }
+
+    public function submitContact(Request $request)
+    {
+        $data = $request->validate([
+            'author' => ['required', 'string', 'max:120'],
+            'phone' => ['required', 'string', 'max:40'],
+            'email' => ['required', 'email', 'max:180'],
+            'subject' => ['nullable', 'string', 'max:180'],
+            'comment' => ['required', 'string', 'max:3000'],
+        ]);
+
+        $subject = $data['subject'] ?: 'Website Contact Form Message';
+
+        Mail::raw(
+            "New contact message from tkthouse.com\n\n"
+            . "Name: {$data['author']}\n"
+            . "Phone: {$data['phone']}\n"
+            . "Email: {$data['email']}\n"
+            . "Subject: {$subject}\n\n"
+            . "Message:\n{$data['comment']}\n",
+            function ($message) use ($data, $subject) {
+                $message->to('support@tkthouse.com')
+                    ->replyTo($data['email'], $data['author'])
+                    ->subject('[TKT House Contact] '.$subject);
+            }
+        );
+
+        return redirect()->route('front.contact')->with('success', 'Your message has been sent successfully.');
     }
 
     public function terms()
