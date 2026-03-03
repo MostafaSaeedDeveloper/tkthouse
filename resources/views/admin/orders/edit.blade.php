@@ -92,7 +92,9 @@
 .oe-invoice-table tbody td {
   padding: 14px 12px; vertical-align: middle; font-size: 13.5px;
 }
+.oe-inv-name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .oe-inv-name { color: #fff; font-weight: 700; font-size: 16px; line-height: 1.35; }
+.oe-ticket-type-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; line-height: 1.2; }
 .oe-inv-meta { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 8px; }
 .oe-inv-meta-chip {
   display: inline-flex; align-items: center; gap: 5px;
@@ -222,19 +224,31 @@
                 @forelse($order->items as $item)
                   <tr>
                     <td style="padding-left:0;">
-                      <div class="oe-inv-name">{{ $item->ticket_name }}</div>
+                      @php
+                        $ticketName = trim((string) $item->ticket_name);
+                        $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
+                        $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
+                        $normalizedType = \Illuminate\Support\Str::lower($ticketType);
+                        $ticketTypeColor = [
+                          'early bird' => '#6c757d',
+                          'regular' => '#0d6efd',
+                          'phase 1' => '#0d6efd',
+                          'phase 2' => '#6f42c1',
+                          'vip' => '#f5b800',
+                        ][$normalizedType] ?? '#6c757d';
+                      @endphp
+                      <div class="oe-inv-name-wrap">
+                        <div class="oe-inv-name">{{ $eventName }}</div>
+                        @if($ticketType !== '' && $ticketType !== $eventName)
+                          <span class="oe-ticket-type-badge" style="background-color: {{ $ticketTypeColor }};">{{ $ticketType }}</span>
+                        @endif
+                      </div>
                       <div class="oe-inv-meta">
                         @if($item->holder_name)
                           <span class="oe-inv-meta-chip"><i class="fa fa-user"></i> {{ $item->holder_name }}</span>
                         @endif
-                        @if($item->holder_email)
-                          <span class="oe-inv-meta-chip"><i class="fa fa-envelope"></i> {{ $item->holder_email }}</span>
-                        @endif
-                        @if($item->holder_phone)
-                          <span class="oe-inv-meta-chip"><i class="fa fa-phone"></i> {{ $item->holder_phone }}</span>
-                        @endif
-                        @if($item->holder_gender)
-                          <span class="oe-inv-meta-chip"><i class="fa fa-venus-mars"></i> {{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}</span>
+                        @if($item->holder_email || $item->holder_phone || $item->holder_gender)
+                          <span class="oe-inv-meta-chip"><i class="fa fa-id-card"></i> {{ $item->holder_email ?: '-' }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</span>
                         @endif
                         @if($item->holder_social_profile)
                           @php

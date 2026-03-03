@@ -38,7 +38,9 @@
 .od-btn-approve { background:#f5b800;color:#000; }
 .od-btn-back { background:#15151b;color:#5e5e72;border:1px solid rgba(255,255,255,0.07); }
 .od-ticket { background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:12px; }
+.od-ticket-name-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
 .od-ticket-name{color:#fff;font-weight:700;font-size:17px;line-height:1.25;}
+.od-ticket-type-badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:700;line-height:1.2;}
 .od-ticket-holder-info{color:#dddde8;font-size:15px;line-height:1.4;}
 .od-ticket-holder-info span{display:block;color:#9ba0bd;font-size:14px;}
 .od-ticket-social{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#f5b800;font-size:14px;text-decoration:none;word-break:break-all;}
@@ -132,21 +134,34 @@
           @forelse($order->items as $item)
             <div class="od-ticket">
               <div>
-                <div class="od-ticket-name">{{ $item->ticket_name }}</div>
+                @php
+                  $ticketName = trim((string) $item->ticket_name);
+                  $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
+                  $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
+                  $normalizedType = \Illuminate\Support\Str::lower($ticketType);
+                  $ticketTypeColor = [
+                    'early bird' => '#6c757d',
+                    'regular' => '#0d6efd',
+                    'phase 1' => '#0d6efd',
+                    'phase 2' => '#6f42c1',
+                    'vip' => '#f5b800',
+                  ][$normalizedType] ?? '#6c757d';
+                  $socialProfileRaw = trim((string) $item->holder_social_profile);
+                  $socialProfileLink = $socialProfileRaw !== ''
+                    ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
+                    : null;
+                @endphp
+                <div class="od-ticket-name-wrap">
+                  <div class="od-ticket-name">{{ $eventName }}</div>
+                  @if($ticketType !== '' && $ticketType !== $eventName)
+                    <span class="od-ticket-type-badge" style="background-color: {{ $ticketTypeColor }};">{{ $ticketType }}</span>
+                  @endif
+                </div>
                 <div class="od-ticket-holder">
                   <div class="od-ticket-holder-avatar">{{ collect(explode(' ', (string)$item->holder_name))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') }}</div>
-                  @php
-                    $socialProfileRaw = trim((string) $item->holder_social_profile);
-                    $socialProfileLink = $socialProfileRaw !== ''
-                      ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
-                      : null;
-                  @endphp
                   <div class="od-ticket-holder-info">
                     {{ $item->holder_name }}
-                    <span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span>
-                    @if($item->holder_gender)
-                      <span>Gender: {{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}</span>
-                    @endif
+                    <span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</span>
                     @if($socialProfileLink)
                       <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="od-ticket-social">
                         <i class="fa fa-globe"></i>
