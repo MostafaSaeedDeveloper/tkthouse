@@ -68,10 +68,10 @@
                             </td>
                             <td>{{ $order->customer?->full_name }}<br><span class="fs-sm text-muted">{{ $order->customer?->email }}</span></td>
                             <td>{{ $order->items_count }}</td>
-                            <td>
+                            <td style="max-width: 320px;">
                                 <div class="d-flex flex-wrap gap-1">
                                     @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => str_contains((string) $ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : null)->filter()->unique() as $eventName)
-                                        <span class="badge bg-secondary">{{ $eventName }}</span>
+                                        <span class="badge bg-secondary" style="display: inline-block; white-space: normal; line-height: 1.2; max-width: 280px; word-break: break-word;">{{ $eventName }}</span>
                                     @endforeach
                                 </div>
                             </td>
@@ -83,7 +83,7 @@
                                             $normalizedType = \Illuminate\Support\Str::lower(trim((string) \Illuminate\Support\Str::afterLast($ticketType, ' - ')));
                                             $ticketColor = $ticketColorMap[$normalizedType] ?? '#6c757d';
                                         @endphp
-                                        <span class="badge text-truncate" style="background-color: {{ $ticketColor }}; color: #fff; max-width: 220px;">{{ $ticketType }}</span>
+                                        <span class="badge" style="background-color: {{ $ticketColor }}; color: #fff; display: inline-block; white-space: normal; line-height: 1.2; max-width: 220px; word-break: break-word;">{{ $ticketType }}</span>
                                     @endforeach
                                 </div>
                             </td>
