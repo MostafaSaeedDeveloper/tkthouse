@@ -50,8 +50,8 @@ a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--g
 
 
 /* ── Stat cards ── */
-.db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-@media (max-width: 900px) { .db-stats { grid-template-columns: repeat(2, 1fr); } }
+.db-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+@media (max-width: 1100px) { .db-stats { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 500px)  { .db-stats { grid-template-columns: 1fr; } }
 
 .db-stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 22px 18px; position: relative; overflow: hidden; transition: border-color 0.2s, transform 0.2s; }
@@ -182,7 +182,9 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
          ║          STAT CARDS                  ║
          ║  WIRE each .db-stat-val with:        ║
          ║   Orders    → {{ number_format($totalOrders) }}
+         ║   Paid      → {{ number_format($totalPaidOrders) }}
          ║   Revenue   → {{ number_format($totalRevenue, 0) }}
+         ║   Gross Rev → {{ number_format($grossRevenue, 0) }}
          ║   Customers → {{ number_format($totalCustomers) }}
          ║   Events    → {{ number_format($totalEvents) }}
          ╚══════════════════════════════════════╝ --}}
@@ -197,7 +199,16 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
         </div>
 
-        <div class="db-stat green fade-up delay-2">
+        <div class="db-stat fade-up delay-2">
+            <div class="db-stat-top">
+                <div class="db-stat-label">Total Paid Orders</div>
+                <div class="db-stat-icon">✅</div>
+            </div>
+            <div class="db-stat-val">{{ number_format($totalPaidOrders) }}</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
+        </div>
+
+        <div class="db-stat green fade-up delay-3">
             <div class="db-stat-top">
                 <div class="db-stat-label">Revenue</div>
                 <div class="db-stat-icon">💰</div>
@@ -206,7 +217,16 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
         </div>
 
-        <div class="db-stat blue fade-up delay-3">
+        <div class="db-stat green fade-up delay-4">
+            <div class="db-stat-top">
+                <div class="db-stat-label">Gross Revenue</div>
+                <div class="db-stat-icon">💵</div>
+            </div>
+            <div class="db-stat-val">{{ number_format($grossRevenue, 0) }} EGP</div>
+            <div class="db-stat-sub">Paid orders only</div>
+        </div>
+
+        <div class="db-stat blue fade-up delay-1">
             <div class="db-stat-top">
                 <div class="db-stat-label">Customers</div>
                 <div class="db-stat-icon">👥</div>
@@ -215,7 +235,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             <div class="db-stat-sub">New in {{ $rangeLabel }}</div>
         </div>
 
-        <div class="db-stat red fade-up delay-4">
+        <div class="db-stat red fade-up delay-2">
             <div class="db-stat-top">
                 <div class="db-stat-label">Active Events</div>
                 <div class="db-stat-icon">🎟️</div>
