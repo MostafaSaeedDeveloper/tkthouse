@@ -29,7 +29,9 @@
         <!--black-style Css-->
         <link href="{{ asset('css/black-style.css') }}" rel="stylesheet" />
         <!-- Fav icon -->
-        <link rel="icon" type="image/png" sizes="96x96" href="{{ asset('images/favicon.png') }}">
+        <link rel="shortcut icon" href="{{ asset('images/favicon.png') }}">
+        <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/favicon.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/favicon.png') }}">
         <link href="{{ asset('css/font-awesome.css') }}" rel="stylesheet">
         <link href="{{ asset('css/svg-icons.css') }}" rel="stylesheet">
         <!-- Pretty Photo CSS -->
