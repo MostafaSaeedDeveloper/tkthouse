@@ -233,6 +233,9 @@
                         @if($item->holder_phone)
                           <span class="oe-inv-meta-chip"><i class="fa fa-phone"></i> {{ $item->holder_phone }}</span>
                         @endif
+                        @if($item->holder_gender)
+                          <span class="oe-inv-meta-chip"><i class="fa fa-venus-mars"></i> {{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}</span>
+                        @endif
                         @if($item->holder_social_profile)
                           @php
                             $socialProfileRaw = trim((string) $item->holder_social_profile);

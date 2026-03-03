@@ -144,6 +144,9 @@
                   <div class="od-ticket-holder-info">
                     {{ $item->holder_name }}
                     <span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }}</span>
+                    @if($item->holder_gender)
+                      <span>Gender: {{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}</span>
+                    @endif
                     @if($socialProfileLink)
                       <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="od-ticket-social">
                         <i class="fa fa-globe"></i>
