@@ -151,11 +151,17 @@ class FawaterakService
         $configured = trim((string) data_get($method->config, 'provider_key', ''));
         $normalizedConfigured = preg_replace('/^[^0-9]*/', '', $configured ?? '');
 
-        if (is_string($normalizedConfigured) && $normalizedConfigured !== '') {
+        if ($configured !== '') {
             foreach ($paymentMethods as $item) {
                 $id = (string) data_get($item, 'paymentId', '');
                 $name = strtolower((string) data_get($item, 'name', ''));
-                if ($id === $normalizedConfigured || $name === strtolower($configured)) {
+                $providerKey = strtolower(trim((string) (data_get($item, 'providerKey') ?: data_get($item, 'provider_key') ?: data_get($item, 'key') ?: '')));
+
+                if (
+                    ($normalizedConfigured !== '' && $id === $normalizedConfigured)
+                    || $name === strtolower($configured)
+                    || ($providerKey !== '' && $providerKey === strtolower($configured))
+                ) {
                     return (int) $id;
                 }
             }

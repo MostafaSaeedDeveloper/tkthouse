@@ -99,8 +99,16 @@ class PaymentMethodController extends Controller
                     ?: ''
                 ));
 
+                $providerKey = trim((string) (
+                    data_get($m, 'providerKey')
+                    ?: data_get($m, 'provider_key')
+                    ?: data_get($m, 'key')
+                    ?: ''
+                ));
+
                 return [
                     'id' => $id,
+                    'provider_key' => $providerKey,
                     'name' => $name !== '' ? $name : 'Payment Method #'.$id,
                 ];
             })

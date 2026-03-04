@@ -137,9 +137,12 @@
       fMethodSelect.innerHTML = '';
       (data.methods || []).forEach((m) => {
         const opt = document.createElement('option');
-        opt.value = String(m.id);
-        opt.textContent = `${m.name} (#${m.id})`;
-        if (current && (String(current) === String(m.id))) opt.selected = true;
+        const providerKey = String(m.provider_key || m.id || '');
+        opt.value = providerKey;
+        opt.textContent = m.provider_key
+          ? `${m.name} (${m.provider_key})`
+          : `${m.name} (#${m.id})`;
+        if (current && String(current) === providerKey) opt.selected = true;
         fMethodSelect.appendChild(opt);
       });
       if (!fMethodSelect.options.length) {
