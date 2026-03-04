@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Event;
+use App\Models\IssuedTicket;
 use App\Models\Order;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Bus\Queueable;
@@ -10,6 +11,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class OrderTicketsIssuedMail extends Mailable
@@ -33,11 +35,11 @@ class OrderTicketsIssuedMail extends Mailable
 
     public function attachments(): array
     {
-        $ticketPdfData = $this->order->issuedTickets->map(function ($ticket) {
+        $ticketPdfData = $this->order->issuedTickets->map(function (IssuedTicket $ticket) {
             return [
                 'ticket' => $ticket,
                 'event' => $this->resolveEvent($ticket->ticket_name ?? ''),
-                'qrDataUri' => $ticket->qrUrl(),
+                'qrDataUri' => $this->qrDataUri($ticket),
             ];
         });
 
@@ -50,6 +52,25 @@ class OrderTicketsIssuedMail extends Mailable
             \Illuminate\Mail\Mailables\Attachment::fromData(fn () => $pdf, 'tickets-'.$this->order->order_number.'.pdf')
                 ->withMime('application/pdf'),
         ];
+    }
+
+
+
+    private function qrDataUri(IssuedTicket $ticket): string
+    {
+        $payload = (string) $ticket->ticket_number;
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode($payload);
+
+        try {
+            $response = Http::timeout(15)->get($url);
+            if ($response->successful()) {
+                return 'data:image/png;base64,'.base64_encode($response->body());
+            }
+        } catch (\Throwable) {
+            // Ignore and fallback to URL
+        }
+
+        return $url;
     }
 
     private function resolveEvent(string $ticketName): ?Event

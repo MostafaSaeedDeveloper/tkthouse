@@ -48,6 +48,6 @@ class IssuedTicket extends Model
 
     public function qrUrl(): string
     {
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode(route('front.tickets.show', $this));
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $this->ticket_number);
     }
 }
