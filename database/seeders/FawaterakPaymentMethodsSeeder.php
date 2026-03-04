@@ -5,43 +5,39 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class PaymobPaymentMethodsSeeder extends Seeder
+class FawaterakPaymentMethodsSeeder extends Seeder
 {
     public function run(): void
     {
-        $apiKey = (string) config('services.paymob.api_key', '');
-        $iframeId = (string) config('services.paymob.iframe_id', '');
+        $apiKey = (string) config('services.fawaterak.api_key', '0095c3aa1d15e2eefd1a8dc82873001b5de3ed0d03691abdea');
+        $defaultProviderKey = (string) config('services.fawaterak.provider_default', 'FAWATERAK.27416');
 
         $definitions = [
-            'paymob_card' => [
-                'name' => 'Paymob Card',
+            'fawaterak_card' => [
+                'name' => 'Fawaterak Card',
                 'label' => 'Credit / Debit Card',
                 'icon' => 'public/uploads/payment-method-icons/card.webp',
-                'description' => 'Secure online payment with Visa / Mastercard.',
-                'integration_id' => (string) config('services.paymob.integration_card', ''),
+                'description' => 'Pay securely by bank card via Fawaterak.',
+                'provider_key' => (string) config('services.fawaterak.provider_card', $defaultProviderKey),
                 'is_active' => true,
             ],
-            'paymob_wallet' => [
-                'name' => 'Paymob Wallet',
+            'fawaterak_wallet' => [
+                'name' => 'Fawaterak Wallet',
                 'label' => 'Mobile Wallet',
                 'icon' => 'public/uploads/payment-method-icons/wallet.webp',
-                'description' => 'Pay instantly using your mobile wallet.',
-                'integration_id' => (string) config('services.paymob.integration_wallet', ''),
+                'description' => 'Pay using your mobile wallet via Fawaterak.',
+                'provider_key' => (string) config('services.fawaterak.provider_wallet', $defaultProviderKey),
                 'is_active' => true,
             ],
-            'paymob_apple_pay' => [
-                'name' => 'Paymob Apple Pay',
+            'fawaterak_apple_pay' => [
+                'name' => 'Fawaterak Apple Pay',
                 'label' => 'Apple Pay',
                 'icon' => 'public/uploads/payment-method-icons/apple-pay.webp',
-                'description' => 'Pay quickly with Apple Pay.',
-                'integration_id' => (string) config('services.paymob.integration_apple_pay', ''),
+                'description' => 'Pay quickly with Apple Pay via Fawaterak.',
+                'provider_key' => (string) config('services.fawaterak.provider_apple_pay', $defaultProviderKey),
                 'is_active' => false,
             ],
         ];
-
-        DB::table('payment_methods')
-            ->whereIn('code', ['visa', 'wallet', 'card'])
-            ->delete();
 
         foreach ($definitions as $code => $data) {
             DB::table('payment_methods')->updateOrInsert(
@@ -51,12 +47,11 @@ class PaymobPaymentMethodsSeeder extends Seeder
                     'checkout_label' => $data['label'],
                     'checkout_icon' => $data['icon'],
                     'checkout_description' => $data['description'],
-                    'provider' => 'paymob',
+                    'provider' => 'fawaterak',
                     'is_active' => (bool) ($data['is_active'] ?? true),
                     'config' => json_encode([
                         'api_key' => $apiKey,
-                        'iframe_id' => $iframeId,
-                        'integration_id' => $data['integration_id'],
+                        'provider_key' => $data['provider_key'],
                     ], JSON_UNESCAPED_UNICODE),
                     'updated_at' => now(),
                     'created_at' => now(),

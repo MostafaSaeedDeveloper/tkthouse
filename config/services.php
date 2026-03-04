@@ -41,6 +41,16 @@ return [
     ],
 
 
+
+    'fawaterak' => [
+        'api_url' => env('FAWATERAK_API_URL', 'https://app.fawaterk.com/api/v2'),
+        'api_key' => env('FAWATERAK_API_KEY'),
+        'provider_default' => env('FAWATERAK_PROVIDER_KEY'),
+        'provider_card' => env('FAWATERAK_PROVIDER_CARD'),
+        'provider_wallet' => env('FAWATERAK_PROVIDER_WALLET'),
+        'provider_apple_pay' => env('FAWATERAK_PROVIDER_APPLE_PAY'),
+    ],
+
     'paymob' => [
         'api_key' => env('PAYMOB_API_KEY'),
         'secret_key' => env('PAYMOB_SECRET_KEY'),
@@ -48,6 +58,7 @@ return [
         'iframe_id' => env('PAYMOB_IFRAME_ID'),
         'integration_card' => env('PAYMOB_INTEGRATION_CARD'),
         'integration_wallet' => env('PAYMOB_INTEGRATION_WALLET'),
+        'integration_apple_pay' => env('PAYMOB_INTEGRATION_APPLE_PAY'),
         'currency' => env('PAYMOB_CURRENCY', 'EGP'),
     ],
 

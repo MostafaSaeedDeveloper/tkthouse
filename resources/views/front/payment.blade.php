@@ -297,7 +297,7 @@
                             @endforelse
                         </div>
 
-                        <button type="button" id="paymobBtn" class="pm-pay-btn">
+                        <button type="button" id="gatewayBtn" class="pm-pay-btn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                             </svg>
@@ -366,7 +366,7 @@
 (() => {
     const methodCards = Array.from(document.querySelectorAll('.pm-method'));
     const hidden      = document.getElementById('selectedPaymentMethod');
-    const paymobBtn   = document.getElementById('paymobBtn');
+    const gatewayBtn  = document.getElementById('gatewayBtn');
 
     function selectCard(code) {
         hidden.value = code;
@@ -380,17 +380,17 @@
 
     methodCards.forEach(card => card.addEventListener('click', () => selectCard(card.dataset.code)));
 
-    paymobBtn?.addEventListener('click', () => {
+    gatewayBtn?.addEventListener('click', () => {
         const active = methodCards.find(c => c.classList.contains('active'));
         const code   = active?.dataset.code || hidden.value;
         if (!code) return;
-        window.location.href = `{{ route('front.orders.payment.paymob', ['order' => $order, 'token' => $order->payment_link_token]) }}?method=${encodeURIComponent(code)}`;
+        window.location.href = `{{ route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token]) }}?method=${encodeURIComponent(code)}`;
     });
 
     // Disable pay btn if no method selected and none pre-selected
     if (!hidden.value && methodCards.length > 0) {
-        paymobBtn.disabled = true;
-        methodCards.forEach(card => card.addEventListener('click', () => { paymobBtn.disabled = false; }, { once: true }));
+        gatewayBtn.disabled = true;
+        methodCards.forEach(card => card.addEventListener('click', () => { gatewayBtn.disabled = false; }, { once: true }));
     }
 })();
 </script>

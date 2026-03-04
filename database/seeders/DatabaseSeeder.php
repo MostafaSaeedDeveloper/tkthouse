@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             EventsSeeder::class,
             PaymobPaymentMethodsSeeder::class,
+            FawaterakPaymentMethodsSeeder::class,
         ]);
 
         $admin = User::updateOrCreate(

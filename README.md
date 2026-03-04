@@ -57,3 +57,32 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Payment Seeders (Paymob / Fawaterak)
+
+When running a specific seeder, use the class name with `--class` (not a file path).
+
+```bash
+php artisan db:seed --class=Database\\Seeders\\FawaterakPaymentMethodsSeeder
+```
+
+You can also run all seeders registered in `DatabaseSeeder`:
+
+```bash
+php artisan db:seed
+```
+
+> Example of incorrect usage (will fail):
+>
+> `php artisan db:seed database/seeders/FawaterakPaymentMethodsSeeder.php`
+
+
+### Fawaterak Dashboard checklist
+
+If you see an error like `Invalid Token or inactive vendor`, verify these in Fawaterak:
+
+- Integrations → API Key: copy the exact key into your payment method config (`fawaterak_api_key`) **or set `FAWATERAK_API_KEY` in `.env`** (used as fallback when DB config is empty).
+- Integrations → `providerKey`: copy it into `fawaterak_provider_key` (Payment Method ID / Provider Key) **or set fallback values** `FAWATERAK_PROVIDER_KEY` / `FAWATERAK_PROVIDER_CARD` / `FAWATERAK_PROVIDER_WALLET` / `FAWATERAK_PROVIDER_APPLE_PAY`.
+- Ensure vendor account is active/live (not disabled).
+- For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
+- Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
