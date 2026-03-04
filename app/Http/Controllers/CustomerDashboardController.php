@@ -20,7 +20,16 @@ class CustomerDashboardController extends Controller
     {
         $user = $request->user();
 
-        $orders = $this->ordersQuery($user)
+        $ordersQuery = $this->ordersQuery($user);
+
+        $orderStats = [
+            'total_orders' => (clone $ordersQuery)->count(),
+            'paid_orders' => (clone $ordersQuery)->where('status', 'paid')->count(),
+            'pending_orders' => (clone $ordersQuery)->whereIn('status', ['pending', 'pending_payment'])->count(),
+            'total_spent' => (float) ((clone $ordersQuery)->where('status', 'paid')->sum('total_amount')),
+        ];
+
+        $orders = $ordersQuery
             ->with(['items', 'customer', 'issuedTickets'])
             ->latest()
             ->paginate(10);
@@ -32,19 +41,28 @@ class CustomerDashboardController extends Controller
                 (string) $method->code => trim((string) ($method->checkout_label ?: $method->name)),
             ]);
 
-        return view('front.account.orders', compact('user', 'orders', 'paymentMethodLabels'));
+        return view('front.account.orders', compact('user', 'orders', 'paymentMethodLabels', 'orderStats'));
     }
 
     public function tickets(Request $request)
     {
         $user = $request->user();
 
-        $tickets = $this->ticketsQuery($user)
+        $ticketsQuery = $this->ticketsQuery($user);
+
+        $ticketStats = [
+            'total_tickets' => (clone $ticketsQuery)->count(),
+            'assigned_holders' => (clone $ticketsQuery)->whereNotNull('holder_name')->count(),
+            'delivered' => (clone $ticketsQuery)->whereNotNull('sent_at')->count(),
+            'total_value' => (float) ((clone $ticketsQuery)->sum('ticket_price')),
+        ];
+
+        $tickets = $ticketsQuery
             ->with(['order'])
             ->latest()
             ->paginate(10);
 
-        return view('front.account.tickets', compact('user', 'tickets'));
+        return view('front.account.tickets', compact('user', 'tickets', 'ticketStats'));
     }
 
     public function updateProfile(Request $request)
