@@ -36,6 +36,7 @@ class CheckoutController extends Controller
                 'mode' => 'event_locked',
                 'eventSelection' => $eventSelection,
                 'buyer' => $buyer,
+                'promoCodesPreview' => $this->promoCodesPreview(),
                 'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
             ]);
         }
@@ -59,6 +60,7 @@ class CheckoutController extends Controller
             'legacyTickets' => $legacyTickets,
             'eventSelection' => null,
             'buyer' => $buyer,
+            'promoCodesPreview' => $this->promoCodesPreview(),
             'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
         ]);
     }
@@ -581,6 +583,26 @@ class CheckoutController extends Controller
             ->where('code', '!=', 'card')
             ->orderBy('id')
             ->pluck('code')
+            ->values()
+            ->all();
+    }
+
+
+    private function promoCodesPreview(): array
+    {
+        return PromoCode::query()
+            ->select(['code', 'discount_type', 'discount_value', 'usage_limit', 'used_count', 'is_active', 'starts_at', 'ends_at'])
+            ->get()
+            ->map(fn (PromoCode $promoCode) => [
+                'code' => (string) $promoCode->code,
+                'discount_type' => (string) $promoCode->discount_type,
+                'discount_value' => (float) $promoCode->discount_value,
+                'usage_limit' => $promoCode->usage_limit,
+                'used_count' => (int) $promoCode->used_count,
+                'is_active' => (bool) $promoCode->is_active,
+                'starts_at' => $promoCode->starts_at?->toIso8601String(),
+                'ends_at' => $promoCode->ends_at?->toIso8601String(),
+            ])
             ->values()
             ->all();
     }

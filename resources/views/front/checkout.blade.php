@@ -273,7 +273,8 @@
                     <div class="co-sidebar">
                         <div class="co-label">Promo Code</div>
                         <div class="co-card" style="margin-bottom:20px;">
-                            <div class="co-promo-row"><div class="co-field" style="margin-bottom:0;"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div><button type="button" class="co-promo-apply">Apply</button></div>
+                            <div class="co-promo-row"><div class="co-field" style="margin-bottom:0;"><label>Promo Code</label><input id="locked-promo-input" name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div><button type="button" class="co-promo-apply" id="locked-promo-apply">Apply</button></div>
+                            <div class="co-flow-note" id="locked-promo-note"></div>
                         </div>
 
                         <div class="co-label">Order Review</div>
@@ -288,8 +289,16 @@
                                 @endforeach
                             </div>
                             <div class="co-summary-total">
+                                <span class="total-label">Subtotal</span>
+                                <span class="total-val" id="locked-subtotal-val">{{ number_format($units->sum('ticket_price'),2) }}</span>
+                            </div>
+                            <div class="co-summary-total" id="locked-discount-row" style="display:none;">
+                                <span class="total-label">Discount</span>
+                                <span class="total-val" id="locked-discount-val">-0.00</span>
+                            </div>
+                            <div class="co-summary-total">
                                 <span class="total-label">Total</span>
-                                <span class="total-val">{{ number_format($units->sum('ticket_price'),2) }}</span>
+                                <span class="total-val" id="locked-total-val">{{ number_format($units->sum('ticket_price'),2) }}</span>
                             </div>
                         </div>
 
@@ -306,7 +315,7 @@
                             @endif
                         </div>
 
-                        <button type="submit" class="co-btn-primary">
+                        <button type="submit" class="co-btn-primary" id="locked-submit-btn">
                             {{ $requiresApproval ? 'Send Order' : 'Pay '.number_format($units->sum('ticket_price'),2).' EGP' }}
                         </button>
                     </div>
@@ -372,6 +381,65 @@
             </script>
             @endif
 
+            <script>
+            (function(){
+                const promoCatalog = @json($promoCodesPreview ?? []);
+                const applyBtn = document.getElementById('locked-promo-apply');
+                const promoInput = document.getElementById('locked-promo-input');
+                const promoNote = document.getElementById('locked-promo-note');
+                const subtotalVal = document.getElementById('locked-subtotal-val');
+                const discountRow = document.getElementById('locked-discount-row');
+                const discountVal = document.getElementById('locked-discount-val');
+                const totalVal = document.getElementById('locked-total-val');
+                const submitBtn = document.getElementById('locked-submit-btn');
+                const requiresApproval = {{ $requiresApproval ? 'true' : 'false' }};
+                const baseTotal = Number({{ (float) $units->sum('ticket_price') }});
+
+                if (!applyBtn || !promoInput || !subtotalVal || !totalVal) return;
+
+                const fmt = (n) => Number(n || 0).toFixed(2);
+
+                const resetPromo = (msg='') => {
+                    discountRow.style.display = 'none';
+                    discountVal.textContent = '-0.00';
+                    totalVal.textContent = fmt(baseTotal);
+                    promoNote.textContent = msg;
+                    if (!requiresApproval && submitBtn) submitBtn.textContent = `Pay ${fmt(baseTotal)} EGP`;
+                };
+
+                const findPromo = (code) => promoCatalog.find((p) => String(p.code || '').toUpperCase() === code);
+
+                const validatePromo = (promo) => {
+                    if (!promo || !promo.is_active) return 'Promo code is invalid.';
+                    const now = Date.now();
+                    if (promo.starts_at && now < new Date(promo.starts_at).getTime()) return 'Promo code is not active yet.';
+                    if (promo.ends_at && now > new Date(promo.ends_at).getTime()) return 'Promo code has expired.';
+                    if (promo.usage_limit !== null && Number(promo.used_count) >= Number(promo.usage_limit)) return 'Promo code usage limit reached.';
+                    return '';
+                };
+
+                applyBtn.addEventListener('click', () => {
+                    const code = String(promoInput.value || '').trim().toUpperCase();
+                    if (!code) return resetPromo('Enter promo code first.');
+                    const promo = findPromo(code);
+                    const err = validatePromo(promo);
+                    if (err) return resetPromo(err);
+
+                    const discount = promo.discount_type === 'percent'
+                        ? Math.min(baseTotal, (baseTotal * Number(promo.discount_value || 0)) / 100)
+                        : Math.min(baseTotal, Number(promo.discount_value || 0));
+
+                    const finalTotal = Math.max(0, baseTotal - discount);
+                    discountRow.style.display = discount > 0 ? 'flex' : 'none';
+                    discountVal.textContent = `-${fmt(discount)}`;
+                    totalVal.textContent = fmt(finalTotal);
+                    promoNote.textContent = `Applied ${code} successfully.`;
+                    promoInput.value = code;
+                    if (!requiresApproval && submitBtn) submitBtn.textContent = `Pay ${fmt(finalTotal)} EGP`;
+                });
+            })();
+            </script>
+
 
         {{-- ================================================================
              MODE: OPEN  (left = buyer + payment, right = ticket rows)
@@ -424,7 +492,8 @@
                     <div>
                         <div class="co-label">Promo Code</div>
                         <div class="co-card" style="margin-bottom:20px;">
-                            <div class="co-promo-row"><div class="co-field" style="margin-bottom:0;"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div><button type="button" class="co-promo-apply">Apply</button></div>
+                            <div class="co-promo-row"><div class="co-field" style="margin-bottom:0;"><label>Promo Code</label><input id="open-promo-input" name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div><button type="button" class="co-promo-apply" id="open-promo-apply">Apply</button></div>
+                            <div class="co-flow-note" id="open-promo-note"></div>
                         </div>
 
                         <div class="co-label">02 &nbsp; Tickets & Order Review</div>
@@ -522,6 +591,23 @@
                 const penBox = document.getElementById('pending-review-box');
                 const subBtn = document.getElementById('submit-order-btn');
                 const note   = document.getElementById('checkout-flow-note');
+                const promoCatalog = @json($promoCodesPreview ?? []);
+                const promoInput = document.getElementById('open-promo-input');
+                const promoApply = document.getElementById('open-promo-apply');
+                const promoNote = document.getElementById('open-promo-note');
+                let appliedPromo = null;
+
+                const fmt = (n) => Number(n || 0).toFixed(2);
+
+                const findPromo = (code) => promoCatalog.find((p) => String(p.code || '').toUpperCase() === code);
+                const validatePromo = (promo) => {
+                    if (!promo || !promo.is_active) return 'Promo code is invalid.';
+                    const now = Date.now();
+                    if (promo.starts_at && now < new Date(promo.starts_at).getTime()) return 'Promo code is not active yet.';
+                    if (promo.ends_at && now > new Date(promo.ends_at).getTime()) return 'Promo code has expired.';
+                    if (promo.usage_limit !== null && Number(promo.used_count) >= Number(promo.usage_limit)) return 'Promo code usage limit reached.';
+                    return '';
+                };
 
                 const reindex = () => rows.querySelectorAll('[data-row]').forEach((r,i)=>{
                     r.querySelector('.ticket-num').textContent='Ticket '+(i+1);
@@ -544,12 +630,47 @@
                         const price = parseFloat(ticket?.options[ticket.selectedIndex]?.dataset.price || '0');
                         if (!Number.isNaN(price) && !Number.isNaN(qty)) total += price * Math.max(1, qty);
                     });
+
+                    let discount = 0;
+                    if (appliedPromo) {
+                        discount = appliedPromo.discount_type === 'percent'
+                            ? Math.min(total, (total * Number(appliedPromo.discount_value || 0)) / 100)
+                            : Math.min(total, Number(appliedPromo.discount_value || 0));
+                    }
+                    const finalTotal = Math.max(0, total - discount);
+
                     payBox.style.display=req?'none':'block';
                     penBox.style.display=req?'block':'none';
                     document.querySelectorAll('.payment-method-input').forEach(i=>{i.required=!req;if(req)i.checked=false;});
-                    subBtn.textContent=req?'Send Order':`Pay ${total.toFixed(2)} EGP`;
+                    subBtn.textContent=req?'Send Order':`Pay ${fmt(finalTotal)} EGP`;
                     note.textContent=req?'This order requires admin approval before payment.':'You will be redirected directly to secure payment.';
                 };
+
+                if (promoApply && promoInput) {
+                    promoApply.addEventListener('click', () => {
+                        const code = String(promoInput.value || '').trim().toUpperCase();
+                        if (!code) {
+                            appliedPromo = null;
+                            promoNote.textContent = 'Enter promo code first.';
+                            flow();
+                            return;
+                        }
+                        const promo = findPromo(code);
+                        const err = validatePromo(promo);
+                        if (err) {
+                            appliedPromo = null;
+                            promoNote.textContent = err;
+                            flow();
+                            return;
+                        }
+
+                        appliedPromo = promo;
+                        promoInput.value = code;
+                        promoNote.textContent = `Applied ${code} successfully.`;
+                        flow();
+                    });
+                }
+
                 addBtn.addEventListener('click',()=>{
                     rows.appendChild(tpl.content.cloneNode(true));
                     reindex(); bindRemove();
