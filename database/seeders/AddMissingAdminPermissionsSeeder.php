@@ -25,6 +25,7 @@ class AddMissingAdminPermissionsSeeder extends Seeder
             'promo-codes.update',
             'promo-codes.delete',
 
+            'orders.deleted.view',
             'orders.delete',
             'orders.restore',
         ];
@@ -36,6 +37,7 @@ class AddMissingAdminPermissionsSeeder extends Seeder
         $rolePermissions = [
             'admin' => $permissions,
             'ticket_manager' => [
+                'orders.deleted.view',
                 'orders.delete',
                 'orders.restore',
                 'promo-codes.view',
