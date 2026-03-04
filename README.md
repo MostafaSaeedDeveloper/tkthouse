@@ -86,3 +86,26 @@ If you see an error like `Invalid Token or inactive vendor`, verify these in Faw
 - Ensure vendor account is active/live (not disabled).
 - For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
 - Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
+
+## WhatsApp Integration via Twilio
+
+To send tickets automatically on WhatsApp when an order becomes `paid`, and to enable **Send WhatsApp** from the ticket details page, configure Twilio as follows:
+
+1. Create a Twilio account and activate the WhatsApp sender.
+2. Add these variables to `.env`:
+   ```env
+   TWILIO_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+   ```
+3. Ensure customer/holder phone numbers are stored in international format (example: `+2010xxxxxxx`).
+4. Clear config cache after updating env values:
+   ```bash
+   php artisan config:clear
+   ```
+5. Test flow:
+   - Complete checkout and change order status to `paid` (or pay from gateway callback).
+   - The system will issue tickets and send WhatsApp message with ticket links.
+   - From Admin > Ticket Details, use **Send WhatsApp** to resend a single ticket manually.
+
+> If Twilio credentials are missing or the ticket/customer phone is empty, WhatsApp sending is skipped and logged.

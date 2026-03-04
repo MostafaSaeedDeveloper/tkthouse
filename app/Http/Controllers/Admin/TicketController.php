@@ -6,9 +6,9 @@ use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
+use App\Services\WhatsappNotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -109,25 +109,15 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket sent by email successfully.');
     }
 
-    public function sendWhatsapp(Ticket $ticket)
+    public function sendWhatsapp(Ticket $ticket, WhatsappNotificationService $whatsappNotificationService)
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            return back()->with('error', 'WhatsApp webhook is not configured.');
+        $sent = $whatsappNotificationService->sendSingleTicket($ticket);
+
+        if (! $sent) {
+            return back()->with('error', 'Twilio WhatsApp is not configured or holder phone is missing.');
         }
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'ticket_number' => $ticket->ticket_number,
-                'holder_name' => $ticket->holder_name,
-                'holder_phone' => $ticket->holder_phone,
-                'ticket_show_url' => route('admin.tickets.show', $ticket),
-                'ticket_pdf_url' => route('admin.tickets.download', $ticket),
-            ])
-            ->throw();
-
-        return back()->with('success', 'Ticket sent by WhatsApp webhook successfully.');
+        return back()->with('success', 'Ticket sent by WhatsApp successfully.');
     }
 
     public function download(Ticket $ticket)

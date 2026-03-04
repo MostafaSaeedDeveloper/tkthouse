@@ -95,7 +95,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
         ->middlewareFor('destroy', 'permission:tickets.delete');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
-    Route::get('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
+    Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
     Route::get('tickets/{ticket}/download', [TicketController::class, 'download'])->middleware('permission:tickets.view')->name('tickets.download');
     Route::get('scanner', [TicketController::class, 'scanner'])->middleware('permission:scanner.access')->name('tickets.scanner');
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
