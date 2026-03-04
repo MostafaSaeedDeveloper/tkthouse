@@ -196,6 +196,8 @@ class FawaterakService
             data_get($json, 'data.payment_data.url'),
             data_get($json, 'data.payment_data.payment_url'),
             data_get($json, 'data.payment_data.redirect'),
+            data_get($json, 'data.payment_data.redirect_url'),
+            data_get($json, 'data.payment_data.checkout_url'),
             data_get($json, 'data.redirectTo'),
             data_get($json, 'data.redirect_to'),
             data_get($json, 'data.url'),
@@ -205,15 +207,21 @@ class FawaterakService
             data_get($json, 'payment_data.url'),
             data_get($json, 'payment_data.payment_url'),
             data_get($json, 'payment_data.redirect'),
+            data_get($json, 'payment_data.redirect_url'),
+            data_get($json, 'payment_data.checkout_url'),
             data_get($json, 'payment_data.redirectUrl'),
             data_get($json, 'data.payment_data.redirectUrl'),
             data_get($json, 'payment_url'),
             data_get($json, 'redirectUrl'),
             data_get($json, 'data.redirectUrl'),
             data_get($json, 'data.redirect'),
+            data_get($json, 'data.redirect_url'),
+            data_get($json, 'data.checkout_url'),
             data_get($json, 'invoice_url'),
             data_get($json, 'data.invoice_url'),
             data_get($json, 'redirect'),
+            data_get($json, 'redirect_url'),
+            data_get($json, 'checkout_url'),
             data_get($json, 'url'),
         ];
 
@@ -293,13 +301,36 @@ class FawaterakService
             return '';
         }
 
+        $fromText = $this->extractUrlFromText($text);
+        if ($fromText !== '') {
+            return $fromText;
+        }
+
+        $decodedUrl = urldecode($text);
+        if ($decodedUrl !== $text) {
+            $fromDecoded = $this->extractUrlFromText($decodedUrl);
+            if ($fromDecoded !== '') {
+                return $fromDecoded;
+            }
+        }
+
+        return '';
+    }
+
+
+    private function extractUrlFromText(string $text): string
+    {
         if (preg_match('#https?://[^\s"\']+#i', $text, $matches) === 1) {
             return $this->canonicalizeCheckoutUrl($matches[0]);
         }
 
-        $unescaped = str_replace('\/', '/', $text);
+        $unescaped = str_replace(['\/', '\u002F', '&amp;'], ['/', '/', '&'], $text);
         if ($unescaped !== $text && preg_match('#https?://[^\s"\']+#i', $unescaped, $matches) === 1) {
             return $this->canonicalizeCheckoutUrl($matches[0]);
+        }
+
+        if (preg_match('#<iframe[^>]+src=["\']([^"\']+)["\']#i', $text, $matches) === 1) {
+            return $this->normalizePossibleUrl($matches[1]);
         }
 
         return '';
