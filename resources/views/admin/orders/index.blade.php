@@ -46,7 +46,12 @@
     <div class="block block-rounded">
         <div class="block-header block-header-default">
             <h3 class="block-title">All Orders</h3>
-            <div class="block-options">
+            <div class="block-options d-flex align-items-center gap-2">
+                @if(($canViewDeletedOrders ?? false))
+                    <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.deleted') }}">
+                        Deleted Orders <span class="badge bg-dark ms-1">{{ $deletedOrdersCount ?? 0 }}</span>
+                    </a>
+                @endif
                 <span class="badge bg-primary">{{ $orders->total() }} Total</span>
             </div>
         </div>
@@ -109,6 +114,13 @@
                                 @endif
                                 <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
                                 <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
+                                @can('orders.manage')
+                                    <form class="d-inline" method="POST" action="{{ route('admin.orders.destroy', $order) }}" onsubmit="return confirm('Delete this order? You can restore it later from Deleted Orders.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-sm btn-alt-danger" type="submit" title="Delete"><i class="fa fa-trash"></i></button>
+                                    </form>
+                                @endcan
                                 </div>
                             </td>
                         </tr>

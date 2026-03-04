@@ -17,6 +17,8 @@ use Spatie\Activitylog\Models\Activity;
 
 class OrderController extends Controller
 {
+    private const DELETED_ORDERS_PERMISSION = 'orders.deleted.view';
+
     public function index(Request $request)
     {
         $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
@@ -42,6 +44,8 @@ class OrderController extends Controller
         }
 
         $orders = $ordersQuery->orderByDesc('id')->paginate(15)->withQueryString();
+        $canViewDeletedOrders = $request->user()?->can(self::DELETED_ORDERS_PERMISSION) ?? false;
+        $deletedOrdersCount = $canViewDeletedOrders ? Order::onlyTrashed()->count() : 0;
 
         $ticketColorMap = EventTicket::query()
             ->select('name', 'color')
@@ -55,7 +59,21 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['code', 'name', 'is_active']);
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods'));
+        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount'));
+    }
+
+    public function deleted(Request $request)
+    {
+        abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
+
+        $orders = Order::onlyTrashed()
+            ->withCount('items')
+            ->with(['customer'])
+            ->orderByDesc('deleted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.orders.deleted', compact('orders'));
     }
 
     public function show(Order $order)
@@ -241,6 +259,37 @@ class OrderController extends Controller
         app(TicketIssuanceService::class)->issueIfPaid($order);
 
         return redirect()->route('admin.orders.show', $order)->with('success', 'Order updated successfully.');
+    }
+
+    public function destroy(Request $request, Order $order)
+    {
+        abort_unless($request->user()?->can('orders.manage'), 403);
+
+        $orderNumber = $order->order_number;
+        $order->delete();
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->log('Order soft deleted');
+
+        return redirect()->route('admin.orders.index')->with('success', "Order {$orderNumber} deleted successfully.");
+    }
+
+    public function restore(Request $request, int $order)
+    {
+        abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
+        abort_unless($request->user()?->can('orders.manage'), 403);
+
+        $targetOrder = Order::onlyTrashed()->findOrFail($order);
+        $targetOrder->restore();
+
+        activity('orders')
+            ->performedOn($targetOrder)
+            ->causedBy($request->user())
+            ->log('Order restored from trash');
+
+        return redirect()->route('admin.orders.deleted')->with('success', 'Order restored successfully.');
     }
 
     public function storeNote(Request $request, Order $order)
