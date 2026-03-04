@@ -57,3 +57,21 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Payment Seeders (Paymob / Fawaterak)
+
+When running a specific seeder, use the class name with `--class` (not a file path).
+
+```bash
+php artisan db:seed --class=Database\\Seeders\\FawaterakPaymentMethodsSeeder
+```
+
+You can also run all seeders registered in `DatabaseSeeder`:
+
+```bash
+php artisan db:seed
+```
+
+> Example of incorrect usage (will fail):
+>
+> `php artisan db:seed database/seeders/FawaterakPaymentMethodsSeeder.php`
