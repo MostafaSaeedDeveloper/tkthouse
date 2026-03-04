@@ -1,4 +1,4 @@
-@extends('layouts.backend')
+@extends('admin.master')
 
 @section('title', $promoCode->exists ? 'Edit Promo Code' : 'Create Promo Code')
 

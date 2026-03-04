@@ -1,4 +1,4 @@
-@extends('layouts.backend')
+@extends('admin.master')
 
 @section('title', 'Promo Codes')
 
@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="h3 mb-1">Promo Codes</h1>
-            <a href="{{ route('admin.settings.edit') }}" class="fs-sm">← Back to General Settings</a>
+            <a href="{{ route('admin.affiliates.index') }}" class="fs-sm">← Back to Affiliate</a>
         </div>
         <a href="{{ route('admin.promo-codes.create') }}" class="btn btn-primary">Add Promo Code</a>
     </div>
