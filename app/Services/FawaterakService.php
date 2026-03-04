@@ -4,11 +4,10 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
-use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
-use Throwable;
 
 class FawaterakService
 {
@@ -24,22 +23,14 @@ class FawaterakService
             throw new RuntimeException('Selected Fawaterak payment method is disabled.');
         }
 
-        $config = $this->normalizeConfig($method->config ?? []);
-        $apiKey = $this->resolveApiKey($config);
-        $providerKey = $this->resolveProviderKey($method, $config);
-        $providerKey = $this->normalizeProviderKey($providerKey);
+        $config = is_array($method->config) ? $method->config : [];
+        $apiKey = trim((string) ($config['api_key'] ?? ''));
 
-        if ($apiKey === '' || $providerKey === '') {
-            throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key and payment method id.');
+        if ($apiKey === '') {
+            throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key.');
         }
 
-        Log::info('Fawaterak config resolved for payment method.', [
-            'payment_method_id' => $method->id,
-            'payment_method_code' => $method->code,
-            'provider' => $method->provider,
-            'api_key_source' => $this->apiKeySource($config),
-            'provider_key_source' => $this->providerKeySource($method, $config),
-        ]);
+        $paymentId = $this->resolvePaymentId($method, $apiKey);
 
         $customer = $order->loadMissing('customer')->customer;
         $firstName = trim((string) ($customer->first_name ?? '')) ?: 'Customer';
@@ -57,17 +48,10 @@ class FawaterakService
         ]);
 
         $payload = [
-            'payment_method_id' => ctype_digit($providerKey) ? (int) $providerKey : $providerKey,
+            'payment_method_id' => (int) $paymentId,
             'cartTotal' => (string) $order->total_amount,
             'currency' => 'EGP',
             'cartId' => (string) $order->order_number,
-            'cartItems' => [
-                [
-                    'name' => 'Order #'.$order->order_number,
-                    'price' => (string) $order->total_amount,
-                    'quantity' => '1',
-                ],
-            ],
             'customer' => [
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -78,135 +62,107 @@ class FawaterakService
             'redirectionUrls' => [
                 'successUrl' => $successUrl,
                 'failUrl' => $failUrl,
-                'pendingUrl' => $successUrl,
+                'pendingUrl' => $failUrl,
             ],
+            'cartItems' => [[
+                'name' => 'Order #'.$order->order_number,
+                'price' => (string) $order->total_amount,
+                'quantity' => '1',
+            ]],
         ];
 
-        $baseUrl = (string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2');
+        $response = Http::baseUrl('https://app.fawaterk.com/api/v2')
+            ->timeout(20)
+            ->withToken($apiKey)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->post('/invoiceInitPay', $payload);
 
-        try {
-            $resp = Http::baseUrl($baseUrl)
-                ->timeout(20)
-                ->withToken($apiKey)
-                ->withHeaders(['Accept' => 'application/json'])
-                ->post('/invoiceInitPay', $payload);
-        } catch (ConnectionException $exception) {
-            throw new RuntimeException('Unable to connect to Fawaterak gateway. '.$exception->getMessage(), previous: $exception);
+        if (! $response->successful()) {
+            $raw = (string) $response->body();
+            Log::error('Fawaterak invoiceInitPay failed.', [
+                'order_id' => $order->id,
+                'status' => $response->status(),
+                'response' => $raw,
+            ]);
+            throw new RuntimeException($raw);
         }
 
-        if (! $resp->successful()) {
-            $status = $resp->status();
-            $body = (string) $resp->body();
-            throw new RuntimeException($this->humanizeGatewayError($status, $body));
-        }
+        $json = $response->json();
+        $redirectUrl = (string) data_get($json, 'data.payment_data.redirectTo', '');
 
-        $response = $resp->json();
-        $paymentUrl = (string) (data_get($response, 'data.payment_data.redirectTo')
-            ?: data_get($response, 'data.payment_data.redirect_to')
-            ?: data_get($response, 'data.redirectTo')
-            ?: data_get($response, 'data.payment_url')
-            ?: data_get($response, 'data.url')
-            ?: '');
-
-        if ($paymentUrl === '') {
+        if ($redirectUrl === '') {
+            Log::error('Fawaterak checkout URL missing.', [
+                'order_id' => $order->id,
+                'response' => $json,
+            ]);
             throw new RuntimeException('Fawaterak did not return a checkout URL.');
         }
 
-        return $paymentUrl;
+        return $redirectUrl;
     }
 
-    private function humanizeGatewayError(int $status, string $body): string
+    private function resolvePaymentId(PaymentMethod $method, string $apiKey): int
     {
-        try {
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
-            return 'Unable to initialize Fawaterak payment right now. HTTP '.$status.': '.$body;
-        }
+        $paymentMethods = Cache::remember(
+            'fawaterak_payment_methods_'.sha1($apiKey),
+            now()->addDay(),
+            function () use ($apiKey) {
+                $response = Http::baseUrl('https://app.fawaterk.com/api/v2')
+                    ->timeout(20)
+                    ->withToken($apiKey)
+                    ->withHeaders(['Accept' => 'application/json'])
+                    ->get('/getPaymentmethods');
 
-        if (($decoded['status'] ?? null) === 'error') {
-            $tokenError = data_get($decoded, 'message.token.0');
-            if (is_string($tokenError) && str_contains(strtolower($tokenError), 'invalid token')) {
-                return 'Unable to initialize Fawaterak payment right now. Fawaterak API Key is invalid or your vendor is inactive.';
+                if (! $response->successful()) {
+                    Log::error('Fawaterak getPaymentmethods failed.', [
+                        'status' => $response->status(),
+                        'response' => (string) $response->body(),
+                    ]);
+                    throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+                }
+
+                $json = $response->json();
+                $methods = data_get($json, 'data', []);
+
+                if (! is_array($methods)) {
+                    Log::error('Fawaterak getPaymentmethods unexpected payload.', ['response' => $json]);
+                    throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+                }
+
+                return $methods;
             }
+        );
 
-            $methodError = data_get($decoded, 'message.payment_method_id.0');
-            if (is_string($methodError) && $methodError !== '') {
-                return 'Unable to initialize Fawaterak payment right now. Invalid Fawaterak Payment Method ID / Provider Key.';
+        $configured = trim((string) data_get($method->config, 'provider_key', ''));
+        $normalizedConfigured = preg_replace('/^[^0-9]*/', '', $configured ?? '');
+
+        if (is_string($normalizedConfigured) && $normalizedConfigured !== '') {
+            foreach ($paymentMethods as $item) {
+                $id = (string) data_get($item, 'paymentId', '');
+                $name = strtolower((string) data_get($item, 'name', ''));
+                if ($id === $normalizedConfigured || $name === strtolower($configured)) {
+                    return (int) $id;
+                }
             }
         }
 
-        return 'Unable to initialize Fawaterak payment right now. HTTP '.$status.': '.$body;
-    }
-
-
-    private function normalizeProviderKey(string $providerKey): string
-    {
-        $normalized = preg_replace('/^[^0-9]*/', '', trim($providerKey));
-
-        return is_string($normalized) ? $normalized : '';
-    }
-
-    private function resolveProviderKey(PaymentMethod $method, array $config): string
-    {
-        $direct = trim((string) ($config['provider_key'] ?? $config['providerKey'] ?? $config['payment_method_id'] ?? ''));
-        if ($direct !== '') {
-            return $direct;
+        foreach ($paymentMethods as $item) {
+            $name = strtolower((string) data_get($item, 'name', ''));
+            if (str_contains($name, 'card')) {
+                return (int) data_get($item, 'paymentId');
+            }
         }
 
-        $code = strtolower((string) $method->code);
-        if (str_contains($code, 'apple')) {
-            return trim((string) config('services.fawaterak.provider_apple_pay', config('services.fawaterak.provider_default', '')));
+        $firstId = (int) data_get($paymentMethods, '0.paymentId', 0);
+        if ($firstId > 0) {
+            return $firstId;
         }
 
-        if (str_contains($code, 'wallet')) {
-            return trim((string) config('services.fawaterak.provider_wallet', config('services.fawaterak.provider_default', '')));
-        }
+        Log::error('Fawaterak payment methods list empty or invalid.', [
+            'payment_method_code' => $method->code,
+            'payment_methods' => $paymentMethods,
+        ]);
 
-        return trim((string) config('services.fawaterak.provider_card', config('services.fawaterak.provider_default', '')));
-    }
-
-    private function resolveApiKey(array $config): string
-    {
-        return trim((string) ($config['api_key'] ?? $config['apiKey'] ?? $config['token'] ?? config('services.fawaterak.api_key', '')));
-    }
-
-    private function normalizeConfig(array|string|null $config): array
-    {
-        if (is_array($config)) {
-            return $config;
-        }
-
-        if (is_string($config) && trim($config) !== '') {
-            $decoded = json_decode($config, true);
-            return is_array($decoded) ? $decoded : [];
-        }
-
-        return [];
-    }
-
-    private function apiKeySource(array $config): string
-    {
-        if (trim((string) ($config['api_key'] ?? '')) !== '' || trim((string) ($config['apiKey'] ?? '')) !== '' || trim((string) ($config['token'] ?? '')) !== '') {
-            return 'payment_method_config';
-        }
-
-        return 'services_config';
-    }
-
-    private function providerKeySource(PaymentMethod $method, array $config): string
-    {
-        if (trim((string) ($config['provider_key'] ?? $config['providerKey'] ?? $config['payment_method_id'] ?? '')) !== '') {
-            return 'payment_method_config';
-        }
-
-        $code = strtolower((string) $method->code);
-        if (str_contains($code, 'apple')) {
-            return 'services.fawaterak.provider_apple_pay|provider_default';
-        }
-        if (str_contains($code, 'wallet')) {
-            return 'services.fawaterak.provider_wallet|provider_default';
-        }
-
-        return 'services.fawaterak.provider_card|provider_default';
+        throw new RuntimeException('Could not fetch Fawaterak payment methods.');
     }
 }
