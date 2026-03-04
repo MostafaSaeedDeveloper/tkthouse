@@ -27,10 +27,15 @@ class WhatsappNotificationService
         return $this->dispatchMessage($phone, $body, [
             'context' => 'order_paid',
             'order_id' => $order->id,
-        ]);
+        ])['ok'];
     }
 
     public function sendSingleTicket(Ticket $ticket): bool
+    {
+        return $this->sendSingleTicketWithDetails($ticket)['ok'];
+    }
+
+    public function sendSingleTicketWithDetails(Ticket $ticket): array
     {
         $ticket->loadMissing('order.customer');
 
@@ -43,7 +48,10 @@ class WhatsappNotificationService
                 'customer_phone' => $ticket->order?->customer?->phone,
             ]);
 
-            return false;
+            return [
+                'ok' => false,
+                'message' => 'Phone number is missing or invalid. Use international format like +2010xxxxxxx.',
+            ];
         }
 
         $body = implode("\n", [
@@ -59,7 +67,7 @@ class WhatsappNotificationService
         ]);
     }
 
-    private function dispatchMessage(string $to, string $body, array $context = []): bool
+    private function dispatchMessage(string $to, string $body, array $context = []): array
     {
         $sid = (string) config('services.twilio.sid');
         $token = (string) config('services.twilio.auth_token');
@@ -68,7 +76,7 @@ class WhatsappNotificationService
         if (! $sid || ! $token || ! $from) {
             Log::info('Skipping WhatsApp notification: Twilio is not fully configured.', $context);
 
-            return false;
+            return ['ok' => false, 'message' => 'Twilio credentials are missing or invalid.'];
         }
 
         $url = sprintf('https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json', $sid);
@@ -91,7 +99,7 @@ class WhatsappNotificationService
                     'response' => $response->json() ?: $response->body(),
                 ]);
 
-                return false;
+                return ['ok' => false, 'message' => 'Twilio HTTP error: '.$response->status().'.'];
             }
 
             $payload = $response->json() ?: [];
@@ -109,7 +117,7 @@ class WhatsappNotificationService
                     'error_message' => $payload['error_message'] ?? null,
                 ]);
 
-                return false;
+                return ['ok' => false, 'message' => (string) ($payload['error_message'] ?? 'Twilio rejected the request. Error code: '.$errorCode)];
             }
 
             if (! filled($messageSid)) {
@@ -120,7 +128,7 @@ class WhatsappNotificationService
                     'response' => $payload,
                 ]);
 
-                return false;
+                return ['ok' => false, 'message' => 'Twilio response did not include a message SID.'];
             }
 
             Log::info('Twilio WhatsApp message queued/sent.', [
@@ -130,7 +138,11 @@ class WhatsappNotificationService
                 'status' => $messageStatus,
             ]);
 
-            return filled($messageSid) && in_array($messageStatus, ['accepted', 'queued', 'sending', 'sent', 'delivered', 'read'], true);
+            if (filled($messageSid) && in_array($messageStatus, ['accepted', 'queued', 'sending', 'sent', 'delivered', 'read'], true)) {
+                return ['ok' => true, 'message' => 'Message queued successfully.', 'sid' => $messageSid, 'status' => $messageStatus];
+            }
+
+            return ['ok' => false, 'message' => 'Twilio status is not deliverable yet: '.($messageStatus ?: 'unknown').'.', 'sid' => $messageSid, 'status' => $messageStatus];
         } catch (Throwable $exception) {
             Log::error('Twilio WhatsApp request threw an exception.', [
                 ...$context,
@@ -138,7 +150,7 @@ class WhatsappNotificationService
                 'error' => $exception->getMessage(),
             ]);
 
-            return false;
+            return ['ok' => false, 'message' => 'Twilio request failed: '.$exception->getMessage()];
         }
     }
 

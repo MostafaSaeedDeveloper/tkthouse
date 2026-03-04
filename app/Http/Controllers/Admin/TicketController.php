@@ -111,13 +111,13 @@ class TicketController extends Controller
 
     public function sendWhatsapp(Ticket $ticket, WhatsappNotificationService $whatsappNotificationService)
     {
-        $sent = $whatsappNotificationService->sendSingleTicket($ticket);
+        $result = $whatsappNotificationService->sendSingleTicketWithDetails($ticket);
 
-        if (! $sent) {
-            return back()->with('error', 'Twilio WhatsApp failed. Check phone format, sandbox join, and laravel.log for Twilio error details.');
+        if (! ($result['ok'] ?? false)) {
+            return back()->with('error', (string) ($result['message'] ?? 'Twilio WhatsApp failed. Check laravel.log for details.'));
         }
 
-        return back()->with('success', 'WhatsApp message accepted by Twilio (queued for delivery).');
+        return back()->with('success', 'WhatsApp queued successfully. SID: '.($result['sid'] ?? 'N/A'));
     }
 
     public function download(Ticket $ticket)
