@@ -225,20 +225,6 @@ class FawaterakService
             return $recursiveUrl;
         }
 
-        $invoiceKey = trim((string) (
-            data_get($json, 'data.invoice_key')
-            ?? data_get($json, 'data.invoiceKey')
-            ?? data_get($json, 'invoice_key')
-            ?? data_get($json, 'invoiceKey')
-            ?? data_get($json, 'data.payment_data.invoice_key')
-            ?? data_get($json, 'data.payment_data.invoiceKey')
-            ?? ''
-        ));
-
-        if ($invoiceKey !== '') {
-            return $this->canonicalizeCheckoutUrl($this->baseHost().'/invoice/'.$invoiceKey);
-        }
-
         return '';
     }
 
