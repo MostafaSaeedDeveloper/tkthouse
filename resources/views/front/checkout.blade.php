@@ -209,7 +209,6 @@
                                 <div class="co-field"><label>Email</label> <input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
                                 <div class="co-field"><label>Phone</label> <input name="phone" placeholder="+1 234 567 890"   value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
-                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
                         </div>
 
                         {{-- Attendee Stepper --}}
@@ -269,6 +268,11 @@
 
                     {{-- ── RIGHT: Order Review + Payment + Submit ── --}}
                     <div class="co-sidebar">
+                        <div class="co-label">Promo Code</div>
+                        <div class="co-card" style="margin-bottom:20px;">
+                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
+                        </div>
+
                         <div class="co-label">Order Review</div>
                         <div class="co-summary-card" style="margin-bottom:20px;">
                             <div class="co-summary-head">Items</div>
@@ -393,7 +397,6 @@
                                 <div class="co-field"><label>Email</label><input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
                                 <div class="co-field"><label>Phone</label><input name="phone" placeholder="+1 234 567 890" value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
-                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
                         </div>
 
                         <div class="co-label">Payment Method</div>
@@ -416,6 +419,11 @@
 
                     {{-- RIGHT: Tickets --}}
                     <div>
+                        <div class="co-label">Promo Code</div>
+                        <div class="co-card" style="margin-bottom:20px;">
+                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
+                        </div>
+
                         <div class="co-label">02 &nbsp; Tickets & Order Review</div>
                         <div id="ticket-rows">
                             @foreach($oldItems as $i => $item)
