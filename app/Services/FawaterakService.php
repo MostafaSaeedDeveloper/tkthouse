@@ -30,7 +30,8 @@ class FawaterakService
             throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key.');
         }
 
-        $paymentId = $this->resolvePaymentId($method, $apiKey);
+        $configuredProviderKey = trim((string) data_get($method->config, 'provider_key', ''));
+        $paymentId = $configuredProviderKey !== '' ? $this->resolvePaymentId($method, $apiKey) : null;
 
         $customer = $order->loadMissing('customer')->customer;
         $firstName = trim((string) ($customer->first_name ?? '')) ?: 'Customer';
@@ -48,7 +49,6 @@ class FawaterakService
         ]);
 
         $payload = [
-            'payment_method_id' => (int) $paymentId,
             'cartTotal' => (string) $order->total_amount,
             'currency' => 'EGP',
             'cartId' => (string) $order->order_number,
@@ -70,6 +70,10 @@ class FawaterakService
                 'quantity' => '1',
             ]],
         ];
+
+        if ($paymentId !== null) {
+            $payload['payment_method_id'] = (int) $paymentId;
+        }
 
         $response = Http::baseUrl($this->apiBaseUrl())
             ->timeout(20)
