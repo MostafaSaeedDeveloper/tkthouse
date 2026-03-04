@@ -80,6 +80,15 @@ class OrderController extends Controller
     {
         $order->load(['customer', 'items.ticket', 'user', 'promoCode']);
 
+        $paymentMethodLabel = PaymentMethod::query()
+            ->where('code', (string) $order->payment_method)
+            ->value('checkout_label');
+
+        $paymentMethodLabel = trim((string) $paymentMethodLabel);
+        if ($paymentMethodLabel === '') {
+            $paymentMethodLabel = ucwords(str_replace('_', ' ', (string) $order->payment_method));
+        }
+
         $activities = Activity::query()
             ->with('causer')
             ->forSubject($order)
@@ -122,7 +131,7 @@ class OrderController extends Controller
             ],
         ]);
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline'));
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel'));
     }
 
     public function edit(Order $order)
