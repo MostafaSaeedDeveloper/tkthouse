@@ -10,6 +10,7 @@ class FawaterakPaymentMethodsSeeder extends Seeder
     public function run(): void
     {
         $apiKey = (string) config('services.fawaterak.api_key', '');
+        $defaultProviderKey = (string) config('services.fawaterak.provider_default', '');
 
         $definitions = [
             'fawaterak_card' => [
@@ -17,7 +18,7 @@ class FawaterakPaymentMethodsSeeder extends Seeder
                 'label' => 'Credit / Debit Card',
                 'icon' => 'public/uploads/payment-method-icons/card.webp',
                 'description' => 'Pay securely by bank card via Fawaterak.',
-                'provider_key' => (string) config('services.fawaterak.provider_card', ''),
+                'provider_key' => (string) config('services.fawaterak.provider_card', $defaultProviderKey),
                 'is_active' => true,
             ],
             'fawaterak_wallet' => [
@@ -25,7 +26,7 @@ class FawaterakPaymentMethodsSeeder extends Seeder
                 'label' => 'Mobile Wallet',
                 'icon' => 'public/uploads/payment-method-icons/wallet.webp',
                 'description' => 'Pay using your mobile wallet via Fawaterak.',
-                'provider_key' => (string) config('services.fawaterak.provider_wallet', ''),
+                'provider_key' => (string) config('services.fawaterak.provider_wallet', $defaultProviderKey),
                 'is_active' => true,
             ],
             'fawaterak_apple_pay' => [
@@ -33,7 +34,7 @@ class FawaterakPaymentMethodsSeeder extends Seeder
                 'label' => 'Apple Pay',
                 'icon' => 'public/uploads/payment-method-icons/apple-pay.webp',
                 'description' => 'Pay quickly with Apple Pay via Fawaterak.',
-                'provider_key' => (string) config('services.fawaterak.provider_apple_pay', ''),
+                'provider_key' => (string) config('services.fawaterak.provider_apple_pay', $defaultProviderKey),
                 'is_active' => false,
             ],
         ];
