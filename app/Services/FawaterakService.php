@@ -203,7 +203,13 @@ class FawaterakService
             data_get($json, 'payment_data.redirect_to'),
             data_get($json, 'payment_data.url'),
             data_get($json, 'payment_data.payment_url'),
+            data_get($json, 'payment_data.redirectUrl'),
+            data_get($json, 'data.payment_data.redirectUrl'),
             data_get($json, 'payment_url'),
+            data_get($json, 'redirectUrl'),
+            data_get($json, 'data.redirectUrl'),
+            data_get($json, 'invoice_url'),
+            data_get($json, 'data.invoice_url'),
             data_get($json, 'url'),
         ];
 
@@ -212,6 +218,20 @@ class FawaterakService
             if ($url !== '') {
                 return $url;
             }
+        }
+
+        $invoiceKey = trim((string) (
+            data_get($json, 'data.invoice_key')
+            ?? data_get($json, 'data.invoiceKey')
+            ?? data_get($json, 'invoice_key')
+            ?? data_get($json, 'invoiceKey')
+            ?? data_get($json, 'data.payment_data.invoice_key')
+            ?? data_get($json, 'data.payment_data.invoiceKey')
+            ?? ''
+        ));
+
+        if ($invoiceKey !== '') {
+            return $this->baseHost().'/invoice/'.$invoiceKey;
         }
 
         return $this->findFirstUrlRecursive($json);
@@ -238,6 +258,14 @@ class FawaterakService
 
         if (preg_match('/^www\./i', $url) === 1) {
             return 'https://'.$url;
+        }
+
+        if (preg_match('#^[a-z0-9.-]+\.[a-z]{2,}(/.*)?$#i', $url) === 1) {
+            return 'https://'.$url;
+        }
+
+        if (preg_match('#^[a-z0-9][a-z0-9_\-/]*$#i', $url) === 1 && str_contains($url, '/')) {
+            return $this->baseHost().'/'.ltrim($url, '/');
         }
 
         return '';
