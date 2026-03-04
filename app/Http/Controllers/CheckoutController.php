@@ -29,7 +29,7 @@ class CheckoutController extends Controller
             session(['checkout.event_selection' => $selection]);
         }
 
-        $eventSelection = session('checkout.event_selection');
+        $eventSelection = $this->hydrateEventSelectionWithFees(session('checkout.event_selection'));
         $buyer = $this->buyerDefaults($request);
 
         if ($eventSelection) {
@@ -277,7 +277,7 @@ class CheckoutController extends Controller
             throw ValidationException::withMessages($errors);
         }
 
-        $event = Event::query()->findOrFail((int) ($selection['event_id'] ?? 0));
+        $event = Event::query()->with('fees')->findOrFail((int) ($selection['event_id'] ?? 0));
         $requiresApproval = (bool) $event->requires_booking_approval;
 
         if (! $requiresApproval) {
@@ -287,8 +287,10 @@ class CheckoutController extends Controller
         }
 
         $subtotal = (float) $ticketUnits->sum(fn ($unit) => (float) $unit['ticket_price']);
+        $feeSummary = $this->calculateEventFeeSummary($event, $subtotal);
+        $feeTotal = (float) $feeSummary['total'];
 
-        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval, $subtotal) {
+        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval, $subtotal, $feeTotal) {
             $promoData = $this->resolvePromoCodeForCheckout((string) $request->input('promo_code', ''), $subtotal);
             $customer = $this->upsertCustomer($baseValidated);
 
@@ -329,7 +331,8 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            $order->update(['total_amount' => max(0, $total - $promoData['discount_amount'])]);
+            $discountedSubtotal = max(0, $total - $promoData['discount_amount']);
+            $order->update(['total_amount' => $discountedSubtotal + $feeTotal]);
 
             activity('orders')
                 ->performedOn($order)
@@ -713,11 +716,72 @@ class CheckoutController extends Controller
             throw ValidationException::withMessages(['cart' => 'Selected tickets are no longer available.']);
         }
 
+        $subtotal = collect($units)->sum('ticket_price');
+        $feeSummary = $this->calculateEventFeeSummary($event->loadMissing('fees'), (float) $subtotal);
+
         return [
             'event_id' => $event->id,
             'event_name' => $event->name,
             'requires_approval' => (bool) $event->requires_booking_approval,
             'units' => $units,
+            'fees' => $feeSummary['breakdown'],
+            'fees_total' => $feeSummary['total'],
+        ];
+    }
+
+    private function hydrateEventSelectionWithFees(?array $eventSelection): ?array
+    {
+        if (! is_array($eventSelection) || empty($eventSelection)) {
+            return $eventSelection;
+        }
+
+        $eventId = (int) ($eventSelection['event_id'] ?? 0);
+        if ($eventId <= 0) {
+            return $eventSelection;
+        }
+
+        if (array_key_exists('fees', $eventSelection) && array_key_exists('fees_total', $eventSelection)) {
+            return $eventSelection;
+        }
+
+        $event = Event::query()->with('fees')->find($eventId);
+        if (! $event) {
+            return $eventSelection;
+        }
+
+        $subtotal = collect($eventSelection['units'] ?? [])->sum(fn ($unit) => (float) ($unit['ticket_price'] ?? 0));
+        $feeSummary = $this->calculateEventFeeSummary($event, (float) $subtotal);
+
+        $eventSelection['fees'] = $feeSummary['breakdown'];
+        $eventSelection['fees_total'] = $feeSummary['total'];
+        session(['checkout.event_selection' => $eventSelection]);
+
+        return $eventSelection;
+    }
+
+    private function calculateEventFeeSummary(Event $event, float $subtotal): array
+    {
+        $breakdown = $event->fees
+            ->map(function ($fee) use ($subtotal) {
+                $value = (float) ($fee->value ?? 0);
+                $amount = $fee->fee_type === 'percentage'
+                    ? round(($subtotal * $value) / 100, 2)
+                    : round($value, 2);
+
+                return [
+                    'name' => (string) $fee->name,
+                    'fee_type' => (string) $fee->fee_type,
+                    'value' => $value,
+                    'amount' => max(0, $amount),
+                ];
+            })
+            ->filter(fn (array $fee) => $fee['amount'] > 0)
+            ->values()
+            ->all();
+
+        return [
+            'breakdown' => $breakdown,
+            'total' => array_reduce($breakdown, fn (float $carry, array $fee) => $carry + (float) $fee['amount'], 0.0),
         ];
     }
 
