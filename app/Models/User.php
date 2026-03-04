@@ -88,4 +88,9 @@ class User extends Authenticatable
     {
         $this->notify(new CustomerResetPasswordNotification($token));
     }
+
+    public function isSuperAdmin(): bool
+    {
+        return method_exists($this, 'hasRole') && $this->hasRole('superadmin');
+    }
 }

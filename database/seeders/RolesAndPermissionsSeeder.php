@@ -55,12 +55,14 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         $adminRole = Role::findOrCreate('admin', 'web');
+        $superAdminRole = Role::findOrCreate('superadmin', 'web');
         $eventManagerRole = Role::findOrCreate('event_manager', 'web');
         $ticketManagerRole = Role::findOrCreate('ticket_manager', 'web');
         $supportRole = Role::findOrCreate('support', 'web');
         $scannerRole = Role::findOrCreate('scanner', 'web');
 
         $adminRole->syncPermissions(Permission::all());
+        $superAdminRole->syncPermissions(Permission::all());
 
         $eventManagerRole->syncPermissions([
             'dashboard.view',

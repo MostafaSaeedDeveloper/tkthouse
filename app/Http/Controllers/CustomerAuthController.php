@@ -18,6 +18,7 @@ class CustomerAuthController extends Controller
         'ticket_manager',
         'support',
         'scanner',
+        'superadmin',
         'super_admin',
         'super admin',
     ];

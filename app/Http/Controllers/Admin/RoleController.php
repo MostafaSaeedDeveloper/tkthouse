@@ -11,7 +11,10 @@ class RoleController extends Controller
 {
     public function index()
     {
-        $roles = Role::with('permissions')->latest()->paginate(15);
+        $roles = Role::with('permissions')
+            ->where('name', '!=', 'superadmin')
+            ->latest()
+            ->paginate(15);
 
         return view('admin.roles.index', compact('roles'));
     }
@@ -40,6 +43,8 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
+        abort_if($role->name === 'superadmin', 403);
+
         $permissions = Permission::orderBy('name')->get();
 
         return view('admin.roles.edit', compact('role', 'permissions'));
@@ -47,6 +52,8 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        abort_if($role->name === 'superadmin', 403);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:roles,name,'.$role->id],
             'permissions' => ['nullable', 'array'],
@@ -62,6 +69,8 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
+        abort_if($role->name === 'superadmin', 403);
+
         $roleName = $role->name;
         $role->delete();
         activity('roles')->causedBy(auth()->user())->log('Role deleted: '.$roleName);
