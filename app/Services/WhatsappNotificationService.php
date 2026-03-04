@@ -32,9 +32,16 @@ class WhatsappNotificationService
 
     public function sendSingleTicket(Ticket $ticket): bool
     {
-        $phone = $this->formatTwilioWhatsappAddress($ticket->holder_phone);
+        $ticket->loadMissing('order.customer');
+
+        $rawPhone = $ticket->holder_phone ?: $ticket->order?->customer?->phone;
+        $phone = $this->formatTwilioWhatsappAddress($rawPhone);
         if (! $phone) {
-            Log::info('Skipping WhatsApp ticket notification: holder phone is missing or invalid.', ['ticket_id' => $ticket->id, 'phone' => $ticket->holder_phone]);
+            Log::info('Skipping WhatsApp ticket notification: holder/customer phone is missing or invalid.', [
+                'ticket_id' => $ticket->id,
+                'holder_phone' => $ticket->holder_phone,
+                'customer_phone' => $ticket->order?->customer?->phone,
+            ]);
 
             return false;
         }
@@ -105,6 +112,17 @@ class WhatsappNotificationService
                 return false;
             }
 
+            if (! filled($messageSid)) {
+                Log::warning('Twilio WhatsApp response missing message SID.', [
+                    ...$context,
+                    'to' => $to,
+                    'status' => $messageStatus,
+                    'response' => $payload,
+                ]);
+
+                return false;
+            }
+
             Log::info('Twilio WhatsApp message queued/sent.', [
                 ...$context,
                 'to' => $to,
@@ -112,7 +130,7 @@ class WhatsappNotificationService
                 'status' => $messageStatus,
             ]);
 
-            return in_array($messageStatus, ['accepted', 'queued', 'sending', 'sent', 'delivered', 'read', null], true);
+            return filled($messageSid) && in_array($messageStatus, ['accepted', 'queued', 'sending', 'sent', 'delivered', 'read'], true);
         } catch (Throwable $exception) {
             Log::error('Twilio WhatsApp request threw an exception.', [
                 ...$context,

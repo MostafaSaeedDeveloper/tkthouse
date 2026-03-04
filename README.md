@@ -118,5 +118,9 @@ If the app says message is queued/sent but nothing arrives:
 - Make sure the recipient joined your Twilio WhatsApp Sandbox by sending the join code from Twilio console to `+14155238886`.
 - Sandbox works only for joined numbers and usually within the active customer service window.
 - Check `storage/logs/laravel.log` for Twilio response data (`sid`, `status`, `error_code`, `error_message`).
+- Quick debug command:
+  ```bash
+  tail -f storage/logs/laravel.log
+  ```
 - If your local numbers are like `010...`, keep `TWILIO_DEFAULT_COUNTRY_CODE=20` so they become valid `+20...` numbers.
 - Verify Twilio account limitations (trial account, WhatsApp sender approval, destination restrictions).
