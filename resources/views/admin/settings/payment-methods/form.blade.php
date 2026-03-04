@@ -82,7 +82,7 @@
                 <h5>Fawaterak Configuration</h5>
                 <div class="row">
                     <div class="col-md-6 mb-3"><label class="form-label">API Key</label><input class="form-control" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}"></div>
-                    <div class="col-md-6 mb-3"><label class="form-label">Provider Key</label><input class="form-control" name="fawaterak_provider_key" value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}"></div>
+                    <div class="col-md-6 mb-3"><label class="form-label">Payment Method ID / Provider Key</label><input class="form-control" name="fawaterak_provider_key" value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}" placeholder="e.g. FAWATERAK.27416"></div>
                 </div>
                 <p class="text-muted fs-sm mb-0">You can create multiple payment methods with provider = Fawaterak, each one can use a different API/Provider key pair.</p>
             </div>
