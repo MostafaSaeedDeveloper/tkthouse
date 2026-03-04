@@ -417,3 +417,21 @@ p.text-muted { font-size: 13px !important; }
 .text-danger  { color: var(--red)   !important; }
 a { color: var(--text); text-decoration: none; transition: color 0.15s; }
 a:hover { color: var(--gold); }
+
+/* Fix: improve multi-select permission chips readability (roles/users forms) */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background: #f5b800 !important;
+  border: 1px solid #d39b00 !important;
+  color: #111111 !important;
+  font-weight: 700 !important;
+  padding: 3px 10px !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #111111 !important;
+  margin-right: 6px !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+  color: #000000 !important;
+}
