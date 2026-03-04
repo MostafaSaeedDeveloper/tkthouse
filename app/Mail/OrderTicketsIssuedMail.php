@@ -58,7 +58,7 @@ class OrderTicketsIssuedMail extends Mailable
 
     private function qrDataUri(IssuedTicket $ticket): string
     {
-        $payload = (string) route('front.tickets.show', $ticket);
+        $payload = (string) $ticket->ticket_number;
         $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode($payload);
 
         try {
