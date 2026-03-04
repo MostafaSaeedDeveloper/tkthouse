@@ -83,21 +83,30 @@ class FawaterakService
 
         $lastError = 'Unknown error.';
 
+        $authModes = [
+            'bearer' => fn ($client, $payload) => [$client->withToken($apiKey), $payload],
+            'raw_authorization' => fn ($client, $payload) => [$client->withHeaders(['Authorization' => $apiKey]), $payload],
+            'body_token' => fn ($client, $payload) => [$client, $payload + ['token' => $apiKey]],
+        ];
+
         foreach ($baseUrls as $baseUrl) {
-            $http = Http::baseUrl($baseUrl)
+            $baseClient = Http::baseUrl($baseUrl)
                 ->timeout(20)
                 ->withHeaders([
-                    'Authorization' => 'Bearer '.$apiKey,
                     'Accept' => 'application/json',
                 ]);
 
-            foreach ($payloads as $mode => $payload) {
+            foreach ($authModes as $authMode => $authResolver) {
+                foreach ($payloads as $mode => $payload) {
+                    [$http, $finalPayload] = $authResolver($baseClient, $payload);
+
                 try {
-                    $resp = $http->post('/invoiceInitPay', $payload);
+                    $resp = $http->post('/invoiceInitPay', $finalPayload);
                 } catch (ConnectionException $exception) {
                     $lastError = $exception->getMessage();
                     Log::warning('Fawaterak connection failed.', [
                         'base_url' => $baseUrl,
+                        'auth_mode' => $authMode,
                         'mode' => $mode,
                         'order_id' => $order->id,
                         'error' => $lastError,
@@ -112,6 +121,7 @@ class FawaterakService
 
                     Log::warning('Fawaterak checkout init failed.', [
                         'base_url' => $baseUrl,
+                        'auth_mode' => $authMode,
                         'mode' => $mode,
                         'order_id' => $order->id,
                         'status' => $status,
@@ -137,10 +147,12 @@ class FawaterakService
                 $lastError = 'Fawaterak response did not include a checkout URL.';
                 Log::warning('Fawaterak response missing checkout URL.', [
                     'base_url' => $baseUrl,
+                    'auth_mode' => $authMode,
                     'mode' => $mode,
                     'order_id' => $order->id,
                     'response' => $response,
                 ]);
+                }
             }
         }
 
