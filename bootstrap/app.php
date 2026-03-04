@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
             'customer.account' => \App\Http\Middleware\EnsureCustomerAccountAccess::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
 
         $middleware->redirectGuestsTo(static function (Request $request): string {

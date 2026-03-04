@@ -61,41 +61,90 @@ Route::middleware('auth')->group(function () {
 Auth::routes(['register' => false]);
 
 Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('users', UserController::class)->except('show');
-    Route::resource('roles', RoleController::class)->except('show');
-    Route::resource('permissions', PermissionController::class)->except('show');
-    Route::resource('events', EventController::class);
-    Route::resource('tickets', TicketController::class);
-    Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->name('tickets.send-email');
-    Route::get('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->name('tickets.send-whatsapp');
-    Route::get('tickets/{ticket}/download', [TicketController::class, 'download'])->name('tickets.download');
-    Route::get('scanner', [TicketController::class, 'scanner'])->name('tickets.scanner');
-    Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->name('tickets.scanner.lookup');
-    Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->name('tickets.scanner.status');
-    Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('orders/deleted', [OrderController::class, 'deleted'])->name('orders.deleted');
-    Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
-    Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->name('orders.restore');
-    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
-    Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
-    Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->name('orders.notes.store');
-    Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
-    Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->name('orders.reject');
-    Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
-    Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
-    Route::get('affiliates', [AffiliateController::class, 'index'])->name('affiliates.index');
-    Route::get('affiliates/create', [AffiliateController::class, 'create'])->name('affiliates.create');
-    Route::post('affiliates', [AffiliateController::class, 'store'])->name('affiliates.store');
-    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
-    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
-    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
-    Route::put('settings', [SystemSettingController::class, 'update'])->name('settings.update');
-    Route::resource('payment-methods', PaymentMethodController::class)->except('show');
-    Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->name('payment-methods.fawaterak-methods');
-    Route::resource('promo-codes', PromoCodeController::class)->except('show');
+    Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
+
+    Route::resource('users', UserController::class)->except('show')->middleware([
+        'index' => 'permission:users.view',
+        'create' => 'permission:users.create',
+        'store' => 'permission:users.create',
+        'edit' => 'permission:users.update',
+        'update' => 'permission:users.update',
+        'destroy' => 'permission:users.delete',
+    ]);
+
+    Route::resource('roles', RoleController::class)->except('show')->middleware([
+        'index' => 'permission:roles.view',
+        'create' => 'permission:roles.create',
+        'store' => 'permission:roles.create',
+        'edit' => 'permission:roles.update',
+        'update' => 'permission:roles.update',
+        'destroy' => 'permission:roles.delete',
+    ]);
+
+    Route::resource('permissions', PermissionController::class)->except('show')->middleware([
+        'index' => 'permission:permissions.view',
+        'create' => 'permission:permissions.create',
+        'store' => 'permission:permissions.create',
+        'edit' => 'permission:permissions.update',
+        'update' => 'permission:permissions.update',
+        'destroy' => 'permission:permissions.delete',
+    ]);
+
+    Route::resource('events', EventController::class)->middleware([
+        'index' => 'permission:events.view',
+        'show' => 'permission:events.view',
+        'create' => 'permission:events.create',
+        'store' => 'permission:events.create',
+        'edit' => 'permission:events.update',
+        'update' => 'permission:events.update',
+        'destroy' => 'permission:events.delete',
+    ]);
+
+    Route::resource('tickets', TicketController::class)->middleware([
+        'index' => 'permission:tickets.view',
+        'show' => 'permission:tickets.view',
+        'create' => 'permission:tickets.manage',
+        'store' => 'permission:tickets.manage',
+        'edit' => 'permission:tickets.manage',
+        'update' => 'permission:tickets.manage',
+        'destroy' => 'permission:tickets.manage',
+    ]);
+
+    Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.manage')->name('tickets.send-email');
+    Route::get('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.manage')->name('tickets.send-whatsapp');
+    Route::get('tickets/{ticket}/download', [TicketController::class, 'download'])->middleware('permission:tickets.view')->name('tickets.download');
+    Route::get('scanner', [TicketController::class, 'scanner'])->middleware('permission:scanner.access')->name('tickets.scanner');
+    Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
+    Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->middleware('permission:scanner.access')->name('tickets.scanner.status');
+
+    Route::get('orders', [OrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
+    Route::get('orders/deleted', [OrderController::class, 'deleted'])->middleware('permission:orders.deleted.view')->name('orders.deleted');
+    Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.manage')->name('orders.destroy');
+    Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.manage')->name('orders.restore');
+    Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
+    Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->middleware('permission:orders.manage')->name('orders.edit');
+    Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.manage')->name('orders.update');
+    Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->middleware('permission:orders.manage')->name('orders.notes.store');
+    Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->middleware('permission:orders.manage')->name('orders.approve');
+    Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.manage')->name('orders.reject');
+
+    Route::get('customers', [CustomerController::class, 'index'])->middleware('permission:attendees.view')->name('customers.index');
+    Route::get('customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:attendees.view')->name('customers.show');
+    Route::get('affiliates', [AffiliateController::class, 'index'])->middleware('permission:attendees.view')->name('affiliates.index');
+    Route::get('affiliates/create', [AffiliateController::class, 'create'])->middleware('permission:attendees.export')->name('affiliates.create');
+    Route::post('affiliates', [AffiliateController::class, 'store'])->middleware('permission:attendees.export')->name('affiliates.store');
+    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware('permission:attendees.view')->name('affiliates.show');
+
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
+    Route::get('reports', [ReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.index');
+
+    Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:permissions.update')->name('settings.edit');
+    Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:permissions.update')->name('settings.update');
+
+    Route::resource('payment-methods', PaymentMethodController::class)->except('show')->middleware('permission:permissions.update');
+    Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->middleware('permission:permissions.update')->name('payment-methods.fawaterak-methods');
+
+    Route::resource('promo-codes', PromoCodeController::class)->except('show')->middleware('permission:orders.manage');
 });
 
 Route::redirect('/admin', '/dashboard');
