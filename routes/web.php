@@ -64,7 +64,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
     Route::resource('users', UserController::class)->except('show')->middleware([
-        'index' => 'permission:users.view',
+        'index' => 'role_or_permission:users.view|users.show',
         'create' => 'permission:users.create',
         'store' => 'permission:users.create',
         'edit' => 'permission:users.update',
@@ -91,8 +91,8 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     ]);
 
     Route::resource('events', EventController::class)->middleware([
-        'index' => 'permission:events.view',
-        'show' => 'permission:events.view',
+        'index' => 'role_or_permission:events.view|events.show',
+        'show' => 'role_or_permission:events.view|events.show',
         'create' => 'permission:events.create',
         'store' => 'permission:events.create',
         'edit' => 'permission:events.update',

@@ -22,14 +22,14 @@
 @php
   $canDashboard = auth()->user()?->can('dashboard.view');
   $canReports = auth()->user()?->can('orders.view');
-  $canEvents = auth()->user()?->can('events.view');
+  $canEvents = auth()->user()?->hasAnyPermission(['events.view', 'events.show']);
   $canOrders = auth()->user()?->can('orders.view');
   $canCustomers = auth()->user()?->can('attendees.view');
   $canAffiliates = auth()->user()?->can('attendees.view');
   $canPromoCodes = auth()->user()?->can('orders.manage');
   $canTickets = auth()->user()?->can('tickets.view');
 
-  $canUsers = auth()->user()?->can('users.view');
+  $canUsers = auth()->user()?->hasAnyPermission(['users.view', 'users.show']);
   $canRoles = auth()->user()?->can('roles.view');
   $canPermissions = auth()->user()?->can('permissions.view');
   $canActivityLogs = auth()->user()?->can('activity-logs.view');
