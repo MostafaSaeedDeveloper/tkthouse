@@ -216,7 +216,7 @@ class FawaterakService
         foreach ($candidates as $value) {
             $url = $this->normalizePossibleUrl($value);
             if ($url !== '') {
-                return $url;
+                return $this->canonicalizeCheckoutUrl($url);
             }
         }
 
@@ -236,7 +236,7 @@ class FawaterakService
         ));
 
         if ($invoiceKey !== '') {
-            return $this->baseHost().'/invoice/'.$invoiceKey;
+            return $this->canonicalizeCheckoutUrl($this->baseHost().'/invoice/'.$invoiceKey);
         }
 
         return '';
@@ -254,23 +254,23 @@ class FawaterakService
         }
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
+            return $this->canonicalizeCheckoutUrl($url);
         }
 
         if (str_starts_with($url, '/')) {
-            return $this->baseHost().$url;
+            return $this->canonicalizeCheckoutUrl($this->baseHost().$url);
         }
 
         if (preg_match('/^www\./i', $url) === 1) {
-            return 'https://'.$url;
+            return $this->canonicalizeCheckoutUrl('https://'.$url);
         }
 
         if (preg_match('#^[a-z0-9.-]+\.[a-z]{2,}(/.*)?$#i', $url) === 1) {
-            return 'https://'.$url;
+            return $this->canonicalizeCheckoutUrl('https://'.$url);
         }
 
         if (preg_match('#^[a-z0-9][a-z0-9_\-/]*$#i', $url) === 1 && str_contains($url, '/')) {
-            return $this->baseHost().'/'.ltrim($url, '/');
+            return $this->canonicalizeCheckoutUrl($this->baseHost().'/'.ltrim($url, '/'));
         }
 
         return '';
@@ -304,6 +304,33 @@ class FawaterakService
         }
 
         return '';
+    }
+
+
+    private function canonicalizeCheckoutUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        $parts = parse_url($url);
+        if (! is_array($parts)) {
+            return $url;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $path = (string) ($parts['path'] ?? '');
+
+        if (in_array($host, ['app.fawaterk.com', 'www.app.fawaterk.com'], true) && preg_match('#^/invoice/pay/([^/?#]+)$#', $path, $m) === 1) {
+            $scheme = $parts['scheme'] ?? 'https';
+            $query = isset($parts['query']) ? '?'.$parts['query'] : '';
+            $fragment = isset($parts['fragment']) ? '#'.$parts['fragment'] : '';
+
+            return $scheme.'://app.fawaterk.com/invoice/'.$m[1].$query.$fragment;
+        }
+
+        return $url;
     }
 
     private function baseHost(): string
