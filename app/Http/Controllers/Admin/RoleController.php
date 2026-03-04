@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleController extends Controller
 {
@@ -33,6 +34,7 @@ class RoleController extends Controller
 
         $role = Role::create(['name' => $validated['name']]);
         $role->syncPermissions($validated['permissions'] ?? []);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('roles')->performedOn($role)->causedBy(auth()->user())->log('Role created');
 
         return redirect()->route('admin.roles.index')->with('success', 'Role created successfully.');
@@ -55,6 +57,7 @@ class RoleController extends Controller
 
         $role->update(['name' => $validated['name']]);
         $role->syncPermissions($validated['permissions'] ?? []);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('roles')->performedOn($role)->causedBy(auth()->user())->log('Role updated');
 
         return redirect()->route('admin.roles.index')->with('success', 'Role updated successfully.');
@@ -64,6 +67,7 @@ class RoleController extends Controller
     {
         $roleName = $role->name;
         $role->delete();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('roles')->causedBy(auth()->user())->log('Role deleted: '.$roleName);
 
         return back()->with('success', 'Role deleted successfully.');

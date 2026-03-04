@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserController extends Controller
 {
@@ -72,6 +73,7 @@ class UserController extends Controller
 
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
@@ -112,6 +114,7 @@ class UserController extends Controller
 
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
