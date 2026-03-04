@@ -75,7 +75,7 @@ class FawaterakService
             ->timeout(20)
             ->withToken($apiKey)
             ->withHeaders(['Accept' => 'application/json'])
-            ->post('/invoiceInitPay', $payload);
+            ->post('invoiceInitPay', $payload);
 
         if (! $response->successful()) {
             $raw = (string) $response->body();
@@ -112,10 +112,7 @@ class FawaterakService
                     ->withToken($apiKey)
                     ->withHeaders(['Accept' => 'application/json']);
 
-                $response = $base->get('/getPaymentmethods');
-                if (! $response->successful()) {
-                    $response = $base->get('/getPaymentMethods');
-                }
+                $response = $base->get('getPaymentmethods');
 
                 if (! $response->successful()) {
                     $raw = (string) $response->body();
@@ -176,6 +173,12 @@ class FawaterakService
 
     private function apiBaseUrl(): string
     {
-        return (string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2');
+        $base = rtrim((string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2'), '/');
+
+        if (! str_contains(strtolower($base), '/api/v2')) {
+            $base .= '/api/v2';
+        }
+
+        return $base;
     }
 }
