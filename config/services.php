@@ -44,6 +44,10 @@ return [
 
     'fawaterak' => [
         'api_url' => env('FAWATERAK_API_URL', 'https://app.fawaterk.com/api/v2'),
+        'api_key' => env('FAWATERAK_API_KEY'),
+        'provider_card' => env('FAWATERAK_PROVIDER_CARD'),
+        'provider_wallet' => env('FAWATERAK_PROVIDER_WALLET'),
+        'provider_apple_pay' => env('FAWATERAK_PROVIDER_APPLE_PAY'),
     ],
 
     'paymob' => [
