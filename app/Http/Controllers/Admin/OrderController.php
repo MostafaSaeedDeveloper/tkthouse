@@ -55,9 +55,9 @@ class OrderController extends Controller
 
         $paymentMethods = PaymentMethod::query()
             ->where('code', '!=', 'card')
-            ->orderByDesc('is_active')
+            ->where('is_active', true)
             ->orderBy('id')
-            ->get(['code', 'name', 'is_active']);
+            ->get(['code', 'name', 'checkout_label']);
 
         return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount'));
     }
@@ -140,9 +140,9 @@ class OrderController extends Controller
 
         $paymentMethods = PaymentMethod::query()
             ->where('code', '!=', 'card')
-            ->orderByDesc('is_active')
+            ->where('is_active', true)
             ->orderBy('id')
-            ->get(['code', 'name', 'is_active']);
+            ->get(['code', 'name', 'checkout_label']);
 
         $promoCodes = PromoCode::query()->orderByDesc('is_active')->orderBy('code')->get(['id', 'code', 'discount_type', 'discount_value', 'is_active']);
 
