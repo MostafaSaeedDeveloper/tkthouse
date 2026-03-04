@@ -79,15 +79,17 @@
       <p>{{ $order->created_at?->format('d M Y, H:i') }}</p>
     </div>
     <div class="d-flex gap-2">
-      @if($order->status === 'pending_approval')
-        <form method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
-          <button class="od-btn-approve" type="submit"><i class="fa fa-check"></i> Approve & Send Payment Link</button>
-        </form>
-        <form method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
-          <button class="od-btn-back" type="submit"><i class="fa fa-times text-danger"></i> Reject</button>
-        </form>
-      @endif
-      <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
+      @can('orders.update')
+        @if($order->status === 'pending_approval')
+          <form method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
+            <button class="od-btn-approve" type="submit"><i class="fa fa-check"></i> Approve & Send Payment Link</button>
+          </form>
+          <form method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
+            <button class="od-btn-back" type="submit"><i class="fa fa-times text-danger"></i> Reject</button>
+          </form>
+        @endif
+        <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
+      @endcan
       <a href="{{ route('admin.orders.index') }}" class="od-btn-back"><i class="fa fa-arrow-left"></i> Back</a>
     </div>
   </div>

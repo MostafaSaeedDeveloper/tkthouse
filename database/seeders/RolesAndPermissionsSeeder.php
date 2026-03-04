@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -10,6 +12,12 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        DB::table('role_has_permissions')->truncate();
+        DB::table('model_has_permissions')->truncate();
+        DB::table('permissions')->truncate();
+
         $permissions = [
             'dashboard.view',
 
@@ -36,14 +44,41 @@ class RolesAndPermissionsSeeder extends Seeder
             'events.mark-sold-out',
 
             'tickets.view',
-            'tickets.manage',
+            'tickets.create',
+            'tickets.update',
+            'tickets.delete',
             'scanner.access',
-            'fees.manage',
-            'event-images.manage',
+
+            'fees.create',
+            'fees.update',
+            'fees.delete',
+
+            'event-images.create',
+            'event-images.update',
+            'event-images.delete',
 
             'orders.view',
-            'orders.manage',
+            'orders.create',
+            'orders.update',
+            'orders.delete',
             'orders.deleted.view',
+            'orders.restore',
+
+            'reports.view',
+
+            'settings.view',
+            'settings.update',
+
+            'payment-methods.view',
+            'payment-methods.create',
+            'payment-methods.update',
+            'payment-methods.delete',
+
+            'promo-codes.view',
+            'promo-codes.create',
+            'promo-codes.update',
+            'promo-codes.delete',
+
             'attendees.view',
             'attendees.export',
 
@@ -70,11 +105,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'events.publish',
             'events.mark-sold-out',
             'tickets.view',
-            'tickets.manage',
+            'tickets.create',
+            'tickets.update',
+            'tickets.delete',
             'scanner.access',
-            'fees.manage',
-            'event-images.manage',
+            'fees.create',
+            'fees.update',
+            'fees.delete',
+            'event-images.create',
+            'event-images.update',
+            'event-images.delete',
             'orders.view',
+            'orders.update',
             'attendees.view',
             'attendees.export',
         ]);
@@ -83,12 +125,19 @@ class RolesAndPermissionsSeeder extends Seeder
             'dashboard.view',
             'events.view',
             'tickets.view',
-            'tickets.manage',
+            'tickets.create',
+            'tickets.update',
+            'tickets.delete',
             'scanner.access',
-            'fees.manage',
+            'fees.create',
+            'fees.update',
+            'fees.delete',
             'orders.view',
-            'orders.manage',
+            'orders.update',
+            'orders.delete',
             'orders.deleted.view',
+            'orders.restore',
+            'promo-codes.view',
             'attendees.view',
             'attendees.export',
         ]);
@@ -97,6 +146,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'dashboard.view',
             'events.view',
             'orders.view',
+            'reports.view',
             'attendees.view',
             'activity-logs.view',
         ]);
@@ -104,9 +154,11 @@ class RolesAndPermissionsSeeder extends Seeder
         $scannerRole->syncPermissions([
             'dashboard.view',
             'tickets.view',
-            'tickets.manage',
+            'tickets.update',
             'scanner.access',
             'orders.view',
         ]);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

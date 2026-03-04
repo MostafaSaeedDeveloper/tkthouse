@@ -89,10 +89,12 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
 
     Route::resource('tickets', TicketController::class)
         ->middlewareFor(['index', 'show'], 'permission:tickets.view')
-        ->middlewareFor(['create', 'store', 'edit', 'update', 'destroy'], 'permission:tickets.manage');
+        ->middlewareFor(['create', 'store'], 'permission:tickets.create')
+        ->middlewareFor(['edit', 'update'], 'permission:tickets.update')
+        ->middlewareFor('destroy', 'permission:tickets.delete');
 
-    Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.manage')->name('tickets.send-email');
-    Route::get('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.manage')->name('tickets.send-whatsapp');
+    Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
+    Route::get('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
     Route::get('tickets/{ticket}/download', [TicketController::class, 'download'])->middleware('permission:tickets.view')->name('tickets.download');
     Route::get('scanner', [TicketController::class, 'scanner'])->middleware('permission:scanner.access')->name('tickets.scanner');
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
@@ -103,11 +105,11 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.delete')->name('orders.destroy');
     Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.restore')->name('orders.restore');
     Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
-    Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->middleware('permission:orders.manage')->name('orders.edit');
-    Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.manage')->name('orders.update');
-    Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->middleware('permission:orders.manage')->name('orders.notes.store');
-    Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->middleware('permission:orders.manage')->name('orders.approve');
-    Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.manage')->name('orders.reject');
+    Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->middleware('permission:orders.update')->name('orders.edit');
+    Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.update')->name('orders.update');
+    Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->middleware('permission:orders.update')->name('orders.notes.store');
+    Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->middleware('permission:orders.update')->name('orders.approve');
+    Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.update')->name('orders.reject');
 
     Route::get('customers', [CustomerController::class, 'index'])->middleware('permission:attendees.view')->name('customers.index');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:attendees.view')->name('customers.show');

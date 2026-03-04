@@ -45,7 +45,7 @@
                             <td>{{ number_format($order->total_amount, 2) }} EGP</td>
                             <td>{{ optional($order->deleted_at)->format('Y-m-d h:i A') }}</td>
                             <td class="text-end">
-                                @can('orders.deleted.view')
+                                @can('orders.restore')
                                     <form method="POST" action="{{ route('admin.orders.restore', $order->id) }}" class="d-inline">
                                         @csrf
                                         <button class="btn btn-sm btn-alt-success" type="submit">

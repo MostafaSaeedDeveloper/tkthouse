@@ -230,7 +230,8 @@ class TicketController extends Controller
         $allowedByRole = method_exists($user, 'hasAnyRole')
             && $user->hasAnyRole(['admin', 'scanner', 'Admin', 'Scanner', 'Super Admin']);
 
-        $allowedByPermission = method_exists($user, 'can') && $user->can('tickets.manage');
+        $allowedByPermission = method_exists($user, 'can')
+            && ($user->can('tickets.update') || $user->can('scanner.access'));
 
         abort_unless($allowedByRole || $allowedByPermission, 403);
     }
