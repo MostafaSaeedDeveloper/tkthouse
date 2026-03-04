@@ -231,7 +231,7 @@ class FawaterakService
         ));
 
         if ($invoiceKey !== '') {
-            return $this->baseHost().'/invoice/'.$invoiceKey;
+            return $this->baseHost().'/invoice/pay/'.$invoiceKey;
         }
 
         return $this->findFirstUrlRecursive($json);
@@ -282,6 +282,11 @@ class FawaterakService
             }
 
             return '';
+        }
+
+        $normalized = $this->normalizePossibleUrl($data);
+        if ($normalized !== '') {
+            return $normalized;
         }
 
         $text = trim((string) $data);
