@@ -82,24 +82,26 @@ class WhatsappNotificationService
         $url = sprintf('https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json', $sid);
 
         try {
-            $response = Http::asForm()
-                ->timeout(15)
-                ->withBasicAuth($sid, $token)
-                ->post($url, [
-                    'From' => $from,
-                    'To' => $to,
-                    'Body' => $body,
-                ]);
+            $response = $this->postTwilioWithRetry($url, $sid, $token, [
+                'From' => $from,
+                'To' => $to,
+                'Body' => $body,
+            ], $context + ['to' => $to]);
 
             if ($response->failed()) {
+                $status = $response->status();
                 Log::warning('Twilio WhatsApp request failed.', [
                     ...$context,
                     'to' => $to,
-                    'status' => $response->status(),
+                    'status' => $status,
                     'response' => $response->json() ?: $response->body(),
                 ]);
 
-                return ['ok' => false, 'message' => 'Twilio HTTP error: '.$response->status().'.'];
+                if ($status === 429) {
+                    return ['ok' => false, 'message' => 'Twilio rate limit reached (429). Please retry after a few seconds.'];
+                }
+
+                return ['ok' => false, 'message' => 'Twilio HTTP error: '.$status.'.'];
             }
 
             $payload = $response->json() ?: [];
@@ -152,6 +154,37 @@ class WhatsappNotificationService
 
             return ['ok' => false, 'message' => 'Twilio request failed: '.$exception->getMessage()];
         }
+    }
+
+
+    private function postTwilioWithRetry(string $url, string $sid, string $token, array $payload, array $context = []): \Illuminate\Http\Client\Response
+    {
+        $maxAttempts = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $response = Http::asForm()
+                ->timeout(15)
+                ->withBasicAuth($sid, $token)
+                ->post($url, $payload);
+
+            if ($response->status() !== 429 || $attempt === $maxAttempts) {
+                return $response;
+            }
+
+            $retryAfter = (int) ($response->header('Retry-After') ?? 0);
+            $sleepSeconds = $retryAfter > 0 ? min($retryAfter, 5) : $attempt;
+
+            Log::warning('Twilio rate limit hit; retrying WhatsApp request.', [
+                ...$context,
+                'attempt' => $attempt,
+                'retry_after' => $retryAfter,
+                'sleep_seconds' => $sleepSeconds,
+            ]);
+
+            sleep($sleepSeconds);
+        }
+
+        return Http::asForm()->timeout(15)->withBasicAuth($sid, $token)->post($url, $payload);
     }
 
     private function formatTwilioWhatsappAddress(?string $value): ?string

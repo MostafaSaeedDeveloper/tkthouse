@@ -124,3 +124,5 @@ If the app says message is queued/sent but nothing arrives:
   ```
 - If your local numbers are like `010...`, keep `TWILIO_DEFAULT_COUNTRY_CODE=20` so they become valid `+20...` numbers.
 - Verify Twilio account limitations (trial account, WhatsApp sender approval, destination restrictions).
+
+- If you see `Twilio HTTP error: 429`, Twilio rate limit is hit; wait a few seconds and retry. The app now retries automatically with short backoff.
