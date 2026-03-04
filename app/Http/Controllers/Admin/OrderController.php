@@ -263,7 +263,7 @@ class OrderController extends Controller
 
     public function destroy(Request $request, Order $order)
     {
-        abort_unless($request->user()?->can('orders.manage'), 403);
+        abort_unless($request->user()?->can('orders.delete'), 403);
 
         $orderNumber = $order->order_number;
         $order->delete();

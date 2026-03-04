@@ -114,7 +114,7 @@
                                 @endif
                                 <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
                                 <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
-                                @can('orders.manage')
+                                @can('orders.delete')
                                     <form class="d-inline" method="POST" action="{{ route('admin.orders.destroy', $order) }}">
                                         @csrf
                                         @method('DELETE')
