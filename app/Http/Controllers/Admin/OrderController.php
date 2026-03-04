@@ -55,9 +55,9 @@ class OrderController extends Controller
 
         $paymentMethods = PaymentMethod::query()
             ->where('code', '!=', 'card')
-            ->orderByDesc('is_active')
+            ->where('is_active', true)
             ->orderBy('id')
-            ->get(['code', 'name', 'is_active']);
+            ->get(['code', 'name', 'checkout_label']);
 
         return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount'));
     }
@@ -78,7 +78,16 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'items.ticket', 'user', 'promoCode']);
+        $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
+
+        $paymentMethodLabel = PaymentMethod::query()
+            ->where('code', (string) $order->payment_method)
+            ->value('checkout_label');
+
+        $paymentMethodLabel = trim((string) $paymentMethodLabel);
+        if ($paymentMethodLabel === '') {
+            $paymentMethodLabel = ucwords(str_replace('_', ' ', (string) $order->payment_method));
+        }
 
         $activities = Activity::query()
             ->with('causer')
@@ -122,18 +131,18 @@ class OrderController extends Controller
             ],
         ]);
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline'));
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel'));
     }
 
     public function edit(Order $order)
     {
-        $order->load(['customer', 'items.ticket', 'user', 'promoCode']);
+        $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethods = PaymentMethod::query()
             ->where('code', '!=', 'card')
-            ->orderByDesc('is_active')
+            ->where('is_active', true)
             ->orderBy('id')
-            ->get(['code', 'name', 'is_active']);
+            ->get(['code', 'name', 'checkout_label']);
 
         $promoCodes = PromoCode::query()->orderByDesc('is_active')->orderBy('code')->get(['id', 'code', 'discount_type', 'discount_value', 'is_active']);
 

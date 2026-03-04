@@ -50,6 +50,11 @@
 .od-ticket-social:hover{color:#ffd24d;text-decoration:underline;}
 .od-ticket-price{color:#f5b800;font-weight:700;text-align:right;font-size:18px;}
 .od-ticket-qty{font-size:13px;color:#9ba0bd;text-align:right}
+
+.od-issued-wrap{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;}
+.od-issued-link{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.35);color:#7df0a8;font-size:12px;text-decoration:none;font-weight:600;}
+.od-issued-link:hover{color:#a7f7c1;border-color:rgba(34,197,94,.55);text-decoration:none;}
+.od-issued-empty{margin-top:10px;font-size:12px;color:#6f748d;}
 .od-total-bar { display:flex;justify-content:space-between;background:rgba(245,184,0,0.06);border:1px solid rgba(245,184,0,0.2);border-radius:10px;padding:14px 20px;margin-top:16px;color:#fff; }
 .od-note-item,.od-hist-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
 .od-note-item:last-child,.od-hist-item:last-child{border-bottom:0}
@@ -104,7 +109,7 @@
         <div class="od-card-body">
           <div class="od-info-row"><span class="od-info-label">Order #</span><span class="od-info-val">{{ $displayOrderNumber }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Date</span><span class="od-info-val">{{ $order->created_at?->format('d M Y, H:i') }}</span></div>
-          <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_method)) }}</span></div>
+          <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ $paymentMethodLabel }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Promo Code</span><span class="od-info-val">{{ $order->promo_code ?: '-' }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Subtotal</span><span class="od-info-val">{{ number_format((float) ($order->subtotal_amount ?: $order->total_amount),2) }} EGP</span></div>
           <div class="od-info-row"><span class="od-info-label">Discount</span><span class="od-info-val">{{ number_format((float) $order->discount_amount,2) }} EGP</span></div>
@@ -178,6 +183,26 @@
                         <i class="fa fa-globe"></i>
                         {{ $socialProfileRaw }}
                       </a>
+                    @endif
+
+                    @if($item->issuedTickets->isNotEmpty())
+                      <div class="od-issued-wrap">
+                        @foreach($item->issuedTickets->sortBy('seat_index') as $issuedTicket)
+                          @if($issuedTicket->dashboardTicket)
+                            <a href="{{ route('admin.tickets.show', $issuedTicket->dashboardTicket) }}" target="_blank" rel="noopener noreferrer" class="od-issued-link">
+                              <i class="fa fa-ticket"></i>
+                              #{{ $issuedTicket->ticket_number }}
+                            </a>
+                          @else
+                            <span class="od-issued-link">
+                              <i class="fa fa-ticket"></i>
+                              #{{ $issuedTicket->ticket_number }}
+                            </span>
+                          @endif
+                        @endforeach
+                      </div>
+                    @else
+                      <div class="od-issued-empty">No generated ticket numbers yet.</div>
                     @endif
                   </div>
                 </div>
