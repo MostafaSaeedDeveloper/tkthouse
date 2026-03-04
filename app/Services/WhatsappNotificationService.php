@@ -87,7 +87,32 @@ class WhatsappNotificationService
                 return false;
             }
 
-            return true;
+            $payload = $response->json() ?: [];
+            $messageSid = $payload['sid'] ?? null;
+            $messageStatus = $payload['status'] ?? null;
+            $errorCode = $payload['error_code'] ?? null;
+
+            if ($errorCode) {
+                Log::warning('Twilio WhatsApp accepted request with error_code.', [
+                    ...$context,
+                    'to' => $to,
+                    'sid' => $messageSid,
+                    'status' => $messageStatus,
+                    'error_code' => $errorCode,
+                    'error_message' => $payload['error_message'] ?? null,
+                ]);
+
+                return false;
+            }
+
+            Log::info('Twilio WhatsApp message queued/sent.', [
+                ...$context,
+                'to' => $to,
+                'sid' => $messageSid,
+                'status' => $messageStatus,
+            ]);
+
+            return in_array($messageStatus, ['accepted', 'queued', 'sending', 'sent', 'delivered', 'read', null], true);
         } catch (Throwable $exception) {
             Log::error('Twilio WhatsApp request threw an exception.', [
                 ...$context,

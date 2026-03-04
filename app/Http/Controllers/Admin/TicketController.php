@@ -117,7 +117,7 @@ class TicketController extends Controller
             return back()->with('error', 'Twilio WhatsApp is not configured, or holder phone number is invalid.');
         }
 
-        return back()->with('success', 'Ticket sent by WhatsApp successfully.');
+        return back()->with('success', 'WhatsApp message accepted by Twilio (queued for delivery).');
     }
 
     public function download(Ticket $ticket)

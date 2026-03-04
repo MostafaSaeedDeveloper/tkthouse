@@ -110,3 +110,13 @@ To send tickets automatically on WhatsApp when an order becomes `paid`, and to e
    - From Admin > Ticket Details, use **Send WhatsApp** to resend a single ticket manually.
 
 > If Twilio credentials are missing or the ticket/customer phone is empty, WhatsApp sending is skipped and logged.
+
+### Twilio Sandbox Troubleshooting (important)
+
+If the app says message is queued/sent but nothing arrives:
+
+- Make sure the recipient joined your Twilio WhatsApp Sandbox by sending the join code from Twilio console to `+14155238886`.
+- Sandbox works only for joined numbers and usually within the active customer service window.
+- Check `storage/logs/laravel.log` for Twilio response data (`sid`, `status`, `error_code`, `error_message`).
+- If your local numbers are like `010...`, keep `TWILIO_DEFAULT_COUNTRY_CODE=20` so they become valid `+20...` numbers.
+- Verify Twilio account limitations (trial account, WhatsApp sender approval, destination restrictions).
