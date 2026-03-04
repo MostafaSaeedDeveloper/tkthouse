@@ -85,10 +85,25 @@ class PaymentMethodController extends Controller
 
         $methods = collect(is_array($methods) ? $methods : [])
             ->filter(fn ($m) => is_array($m) && data_get($m, 'paymentId'))
-            ->map(fn ($m) => [
-                'id' => (string) data_get($m, 'paymentId'),
-                'name' => (string) data_get($m, 'name', 'Payment Method'),
-            ])
+            ->map(function ($m) {
+                $id = (string) data_get($m, 'paymentId');
+                $name = trim((string) (
+                    data_get($m, 'name_ar')
+                    ?: data_get($m, 'name')
+                    ?: data_get($m, 'name_en')
+                    ?: data_get($m, 'title_ar')
+                    ?: data_get($m, 'title')
+                    ?: data_get($m, 'title_en')
+                    ?: data_get($m, 'paymentName')
+                    ?: data_get($m, 'method_name')
+                    ?: ''
+                ));
+
+                return [
+                    'id' => $id,
+                    'name' => $name !== '' ? $name : 'Payment Method #'.$id,
+                ];
+            })
             ->values()
             ->all();
 
