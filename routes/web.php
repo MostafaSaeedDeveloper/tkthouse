@@ -53,7 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
     Route::get('/orders/{order}/payment/{token}', [CheckoutController::class, 'paymentPage'])->name('front.orders.payment');
     Route::post('/orders/{order}/payment/{token}', [CheckoutController::class, 'confirmPayment'])->name('front.orders.payment.confirm');
-    Route::get('/orders/{order}/payment/{token}/paymob', [CheckoutController::class, 'paymobRedirect'])->name('front.orders.payment.paymob');
+    Route::get('/orders/{order}/payment/{token}/gateway', [CheckoutController::class, 'gatewayRedirect'])->name('front.orders.payment.gateway');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
 });

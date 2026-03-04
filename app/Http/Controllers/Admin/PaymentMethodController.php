@@ -70,11 +70,13 @@ class PaymentMethodController extends Controller
                 'regex:/^[a-z0-9_]+$/',
                 Rule::unique('payment_methods', 'code')->ignore($method?->id),
             ],
-            'provider' => ['required', Rule::in(['manual', 'paymob'])],
+            'provider' => ['required', Rule::in(['manual', 'paymob', 'fawaterak'])],
             'is_active' => ['nullable', 'boolean'],
             'paymob_api_key' => ['nullable', 'string'],
             'paymob_iframe_id' => ['nullable', 'string', 'max:50'],
             'paymob_integration_id' => ['nullable', 'string', 'max:50'],
+            'fawaterak_api_key' => ['nullable', 'string'],
+            'fawaterak_provider_key' => ['nullable', 'string', 'max:120'],
         ]);
 
         $config = [];
@@ -83,6 +85,11 @@ class PaymentMethodController extends Controller
                 'api_key' => (string) ($validated['paymob_api_key'] ?? ''),
                 'iframe_id' => (string) ($validated['paymob_iframe_id'] ?? ''),
                 'integration_id' => (string) ($validated['paymob_integration_id'] ?? ''),
+            ];
+        } elseif ($validated['provider'] === 'fawaterak') {
+            $config = [
+                'api_key' => (string) ($validated['fawaterak_api_key'] ?? ''),
+                'provider_key' => (string) ($validated['fawaterak_provider_key'] ?? ''),
             ];
         }
 

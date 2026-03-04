@@ -33,6 +33,7 @@
                     <select class="form-select" name="provider" id="provider-select" required>
                         <option value="manual" @selected(old('provider', $method->provider ?: 'manual') === 'manual')>Manual</option>
                         <option value="paymob" @selected(old('provider', $method->provider) === 'paymob')>Paymob</option>
+                        <option value="fawaterak" @selected(old('provider', $method->provider) === 'fawaterak')>Fawaterak</option>
                     </select>
                 </div>
             </div>
@@ -75,6 +76,17 @@
                     </div>
                 </div>
             </div>
+
+
+            <div id="fawaterak-config" style="display:none;">
+                <h5>Fawaterak Configuration</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3"><label class="form-label">API Key</label><input class="form-control" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}"></div>
+                    <div class="col-md-6 mb-3"><label class="form-label">Provider Key</label><input class="form-control" name="fawaterak_provider_key" value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}"></div>
+                </div>
+                <p class="text-muted fs-sm mb-0">You can create multiple payment methods with provider = Fawaterak, each one can use a different API/Provider key pair.</p>
+            </div>
+
         </div>
 
         <div class="block-content block-content-full text-end bg-body-light">
@@ -89,9 +101,13 @@
 (() => {
   const provider = document.getElementById('provider-select');
   const paymobBox = document.getElementById('paymob-config');
+  const fawaterakBox = document.getElementById('fawaterak-config');
   const copyBtn = document.getElementById('copy-paymob-callback');
   const callbackInput = document.getElementById('paymob-callback-url');
-  const toggle = () => { paymobBox.style.display = provider.value === 'paymob' ? 'block' : 'none'; };
+  const toggle = () => {
+    paymobBox.style.display = provider.value === 'paymob' ? 'block' : 'none';
+    fawaterakBox.style.display = provider.value === 'fawaterak' ? 'block' : 'none';
+  }; 
   provider.addEventListener('change', toggle);
   copyBtn?.addEventListener('click', async () => {
     try {

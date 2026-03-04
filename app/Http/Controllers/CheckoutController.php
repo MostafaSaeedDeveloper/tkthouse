@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
 use App\Models\Ticket;
+use App\Services\FawaterakService;
 use App\Services\PaymobService;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
@@ -116,20 +117,19 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function paymobRedirect(Request $request, Order $order, string $token, PaymobService $paymobService)
+    public function gatewayRedirect(Request $request, Order $order, string $token, PaymobService $paymobService, FawaterakService $fawaterakService)
     {
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'pending_payment', 404);
 
         $method = (string) $request->query('method', $order->payment_method);
-        $isPaymobMethod = PaymentMethod::query()
+        $paymentMethod = PaymentMethod::query()
             ->where('is_active', true)
-            ->where('provider', 'paymob')
             ->where('code', $method)
-            ->exists();
+            ->first();
 
-        if (! $isPaymobMethod) {
+        if (! $paymentMethod) {
             return back()->withErrors(['payment' => 'Selected payment method is not available for online gateway.']);
         }
 
@@ -138,7 +138,11 @@ class CheckoutController extends Controller
         }
 
         try {
-            $url = $paymobService->createCheckoutUrl($order->loadMissing('customer'));
+            $url = match ($paymentMethod->provider) {
+                'paymob' => $paymobService->createCheckoutUrl($order->loadMissing('customer')),
+                'fawaterak' => $fawaterakService->createCheckoutUrl($order->loadMissing('customer')),
+                default => throw new \RuntimeException('Selected payment method is manual and does not support online redirect.'),
+            };
         } catch (\Throwable $exception) {
             return back()->withErrors(['payment' => $exception->getMessage()]);
         }
@@ -548,8 +552,8 @@ class CheckoutController extends Controller
             ->where('code', $order->payment_method)
             ->first(['code', 'provider']);
 
-        if ($method && $method->provider === 'paymob') {
-            return redirect()->route('front.orders.payment.paymob', [
+        if ($method && in_array($method->provider, ['paymob', 'fawaterak'], true)) {
+            return redirect()->route('front.orders.payment.gateway', [
                 'order' => $order,
                 'token' => $order->payment_link_token,
                 'method' => $method->code,

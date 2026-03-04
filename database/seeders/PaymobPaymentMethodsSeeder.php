@@ -19,6 +19,7 @@ class PaymobPaymentMethodsSeeder extends Seeder
                 'icon' => 'public/uploads/payment-method-icons/card.webp',
                 'description' => 'Secure online payment with Visa / Mastercard.',
                 'integration_id' => (string) config('services.paymob.integration_card', ''),
+                'is_active' => true,
             ],
             'paymob_wallet' => [
                 'name' => 'Paymob Wallet',
@@ -26,12 +27,20 @@ class PaymobPaymentMethodsSeeder extends Seeder
                 'icon' => 'public/uploads/payment-method-icons/wallet.webp',
                 'description' => 'Pay instantly using your mobile wallet.',
                 'integration_id' => (string) config('services.paymob.integration_wallet', ''),
+                'is_active' => true,
+            ],
+            'paymob_apple_pay' => [
+                'name' => 'Paymob Apple Pay',
+                'label' => 'Apple Pay',
+                'icon' => 'public/uploads/payment-method-icons/apple-pay.webp',
+                'description' => 'Pay quickly with Apple Pay.',
+                'integration_id' => (string) config('services.paymob.integration_apple_pay', ''),
+                'is_active' => false,
             ],
         ];
 
-
         DB::table('payment_methods')
-            ->whereIn('code', ['visa', 'wallet'])
+            ->whereIn('code', ['visa', 'wallet', 'card'])
             ->delete();
 
         foreach ($definitions as $code => $data) {
@@ -43,7 +52,7 @@ class PaymobPaymentMethodsSeeder extends Seeder
                     'checkout_icon' => $data['icon'],
                     'checkout_description' => $data['description'],
                     'provider' => 'paymob',
-                    'is_active' => true,
+                    'is_active' => (bool) ($data['is_active'] ?? true),
                     'config' => json_encode([
                         'api_key' => $apiKey,
                         'iframe_id' => $iframeId,
