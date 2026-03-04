@@ -8,14 +8,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with(['roles', 'permissions'])->latest()->paginate(15);
+        $search = trim((string) $request->string('search'));
+        $role = $request->string('role')->toString();
+        $permission = $request->string('permission')->toString();
 
-        return view('admin.users.index', compact('users'));
+        $users = User::query()
+            ->with(['roles', 'permissions'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($role !== '', function ($query) use ($role) {
+                $query->whereHas('roles', fn ($roleQuery) => $roleQuery->where('name', $role));
+            })
+            ->when($permission !== '', function ($query) use ($permission) {
+                $query->whereHas('permissions', fn ($permissionQuery) => $permissionQuery->where('name', $permission));
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $roles = Role::orderBy('name')->pluck('name');
+        $permissions = Permission::orderBy('name')->pluck('name');
+
+        return view('admin.users.index', compact('users', 'roles', 'permissions', 'search', 'role', 'permission'));
     }
 
     public function create()
@@ -47,6 +73,7 @@ class UserController extends Controller
 
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
@@ -87,6 +114,7 @@ class UserController extends Controller
 
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 

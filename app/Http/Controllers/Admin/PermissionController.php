@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionController extends Controller
 {
@@ -27,6 +28,7 @@ class PermissionController extends Controller
         ]);
 
         $permission = Permission::create(['name' => $validated['name']]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('permissions')->performedOn($permission)->causedBy(auth()->user())->log('Permission created');
 
         return redirect()->route('admin.permissions.index')->with('success', 'Permission created successfully.');
@@ -44,6 +46,7 @@ class PermissionController extends Controller
         ]);
 
         $permission->update(['name' => $validated['name']]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('permissions')->performedOn($permission)->causedBy(auth()->user())->log('Permission updated');
 
         return redirect()->route('admin.permissions.index')->with('success', 'Permission updated successfully.');
@@ -53,6 +56,7 @@ class PermissionController extends Controller
     {
         $permissionName = $permission->name;
         $permission->delete();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('permissions')->causedBy(auth()->user())->log('Permission deleted: '.$permissionName);
 
         return back()->with('success', 'Permission deleted successfully.');
