@@ -73,6 +73,9 @@
 .co-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 .co-row.cols-5-3 { grid-template-columns: 5fr 3fr; }
 @media (max-width: 640px) { .co-row.cols-2, .co-row.cols-3, .co-row.cols-5-3 { grid-template-columns: 1fr; } }
+.co-promo-row { display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:end; }
+.co-promo-apply { height:44px; padding: 0 16px; border-radius:8px; border:1px solid rgba(245,184,0,0.35); background: rgba(245,184,0,0.08); color: var(--gold); font-family: var(--font-head); font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; cursor:pointer; white-space:nowrap; }
+.co-promo-apply:hover { background: rgba(245,184,0,0.16); border-color: rgba(245,184,0,0.6); }
 
 /* Payment */
 .co-pay-options { display: flex; flex-direction: column; gap: 10px; }
@@ -270,7 +273,7 @@
                     <div class="co-sidebar">
                         <div class="co-label">Promo Code</div>
                         <div class="co-card" style="margin-bottom:20px;">
-                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
+                            <div class="co-promo-row"><div class="co-field" style="margin-bottom:0;"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div><button type="button" class="co-promo-apply">Apply</button></div>
                         </div>
 
                         <div class="co-label">Order Review</div>
@@ -421,7 +424,7 @@
                     <div>
                         <div class="co-label">Promo Code</div>
                         <div class="co-card" style="margin-bottom:20px;">
-                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
+                            <div class="co-promo-row"><div class="co-field" style="margin-bottom:0;"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div><button type="button" class="co-promo-apply">Apply</button></div>
                         </div>
 
                         <div class="co-label">02 &nbsp; Tickets & Order Review</div>
