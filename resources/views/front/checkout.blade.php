@@ -286,21 +286,21 @@
                                 @foreach($units as $unit)
                                     <div class="co-summary-item">
                                         <div class="item-name">{{ $unit['event_name'] }}<br><small style="color:var(--muted)">{{ $unit['ticket_name'] }}</small></div>
-                                        <div class="item-price">{{ number_format($unit['ticket_price'],2) }}</div>
+                                        <div class="item-price">{{ number_format($unit['ticket_price'],2) }} EGP</div>
                                     </div>
                                 @endforeach
                             </div>
                             <div class="co-summary-total">
                                 <span class="total-label">Subtotal</span>
-                                <span class="total-val" id="locked-subtotal-val">{{ number_format($units->sum('ticket_price'),2) }}</span>
+                                <span class="total-val" id="locked-subtotal-val">{{ number_format($units->sum('ticket_price'),2) }} EGP</span>
                             </div>
                             <div class="co-summary-total" id="locked-discount-row" style="display:none;">
                                 <span class="total-label">Discount</span>
-                                <span class="total-val" id="locked-discount-val">-0.00</span>
+                                <span class="total-val" id="locked-discount-val">-0.00 EGP</span>
                             </div>
                             <div class="co-summary-total">
                                 <span class="total-label">Total</span>
-                                <span class="total-val" id="locked-total-val">{{ number_format($units->sum('ticket_price'),2) }}</span>
+                                <span class="total-val" id="locked-total-val">{{ number_format($units->sum('ticket_price'),2) }} EGP</span>
                             </div>
                         </div>
 
@@ -399,11 +399,11 @@
 
                 if (!applyBtn || !promoInput || !subtotalVal || !totalVal) return;
 
-                const fmt = (n) => Number(n || 0).toFixed(2);
+                const fmt = (n) => `${Number(n || 0).toFixed(2)} EGP`;
 
                 const resetPromo = (msg='') => {
                     discountRow.style.display = 'none';
-                    discountVal.textContent = '-0.00';
+                    discountVal.textContent = '-0.00 EGP';
                     totalVal.textContent = fmt(baseTotal);
                     promoNote.textContent = msg;
                     promoNote.classList.toggle('error', msg !== '');
@@ -435,7 +435,7 @@
 
                     const finalTotal = Math.max(0, baseTotal - discount);
                     discountRow.style.display = discount > 0 ? 'flex' : 'none';
-                    discountVal.textContent = `-${fmt(discount)}`;
+                    discountVal.textContent = `- ${fmt(discount)}`;
                     totalVal.textContent = fmt(finalTotal);
                     promoNote.textContent = `Applied ${code} successfully.`;
                     promoNote.classList.remove('error');
