@@ -9,8 +9,8 @@ class FawaterakPaymentMethodsSeeder extends Seeder
 {
     public function run(): void
     {
-        $apiKey = (string) config('services.fawaterak.api_key', '');
-        $defaultProviderKey = (string) config('services.fawaterak.provider_default', '');
+        $apiKey = (string) config('services.fawaterak.api_key', '0095c3aa1d15e2eefd1a8dc82873001b5de3ed0d03691abdea');
+        $defaultProviderKey = (string) config('services.fawaterak.provider_default', 'FAWATERAK.27416');
 
         $definitions = [
             'fawaterak_card' => [
