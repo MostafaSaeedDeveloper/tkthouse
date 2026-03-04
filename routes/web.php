@@ -100,8 +100,8 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
 
     Route::get('orders', [OrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
     Route::get('orders/deleted', [OrderController::class, 'deleted'])->middleware('permission:orders.deleted.view')->name('orders.deleted');
-    Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.manage')->name('orders.destroy');
-    Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.manage')->name('orders.restore');
+    Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.delete')->name('orders.destroy');
+    Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.restore')->name('orders.restore');
     Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
     Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->middleware('permission:orders.manage')->name('orders.edit');
     Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.manage')->name('orders.update');
@@ -117,15 +117,23 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware('permission:attendees.view')->name('affiliates.show');
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
-    Route::get('reports', [ReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.index');
+    Route::get('reports', [ReportController::class, 'index'])->middleware('permission:reports.view')->name('reports.index');
 
-    Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:permissions.update')->name('settings.edit');
-    Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:permissions.update')->name('settings.update');
+    Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');
+    Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
 
-    Route::resource('payment-methods', PaymentMethodController::class)->except('show')->middleware('permission:permissions.update');
-    Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->middleware('permission:permissions.update')->name('payment-methods.fawaterak-methods');
+    Route::resource('payment-methods', PaymentMethodController::class)->except('show')
+        ->middlewareFor('index', 'permission:payment-methods.view')
+        ->middlewareFor(['create', 'store'], 'permission:payment-methods.create')
+        ->middlewareFor(['edit', 'update'], 'permission:payment-methods.update')
+        ->middlewareFor('destroy', 'permission:payment-methods.delete');
+    Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->middleware('permission:payment-methods.view')->name('payment-methods.fawaterak-methods');
 
-    Route::resource('promo-codes', PromoCodeController::class)->except('show')->middleware('permission:orders.manage');
+    Route::resource('promo-codes', PromoCodeController::class)->except('show')
+        ->middlewareFor('index', 'permission:promo-codes.view')
+        ->middlewareFor(['create', 'store'], 'permission:promo-codes.create')
+        ->middlewareFor(['edit', 'update'], 'permission:promo-codes.update')
+        ->middlewareFor('destroy', 'permission:promo-codes.delete');
 });
 
 Route::redirect('/admin', '/dashboard');

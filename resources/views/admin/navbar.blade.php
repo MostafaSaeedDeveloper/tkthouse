@@ -21,12 +21,12 @@
 
 @php
   $canDashboard = auth()->user()?->can('dashboard.view');
-  $canReports = auth()->user()?->can('orders.view');
+  $canReports = auth()->user()?->can('reports.view');
   $canEvents = auth()->user()?->can('events.view');
   $canOrders = auth()->user()?->can('orders.view');
   $canCustomers = auth()->user()?->can('attendees.view');
   $canAffiliates = auth()->user()?->can('attendees.view');
-  $canPromoCodes = auth()->user()?->can('orders.manage');
+  $canPromoCodes = auth()->user()?->can('promo-codes.view');
   $canTickets = auth()->user()?->can('tickets.view');
 
   $canUsers = auth()->user()?->can('users.view');
@@ -34,8 +34,8 @@
   $canPermissions = auth()->user()?->can('permissions.view');
   $canActivityLogs = auth()->user()?->can('activity-logs.view');
 
-  $canSettings = auth()->user()?->can('permissions.update');
-  $canPaymentMethods = auth()->user()?->can('permissions.update');
+  $canSettings = auth()->user()?->can('settings.view');
+  $canPaymentMethods = auth()->user()?->can('payment-methods.view');
 
   $showEventsSalesSection = $canReports || $canEvents || $canOrders || $canCustomers || $canAffiliates || $canPromoCodes || $canTickets;
   $showSystemSection = $canUsers || $canRoles || $canPermissions || $canActivityLogs || $canSettings || $canPaymentMethods;
