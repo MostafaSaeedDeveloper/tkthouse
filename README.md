@@ -81,8 +81,8 @@ php artisan db:seed
 
 If you see an error like `Invalid Token or inactive vendor`, verify these in Fawaterak:
 
-- Integrations → API Key: copy the exact key into your payment method config (`fawaterak_api_key`).
-- Integrations → `providerKey`: copy it into `fawaterak_provider_key` (Payment Method ID / Provider Key).
+- Integrations → API Key: copy the exact key into your payment method config (`fawaterak_api_key`) **or set `FAWATERAK_API_KEY` in `.env`** (used as fallback when DB config is empty).
+- Integrations → `providerKey`: copy it into `fawaterak_provider_key` (Payment Method ID / Provider Key) **or set fallback values** `FAWATERAK_PROVIDER_KEY` / `FAWATERAK_PROVIDER_CARD` / `FAWATERAK_PROVIDER_WALLET` / `FAWATERAK_PROVIDER_APPLE_PAY`.
 - Ensure vendor account is active/live (not disabled).
 - For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
 - Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
