@@ -241,6 +241,19 @@
                     <strong>{{ ucwords(str_replace('_', ' ', (string) data_get($log->properties, 'to_status', 'N/A'))) }}</strong>
                   </div>
                 @endif
+                @if(filled(data_get($log->properties, 'transaction_id')) || filled(data_get($log->properties, 'transaction_url')) || filled(data_get($log->properties, 'payment_status')))
+                  <div class="od-hist-meta" style="margin-top:4px;">
+                    @if(filled(data_get($log->properties, 'payment_status')))
+                      <span style="margin-right:8px;">Payment: <strong>{{ strtoupper((string) data_get($log->properties, 'payment_status')) }}</strong></span>
+                    @endif
+                    @if(filled(data_get($log->properties, 'transaction_id')))
+                      <span style="margin-right:8px;">Ref: <strong>{{ data_get($log->properties, 'transaction_id') }}</strong></span>
+                    @endif
+                    @if(filled(data_get($log->properties, 'transaction_url')))
+                      <a href="{{ data_get($log->properties, 'transaction_url') }}" target="_blank" rel="noopener noreferrer" style="color:#f5b800;">Open transaction</a>
+                    @endif
+                  </div>
+                @endif
                 <div class="od-hist-meta">{{ $log->created_at?->format('d M Y, H:i') }}</div>
               </div>
             </div>

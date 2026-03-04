@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Spatie\Activitylog\Models\Activity;
 
 class CheckoutController extends Controller
 {
@@ -138,12 +139,35 @@ class CheckoutController extends Controller
         }
 
         try {
+            $transactionId = null;
+            $transactionLink = null;
             $url = match ($paymentMethod->provider) {
                 'paymob' => $paymobService->createCheckoutUrl($order->loadMissing('customer')),
-                'fawaterak' => $fawaterakService->createCheckoutUrl($order->loadMissing('customer')),
+                'fawaterak' => (function () use ($fawaterakService, $order, &$transactionId, &$transactionLink) {
+                    $checkoutData = $fawaterakService->createCheckoutData($order->loadMissing('customer'));
+                    $transactionId = (string) ($checkoutData['transaction_id'] ?? '');
+                    $transactionLink = (string) ($checkoutData['transaction_url'] ?? '');
+
+                    return (string) ($checkoutData['url'] ?? '');
+                })(),
                 default => throw new \RuntimeException('Selected payment method is manual and does not support online redirect.'),
             };
+
+            $this->logPaymentEvent($order, $request->user(), 'Payment gateway opened', [
+                'provider' => $paymentMethod->provider,
+                'payment_method' => $paymentMethod->code,
+                'payment_status' => 'opened',
+                'transaction_id' => $transactionId ?: null,
+                'transaction_url' => $transactionLink ?: $url,
+            ]);
         } catch (\Throwable $exception) {
+            $this->logPaymentEvent($order, $request->user(), 'Payment attempt failed', [
+                'provider' => $paymentMethod->provider,
+                'payment_method' => $paymentMethod->code,
+                'payment_status' => 'failed',
+                'failure_reason' => $exception->getMessage(),
+            ]);
+
             return back()->withErrors(['payment' => $exception->getMessage()]);
         }
 
@@ -177,11 +201,33 @@ class CheckoutController extends Controller
             return response()->json(['received' => true, 'updated' => false]);
         }
 
+        $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
+        $transactionLink = (string) data_get($payload, 'obj.data.redirect_to', data_get($payload, 'obj.redirect_to', ''));
+
         if ($isSuccess && $order->status !== 'paid') {
+            $oldStatus = $order->status;
             $order->update([
                 'status' => 'paid',
             ]);
             app(TicketIssuanceService::class)->issueIfPaid($order);
+
+            $this->logPaymentEvent($order, null, 'Payment completed successfully', [
+                'provider' => 'paymob',
+                'payment_status' => 'paid',
+                'from_status' => $oldStatus,
+                'to_status' => 'paid',
+                'transaction_id' => $transactionId ?: null,
+                'transaction_url' => $transactionLink ?: null,
+            ]);
+        }
+
+        if (! $isSuccess) {
+            $this->logPaymentEvent($order, null, 'Payment failed', [
+                'provider' => 'paymob',
+                'payment_status' => 'failed',
+                'transaction_id' => $transactionId ?: null,
+                'transaction_url' => $transactionLink ?: null,
+            ]);
         }
 
         Log::info('Paymob callback processed.', [
@@ -232,6 +278,66 @@ class CheckoutController extends Controller
             ->log('Payment confirmed');
 
         return redirect()->route('front.checkout.thank-you')->with('success', 'Payment completed successfully.');
+    }
+
+    public function fawaterakCallback(Request $request, Order $order, string $token)
+    {
+        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
+
+        $result = strtolower((string) $request->query('result', 'failed'));
+        $isSuccess = $result === 'success';
+        $flow = $isSuccess ? 'payment_success' : 'payment_failed';
+
+        $transactionId = trim((string) ($request->query('invoice_id')
+            ?: $request->query('payment_id')
+            ?: $request->query('transaction_id')
+            ?: $request->query('id')));
+
+        $transactionUrl = trim((string) ($request->query('redirectTo')
+            ?: $request->query('redirect_to')
+            ?: $request->query('url')));
+
+        if ($isSuccess && $order->status !== 'paid') {
+            $oldStatus = $order->status;
+            $order->update(['status' => 'paid']);
+            app(TicketIssuanceService::class)->issueIfPaid($order);
+
+            $this->logPaymentEvent($order, null, 'Payment completed successfully', [
+                'provider' => 'fawaterak',
+                'payment_status' => 'paid',
+                'from_status' => $oldStatus,
+                'to_status' => 'paid',
+                'transaction_id' => $transactionId !== '' ? $transactionId : null,
+                'transaction_url' => $transactionUrl !== '' ? $transactionUrl : null,
+            ]);
+        }
+
+        if (! $isSuccess) {
+            $this->logPaymentEvent($order, null, 'Payment failed', [
+                'provider' => 'fawaterak',
+                'payment_status' => 'failed',
+                'transaction_id' => $transactionId !== '' ? $transactionId : null,
+                'transaction_url' => $transactionUrl !== '' ? $transactionUrl : null,
+            ]);
+        }
+
+        return redirect()->route('front.checkout.thank-you', [
+            'flow' => $flow,
+            'order' => $order->order_number,
+        ]);
+    }
+
+    private function logPaymentEvent(Order $order, $causer, string $description, array $properties = []): Activity
+    {
+        $logger = activity('orders')
+            ->performedOn($order)
+            ->withProperties($properties);
+
+        if ($causer) {
+            $logger->causedBy($causer);
+        }
+
+        return $logger->log($description);
     }
 
     private function storeFromLockedEventSelection(Request $request, array $baseValidated)
