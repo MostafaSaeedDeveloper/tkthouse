@@ -220,6 +220,11 @@ class FawaterakService
             }
         }
 
+        $recursiveUrl = $this->findFirstUrlRecursive($json);
+        if ($recursiveUrl !== '') {
+            return $recursiveUrl;
+        }
+
         $invoiceKey = trim((string) (
             data_get($json, 'data.invoice_key')
             ?? data_get($json, 'data.invoiceKey')
@@ -231,10 +236,10 @@ class FawaterakService
         ));
 
         if ($invoiceKey !== '') {
-            return $this->baseHost().'/invoice/pay/'.$invoiceKey;
+            return $this->baseHost().'/invoice/'.$invoiceKey;
         }
 
-        return $this->findFirstUrlRecursive($json);
+        return '';
     }
 
     private function normalizePossibleUrl(mixed $value): string
