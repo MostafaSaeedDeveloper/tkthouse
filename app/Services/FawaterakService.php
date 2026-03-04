@@ -193,24 +193,91 @@ class FawaterakService
         $candidates = [
             data_get($json, 'data.payment_data.redirectTo'),
             data_get($json, 'data.payment_data.redirect_to'),
+            data_get($json, 'data.payment_data.url'),
+            data_get($json, 'data.payment_data.payment_url'),
             data_get($json, 'data.redirectTo'),
             data_get($json, 'data.redirect_to'),
             data_get($json, 'data.url'),
             data_get($json, 'data.payment_url'),
             data_get($json, 'payment_data.redirectTo'),
             data_get($json, 'payment_data.redirect_to'),
+            data_get($json, 'payment_data.url'),
+            data_get($json, 'payment_data.payment_url'),
             data_get($json, 'payment_url'),
             data_get($json, 'url'),
         ];
 
         foreach ($candidates as $value) {
-            $url = trim((string) $value);
-            if ($url !== '' && (str_starts_with($url, 'http://') || str_starts_with($url, 'https://'))) {
+            $url = $this->normalizePossibleUrl($value);
+            if ($url !== '') {
                 return $url;
             }
         }
 
+        return $this->findFirstUrlRecursive($json);
+    }
+
+    private function normalizePossibleUrl(mixed $value): string
+    {
+        if (is_array($value)) {
+            return $this->findFirstUrlRecursive($value);
+        }
+
+        $url = trim((string) $value);
+        if ($url === '') {
+            return '';
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        if (str_starts_with($url, '/')) {
+            return $this->baseHost().$url;
+        }
+
+        if (preg_match('/^www\./i', $url) === 1) {
+            return 'https://'.$url;
+        }
+
         return '';
+    }
+
+    private function findFirstUrlRecursive(mixed $data): string
+    {
+        if (is_array($data)) {
+            foreach ($data as $item) {
+                $found = $this->findFirstUrlRecursive($item);
+                if ($found !== '') {
+                    return $found;
+                }
+            }
+
+            return '';
+        }
+
+        $text = trim((string) $data);
+        if ($text === '') {
+            return '';
+        }
+
+        if (preg_match('#https?://[^\s"\']+#i', $text, $matches) === 1) {
+            return $matches[0];
+        }
+
+        return '';
+    }
+
+    private function baseHost(): string
+    {
+        $base = $this->apiBaseUrl();
+        $parts = parse_url($base);
+        if (! is_array($parts) || empty($parts['host'])) {
+            return 'https://app.fawaterk.com';
+        }
+
+        $scheme = $parts['scheme'] ?? 'https';
+        return $scheme.'://'.$parts['host'];
     }
 
     private function apiBaseUrl(): string
