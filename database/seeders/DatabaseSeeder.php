@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolesAndPermissionsSeeder::class,
-            RemoveOrdersManagePermissionSeeder::class,
+            RemoveLegacyManagePermissionsSeeder::class,
             EventsSeeder::class,
             PaymobPaymentMethodsSeeder::class,
             FawaterakPaymentMethodsSeeder::class,
