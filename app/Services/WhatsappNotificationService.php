@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class WhatsappNotificationService
 {
@@ -16,7 +17,7 @@ class WhatsappNotificationService
 
         $phone = $this->formatTwilioWhatsappAddress($order->customer?->phone);
         if (! $phone) {
-            Log::info('Skipping WhatsApp order notification: missing customer phone.', ['order_id' => $order->id]);
+            Log::info('Skipping WhatsApp order notification: customer phone is missing or invalid.', ['order_id' => $order->id, 'phone' => $order->customer?->phone]);
 
             return false;
         }
@@ -33,7 +34,7 @@ class WhatsappNotificationService
     {
         $phone = $this->formatTwilioWhatsappAddress($ticket->holder_phone);
         if (! $phone) {
-            Log::info('Skipping WhatsApp ticket notification: missing holder phone.', ['ticket_id' => $ticket->id]);
+            Log::info('Skipping WhatsApp ticket notification: holder phone is missing or invalid.', ['ticket_id' => $ticket->id, 'phone' => $ticket->holder_phone]);
 
             return false;
         }
@@ -55,7 +56,7 @@ class WhatsappNotificationService
     {
         $sid = (string) config('services.twilio.sid');
         $token = (string) config('services.twilio.auth_token');
-        $from = $this->formatTwilioWhatsappAddress(config('services.twilio.whatsapp_from'));
+        $from = $this->formatTwilioWhatsappAddress((string) config('services.twilio.whatsapp_from'));
 
         if (! $sid || ! $token || ! $from) {
             Log::info('Skipping WhatsApp notification: Twilio is not fully configured.', $context);
@@ -65,17 +66,37 @@ class WhatsappNotificationService
 
         $url = sprintf('https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json', $sid);
 
-        Http::asForm()
-            ->timeout(15)
-            ->withBasicAuth($sid, $token)
-            ->post($url, [
-                'From' => $from,
-                'To' => $to,
-                'Body' => $body,
-            ])
-            ->throw();
+        try {
+            $response = Http::asForm()
+                ->timeout(15)
+                ->withBasicAuth($sid, $token)
+                ->post($url, [
+                    'From' => $from,
+                    'To' => $to,
+                    'Body' => $body,
+                ]);
 
-        return true;
+            if ($response->failed()) {
+                Log::warning('Twilio WhatsApp request failed.', [
+                    ...$context,
+                    'to' => $to,
+                    'status' => $response->status(),
+                    'response' => $response->json() ?: $response->body(),
+                ]);
+
+                return false;
+            }
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::error('Twilio WhatsApp request threw an exception.', [
+                ...$context,
+                'to' => $to,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function formatTwilioWhatsappAddress(?string $value): ?string
@@ -86,15 +107,31 @@ class WhatsappNotificationService
         }
 
         if (str_starts_with($value, 'whatsapp:')) {
-            return $value;
+            $value = substr($value, strlen('whatsapp:'));
         }
+
+        $value = preg_replace('/[^\d+]/', '', $value) ?? '';
 
         if (str_starts_with($value, '00')) {
             $value = '+'.substr($value, 2);
         }
 
         if (! str_starts_with($value, '+')) {
-            $value = '+'.$value;
+            $digits = preg_replace('/\D/', '', $value) ?? '';
+            if ($digits === '') {
+                return null;
+            }
+
+            if (str_starts_with($digits, '0')) {
+                $defaultCountryCode = ltrim((string) config('services.twilio.default_country_code', '20'), '+');
+                $digits = $defaultCountryCode.ltrim($digits, '0');
+            }
+
+            $value = '+'.$digits;
+        }
+
+        if (! preg_match('/^\+[1-9]\d{7,14}$/', $value)) {
+            return null;
         }
 
         return 'whatsapp:'.$value;

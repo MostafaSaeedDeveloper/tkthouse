@@ -97,8 +97,9 @@ To send tickets automatically on WhatsApp when an order becomes `paid`, and to e
    TWILIO_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+   TWILIO_DEFAULT_COUNTRY_CODE=20
    ```
-3. Ensure customer/holder phone numbers are stored in international format (example: `+2010xxxxxxx`).
+3. Ensure customer/holder phone numbers are stored in international format (example: `+2010xxxxxxx`) OR local format like `010...` with `TWILIO_DEFAULT_COUNTRY_CODE` configured.
 4. Clear config cache after updating env values:
    ```bash
    php artisan config:clear

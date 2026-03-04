@@ -114,7 +114,7 @@ class TicketController extends Controller
         $sent = $whatsappNotificationService->sendSingleTicket($ticket);
 
         if (! $sent) {
-            return back()->with('error', 'Twilio WhatsApp is not configured or holder phone is missing.');
+            return back()->with('error', 'Twilio WhatsApp is not configured, or holder phone number is invalid.');
         }
 
         return back()->with('success', 'Ticket sent by WhatsApp successfully.');
