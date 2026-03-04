@@ -74,7 +74,10 @@ class FawaterakService
         $response = Http::baseUrl($this->apiBaseUrl())
             ->timeout(20)
             ->withToken($apiKey)
-            ->withHeaders(['Accept' => 'application/json'])
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])
             ->post('invoiceInitPay', $payload);
 
         if (! $response->successful()) {
@@ -110,7 +113,10 @@ class FawaterakService
                 $base = Http::baseUrl($this->apiBaseUrl())
                     ->timeout(20)
                     ->withToken($apiKey)
-                    ->withHeaders(['Accept' => 'application/json']);
+                    ->withHeaders([
+                        'Accept' => 'application/json',
+                        'Content-Type' => 'application/json',
+                    ]);
 
                 $response = $base->get('getPaymentmethods');
 
