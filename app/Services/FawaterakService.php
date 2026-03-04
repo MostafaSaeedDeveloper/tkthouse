@@ -309,28 +309,7 @@ class FawaterakService
 
     private function canonicalizeCheckoutUrl(string $url): string
     {
-        $url = trim($url);
-        if ($url === '') {
-            return '';
-        }
-
-        $parts = parse_url($url);
-        if (! is_array($parts)) {
-            return $url;
-        }
-
-        $host = strtolower((string) ($parts['host'] ?? ''));
-        $path = (string) ($parts['path'] ?? '');
-
-        if (in_array($host, ['app.fawaterk.com', 'www.app.fawaterk.com'], true) && preg_match('~^/invoice/pay/([^/?#]+)$~', $path, $m) === 1) {
-            $scheme = $parts['scheme'] ?? 'https';
-            $query = isset($parts['query']) ? '?'.$parts['query'] : '';
-            $fragment = isset($parts['fragment']) ? '#'.$parts['fragment'] : '';
-
-            return $scheme.'://app.fawaterk.com/invoice/'.$m[1].$query.$fragment;
-        }
-
-        return $url;
+        return trim($url);
     }
 
     private function baseHost(): string
