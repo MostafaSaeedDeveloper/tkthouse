@@ -27,6 +27,7 @@ class FawaterakService
         $config = $this->normalizeConfig($method->config ?? []);
         $apiKey = $this->resolveApiKey($config);
         $providerKey = $this->resolveProviderKey($method, $config);
+        $providerKey = $this->normalizeProviderKey($providerKey);
 
         if ($apiKey === '' || $providerKey === '') {
             throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key and payment method id.');
@@ -135,6 +136,14 @@ class FawaterakService
         }
 
         return 'Unable to initialize Fawaterak payment right now. HTTP '.$status.': '.$body;
+    }
+
+
+    private function normalizeProviderKey(string $providerKey): string
+    {
+        $normalized = preg_replace('/^[^0-9]*/', '', trim($providerKey));
+
+        return is_string($normalized) ? $normalized : '';
     }
 
     private function resolveProviderKey(PaymentMethod $method, array $config): string
