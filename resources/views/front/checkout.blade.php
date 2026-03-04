@@ -209,6 +209,7 @@
                                 <div class="co-field"><label>Email</label> <input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
                                 <div class="co-field"><label>Phone</label> <input name="phone" placeholder="+1 234 567 890"   value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
+                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
                         </div>
 
                         {{-- Attendee Stepper --}}
@@ -392,6 +393,7 @@
                                 <div class="co-field"><label>Email</label><input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
                                 <div class="co-field"><label>Phone</label><input name="phone" placeholder="+1 234 567 890" value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
+                            <div class="co-field"><label>Promo Code</label><input name="promo_code" placeholder="DISCOUNT10" value="{{ old('promo_code') }}"></div>
                         </div>
 
                         <div class="co-label">Payment Method</div>

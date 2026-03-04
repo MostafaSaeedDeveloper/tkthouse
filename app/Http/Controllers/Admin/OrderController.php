@@ -8,6 +8,7 @@ use App\Mail\OrderRejectedMail;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Models\PromoCode;
 use App\Services\TicketIssuanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -59,7 +60,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'items.ticket', 'user']);
+        $order->load(['customer', 'items.ticket', 'user', 'promoCode']);
 
         $activities = Activity::query()
             ->with('causer')
@@ -108,7 +109,7 @@ class OrderController extends Controller
 
     public function edit(Order $order)
     {
-        $order->load(['customer', 'items.ticket', 'user']);
+        $order->load(['customer', 'items.ticket', 'user', 'promoCode']);
 
         $paymentMethods = PaymentMethod::query()
             ->where('code', '!=', 'card')
@@ -116,7 +117,9 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['code', 'name', 'is_active']);
 
-        return view('admin.orders.edit', compact('order', 'paymentMethods'));
+        $promoCodes = PromoCode::query()->orderByDesc('is_active')->orderBy('code')->get(['id', 'code', 'discount_type', 'discount_value', 'is_active']);
+
+        return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes'));
     }
 
     public function update(Request $request, Order $order)
@@ -125,6 +128,7 @@ class OrderController extends Controller
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
             'payment_method' => ['required', 'string', 'max:100'],
             'requires_approval' => ['nullable', 'boolean'],
+            'promo_code' => ['nullable', 'string', 'max:50'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
@@ -178,7 +182,38 @@ class OrderController extends Controller
             $total += $lineTotal;
         }
 
-        $order->update(['total_amount' => $total]);
+        $promoCodeInput = strtoupper(trim((string) ($validated['promo_code'] ?? '')));
+        $selectedPromo = null;
+        $discountAmount = 0.0;
+
+        if ($promoCodeInput !== '') {
+            $selectedPromo = PromoCode::query()->where('code', $promoCodeInput)->first();
+            if (! $selectedPromo) {
+                return back()->withErrors(['promo_code' => 'Promo code does not exist.'])->withInput();
+            }
+
+            $discountAmount = $selectedPromo->discount_type === 'percent'
+                ? round(($total * (float) $selectedPromo->discount_value) / 100, 2)
+                : round((float) $selectedPromo->discount_value, 2);
+
+            $discountAmount = min($discountAmount, $total);
+        }
+
+        if ($order->promo_code_id && (! $selectedPromo || (int) $order->promo_code_id !== (int) $selectedPromo->id)) {
+            PromoCode::query()->whereKey($order->promo_code_id)->where('used_count', '>', 0)->decrement('used_count');
+        }
+
+        if ($selectedPromo && (int) $order->promo_code_id !== (int) $selectedPromo->id) {
+            $selectedPromo->increment('used_count');
+        }
+
+        $order->update([
+            'promo_code_id' => $selectedPromo?->id,
+            'promo_code' => $selectedPromo?->code,
+            'subtotal_amount' => $total,
+            'discount_amount' => $discountAmount,
+            'total_amount' => max(0, $total - $discountAmount),
+        ]);
 
         activity('orders')
             ->performedOn($order)

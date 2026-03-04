@@ -103,6 +103,9 @@
           <div class="od-info-row"><span class="od-info-label">Order #</span><span class="od-info-val">{{ $displayOrderNumber }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Date</span><span class="od-info-val">{{ $order->created_at?->format('d M Y, H:i') }}</span></div>
           <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ ucwords(str_replace('_',' ',(string)$order->payment_method)) }}</span></div>
+          <div class="od-info-row"><span class="od-info-label">Promo Code</span><span class="od-info-val">{{ $order->promo_code ?: '-' }}</span></div>
+          <div class="od-info-row"><span class="od-info-label">Subtotal</span><span class="od-info-val">{{ number_format((float) ($order->subtotal_amount ?: $order->total_amount),2) }} EGP</span></div>
+          <div class="od-info-row"><span class="od-info-label">Discount</span><span class="od-info-val">{{ number_format((float) $order->discount_amount,2) }} EGP</span></div>
           @if($order->status === 'pending_payment' && $paymentLink)
             <div class="od-info-row">
               <span class="od-info-label">Payment Link</span>
@@ -183,7 +186,11 @@
             <div class="od-note-text">No tickets found.</div>
           @endforelse
 
-          <div class="od-total-bar"><span>Total Amount</span><strong>{{ number_format((float)$order->total_amount,2) }} EGP</strong></div>
+          <div class="od-total-bar"><span>Subtotal</span><strong>{{ number_format((float) ($order->subtotal_amount ?: $order->total_amount),2) }} EGP</strong></div>
+          @if((float) $order->discount_amount > 0)
+            <div class="od-total-bar" style="margin-top:10px;"><span>Promo Discount{{ $order->promo_code ? ' ('.$order->promo_code.')' : '' }}</span><strong>- {{ number_format((float)$order->discount_amount,2) }} EGP</strong></div>
+          @endif
+          <div class="od-total-bar" style="margin-top:10px;"><span>Total Amount</span><strong>{{ number_format((float)$order->total_amount,2) }} EGP</strong></div>
         </div>
       </div>
 
