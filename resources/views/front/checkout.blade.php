@@ -317,7 +317,7 @@
                             @endif
                         </div>
 
-                        <button type="submit" class="co-btn-primary" id="locked-submit-btn">
+                        <button type="button" class="co-btn-primary" id="locked-submit-btn" data-checkout-submit>
                             {{ $requiresApproval ? 'Send Order' : 'Pay '.number_format($units->sum('ticket_price'),2).' EGP' }}
                         </button>
                     </div>
@@ -491,7 +491,7 @@
                             <div class="co-flow-note" id="checkout-flow-note"></div>
                         </div>
 
-                        <button type="submit" class="co-btn-primary" id="submit-order-btn">Pay 0.00 EGP</button>
+                        <button type="button" class="co-btn-primary" id="submit-order-btn" data-checkout-submit>Pay 0.00 EGP</button>
                     </div>
 
                     {{-- RIGHT: Tickets --}}
@@ -698,5 +698,20 @@
 
     </div>
 </section>
+
+
+<script>
+(function(){
+    document.querySelectorAll('[data-checkout-submit]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const form = button.closest('form');
+            if (!form) return;
+            button.disabled = true;
+            button.textContent = 'Submitting...';
+            form.submit();
+        });
+    });
+})();
+</script>
 
 @endsection
