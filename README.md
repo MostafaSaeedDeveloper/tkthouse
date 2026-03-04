@@ -75,3 +75,14 @@ php artisan db:seed
 > Example of incorrect usage (will fail):
 >
 > `php artisan db:seed database/seeders/FawaterakPaymentMethodsSeeder.php`
+
+
+### Fawaterak Dashboard checklist
+
+If you see an error like `Invalid Token or inactive vendor`, verify these in Fawaterak:
+
+- Integrations → API Key: copy the exact key into your payment method config (`fawaterak_api_key`).
+- Integrations → `providerKey`: copy it into `fawaterak_provider_key` (Payment Method ID / Provider Key).
+- Ensure vendor account is active/live (not disabled).
+- For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
+- Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.

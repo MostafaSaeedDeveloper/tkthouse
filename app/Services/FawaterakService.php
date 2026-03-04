@@ -7,6 +7,7 @@ use App\Models\PaymentMethod;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 use RuntimeException;
 
 class FawaterakService
@@ -84,6 +85,7 @@ class FawaterakService
 
         foreach ($baseUrls as $baseUrl) {
             $http = Http::baseUrl($baseUrl)
+                ->timeout(20)
                 ->withHeaders([
                     'Authorization' => 'Bearer '.$apiKey,
                     'Accept' => 'application/json',
@@ -106,7 +108,7 @@ class FawaterakService
                 if (! $resp->successful()) {
                     $status = $resp->status();
                     $body = (string) $resp->body();
-                    $lastError = 'HTTP '.$status.': '.$body;
+                    $lastError = $this->humanizeGatewayError($status, $body);
 
                     Log::warning('Fawaterak checkout init failed.', [
                         'base_url' => $baseUrl,
@@ -114,6 +116,7 @@ class FawaterakService
                         'order_id' => $order->id,
                         'status' => $status,
                         'body' => $body,
+                        'human_error' => $lastError,
                     ]);
 
                     continue;
@@ -143,4 +146,29 @@ class FawaterakService
 
         throw new RuntimeException('Unable to initialize Fawaterak payment right now. '.$lastError);
     }
+
+
+    private function humanizeGatewayError(int $status, string $body): string
+    {
+        try {
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return 'HTTP '.$status.': '.$body;
+        }
+
+        if (($decoded['status'] ?? null) === 'error') {
+            $tokenError = data_get($decoded, 'message.token.0');
+            if (is_string($tokenError) && str_contains(strtolower($tokenError), 'invalid token')) {
+                return 'Fawaterak API Key is invalid or your vendor is inactive. Please verify API Key and vendor activation in Fawaterak dashboard (Integrations page).';
+            }
+
+            $methodError = data_get($decoded, 'message.payment_method_id.0');
+            if (is_string($methodError) && $methodError !== '') {
+                return 'Invalid Fawaterak Payment Method ID / Provider Key. Please verify providerKey in Fawaterak dashboard.';
+            }
+        }
+
+        return 'HTTP '.$status.': '.$body;
+    }
 }
+
