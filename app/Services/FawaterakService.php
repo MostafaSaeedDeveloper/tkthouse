@@ -322,7 +322,7 @@ class FawaterakService
         $host = strtolower((string) ($parts['host'] ?? ''));
         $path = (string) ($parts['path'] ?? '');
 
-        if (in_array($host, ['app.fawaterk.com', 'www.app.fawaterk.com'], true) && preg_match('#^/invoice/pay/([^/?#]+)$#', $path, $m) === 1) {
+        if (in_array($host, ['app.fawaterk.com', 'www.app.fawaterk.com'], true) && preg_match('~^/invoice/pay/([^/?#]+)$~', $path, $m) === 1) {
             $scheme = $parts['scheme'] ?? 'https';
             $query = isset($parts['query']) ? '?'.$parts['query'] : '';
             $fragment = isset($parts['fragment']) ? '#'.$parts['fragment'] : '';
