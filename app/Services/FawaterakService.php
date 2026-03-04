@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -23,13 +24,21 @@ class FawaterakService
             throw new RuntimeException('Selected Fawaterak payment method is disabled.');
         }
 
-        $config = $method->config ?? [];
-        $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
+        $config = $this->normalizeConfig($method->config ?? []);
+        $apiKey = $this->resolveApiKey($config);
         $providerKey = $this->resolveProviderKey($method, $config);
 
         if ($apiKey === '' || $providerKey === '') {
             throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key and payment method id.');
         }
+
+        Log::info('Fawaterak config resolved for payment method.', [
+            'payment_method_id' => $method->id,
+            'payment_method_code' => $method->code,
+            'provider' => $method->provider,
+            'api_key_source' => $this->apiKeySource($config),
+            'provider_key_source' => $this->providerKeySource($method, $config),
+        ]);
 
         $customer = $order->loadMissing('customer')->customer;
         $firstName = trim((string) ($customer->first_name ?? '')) ?: 'Customer';
@@ -130,7 +139,7 @@ class FawaterakService
 
     private function resolveProviderKey(PaymentMethod $method, array $config): string
     {
-        $direct = trim((string) ($config['provider_key'] ?? ''));
+        $direct = trim((string) ($config['provider_key'] ?? $config['providerKey'] ?? $config['payment_method_id'] ?? ''));
         if ($direct !== '') {
             return $direct;
         }
@@ -145,5 +154,50 @@ class FawaterakService
         }
 
         return trim((string) config('services.fawaterak.provider_card', config('services.fawaterak.provider_default', '')));
+    }
+
+    private function resolveApiKey(array $config): string
+    {
+        return trim((string) ($config['api_key'] ?? $config['apiKey'] ?? $config['token'] ?? config('services.fawaterak.api_key', '')));
+    }
+
+    private function normalizeConfig(array|string|null $config): array
+    {
+        if (is_array($config)) {
+            return $config;
+        }
+
+        if (is_string($config) && trim($config) !== '') {
+            $decoded = json_decode($config, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    private function apiKeySource(array $config): string
+    {
+        if (trim((string) ($config['api_key'] ?? '')) !== '' || trim((string) ($config['apiKey'] ?? '')) !== '' || trim((string) ($config['token'] ?? '')) !== '') {
+            return 'payment_method_config';
+        }
+
+        return 'services_config';
+    }
+
+    private function providerKeySource(PaymentMethod $method, array $config): string
+    {
+        if (trim((string) ($config['provider_key'] ?? $config['providerKey'] ?? $config['payment_method_id'] ?? '')) !== '') {
+            return 'payment_method_config';
+        }
+
+        $code = strtolower((string) $method->code);
+        if (str_contains($code, 'apple')) {
+            return 'services.fawaterak.provider_apple_pay|provider_default';
+        }
+        if (str_contains($code, 'wallet')) {
+            return 'services.fawaterak.provider_wallet|provider_default';
+        }
+
+        return 'services.fawaterak.provider_card|provider_default';
     }
 }
