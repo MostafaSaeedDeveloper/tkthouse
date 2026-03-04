@@ -102,6 +102,9 @@ body {
             'Phone Number' => $ticket->holder_phone,
             'Gender' => $ticket->holder_gender ?? $ticket->orderItem?->holder_gender,
         ])->filter();
+
+        $ticketName = $ticket->ticket_name ?? $ticket->name ?? $ticket->ticket_type ?? '-';
+        $ticketStatus = $ticket->status ? str($ticket->status)->replace('_', ' ')->title() : 'Issued';
     @endphp
 
     <div class="ticket-page">
@@ -125,9 +128,9 @@ body {
                 <div class="info-grid">
                     <div class="info-col">
                         <div class="info-section-title">Ticket Information</div>
-                        <div class="info-row">Name: {{ $ticket->name ?? $ticket->ticket_type ?? '-' }}</div>
+                        <div class="info-row">Name: {{ $ticketName }}</div>
                         <div class="info-row">Price: {{ number_format($ticket->ticket_price, 0) }} EGP</div>
-                        <div class="info-row">Status: {{ str($ticket->status)->replace('_', ' ')->title() }}</div>
+                        <div class="info-row">Status: {{ $ticketStatus }}</div>
                         <div class="info-row">#: {{ $ticket->ticket_number }}</div>
                         <div class="info-row">Order: {{ $order->order_number }}</div>
                     </div>
@@ -155,9 +158,9 @@ body {
 
                     <div class="info-col-2">
                         <div class="qr-block">
-                            <div class="qr-label-top">{{ strtoupper($ticket->name ?? $ticket->ticket_type ?? 'General') }}</div>
+                            <div class="qr-label-top">{{ strtoupper($ticketName ?: 'General') }}</div>
                             <img class="qr-img" src="{{ $qrDataUri }}" alt="QR Code">
-                            <div class="qr-label-bottom">{{ strtoupper(str($ticket->status)->replace('_', ' ')) }}</div>
+                            <div class="qr-label-bottom">{{ strtoupper($ticketStatus) }}</div>
                         </div>
 
                         @if($extras->count())
