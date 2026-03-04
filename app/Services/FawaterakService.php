@@ -24,7 +24,7 @@ class FawaterakService
         }
 
         $config = is_array($method->config) ? $method->config : [];
-        $apiKey = trim((string) ($config['api_key'] ?? ''));
+        $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
 
         if ($apiKey === '') {
             throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key.');
@@ -71,7 +71,7 @@ class FawaterakService
             ]],
         ];
 
-        $response = Http::baseUrl('https://app.fawaterk.com/api/v2')
+        $response = Http::baseUrl($this->apiBaseUrl())
             ->timeout(20)
             ->withToken($apiKey)
             ->withHeaders(['Accept' => 'application/json'])
@@ -107,29 +107,37 @@ class FawaterakService
             'fawaterak_payment_methods_'.sha1($apiKey),
             now()->addDay(),
             function () use ($apiKey) {
-                $response = Http::baseUrl('https://app.fawaterk.com/api/v2')
+                $base = Http::baseUrl($this->apiBaseUrl())
                     ->timeout(20)
                     ->withToken($apiKey)
-                    ->withHeaders(['Accept' => 'application/json'])
-                    ->get('/getPaymentmethods');
+                    ->withHeaders(['Accept' => 'application/json']);
+
+                $response = $base->get('/getPaymentmethods');
+                if (! $response->successful()) {
+                    $response = $base->get('/getPaymentMethods');
+                }
 
                 if (! $response->successful()) {
+                    $raw = (string) $response->body();
                     Log::error('Fawaterak getPaymentmethods failed.', [
                         'status' => $response->status(),
-                        'response' => (string) $response->body(),
+                        'response' => $raw,
                     ]);
-                    throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+                    throw new RuntimeException('Could not fetch Fawaterak payment methods. '.$raw);
                 }
 
                 $json = $response->json();
                 $methods = data_get($json, 'data', []);
+                if (! is_array($methods) || isset($methods['paymentId'])) {
+                    $methods = data_get($json, 'data.payment_data', data_get($json, 'payment_methods', $methods));
+                }
 
-                if (! is_array($methods)) {
+                if (! is_array($methods) || $methods === []) {
                     Log::error('Fawaterak getPaymentmethods unexpected payload.', ['response' => $json]);
                     throw new RuntimeException('Could not fetch Fawaterak payment methods.');
                 }
 
-                return $methods;
+                return array_values(array_filter($methods, fn ($m) => is_array($m)));
             }
         );
 
@@ -164,5 +172,10 @@ class FawaterakService
         ]);
 
         throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+    }
+
+    private function apiBaseUrl(): string
+    {
+        return (string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2');
     }
 }
