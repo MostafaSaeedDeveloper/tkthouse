@@ -95,7 +95,7 @@ class FawaterakService
         }
 
         $json = $response->json();
-        $redirectUrl = (string) data_get($json, 'data.payment_data.redirectTo', '');
+        $redirectUrl = $this->extractRedirectUrl($json);
 
         if ($redirectUrl === '') {
             Log::error('Fawaterak checkout URL missing.', [
@@ -179,6 +179,32 @@ class FawaterakService
         ]);
 
         throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+    }
+
+
+    private function extractRedirectUrl(array $json): string
+    {
+        $candidates = [
+            data_get($json, 'data.payment_data.redirectTo'),
+            data_get($json, 'data.payment_data.redirect_to'),
+            data_get($json, 'data.redirectTo'),
+            data_get($json, 'data.redirect_to'),
+            data_get($json, 'data.url'),
+            data_get($json, 'data.payment_url'),
+            data_get($json, 'payment_data.redirectTo'),
+            data_get($json, 'payment_data.redirect_to'),
+            data_get($json, 'payment_url'),
+            data_get($json, 'url'),
+        ];
+
+        foreach ($candidates as $value) {
+            $url = trim((string) $value);
+            if ($url !== '' && (str_starts_with($url, 'http://') || str_starts_with($url, 'https://'))) {
+                return $url;
+            }
+        }
+
+        return '';
     }
 
     private function apiBaseUrl(): string
