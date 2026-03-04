@@ -95,13 +95,35 @@ class FawaterakService
         }
 
         $json = $response->json();
-        $redirectUrl = $this->extractRedirectUrl($json);
+
+        if (is_array($json)) {
+            $status = strtolower((string) data_get($json, 'status', ''));
+            $okFlag = data_get($json, 'success');
+            if ($status === 'error' || $okFlag === false) {
+                $apiError = $this->extractApiErrorMessage($json);
+                Log::error('Fawaterak invoiceInitPay returned business error.', [
+                    'order_id' => $order->id,
+                    'response' => $json,
+                    'error' => $apiError,
+                ]);
+                throw new RuntimeException($apiError !== '' ? $apiError : 'Unable to initialize Fawaterak payment.');
+            }
+        }
+
+        $redirectUrl = $this->extractRedirectUrl(is_array($json) ? $json : []);
 
         if ($redirectUrl === '') {
+            $apiError = is_array($json) ? $this->extractApiErrorMessage($json) : '';
             Log::error('Fawaterak checkout URL missing.', [
                 'order_id' => $order->id,
                 'response' => $json,
+                'error' => $apiError,
             ]);
+
+            if ($apiError !== '') {
+                throw new RuntimeException($apiError);
+            }
+
             throw new RuntimeException('Fawaterak did not return a checkout URL.');
         }
 
@@ -185,6 +207,44 @@ class FawaterakService
         ]);
 
         throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+    }
+
+
+    private function extractApiErrorMessage(array $json): string
+    {
+        $candidates = [
+            data_get($json, 'message'),
+            data_get($json, 'error'),
+            data_get($json, 'errors'),
+            data_get($json, 'data.message'),
+            data_get($json, 'data.error'),
+            data_get($json, 'data.errors'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate)) {
+                $msg = trim($candidate);
+                if ($msg !== '') {
+                    return $msg;
+                }
+            }
+
+            if (is_array($candidate)) {
+                $flat = [];
+                array_walk_recursive($candidate, function ($value) use (&$flat) {
+                    if (is_scalar($value)) {
+                        $flat[] = trim((string) $value);
+                    }
+                });
+
+                $flat = array_values(array_filter($flat, fn ($v) => $v !== ''));
+                if ($flat !== []) {
+                    return implode(' | ', $flat);
+                }
+            }
+        }
+
+        return '';
     }
 
 
