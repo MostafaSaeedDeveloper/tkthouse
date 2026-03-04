@@ -89,6 +89,8 @@
 .co-pay-opt .pay-desc { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 0; }
 .co-pay-pending { background: rgba(245,184,0,0.06); border: 1px dashed rgba(245,184,0,0.3); border-radius: 8px; padding: 13px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gold); }
 .co-flow-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; min-height: 16px; }
+.co-flow-note.error { color: var(--red); }
+.co-flow-note.success { color: var(--green); }
 
 /* Buttons */
 .co-btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--gold); color: #000; font-family: var(--font-head); font-size: 14px; font-weight: 700; letter-spacing: 0.5px; border: none; border-radius: 8px; padding: 15px 24px; cursor: pointer; transition: background 0.2s, transform 0.1s; }
@@ -404,6 +406,8 @@
                     discountVal.textContent = '-0.00';
                     totalVal.textContent = fmt(baseTotal);
                     promoNote.textContent = msg;
+                    promoNote.classList.toggle('error', msg !== '');
+                    promoNote.classList.remove('success');
                     if (!requiresApproval && submitBtn) submitBtn.textContent = `Pay ${fmt(baseTotal)} EGP`;
                 };
 
@@ -434,6 +438,8 @@
                     discountVal.textContent = `-${fmt(discount)}`;
                     totalVal.textContent = fmt(finalTotal);
                     promoNote.textContent = `Applied ${code} successfully.`;
+                    promoNote.classList.remove('error');
+                    promoNote.classList.add('success');
                     promoInput.value = code;
                     if (!requiresApproval && submitBtn) submitBtn.textContent = `Pay ${fmt(finalTotal)} EGP`;
                 });
@@ -652,6 +658,8 @@
                         if (!code) {
                             appliedPromo = null;
                             promoNote.textContent = 'Enter promo code first.';
+                            promoNote.classList.add('error');
+                            promoNote.classList.remove('success');
                             flow();
                             return;
                         }
@@ -660,6 +668,8 @@
                         if (err) {
                             appliedPromo = null;
                             promoNote.textContent = err;
+                            promoNote.classList.add('error');
+                            promoNote.classList.remove('success');
                             flow();
                             return;
                         }
@@ -667,6 +677,8 @@
                         appliedPromo = promo;
                         promoInput.value = code;
                         promoNote.textContent = `Applied ${code} successfully.`;
+                        promoNote.classList.remove('error');
+                        promoNote.classList.add('success');
                         flow();
                     });
                 }
