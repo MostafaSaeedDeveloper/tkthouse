@@ -195,6 +195,7 @@ class FawaterakService
             data_get($json, 'data.payment_data.redirect_to'),
             data_get($json, 'data.payment_data.url'),
             data_get($json, 'data.payment_data.payment_url'),
+            data_get($json, 'data.payment_data.redirect'),
             data_get($json, 'data.redirectTo'),
             data_get($json, 'data.redirect_to'),
             data_get($json, 'data.url'),
@@ -203,13 +204,16 @@ class FawaterakService
             data_get($json, 'payment_data.redirect_to'),
             data_get($json, 'payment_data.url'),
             data_get($json, 'payment_data.payment_url'),
+            data_get($json, 'payment_data.redirect'),
             data_get($json, 'payment_data.redirectUrl'),
             data_get($json, 'data.payment_data.redirectUrl'),
             data_get($json, 'payment_url'),
             data_get($json, 'redirectUrl'),
             data_get($json, 'data.redirectUrl'),
+            data_get($json, 'data.redirect'),
             data_get($json, 'invoice_url'),
             data_get($json, 'data.invoice_url'),
+            data_get($json, 'redirect'),
             data_get($json, 'url'),
         ];
 
@@ -241,6 +245,10 @@ class FawaterakService
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             return $this->canonicalizeCheckoutUrl($url);
+        }
+
+        if (str_starts_with($url, '//')) {
+            return $this->canonicalizeCheckoutUrl('https:'.$url);
         }
 
         if (str_starts_with($url, '/')) {
@@ -286,7 +294,12 @@ class FawaterakService
         }
 
         if (preg_match('#https?://[^\s"\']+#i', $text, $matches) === 1) {
-            return $matches[0];
+            return $this->canonicalizeCheckoutUrl($matches[0]);
+        }
+
+        $unescaped = str_replace('\/', '/', $text);
+        if ($unescaped !== $text && preg_match('#https?://[^\s"\']+#i', $unescaped, $matches) === 1) {
+            return $this->canonicalizeCheckoutUrl($matches[0]);
         }
 
         return '';
