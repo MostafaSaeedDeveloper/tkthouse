@@ -7,6 +7,33 @@
         <h2 class="h4 mb-0">Users</h2>
         <a href="{{ route('admin.users.create') }}" class="btn btn-primary">Create User</a>
     </div>
+    <form method="GET" action="{{ route('admin.users.index') }}" class="block block-rounded block-content mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label">Search</label>
+                <input
+                    type="text"
+                    name="search"
+                    class="form-control"
+                    placeholder="Name, username, or email"
+                    value="{{ $search }}"
+                >
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Filter by Role</label>
+                <select name="role" class="form-select">
+                    <option value="">All roles</option>
+                    @foreach($roles as $roleName)
+                        <option value="{{ $roleName }}" @selected($role === $roleName)>{{ $roleName }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-alt-primary w-100">Apply</button>
+                <a href="{{ route('admin.users.index') }}" class="btn btn-alt-secondary w-100">Reset</a>
+            </div>
+        </div>
+    </form>
     <div class="block block-rounded">
         <div class="table-responsive">
             <table class="table table-striped mb-0">

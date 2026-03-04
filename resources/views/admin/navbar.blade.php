@@ -21,6 +21,8 @@
 </div>
 
 @php
+  $isSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
+
   $usersMenuOpen = request()->routeIs('admin.users.*')
       || request()->routeIs('admin.roles.*')
       || request()->routeIs('admin.permissions.*')
@@ -117,6 +119,7 @@
 
 
       {{-- Users submenu --}}
+      @if($isSuperAdmin)
       <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
 
         <a class="nav-main-link nav-main-link-submenu"
@@ -154,8 +157,10 @@
           </li>
         </ul>
       </li>
+      @endif
 
       {{-- Settings submenu --}}
+      @if($isSuperAdmin)
       <li class="nav-main-item {{ $settingsMenuOpen ? 'open' : '' }}">
         <a class="nav-main-link nav-main-link-submenu"
            data-toggle="submenu"
@@ -180,6 +185,7 @@
           </li>
         </ul>
       </li>
+      @endif
 
 
     </ul>

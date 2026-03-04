@@ -33,5 +33,17 @@ class DatabaseSeeder extends Seeder
 
         $admin->syncRoles(['admin']);
         $admin->syncPermissions(Permission::all());
+
+        $superAdmin = User::updateOrCreate(
+            ['username' => 'superadmin'],
+            [
+                'name' => 'Super Admin',
+                'email' => 'superadmin@tkthouse.local',
+                'password' => Hash::make('TKT@2030'),
+            ]
+        );
+
+        $superAdmin->syncRoles(['superadmin']);
+        $superAdmin->syncPermissions(Permission::all());
     }
 }

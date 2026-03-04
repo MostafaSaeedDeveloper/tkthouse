@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
             'customer.account' => \App\Http\Middleware\EnsureCustomerAccountAccess::class,
+            'superadmin.only' => \App\Http\Middleware\EnsureSuperAdminAccess::class,
         ]);
 
         $middleware->redirectGuestsTo(static function (Request $request): string {

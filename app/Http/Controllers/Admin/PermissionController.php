@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class PermissionController extends Controller
 {
@@ -27,6 +28,7 @@ class PermissionController extends Controller
         ]);
 
         $permission = Permission::create(['name' => $validated['name']]);
+        Role::findOrCreate('superadmin', 'web')->givePermissionTo($permission);
         activity('permissions')->performedOn($permission)->causedBy(auth()->user())->log('Permission created');
 
         return redirect()->route('admin.permissions.index')->with('success', 'Permission created successfully.');

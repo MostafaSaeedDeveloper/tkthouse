@@ -62,9 +62,18 @@ Auth::routes(['register' => false]);
 
 Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('users', UserController::class)->except('show');
-    Route::resource('roles', RoleController::class)->except('show');
-    Route::resource('permissions', PermissionController::class)->except('show');
+
+    Route::middleware('superadmin.only')->group(function () {
+        Route::resource('users', UserController::class)->except('show');
+        Route::resource('roles', RoleController::class)->except('show');
+        Route::resource('permissions', PermissionController::class)->except('show');
+        Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+        Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
+        Route::put('settings', [SystemSettingController::class, 'update'])->name('settings.update');
+        Route::resource('payment-methods', PaymentMethodController::class)->except('show');
+        Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->name('payment-methods.fawaterak-methods');
+    });
+
     Route::resource('events', EventController::class);
     Route::resource('tickets', TicketController::class);
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->name('tickets.send-email');
@@ -89,12 +98,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::get('affiliates/create', [AffiliateController::class, 'create'])->name('affiliates.create');
     Route::post('affiliates', [AffiliateController::class, 'store'])->name('affiliates.store');
     Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->name('affiliates.show');
-    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
-    Route::put('settings', [SystemSettingController::class, 'update'])->name('settings.update');
-    Route::resource('payment-methods', PaymentMethodController::class)->except('show');
-    Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->name('payment-methods.fawaterak-methods');
     Route::resource('promo-codes', PromoCodeController::class)->except('show');
 });
 
