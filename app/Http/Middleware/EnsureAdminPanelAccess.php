@@ -21,7 +21,6 @@ class EnsureAdminPanelAccess
     private const ADMIN_PERMISSIONS = [
         'dashboard.view',
         'users.view',
-        'users.show',
         'users.create',
         'users.update',
         'users.delete',
@@ -34,7 +33,6 @@ class EnsureAdminPanelAccess
         'permissions.update',
         'permissions.delete',
         'events.view',
-        'events.show',
         'events.create',
         'events.update',
         'events.delete',
