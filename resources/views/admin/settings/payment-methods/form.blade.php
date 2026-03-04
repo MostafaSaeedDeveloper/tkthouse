@@ -81,8 +81,17 @@
             <div id="fawaterak-config" style="display:none;">
                 <h5>Fawaterak Configuration</h5>
                 <div class="row">
-                    <div class="col-md-6 mb-3"><label class="form-label">API Key</label><input class="form-control" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}"></div>
-                    <div class="col-md-6 mb-3"><label class="form-label">Payment Method ID / Provider Key</label><input class="form-control" name="fawaterak_provider_key" value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}" placeholder="e.g. FAWATERAK.27416"></div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">API Key</label>
+                        <input class="form-control" id="fawaterak-api-key" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Payment Method (from Fawaterak)</label>
+                        <select class="form-select" id="fawaterak-method-select" name="fawaterak_provider_key" data-current="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">
+                            <option value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') ? 'Current: '.old('fawaterak_provider_key', $cfg['provider_key'] ?? '') : 'Enter API key to load methods' }}</option>
+                        </select>
+                        <small id="fawaterak-method-hint" class="text-muted">The dropdown updates when API key changes.</small>
+                    </div>
                 </div>
                 <p class="text-muted fs-sm mb-0">You can create multiple payment methods with provider = Fawaterak, each one can use a different API/Provider key pair.</p>
             </div>
@@ -104,11 +113,53 @@
   const fawaterakBox = document.getElementById('fawaterak-config');
   const copyBtn = document.getElementById('copy-paymob-callback');
   const callbackInput = document.getElementById('paymob-callback-url');
+  const fApiKey = document.getElementById('fawaterak-api-key');
+  const fMethodSelect = document.getElementById('fawaterak-method-select');
+  const fHint = document.getElementById('fawaterak-method-hint');
+
   const toggle = () => {
     paymobBox.style.display = provider.value === 'paymob' ? 'block' : 'none';
     fawaterakBox.style.display = provider.value === 'fawaterak' ? 'block' : 'none';
-  }; 
+    if (provider.value === 'fawaterak') loadFawaterakMethods();
+  };
+
+  let loading = false;
+  const loadFawaterakMethods = async () => {
+    const apiKey = (fApiKey?.value || '').trim();
+    if (!apiKey || loading) return;
+    loading = true;
+    fHint.textContent = 'Loading methods...';
+    try {
+      const url = `{{ route('admin.payment-methods.fawaterak-methods') }}?api_key=${encodeURIComponent(apiKey)}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      const current = fMethodSelect.dataset.current || '';
+      fMethodSelect.innerHTML = '';
+      (data.methods || []).forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = String(m.id);
+        opt.textContent = `${m.name} (#${m.id})`;
+        if (current && (String(current) === String(m.id))) opt.selected = true;
+        fMethodSelect.appendChild(opt);
+      });
+      if (!fMethodSelect.options.length) {
+        const opt = document.createElement('option');
+        opt.value = current;
+        opt.textContent = current ? `Current: ${current}` : 'No methods returned';
+        fMethodSelect.appendChild(opt);
+      }
+      fHint.textContent = 'Methods loaded from Fawaterak.';
+    } catch (e) {
+      fHint.textContent = 'Failed to fetch methods from Fawaterak API.';
+    } finally {
+      loading = false;
+    }
+  };
+
   provider.addEventListener('change', toggle);
+  fApiKey?.addEventListener('change', loadFawaterakMethods);
+  fApiKey?.addEventListener('blur', loadFawaterakMethods);
+
   copyBtn?.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(callbackInput.value);

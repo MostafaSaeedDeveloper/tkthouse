@@ -91,6 +91,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::get('settings', [SystemSettingController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->name('settings.update');
     Route::resource('payment-methods', PaymentMethodController::class)->except('show');
+    Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->name('payment-methods.fawaterak-methods');
     Route::resource('promo-codes', PromoCodeController::class)->except('show');
 });
 

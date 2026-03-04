@@ -7,6 +7,7 @@ use App\Models\PaymentMethod;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -45,6 +46,53 @@ class PaymentMethodController extends Controller
         $paymentMethod->update($validated);
 
         return redirect()->route('admin.payment-methods.index')->with('success', 'Payment method updated successfully.');
+    }
+
+
+    public function fawaterakMethods(Request $request)
+    {
+        $apiKey = trim((string) $request->query('api_key', ''));
+        if ($apiKey === '') {
+            return response()->json(['methods' => []]);
+        }
+
+        $base = rtrim((string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2'), '/');
+        if (! str_contains(strtolower($base), '/api/v2')) {
+            $base .= '/api/v2';
+        }
+
+        $response = Http::baseUrl($base)
+            ->timeout(20)
+            ->withToken($apiKey)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])
+            ->get('getPaymentmethods');
+
+        if (! $response->successful()) {
+            return response()->json([
+                'message' => (string) $response->body(),
+                'methods' => [],
+            ], $response->status() ?: 422);
+        }
+
+        $json = $response->json();
+        $methods = data_get($json, 'data', []);
+        if (! is_array($methods) || isset($methods['paymentId'])) {
+            $methods = data_get($json, 'data.payment_data', data_get($json, 'payment_methods', $methods));
+        }
+
+        $methods = collect(is_array($methods) ? $methods : [])
+            ->filter(fn ($m) => is_array($m) && data_get($m, 'paymentId'))
+            ->map(fn ($m) => [
+                'id' => (string) data_get($m, 'paymentId'),
+                'name' => (string) data_get($m, 'name', 'Payment Method'),
+            ])
+            ->values()
+            ->all();
+
+        return response()->json(['methods' => $methods]);
     }
 
     public function destroy(PaymentMethod $paymentMethod)
