@@ -160,7 +160,7 @@ body {
                         <div class="qr-block">
                             <div class="qr-label-top">{{ strtoupper($ticketName ?: 'General') }}</div>
                             <img class="qr-img" src="{{ $qrDataUri }}" alt="QR Code">
-                            <div class="qr-label-bottom">{{ strtoupper($ticketStatus) }}</div>
+                            <div class="qr-label-bottom">#: {{ $ticket->ticket_number }}</div>
                         </div>
 
                         @if($extras->count())
