@@ -6,9 +6,8 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Throwable;
 use RuntimeException;
+use Throwable;
 
 class FawaterakService
 {
@@ -42,145 +41,91 @@ class FawaterakService
             'flow' => 'payment_success',
             'order' => $order->order_number,
         ]);
+        $failUrl = route('front.checkout.thank-you', [
+            'flow' => 'payment_failed',
+            'order' => $order->order_number,
+        ]);
 
-        $common = [
-            'cartTotal' => (float) $order->total_amount,
+        $payload = [
+            'payment_method_id' => ctype_digit($providerKey) ? (int) $providerKey : $providerKey,
+            'cartTotal' => (string) $order->total_amount,
             'currency' => 'EGP',
             'cartId' => (string) $order->order_number,
-            'redirect_url' => $successUrl,
-            'return_url' => $successUrl,
-        ];
-
-        $providerKeyAsInt = ctype_digit($providerKey) ? (int) $providerKey : $providerKey;
-
-        $payloads = [
-            'v2' => $common + [
-                'payment_method_id' => $providerKeyAsInt,
-                'customer' => [
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'email' => $email,
-                    'phone' => $phone,
-                    'address' => 'NA',
+            'cartItems' => [
+                [
+                    'name' => 'Order #'.$order->order_number,
+                    'price' => (string) $order->total_amount,
+                    'quantity' => '1',
                 ],
             ],
-            'legacy' => [
-                'invoice_value' => (float) $order->total_amount,
-                'payment_method' => $providerKey,
-                'customer_name' => trim($firstName.' '.$lastName),
-                'customer_email' => $email,
-                'customer_mobile' => $phone,
-                'currency' => 'EGP',
-                'redirect_url' => $successUrl,
+            'customer' => [
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'phone' => $phone,
+                'address' => 'NA',
+            ],
+            'redirectionUrls' => [
+                'successUrl' => $successUrl,
+                'failUrl' => $failUrl,
+                'pendingUrl' => $successUrl,
             ],
         ];
 
-        $baseUrls = array_values(array_unique(array_filter([
-            (string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2'),
-            'https://app.fawaterk.com/api/v2',
-            'https://app.fawaterak.com/api/v2',
-        ])));
+        $baseUrl = (string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2');
 
-        $lastError = 'Unknown error.';
-
-        $authModes = [
-            'bearer' => fn ($client, $payload) => [$client->withToken($apiKey), $payload],
-            'raw_authorization' => fn ($client, $payload) => [$client->withHeaders(['Authorization' => $apiKey]), $payload],
-            'body_token' => fn ($client, $payload) => [$client, $payload + ['token' => $apiKey]],
-        ];
-
-        foreach ($baseUrls as $baseUrl) {
-            $baseClient = Http::baseUrl($baseUrl)
+        try {
+            $resp = Http::baseUrl($baseUrl)
                 ->timeout(20)
-                ->withHeaders([
-                    'Accept' => 'application/json',
-                ]);
-
-            foreach ($authModes as $authMode => $authResolver) {
-                foreach ($payloads as $mode => $payload) {
-                    [$http, $finalPayload] = $authResolver($baseClient, $payload);
-
-                try {
-                    $resp = $http->post('/invoiceInitPay', $finalPayload);
-                } catch (ConnectionException $exception) {
-                    $lastError = $exception->getMessage();
-                    Log::warning('Fawaterak connection failed.', [
-                        'base_url' => $baseUrl,
-                        'auth_mode' => $authMode,
-                        'mode' => $mode,
-                        'order_id' => $order->id,
-                        'error' => $lastError,
-                    ]);
-                    continue;
-                }
-
-                if (! $resp->successful()) {
-                    $status = $resp->status();
-                    $body = (string) $resp->body();
-                    $lastError = $this->humanizeGatewayError($status, $body);
-
-                    Log::warning('Fawaterak checkout init failed.', [
-                        'base_url' => $baseUrl,
-                        'auth_mode' => $authMode,
-                        'mode' => $mode,
-                        'order_id' => $order->id,
-                        'status' => $status,
-                        'body' => $body,
-                        'human_error' => $lastError,
-                    ]);
-
-                    continue;
-                }
-
-                $response = $resp->json();
-                $paymentUrl = (string) (data_get($response, 'data.payment_data.redirectTo')
-                    ?: data_get($response, 'data.payment_data.redirect_to')
-                    ?: data_get($response, 'data.redirectTo')
-                    ?: data_get($response, 'data.payment_url')
-                    ?: data_get($response, 'data.url')
-                    ?: '');
-
-                if ($paymentUrl !== '') {
-                    return $paymentUrl;
-                }
-
-                $lastError = 'Fawaterak response did not include a checkout URL.';
-                Log::warning('Fawaterak response missing checkout URL.', [
-                    'base_url' => $baseUrl,
-                    'auth_mode' => $authMode,
-                    'mode' => $mode,
-                    'order_id' => $order->id,
-                    'response' => $response,
-                ]);
-                }
-            }
+                ->withToken($apiKey)
+                ->withHeaders(['Accept' => 'application/json'])
+                ->post('/invoiceInitPay', $payload);
+        } catch (ConnectionException $exception) {
+            throw new RuntimeException('Unable to connect to Fawaterak gateway. '.$exception->getMessage(), previous: $exception);
         }
 
-        throw new RuntimeException('Unable to initialize Fawaterak payment right now. '.$lastError);
-    }
+        if (! $resp->successful()) {
+            $status = $resp->status();
+            $body = (string) $resp->body();
+            throw new RuntimeException($this->humanizeGatewayError($status, $body));
+        }
 
+        $response = $resp->json();
+        $paymentUrl = (string) (data_get($response, 'data.payment_data.redirectTo')
+            ?: data_get($response, 'data.payment_data.redirect_to')
+            ?: data_get($response, 'data.redirectTo')
+            ?: data_get($response, 'data.payment_url')
+            ?: data_get($response, 'data.url')
+            ?: '');
+
+        if ($paymentUrl === '') {
+            throw new RuntimeException('Fawaterak did not return a checkout URL.');
+        }
+
+        return $paymentUrl;
+    }
 
     private function humanizeGatewayError(int $status, string $body): string
     {
         try {
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         } catch (Throwable) {
-            return 'HTTP '.$status.': '.$body;
+            return 'Unable to initialize Fawaterak payment right now. HTTP '.$status.': '.$body;
         }
 
         if (($decoded['status'] ?? null) === 'error') {
             $tokenError = data_get($decoded, 'message.token.0');
             if (is_string($tokenError) && str_contains(strtolower($tokenError), 'invalid token')) {
-                return 'Fawaterak API Key is invalid or your vendor is inactive. Please verify API Key and vendor activation in Fawaterak dashboard (Integrations page).';
+                return 'Unable to initialize Fawaterak payment right now. Fawaterak API Key is invalid or your vendor is inactive.';
             }
 
             $methodError = data_get($decoded, 'message.payment_method_id.0');
             if (is_string($methodError) && $methodError !== '') {
-                return 'Invalid Fawaterak Payment Method ID / Provider Key. Please verify providerKey in Fawaterak dashboard.';
+                return 'Unable to initialize Fawaterak payment right now. Invalid Fawaterak Payment Method ID / Provider Key.';
             }
         }
 
-        return 'HTTP '.$status.': '.$body;
+        return 'Unable to initialize Fawaterak payment right now. HTTP '.$status.': '.$body;
     }
 
     private function resolveProviderKey(PaymentMethod $method, array $config): string
