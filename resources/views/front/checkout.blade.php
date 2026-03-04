@@ -156,7 +156,7 @@
 .co-summary-item:last-of-type { border-bottom: none; }
 .co-summary-item .item-name { color: var(--text); flex: 1; }
 .co-summary-item .item-price { color: var(--gold); font-weight: 500; white-space: nowrap; }
-.co-summary-total { display: flex; justify-content: space-between; padding: 16px 22px; border-top: 1px solid var(--border); font-family: var(--font-head); font-size: 16px; font-weight: 800; }
+.co-summary-total { display: flex; justify-content: space-between; padding: 16px 22px; border-top: 1px solid var(--border); font-family: var(--font-body); font-size: 16px; font-weight: 700; }
 .co-summary-total .total-label { color: var(--muted); }
 .co-summary-total .total-val { color: var(--gold); }
 
