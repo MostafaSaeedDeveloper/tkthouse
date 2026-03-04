@@ -188,10 +188,17 @@
                     @if($item->issuedTickets->isNotEmpty())
                       <div class="od-issued-wrap">
                         @foreach($item->issuedTickets->sortBy('seat_index') as $issuedTicket)
-                          <a href="{{ route('front.tickets.show', $issuedTicket) }}" target="_blank" rel="noopener noreferrer" class="od-issued-link">
-                            <i class="fa fa-ticket"></i>
-                            #{{ $issuedTicket->ticket_number }}
-                          </a>
+                          @if($issuedTicket->dashboardTicket)
+                            <a href="{{ route('admin.tickets.show', $issuedTicket->dashboardTicket) }}" target="_blank" rel="noopener noreferrer" class="od-issued-link">
+                              <i class="fa fa-ticket"></i>
+                              #{{ $issuedTicket->ticket_number }}
+                            </a>
+                          @else
+                            <span class="od-issued-link">
+                              <i class="fa fa-ticket"></i>
+                              #{{ $issuedTicket->ticket_number }}
+                            </span>
+                          @endif
                         @endforeach
                       </div>
                     @else

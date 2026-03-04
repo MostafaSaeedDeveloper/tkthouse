@@ -41,6 +41,11 @@ class IssuedTicket extends Model
         return $this->belongsTo(OrderItem::class);
     }
 
+    public function dashboardTicket()
+    {
+        return $this->hasOne(Ticket::class, 'ticket_number', 'ticket_number');
+    }
+
     public function getRouteKeyName(): string
     {
         return 'uuid';

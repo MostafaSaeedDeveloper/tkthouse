@@ -78,7 +78,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'items.ticket', 'items.issuedTickets', 'user', 'promoCode']);
+        $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethodLabel = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
@@ -136,7 +136,7 @@ class OrderController extends Controller
 
     public function edit(Order $order)
     {
-        $order->load(['customer', 'items.ticket', 'items.issuedTickets', 'user', 'promoCode']);
+        $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethods = PaymentMethod::query()
             ->where('code', '!=', 'card')
