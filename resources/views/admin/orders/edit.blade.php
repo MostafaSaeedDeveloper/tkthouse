@@ -369,6 +369,19 @@
             </div>
             <hr class="oe-divider">
 
+            <div class="oe-field">
+              <label class="oe-label">Promo Code</label>
+              <select class="oe-select" name="promo_code">
+                <option value="">No Promo Code</option>
+                @foreach($promoCodes as $promo)
+                  <option value="{{ $promo->code }}" {{ old('promo_code', $order->promo_code) === $promo->code ? 'selected' : '' }}>
+                    {{ $promo->code }} — {{ $promo->discount_type === 'percent' ? rtrim(rtrim(number_format((float) $promo->discount_value, 2), '0'), '.') . '%' : number_format((float) $promo->discount_value, 2) . ' EGP' }}{{ $promo->is_active ? '' : ' (Inactive)' }}
+                  </option>
+                @endforeach
+              </select>
+            </div>
+            <hr class="oe-divider">
+
             @if($order->status === 'pending_payment' && $paymentLink)
               <div class="oe-field">
                 <label class="oe-label">Payment Link</label>
@@ -402,6 +415,18 @@
             <div class="oe-pricing-row">
               <span class="oe-pricing-label">Email</span>
               <span class="oe-pricing-val" style="font-size:12px;">{{ $order->customer?->email ?: '-' }}</span>
+            </div>
+            <div class="oe-pricing-row">
+              <span class="oe-pricing-label">Promo Code</span>
+              <span class="oe-pricing-val">{{ $order->promo_code ?: '-' }}</span>
+            </div>
+            <div class="oe-pricing-row">
+              <span class="oe-pricing-label">Subtotal</span>
+              <span class="oe-pricing-val">{{ number_format((float) ($order->subtotal_amount ?: $order->total_amount), 2) }} EGP</span>
+            </div>
+            <div class="oe-pricing-row">
+              <span class="oe-pricing-label">Discount</span>
+              <span class="oe-pricing-val">{{ number_format((float) $order->discount_amount, 2) }} EGP</span>
             </div>
           </div>
         </div>

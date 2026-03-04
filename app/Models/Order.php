@@ -13,6 +13,10 @@ class Order extends Model
         'customer_id',
         'user_id',
         'affiliate_user_id',
+        'promo_code_id',
+        'promo_code',
+        'discount_amount',
+        'subtotal_amount',
         'order_number',
         'status',
         'requires_approval',
@@ -29,6 +33,8 @@ class Order extends Model
             'requires_approval' => 'boolean',
             'approved_at' => 'datetime',
             'tickets_generated_at' => 'datetime',
+            'discount_amount' => 'decimal:2',
+            'subtotal_amount' => 'decimal:2',
         ];
     }
 
@@ -50,6 +56,11 @@ class Order extends Model
     public function affiliateUser()
     {
         return $this->belongsTo(User::class, 'affiliate_user_id');
+    }
+
+    public function promoCode()
+    {
+        return $this->belongsTo(PromoCode::class);
     }
 
     public function issuedTickets()

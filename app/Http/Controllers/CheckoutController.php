@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Models\PromoCode;
 use App\Models\Ticket;
 use App\Services\PaymobService;
 use App\Services\TicketIssuanceService;
@@ -35,6 +36,7 @@ class CheckoutController extends Controller
                 'mode' => 'event_locked',
                 'eventSelection' => $eventSelection,
                 'buyer' => $buyer,
+                'promoCodesPreview' => $this->promoCodesPreview(),
                 'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
             ]);
         }
@@ -58,6 +60,7 @@ class CheckoutController extends Controller
             'legacyTickets' => $legacyTickets,
             'eventSelection' => null,
             'buyer' => $buyer,
+            'promoCodesPreview' => $this->promoCodesPreview(),
             'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
         ]);
     }
@@ -69,6 +72,7 @@ class CheckoutController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
+            'promo_code' => ['nullable', 'string', 'max:50'],
         ]);
 
         $eventSelection = session('checkout.event_selection');
@@ -278,13 +282,20 @@ class CheckoutController extends Controller
             ]);
         }
 
-        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval) {
+        $subtotal = (float) $ticketUnits->sum(fn ($unit) => (float) $unit['ticket_price']);
+
+        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval, $subtotal) {
+            $promoData = $this->resolvePromoCodeForCheckout((string) $request->input('promo_code', ''), $subtotal);
             $customer = $this->upsertCustomer($baseValidated);
 
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
                 'affiliate_user_id' => $request->user()->referred_by_user_id,
+                'promo_code_id' => $promoData['promo_code']?->id,
+                'promo_code' => $promoData['promo_code']?->code,
+                'discount_amount' => $promoData['discount_amount'],
+                'subtotal_amount' => $subtotal,
                 'order_number' => $this->generateNumericOrderNumber(),
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
@@ -314,7 +325,7 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            $order->update(['total_amount' => $total]);
+            $order->update(['total_amount' => max(0, $total - $promoData['discount_amount'])]);
 
             activity('orders')
                 ->performedOn($order)
@@ -403,13 +414,26 @@ class CheckoutController extends Controller
             ]);
         }
 
-        $order = DB::transaction(function () use ($request, $baseValidated, $grouped, $eventTickets, $legacyTickets, $requiresApproval) {
+        $subtotal = (float) $grouped->sum(function ($item) use ($eventTickets, $legacyTickets) {
+            $ticket = $item['ticket_type'] === 'event'
+                ? $eventTickets->get($item['ticket_ref_id'])
+                : $legacyTickets->get($item['ticket_ref_id']);
+
+            return (float) optional($ticket)->price * (int) $item['quantity'];
+        });
+
+        $order = DB::transaction(function () use ($request, $baseValidated, $grouped, $eventTickets, $legacyTickets, $requiresApproval, $subtotal) {
+            $promoData = $this->resolvePromoCodeForCheckout((string) $request->input('promo_code', ''), $subtotal);
             $customer = $this->upsertCustomer($baseValidated);
 
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
                 'affiliate_user_id' => $request->user()->referred_by_user_id,
+                'promo_code_id' => $promoData['promo_code']?->id,
+                'promo_code' => $promoData['promo_code']?->code,
+                'discount_amount' => $promoData['discount_amount'],
+                'subtotal_amount' => $subtotal,
                 'order_number' => $this->generateNumericOrderNumber(),
                 'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                 'requires_approval' => $requiresApproval,
@@ -456,7 +480,7 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            $order->update(['total_amount' => $total]);
+            $order->update(['total_amount' => max(0, $total - $promoData['discount_amount'])]);
 
             activity('orders')
                 ->performedOn($order)
@@ -479,6 +503,43 @@ class CheckoutController extends Controller
     }
 
 
+
+    private function resolvePromoCodeForCheckout(string $rawPromoCode, float $subtotal): array
+    {
+        $code = strtoupper(trim($rawPromoCode));
+
+        if ($code === '') {
+            return ['promo_code' => null, 'discount_amount' => 0.0];
+        }
+
+        $promoCode = PromoCode::query()->where('code', $code)->lockForUpdate()->first();
+
+        if (! $promoCode || ! $promoCode->is_active) {
+            throw ValidationException::withMessages(['promo_code' => 'Promo code is invalid.']);
+        }
+
+        if ($promoCode->starts_at && now()->lt($promoCode->starts_at)) {
+            throw ValidationException::withMessages(['promo_code' => 'Promo code is not active yet.']);
+        }
+
+        if ($promoCode->ends_at && now()->gt($promoCode->ends_at)) {
+            throw ValidationException::withMessages(['promo_code' => 'Promo code has expired.']);
+        }
+
+        if ($promoCode->usage_limit !== null && $promoCode->used_count >= $promoCode->usage_limit) {
+            throw ValidationException::withMessages(['promo_code' => 'Promo code usage limit reached.']);
+        }
+
+        $discountAmount = $promoCode->discount_type === 'percent'
+            ? round(($subtotal * (float) $promoCode->discount_value) / 100, 2)
+            : round((float) $promoCode->discount_value, 2);
+
+        $discountAmount = min($discountAmount, $subtotal);
+
+        $promoCode->increment('used_count');
+
+        return ['promo_code' => $promoCode, 'discount_amount' => $discountAmount];
+    }
 
     private function redirectToImmediatePayment(Order $order)
     {
@@ -522,6 +583,26 @@ class CheckoutController extends Controller
             ->where('code', '!=', 'card')
             ->orderBy('id')
             ->pluck('code')
+            ->values()
+            ->all();
+    }
+
+
+    private function promoCodesPreview(): array
+    {
+        return PromoCode::query()
+            ->select(['code', 'discount_type', 'discount_value', 'usage_limit', 'used_count', 'is_active', 'starts_at', 'ends_at'])
+            ->get()
+            ->map(fn (PromoCode $promoCode) => [
+                'code' => (string) $promoCode->code,
+                'discount_type' => (string) $promoCode->discount_type,
+                'discount_value' => (float) $promoCode->discount_value,
+                'usage_limit' => $promoCode->usage_limit,
+                'used_count' => (int) $promoCode->used_count,
+                'is_active' => (bool) $promoCode->is_active,
+                'starts_at' => $promoCode->starts_at?->toIso8601String(),
+                'ends_at' => $promoCode->ends_at?->toIso8601String(),
+            ])
             ->values()
             ->all();
     }
