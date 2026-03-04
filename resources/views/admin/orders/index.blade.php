@@ -104,16 +104,20 @@
                                 <td><span class="badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
                             <td class="text-end" style="white-space: nowrap; min-width: 170px;">
                                 <div class="d-inline-flex flex-nowrap align-items-center gap-1">
-                                @if($order->status === 'pending_approval')
-                                    <form class="d-inline" method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
-                                        <button class="btn btn-sm btn-alt-success" type="submit" title="Approve"><i class="fa fa-check"></i></button>
-                                    </form>
-                                    <form class="d-inline" method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
-                                        <button class="btn btn-sm btn-alt-danger" type="submit" title="Reject"><i class="fa fa-times"></i></button>
-                                    </form>
-                                @endif
+                                @can('orders.update')
+                                    @if($order->status === 'pending_approval')
+                                        <form class="d-inline" method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
+                                            <button class="btn btn-sm btn-alt-success" type="submit" title="Approve"><i class="fa fa-check"></i></button>
+                                        </form>
+                                        <form class="d-inline" method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
+                                            <button class="btn btn-sm btn-alt-danger" type="submit" title="Reject"><i class="fa fa-times"></i></button>
+                                        </form>
+                                    @endif
+                                @endcan
                                 <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
-                                <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
+                                @can('orders.update')
+                                    <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
+                                @endcan
                                 @can('orders.delete')
                                     <form class="d-inline" method="POST" action="{{ route('admin.orders.destroy', $order) }}">
                                         @csrf

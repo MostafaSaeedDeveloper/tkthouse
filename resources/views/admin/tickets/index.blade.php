@@ -6,8 +6,12 @@
     <div class="d-flex justify-content-between mb-3">
         <h1 class="h3 mb-0">Tickets</h1>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.tickets.scanner') }}" class="btn btn-alt-info">QR Scanner</a>
-            <a href="{{ route('admin.tickets.create') }}" class="btn btn-primary">Create Ticket</a>
+            @can('scanner.access')
+                <a href="{{ route('admin.tickets.scanner') }}" class="btn btn-alt-info">QR Scanner</a>
+            @endcan
+            @can('tickets.create')
+                <a href="{{ route('admin.tickets.create') }}" class="btn btn-primary">Create Ticket</a>
+            @endcan
         </div>
     </div>
 
@@ -69,12 +73,16 @@
                                 <td>{{ $statusLabels[$ticket->status] ?? str($ticket->status)->headline() }}</td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-alt-info" href="{{ route('admin.tickets.show', $ticket) }}"><i class="fa fa-eye"></i></a>
-                                    <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.tickets.edit', $ticket) }}"><i class="fa fa-pen"></i></a>
-                                    <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-sm btn-alt-danger" type="submit"><i class="fa fa-trash"></i></button>
-                                    </form>
+                                    @can('tickets.update')
+                                        <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.tickets.edit', $ticket) }}"><i class="fa fa-pen"></i></a>
+                                    @endcan
+                                    @can('tickets.delete')
+                                        <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-alt-danger" type="submit"><i class="fa fa-trash"></i></button>
+                                        </form>
+                                    @endcan
                                 </td>
                             </tr>
                         @empty

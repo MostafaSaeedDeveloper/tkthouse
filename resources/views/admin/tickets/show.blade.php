@@ -89,11 +89,15 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <a href="{{ route('admin.tickets.index') }}" class="tk-btn"><i class="fa fa-arrow-left"></i> Back</a>
       <a href="{{ route('admin.tickets.download', $ticket) }}" class="tk-btn"><i class="fa fa-download"></i> PDF</a>
-      <a href="{{ route('admin.tickets.edit', $ticket) }}" class="tk-btn tk-btn-gold"><i class="fa fa-pen"></i> Edit</a>
-      <form method="POST" action="{{ route('admin.tickets.destroy', $ticket) }}">
-        @csrf @method('DELETE')
-        <button class="tk-btn tk-btn-red" type="submit"><i class="fa fa-trash"></i> Delete</button>
-      </form>
+      @can('tickets.update')
+        <a href="{{ route('admin.tickets.edit', $ticket) }}" class="tk-btn tk-btn-gold"><i class="fa fa-pen"></i> Edit</a>
+      @endcan
+      @can('tickets.delete')
+        <form method="POST" action="{{ route('admin.tickets.destroy', $ticket) }}">
+          @csrf @method('DELETE')
+          <button class="tk-btn tk-btn-red" type="submit"><i class="fa fa-trash"></i> Delete</button>
+        </form>
+      @endcan
     </div>
   </div>
 
@@ -186,6 +190,7 @@
       </div>
 
       {{-- Send --}}
+      @can('tickets.update')
       <div class="tk-card">
         <div class="tk-card-head"><div class="tk-card-title">Send Ticket</div></div>
         <div class="tk-card-body">
@@ -202,6 +207,7 @@
           </form>
         </div>
       </div>
+      @endcan
 
     </div>{{-- /left --}}
 
