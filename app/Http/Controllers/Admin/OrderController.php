@@ -279,7 +279,6 @@ class OrderController extends Controller
     public function restore(Request $request, int $order)
     {
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
-        abort_unless($request->user()?->can('orders.manage'), 403);
 
         $targetOrder = Order::onlyTrashed()->findOrFail($order);
         $targetOrder->restore();
