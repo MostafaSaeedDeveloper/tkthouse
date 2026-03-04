@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\HolderTicketsIssuedMail;
 use App\Mail\OrderInvoicePaidMail;
+use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -85,6 +86,13 @@ class TicketIssuanceService
             $this->sendMailWithRetry(
                 fn () => Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail)),
                 ['order_id' => $order->id, 'recipient' => $holderEmail, 'mail_type' => 'holder_tickets_issued']
+            );
+        }
+
+        if (filled($order->customer?->email)) {
+            $this->sendMailWithRetry(
+                fn () => Mail::to($order->customer->email)->send(new OrderTicketsIssuedMail($order)),
+                ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_tickets_issued']
             );
         }
 
