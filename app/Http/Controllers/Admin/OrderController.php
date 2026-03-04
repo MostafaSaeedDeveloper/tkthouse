@@ -41,7 +41,7 @@ class OrderController extends Controller
             });
         }
 
-        $orders = $ordersQuery->latest()->paginate(15)->withQueryString();
+        $orders = $ordersQuery->orderByDesc('id')->paginate(15)->withQueryString();
 
         $ticketColorMap = EventTicket::query()
             ->select('name', 'color')
