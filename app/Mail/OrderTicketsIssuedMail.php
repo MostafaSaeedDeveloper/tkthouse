@@ -37,7 +37,7 @@ class OrderTicketsIssuedMail extends Mailable
             return [
                 'ticket' => $ticket,
                 'event' => $this->resolveEvent($ticket->ticket_name ?? ''),
-                'qrDataUri' => $ticket->qrUrl(),
+                'qrDataUri' => $ticket->qrDataUri(),
             ];
         });
 

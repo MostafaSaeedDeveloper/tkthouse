@@ -22,7 +22,7 @@ class FrontTicketController extends Controller
         $this->authorizeTicket($request, $ticket);
 
         $event = $this->resolveEvent($ticket->ticket_name ?? '');
-        $qrDataUri = $ticket->qrUrl();
+        $qrDataUri = $ticket->qrDataUri();
 
         $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
 

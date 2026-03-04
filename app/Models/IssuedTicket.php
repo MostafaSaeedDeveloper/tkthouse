@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Http;
 
 class IssuedTicket extends Model
 {
@@ -49,5 +50,21 @@ class IssuedTicket extends Model
     public function qrUrl(): string
     {
         return 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode(route('front.tickets.show', $this));
+    }
+
+    public function qrDataUri(): string
+    {
+        $url = $this->qrUrl();
+
+        try {
+            $response = Http::timeout(15)->get($url);
+            if ($response->successful()) {
+                return 'data:image/png;base64,'.base64_encode($response->body());
+            }
+        } catch (\Throwable) {
+            // Ignore and fallback to URL
+        }
+
+        return $url;
     }
 }
