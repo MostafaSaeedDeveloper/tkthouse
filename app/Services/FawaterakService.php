@@ -30,8 +30,7 @@ class FawaterakService
             throw new RuntimeException('Fawaterak method is not fully configured yet. Please set API key.');
         }
 
-        $configuredProviderKey = trim((string) data_get($method->config, 'provider_key', ''));
-        $paymentId = $configuredProviderKey !== '' ? $this->resolvePaymentId($method, $apiKey) : null;
+        $paymentId = $this->resolvePaymentId($method, $apiKey);
 
         $customer = $order->loadMissing('customer')->customer;
         $firstName = trim((string) ($customer->first_name ?? '')) ?: 'Customer';
@@ -52,6 +51,7 @@ class FawaterakService
             'cartTotal' => (string) $order->total_amount,
             'currency' => 'EGP',
             'cartId' => (string) $order->order_number,
+            'invoice_number' => (string) $order->order_number,
             'customer' => [
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -71,9 +71,7 @@ class FawaterakService
             ]],
         ];
 
-        if ($paymentId !== null) {
-            $payload['payment_method_id'] = (int) $paymentId;
-        }
+        $payload['payment_method_id'] = (int) $paymentId;
 
         $response = Http::baseUrl($this->apiBaseUrl())
             ->timeout(20)
@@ -171,42 +169,26 @@ class FawaterakService
         );
 
         $configured = trim((string) data_get($method->config, 'provider_key', ''));
+        if ($configured === '') {
+            throw new RuntimeException('Fawaterak payment_method_id is required in payment method settings.');
+        }
+
         $normalizedConfigured = preg_replace('/^[^0-9]*/', '', $configured ?? '');
-
-        if ($configured !== '') {
-            foreach ($paymentMethods as $item) {
-                $id = (string) data_get($item, 'paymentId', '');
-                $name = strtolower((string) data_get($item, 'name', ''));
-                $providerKey = strtolower(trim((string) (data_get($item, 'providerKey') ?: data_get($item, 'provider_key') ?: data_get($item, 'key') ?: '')));
-
-                if (
-                    ($normalizedConfigured !== '' && $id === $normalizedConfigured)
-                    || $name === strtolower($configured)
-                    || ($providerKey !== '' && $providerKey === strtolower($configured))
-                ) {
-                    return (int) $id;
-                }
-            }
+        if ($normalizedConfigured !== '' && ctype_digit($normalizedConfigured)) {
+            return (int) $normalizedConfigured;
         }
 
         foreach ($paymentMethods as $item) {
+            $id = (string) data_get($item, 'paymentId', '');
             $name = strtolower((string) data_get($item, 'name', ''));
-            if (str_contains($name, 'card')) {
-                return (int) data_get($item, 'paymentId');
+            $providerKey = strtolower(trim((string) (data_get($item, 'providerKey') ?: data_get($item, 'provider_key') ?: data_get($item, 'key') ?: '')));
+
+            if ($name === strtolower($configured) || ($providerKey !== '' && $providerKey === strtolower($configured))) {
+                return (int) $id;
             }
         }
 
-        $firstId = (int) data_get($paymentMethods, '0.paymentId', 0);
-        if ($firstId > 0) {
-            return $firstId;
-        }
-
-        Log::error('Fawaterak payment methods list empty or invalid.', [
-            'payment_method_code' => $method->code,
-            'payment_methods' => $paymentMethods,
-        ]);
-
-        throw new RuntimeException('Could not fetch Fawaterak payment methods.');
+        throw new RuntimeException('Invalid Fawaterak payment_method_id in payment method settings.');
     }
 
 
