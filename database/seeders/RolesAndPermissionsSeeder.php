@@ -43,6 +43,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             'orders.view',
             'orders.manage',
+            'orders.deleted.view',
             'attendees.view',
             'attendees.export',
 
@@ -87,6 +88,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'fees.manage',
             'orders.view',
             'orders.manage',
+            'orders.deleted.view',
             'attendees.view',
             'attendees.export',
         ]);

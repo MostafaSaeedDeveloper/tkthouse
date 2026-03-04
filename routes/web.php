@@ -74,6 +74,9 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->name('tickets.scanner.lookup');
     Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->name('tickets.scanner.status');
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/deleted', [OrderController::class, 'deleted'])->name('orders.deleted');
+    Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
+    Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->name('orders.restore');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
     Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');

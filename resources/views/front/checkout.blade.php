@@ -156,7 +156,7 @@
 .co-summary-item:last-of-type { border-bottom: none; }
 .co-summary-item .item-name { color: var(--text); flex: 1; }
 .co-summary-item .item-price { color: var(--gold); font-weight: 500; white-space: nowrap; }
-.co-summary-total { display: flex; justify-content: space-between; padding: 16px 22px; border-top: 1px solid var(--border); font-family: var(--font-head); font-size: 16px; font-weight: 800; }
+.co-summary-total { display: flex; justify-content: space-between; padding: 16px 22px; border-top: 1px solid var(--border); font-family: var(--font-body); font-size: 16px; font-weight: 700; }
 .co-summary-total .total-label { color: var(--muted); }
 .co-summary-total .total-val { color: var(--gold); }
 
@@ -194,6 +194,9 @@
         @if(($mode ?? 'open') === 'event_locked')
             @php
                 $units = collect($eventSelection['units'] ?? []);
+                $fees = collect($eventSelection['fees'] ?? []);
+                $feesTotal = (float) ($eventSelection['fees_total'] ?? 0);
+                $subtotal = (float) $units->sum('ticket_price');
                 $requiresApproval = (bool)($eventSelection['requires_approval'] ?? true);
                 $unitCount = $units->count();
             @endphp
@@ -292,15 +295,21 @@
                             </div>
                             <div class="co-summary-total">
                                 <span class="total-label">Subtotal</span>
-                                <span class="total-val" id="locked-subtotal-val">{{ number_format($units->sum('ticket_price'),2) }} EGP</span>
+                                <span class="total-val" id="locked-subtotal-val">{{ number_format($subtotal,2) }} EGP</span>
                             </div>
+                            @foreach($fees as $fee)
+                                <div class="co-summary-total">
+                                    <span class="total-label">{{ $fee['name'] }}</span>
+                                    <span class="total-val">+ {{ number_format((float) ($fee['amount'] ?? 0),2) }} EGP</span>
+                                </div>
+                            @endforeach
                             <div class="co-summary-total" id="locked-discount-row" style="display:none;">
                                 <span class="total-label">Discount</span>
                                 <span class="total-val" id="locked-discount-val">-0.00 EGP</span>
                             </div>
                             <div class="co-summary-total">
                                 <span class="total-label">Total</span>
-                                <span class="total-val" id="locked-total-val">{{ number_format($units->sum('ticket_price'),2) }} EGP</span>
+                                <span class="total-val" id="locked-total-val">{{ number_format($subtotal + $feesTotal,2) }} EGP</span>
                             </div>
                         </div>
 
@@ -318,7 +327,7 @@
                         </div>
 
                         <button type="button" class="co-btn-primary" id="locked-submit-btn" data-checkout-submit>
-                            {{ $requiresApproval ? 'Send Order' : 'Pay '.number_format($units->sum('ticket_price'),2).' EGP' }}
+                            {{ $requiresApproval ? 'Send Order' : 'Pay '.number_format($subtotal + $feesTotal,2).' EGP' }}
                         </button>
                     </div>
 
@@ -395,7 +404,9 @@
                 const totalVal = document.getElementById('locked-total-val');
                 const submitBtn = document.getElementById('locked-submit-btn');
                 const requiresApproval = {{ $requiresApproval ? 'true' : 'false' }};
-                const baseTotal = Number({{ (float) $units->sum('ticket_price') }});
+                const subtotal = Number({{ $subtotal }});
+                const feesTotal = Number({{ $feesTotal }});
+                const baseTotal = subtotal + feesTotal;
 
                 if (!applyBtn || !promoInput || !subtotalVal || !totalVal) return;
 
@@ -430,10 +441,10 @@
                     if (err) return resetPromo(err);
 
                     const discount = promo.discount_type === 'percent'
-                        ? Math.min(baseTotal, (baseTotal * Number(promo.discount_value || 0)) / 100)
-                        : Math.min(baseTotal, Number(promo.discount_value || 0));
+                        ? Math.min(subtotal, (subtotal * Number(promo.discount_value || 0)) / 100)
+                        : Math.min(subtotal, Number(promo.discount_value || 0));
 
-                    const finalTotal = Math.max(0, baseTotal - discount);
+                    const finalTotal = Math.max(0, subtotal - discount) + feesTotal;
                     discountRow.style.display = discount > 0 ? 'flex' : 'none';
                     discountVal.textContent = `- ${fmt(discount)}`;
                     totalVal.textContent = fmt(finalTotal);
