@@ -63,52 +63,33 @@ Auth::routes(['register' => false]);
 Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
-    Route::resource('users', UserController::class)->except('show')->middleware([
-        'index' => 'permission:users.view',
-        'create' => 'permission:users.create',
-        'store' => 'permission:users.create',
-        'edit' => 'permission:users.update',
-        'update' => 'permission:users.update',
-        'destroy' => 'permission:users.delete',
-    ]);
+    Route::resource('users', UserController::class)->except('show')
+        ->middlewareFor('index', 'permission:users.view')
+        ->middlewareFor(['create', 'store'], 'permission:users.create')
+        ->middlewareFor(['edit', 'update'], 'permission:users.update')
+        ->middlewareFor('destroy', 'permission:users.delete');
 
-    Route::resource('roles', RoleController::class)->except('show')->middleware([
-        'index' => 'permission:roles.view',
-        'create' => 'permission:roles.create',
-        'store' => 'permission:roles.create',
-        'edit' => 'permission:roles.update',
-        'update' => 'permission:roles.update',
-        'destroy' => 'permission:roles.delete',
-    ]);
+    Route::resource('roles', RoleController::class)->except('show')
+        ->middlewareFor('index', 'permission:roles.view')
+        ->middlewareFor(['create', 'store'], 'permission:roles.create')
+        ->middlewareFor(['edit', 'update'], 'permission:roles.update')
+        ->middlewareFor('destroy', 'permission:roles.delete');
 
-    Route::resource('permissions', PermissionController::class)->except('show')->middleware([
-        'index' => 'permission:permissions.view',
-        'create' => 'permission:permissions.create',
-        'store' => 'permission:permissions.create',
-        'edit' => 'permission:permissions.update',
-        'update' => 'permission:permissions.update',
-        'destroy' => 'permission:permissions.delete',
-    ]);
+    Route::resource('permissions', PermissionController::class)->except('show')
+        ->middlewareFor('index', 'permission:permissions.view')
+        ->middlewareFor(['create', 'store'], 'permission:permissions.create')
+        ->middlewareFor(['edit', 'update'], 'permission:permissions.update')
+        ->middlewareFor('destroy', 'permission:permissions.delete');
 
-    Route::resource('events', EventController::class)->middleware([
-        'index' => 'permission:events.view',
-        'show' => 'permission:events.view',
-        'create' => 'permission:events.create',
-        'store' => 'permission:events.create',
-        'edit' => 'permission:events.update',
-        'update' => 'permission:events.update',
-        'destroy' => 'permission:events.delete',
-    ]);
+    Route::resource('events', EventController::class)
+        ->middlewareFor(['index', 'show'], 'permission:events.view')
+        ->middlewareFor(['create', 'store'], 'permission:events.create')
+        ->middlewareFor(['edit', 'update'], 'permission:events.update')
+        ->middlewareFor('destroy', 'permission:events.delete');
 
-    Route::resource('tickets', TicketController::class)->middleware([
-        'index' => 'permission:tickets.view',
-        'show' => 'permission:tickets.view',
-        'create' => 'permission:tickets.manage',
-        'store' => 'permission:tickets.manage',
-        'edit' => 'permission:tickets.manage',
-        'update' => 'permission:tickets.manage',
-        'destroy' => 'permission:tickets.manage',
-    ]);
+    Route::resource('tickets', TicketController::class)
+        ->middlewareFor(['index', 'show'], 'permission:tickets.view')
+        ->middlewareFor(['create', 'store', 'edit', 'update', 'destroy'], 'permission:tickets.manage');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.manage')->name('tickets.send-email');
     Route::get('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.manage')->name('tickets.send-whatsapp');
