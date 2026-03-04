@@ -30,6 +30,7 @@ Route::post('/contact', [PagesController::class, 'submitContact'])->name('front.
 Route::get('/terms-and-conditions', [PagesController::class, 'terms'])->name('front.terms');
 
 Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
+Route::get('/payments/fawaterak/callback/{order}/{token}', [CheckoutController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
 
 Route::middleware('guest')->group(function () {
     Route::get('/account/login', [CustomerAuthController::class, 'showLogin'])->name('front.customer.login');

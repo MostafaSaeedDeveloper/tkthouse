@@ -10,7 +10,7 @@ use RuntimeException;
 
 class FawaterakService
 {
-    public function createCheckoutUrl(Order $order): string
+    public function createCheckoutData(Order $order): array
     {
         $method = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
@@ -47,14 +47,16 @@ class FawaterakService
         $phone     = trim((string) ($customer->phone      ?? '')) ?: '01000000000';
         $email     = trim((string) ($customer->email      ?? '')) ?: 'customer@example.com';
 
-        $successUrl = route('front.checkout.thank-you', [
-            'flow'  => 'payment_success',
-            'order' => $order->order_number,
+        $successUrl = route('front.fawaterak.callback', [
+            'order' => $order,
+            'token' => $order->payment_link_token,
+            'result' => 'success',
         ]);
 
-        $failUrl = route('front.checkout.thank-you', [
-            'flow'  => 'payment_failed',
-            'order' => $order->order_number,
+        $failUrl = route('front.fawaterak.callback', [
+            'order' => $order,
+            'token' => $order->payment_link_token,
+            'result' => 'failed',
         ]);
 
         $payload = [
@@ -131,7 +133,52 @@ class FawaterakService
             throw new RuntimeException('Fawaterak did not return a checkout URL.');
         }
 
-        return $redirectUrl;
+        return [
+            'url' => $redirectUrl,
+            'transaction_id' => $this->extractTransactionId($json),
+            'transaction_url' => $this->extractTransactionUrl($json),
+            'provider_payload' => $json,
+        ];
+    }
+
+    private function extractTransactionId(array $payload): ?string
+    {
+        $candidates = [
+            data_get($payload, 'data.invoice_id'),
+            data_get($payload, 'data.id'),
+            data_get($payload, 'data.payment_data.invoice_id'),
+            data_get($payload, 'data.payment_data.payment_id'),
+            data_get($payload, 'data.payment_data.transaction_id'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) $candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function extractTransactionUrl(array $payload): ?string
+    {
+        $candidates = [
+            data_get($payload, 'data.payment_data.redirectTo'),
+            data_get($payload, 'data.payment_data.redirect_to'),
+            data_get($payload, 'data.payment_data.redirectUrl'),
+            data_get($payload, 'data.redirectTo'),
+            data_get($payload, 'data.url'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) $candidate);
+            if ($value !== '' && filter_var($value, FILTER_VALIDATE_URL)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function extractApiErrorMessage(array $json): string
