@@ -167,9 +167,15 @@ class OrderController extends Controller
         $oldStatus = $order->status;
         $oldPaymentMethod = $order->payment_method;
 
+        $paidAt = $order->paid_at;
+        if ($validated['status'] === 'paid' && $oldStatus !== 'paid') {
+            $paidAt = now();
+        }
+
         $order->update([
             'status' => $validated['status'],
             'payment_method' => $validated['payment_method'],
+            'paid_at' => $paidAt,
             'requires_approval' => array_key_exists('requires_approval', $validated)
                 ? (bool) $validated['requires_approval']
                 : (bool) $order->requires_approval,

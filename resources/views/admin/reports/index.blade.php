@@ -1,23 +1,34 @@
 @extends('admin.master')
 
 @section('content')
+<link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
+
 <div class="content reports-page">
     <div class="d-md-flex justify-content-md-between align-items-md-center mb-4">
         <div>
             <h1 class="h3 mb-1">Reports</h1>
             <p class="text-muted mb-0">Detailed per-event performance, tickets and revenue.</p>
         </div>
-        <div class="reports-overview mt-3 mt-md-0">
-            <div class="reports-pill">
-                <span>Total Tickets</span>
-                <strong>{{ number_format($totalTickets) }}</strong>
-            </div>
-            <div class="reports-pill reports-pill-gold">
-                <span>Total Revenue</span>
-                <strong>{{ number_format($totalRevenue, 2) }} EGP</strong>
-            </div>
-        </div>
     </div>
+
+    <div class="reports-toolbar mb-4">
+        <div class="reports-range-buttons">
+            @foreach($rangeOptions as $key => $label)
+                <a href="{{ route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
+                   class="reports-range-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
+            @endforeach
+        </div>
+        <form method="GET" action="{{ route('admin.reports.index') }}" class="reports-filters-form">
+            <input type="hidden" name="range" value="custom">
+            <input type="text" name="from" class="reports-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
+            <input type="text" name="to" class="reports-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
+            <button type="submit" class="reports-filter-apply">Apply</button>
+        </form>
+    </div>
+
+    <p class="reports-context mb-3">
+        Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
+    </p>
 
     <div class="reports-grid">
         @forelse($eventReports as $report)
@@ -74,20 +85,77 @@
 </div>
 
 <style>
-.reports-page .reports-overview { display: flex; gap: 10px; flex-wrap: wrap; }
-.reports-page .reports-pill {
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 7px 14px;
-    background: var(--surface2);
-    display: inline-flex;
-    align-items: center;
+.reports-page .reports-toolbar {
+    display: grid;
+    gap: 10px;
+}
+.reports-page .reports-range-buttons {
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
 }
-.reports-page .reports-pill span { color: var(--muted); font-size: 12px; }
-.reports-page .reports-pill strong { font-family: var(--font-num); font-weight: 700; color: var(--text); }
-.reports-page .reports-pill-gold { border-color: rgba(245, 184, 0, 0.4); background: rgba(245, 184, 0, 0.1); }
-
+.reports-page .reports-range-btn {
+    text-decoration: none;
+    color: var(--text) !important;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    background: var(--surface2);
+}
+.reports-page .reports-range-btn:visited,
+.reports-page .reports-range-btn:focus,
+.reports-page .reports-range-btn:hover {
+    color: var(--text) !important;
+    text-decoration: none;
+}
+.reports-page .reports-range-btn.active {
+    color: #000 !important;
+    background: var(--gold);
+    border-color: var(--gold);
+    font-weight: 700;
+}
+.reports-page .reports-range-btn.active:visited,
+.reports-page .reports-range-btn.active:hover,
+.reports-page .reports-range-btn.active:focus {
+    color: #000 !important;
+}
+.reports-page .reports-filters-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.reports-page .reports-filter-input {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    padding: 7px 10px;
+    font-size: 12px;
+}
+.reports-page .reports-filters-form .reports-filter-input,
+.reports-page .reports-filters-form .flatpickr-input {
+    width: 220px;
+    min-width: 220px;
+    flex: 0 0 220px;
+}
+.reports-page .reports-filter-input::placeholder {
+    color: var(--muted);
+}
+.reports-page .reports-filter-apply {
+    border: 0;
+    border-radius: 8px;
+    background: var(--gold);
+    color: #111;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.reports-page .reports-context {
+    color: var(--muted);
+    font-size: 13px;
+}
 .reports-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .report-card {
     border: 1px solid var(--border);
@@ -138,4 +206,18 @@
     .report-metrics { grid-template-columns: 1fr; }
 }
 </style>
+
+<script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.flatpickr) {
+            flatpickr('.js-flatpickr', {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'm/d/Y',
+                allowInput: true,
+            });
+        }
+    });
+</script>
 @endsection

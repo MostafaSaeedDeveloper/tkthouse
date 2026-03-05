@@ -208,6 +208,7 @@ class CheckoutController extends Controller
             $oldStatus = $order->status;
             $order->update([
                 'status' => 'paid',
+                'paid_at' => now(),
             ]);
             app(TicketIssuanceService::class)->issueIfPaid($order);
 
@@ -264,6 +265,7 @@ class CheckoutController extends Controller
 
         $order->update([
             'status' => 'paid',
+            'paid_at' => now(),
         ]);
 
         app(TicketIssuanceService::class)->issueIfPaid($order);
@@ -299,7 +301,10 @@ class CheckoutController extends Controller
 
         if ($isSuccess && $order->status !== 'paid') {
             $oldStatus = $order->status;
-            $order->update(['status' => 'paid']);
+            $order->update([
+                'status' => 'paid',
+                'paid_at' => now(),
+            ]);
             app(TicketIssuanceService::class)->issueIfPaid($order);
 
             $this->logPaymentEvent($order, null, 'Payment completed successfully', [
