@@ -9,15 +9,44 @@
         </div>
         <div class="reports-overview mt-3 mt-md-0">
             <div class="reports-pill">
+                <span>Total Orders</span>
+                <strong>{{ number_format($totalOrders) }}</strong>
+            </div>
+            <div class="reports-pill">
                 <span>Total Tickets</span>
                 <strong>{{ number_format($totalTickets) }}</strong>
             </div>
             <div class="reports-pill reports-pill-gold">
-                <span>Total Revenue</span>
+                <span>Gross Revenue</span>
                 <strong>{{ number_format($totalRevenue, 2) }} EGP</strong>
             </div>
         </div>
     </div>
+
+    <div class="reports-toolbar mb-4">
+        <div class="reports-range-buttons">
+            @foreach($rangeOptions as $key => $label)
+                <a href="{{ route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
+                   class="reports-range-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
+            @endforeach
+        </div>
+        <form method="GET" action="{{ route('admin.reports.index') }}" class="reports-filters-form">
+            <input type="hidden" name="range" value="custom">
+            <input type="text" name="from" class="reports-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}" placeholder="From (Y-m-d)">
+            <input type="text" name="to" class="reports-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}" placeholder="To (Y-m-d)">
+            <select name="event" class="reports-filter-input">
+                <option value="">All Events</option>
+                @foreach($eventOptions as $eventName)
+                    <option value="{{ $eventName }}" @selected($selectedEvent === $eventName)>{{ $eventName }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="reports-filter-apply">Apply</button>
+        </form>
+    </div>
+
+    <p class="reports-context mb-3">
+        Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
+    </p>
 
     <div class="reports-grid">
         @forelse($eventReports as $report)
@@ -74,6 +103,56 @@
 </div>
 
 <style>
+.reports-page .reports-toolbar {
+    display: grid;
+    gap: 10px;
+}
+.reports-page .reports-range-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.reports-page .reports-range-btn {
+    text-decoration: none;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    background: var(--surface2);
+}
+.reports-page .reports-range-btn.active {
+    color: #111;
+    background: var(--gold);
+    border-color: var(--gold);
+    font-weight: 700;
+}
+.reports-page .reports-filters-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.reports-page .reports-filter-input {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    padding: 7px 10px;
+    font-size: 12px;
+}
+.reports-page .reports-filter-apply {
+    border: 0;
+    border-radius: 8px;
+    background: var(--gold);
+    color: #111;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.reports-page .reports-context {
+    color: var(--muted);
+    font-size: 13px;
+}
 .reports-page .reports-overview { display: flex; gap: 10px; flex-wrap: wrap; }
 .reports-page .reports-pill {
     border: 1px solid var(--border);
