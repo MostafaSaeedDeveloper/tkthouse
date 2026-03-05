@@ -31,16 +31,33 @@ class DashboardController extends Controller
         }
 
         $totalOrders = (clone $ordersQuery)->count();
-        $totalPaidOrders = (clone $ordersQuery)->where('status', 'paid')->count();
+        $paidOrdersQuery = Order::query()->where('status', 'paid');
+        if ($startAt && $endAt) {
+            $paidOrdersQuery->where(function ($query) use ($startAt, $endAt) {
+                $query->whereBetween('paid_at', [$startAt, $endAt])
+                    ->orWhere(function ($fallback) use ($startAt, $endAt) {
+                        $fallback->whereNull('paid_at')
+                            ->whereBetween('created_at', [$startAt, $endAt]);
+                    });
+            });
+        }
+
+        $totalPaidOrders = (clone $paidOrdersQuery)->count();
         $totalRevenue = (float) (clone $ordersQuery)->sum('total_amount');
-        $grossRevenue = (float) (clone $ordersQuery)->where('status', 'paid')->sum('total_amount');
+        $grossRevenue = (float) (clone $paidOrdersQuery)->sum('total_amount');
         $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'pending_approval', 'pending_payment'])->count();
 
         $ticketsSoldQuery = OrderItem::query();
         $ticketsSoldQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
             $q->where('status', 'paid');
             if ($startAt && $endAt) {
-                $q->whereBetween('created_at', [$startAt, $endAt]);
+                $q->where(function ($query) use ($startAt, $endAt) {
+                    $query->whereBetween('paid_at', [$startAt, $endAt])
+                        ->orWhere(function ($fallback) use ($startAt, $endAt) {
+                            $fallback->whereNull('paid_at')
+                                ->whereBetween('created_at', [$startAt, $endAt]);
+                        });
+                });
             }
         });
         $ticketsSold = (int) $ticketsSoldQuery->sum('quantity');

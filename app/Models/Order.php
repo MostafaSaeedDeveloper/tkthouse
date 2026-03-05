@@ -23,6 +23,7 @@ class Order extends Model
         'requires_approval',
         'payment_method',
         'payment_link_token',
+        'paid_at',
         'approved_at',
         'tickets_generated_at',
         'total_amount',
@@ -33,6 +34,7 @@ class Order extends Model
         return [
             'requires_approval' => 'boolean',
             'approved_at' => 'datetime',
+            'paid_at' => 'datetime',
             'tickets_generated_at' => 'datetime',
             'discount_amount' => 'decimal:2',
             'subtotal_amount' => 'decimal:2',
