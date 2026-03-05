@@ -1,6 +1,8 @@
 @extends('admin.master')
 
 @section('content')
+<link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
+
 <div class="content reports-page">
     <div class="d-md-flex justify-content-md-between align-items-md-center mb-4">
         <div>
@@ -18,8 +20,8 @@
         </div>
         <form method="GET" action="{{ route('admin.reports.index') }}" class="reports-filters-form">
             <input type="hidden" name="range" value="custom">
-            <input type="text" name="from" class="reports-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}" placeholder="From (Y-m-d)">
-            <input type="text" name="to" class="reports-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}" placeholder="To (Y-m-d)">
+            <input type="text" name="from" class="reports-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
+            <input type="text" name="to" class="reports-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
             <button type="submit" class="reports-filter-apply">Apply</button>
         </form>
     </div>
@@ -94,12 +96,18 @@
 }
 .reports-page .reports-range-btn {
     text-decoration: none;
-    color: var(--muted);
+    color: var(--text) !important;
     border: 1px solid var(--border);
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 12px;
     background: var(--surface2);
+}
+.reports-page .reports-range-btn:visited,
+.reports-page .reports-range-btn:focus,
+.reports-page .reports-range-btn:hover {
+    color: var(--text) !important;
+    text-decoration: none;
 }
 .reports-page .reports-range-btn.active {
     color: #111;
@@ -120,6 +128,9 @@
     color: var(--text);
     padding: 7px 10px;
     font-size: 12px;
+}
+.reports-page .reports-filter-input::placeholder {
+    color: var(--muted);
 }
 .reports-page .reports-filter-apply {
     border: 0;
@@ -184,4 +195,18 @@
     .report-metrics { grid-template-columns: 1fr; }
 }
 </style>
+
+<script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.flatpickr) {
+            flatpickr('.js-flatpickr', {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'm/d/Y',
+                allowInput: true,
+            });
+        }
+    });
+</script>
 @endsection
