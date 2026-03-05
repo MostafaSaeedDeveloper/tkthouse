@@ -7,20 +7,6 @@
             <h1 class="h3 mb-1">Reports</h1>
             <p class="text-muted mb-0">Detailed per-event performance, tickets and revenue.</p>
         </div>
-        <div class="reports-overview mt-3 mt-md-0">
-            <div class="reports-pill">
-                <span>Total Orders</span>
-                <strong>{{ number_format($totalOrders) }}</strong>
-            </div>
-            <div class="reports-pill">
-                <span>Total Tickets</span>
-                <strong>{{ number_format($totalTickets) }}</strong>
-            </div>
-            <div class="reports-pill reports-pill-gold">
-                <span>Gross Revenue</span>
-                <strong>{{ number_format($totalRevenue, 2) }} EGP</strong>
-            </div>
-        </div>
     </div>
 
     <div class="reports-toolbar mb-4">
@@ -34,12 +20,6 @@
             <input type="hidden" name="range" value="custom">
             <input type="text" name="from" class="reports-filter-input" value="{{ optional($startAt)->format('Y-m-d') }}" placeholder="From (Y-m-d)">
             <input type="text" name="to" class="reports-filter-input" value="{{ optional($endAt)->format('Y-m-d') }}" placeholder="To (Y-m-d)">
-            <select name="event" class="reports-filter-input">
-                <option value="">All Events</option>
-                @foreach($eventOptions as $eventName)
-                    <option value="{{ $eventName }}" @selected($selectedEvent === $eventName)>{{ $eventName }}</option>
-                @endforeach
-            </select>
             <button type="submit" class="reports-filter-apply">Apply</button>
         </form>
     </div>
@@ -131,6 +111,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: center;
 }
 .reports-page .reports-filter-input {
     border: 1px solid var(--border);
@@ -153,20 +134,6 @@
     color: var(--muted);
     font-size: 13px;
 }
-.reports-page .reports-overview { display: flex; gap: 10px; flex-wrap: wrap; }
-.reports-page .reports-pill {
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 7px 14px;
-    background: var(--surface2);
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-.reports-page .reports-pill span { color: var(--muted); font-size: 12px; }
-.reports-page .reports-pill strong { font-family: var(--font-num); font-weight: 700; color: var(--text); }
-.reports-page .reports-pill-gold { border-color: rgba(245, 184, 0, 0.4); background: rgba(245, 184, 0, 0.1); }
-
 .reports-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .report-card {
     border: 1px solid var(--border);
