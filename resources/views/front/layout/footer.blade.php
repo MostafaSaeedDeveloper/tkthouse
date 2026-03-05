@@ -160,6 +160,7 @@
                         <h4 class="msl-footer-title">Links</h4>
                         <ul class="msl-footer-links">
                             <li><a href="{{ route('front.terms') }}">Terms and Conditions</a></li>
+                            <li><a href="{{ route('front.privacy') }}">Privacy &amp; Policy</a></li>
                         </ul>
                         <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>

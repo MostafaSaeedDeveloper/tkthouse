@@ -111,6 +111,11 @@ class PagesController extends Controller
         return view('front.terms');
     }
 
+    public function privacy()
+    {
+        return view('front.privacy');
+    }
+
     public function checkout()
     {
         return view('front.checkout');
