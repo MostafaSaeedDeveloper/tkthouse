@@ -125,6 +125,8 @@
                     border-top: 1px solid rgba(0,0,0,.12);
                 }
                 .msl-copyright p { color: #000 !important; margin: 0; font-size: 15px; }
+                .msl-copyright a { color: #000; text-decoration: underline; font-weight: 600; }
+                .msl-copyright a:hover { opacity: .8; }
 
                 @media (max-width: 1199px) {
                     .msl-footer-layout { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
@@ -158,6 +160,8 @@
                         <h4 class="msl-footer-title">Links</h4>
                         <ul class="msl-footer-links">
                             <li><a href="{{ route('front.terms') }}">Terms and Conditions</a></li>
+                            <li><a href="{{ route('front.privacy') }}">Privacy &amp; Policy</a></li>
+                            <li><a href="{{ route('front.cookie') }}">Cookie Policy</a></li>
                         </ul>
                         <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
@@ -182,6 +186,6 @@
 
             <div class="msl-copyright">
                 <div class="container">
-                    <p class="text-center">© {{ date('Y') }} {{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}. All rights reserved.</p>
+                    <p class="text-center">© {{ date('Y') }} {{ \App\Support\SystemSettings::get('site_name', 'TKT House') }}. All rights reserved. Development by <a href="https://waf-agency.com/" target="_blank" rel="noopener">WAF Agency</a></p>
                 </div>
             </div>

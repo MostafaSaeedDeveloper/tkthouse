@@ -28,6 +28,8 @@ Route::get('/events/{event:slug}', [PagesController::class, 'eventShow'])->name(
 Route::get('/contact', [PagesController::class, 'contact'])->name('front.contact');
 Route::post('/contact', [PagesController::class, 'submitContact'])->name('front.contact.submit');
 Route::get('/terms-and-conditions', [PagesController::class, 'terms'])->name('front.terms');
+Route::get('/privacy-policy', [PagesController::class, 'privacy'])->name('front.privacy');
+Route::get('/cookie-policy', [PagesController::class, 'cookie'])->name('front.cookie');
 
 Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
 Route::get('/payments/fawaterak/callback/{order}/{token}', [CheckoutController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
