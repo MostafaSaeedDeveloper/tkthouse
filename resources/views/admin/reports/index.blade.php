@@ -110,10 +110,15 @@
     text-decoration: none;
 }
 .reports-page .reports-range-btn.active {
-    color: #111;
+    color: #000 !important;
     background: var(--gold);
     border-color: var(--gold);
     font-weight: 700;
+}
+.reports-page .reports-range-btn.active:visited,
+.reports-page .reports-range-btn.active:hover,
+.reports-page .reports-range-btn.active:focus {
+    color: #000 !important;
 }
 .reports-page .reports-filters-form {
     display: flex;
@@ -128,6 +133,12 @@
     color: var(--text);
     padding: 7px 10px;
     font-size: 12px;
+}
+.reports-page .reports-filters-form .reports-filter-input,
+.reports-page .reports-filters-form .flatpickr-input {
+    width: 220px;
+    min-width: 220px;
+    flex: 0 0 220px;
 }
 .reports-page .reports-filter-input::placeholder {
     color: var(--muted);
