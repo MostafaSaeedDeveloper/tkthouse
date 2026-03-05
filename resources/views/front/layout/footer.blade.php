@@ -161,6 +161,7 @@
                         <ul class="msl-footer-links">
                             <li><a href="{{ route('front.terms') }}">Terms and Conditions</a></li>
                             <li><a href="{{ route('front.privacy') }}">Privacy &amp; Policy</a></li>
+                            <li><a href="{{ route('front.cookie') }}">Cookie Policy</a></li>
                         </ul>
                         <img src="{{ asset('images/pci.svg') }}" alt="PCI DSS Compliant" class="msl-footer-pci">
                     </div>
