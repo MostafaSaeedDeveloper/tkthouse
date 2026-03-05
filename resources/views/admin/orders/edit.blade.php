@@ -382,6 +382,17 @@
             </div>
             <hr class="oe-divider">
 
+            @can('showing_orders')
+              <div class="oe-field">
+                <label class="oe-check-label">
+                  <input type="checkbox" name="exclude_from_statistics" value="1" {{ old('exclude_from_statistics', $order->exclude_from_statistics) ? 'checked' : '' }}>
+                  <span>Exclude this order from dashboard and reports statistics</span>
+                </label>
+                <div class="text-muted mt-1" style="font-size:12px;">When enabled, this order will not be counted in analytics totals.</div>
+              </div>
+              <hr class="oe-divider">
+            @endcan
+
             @if($order->status === 'pending_payment' && $paymentLink)
               <div class="oe-field">
                 <label class="oe-label">Payment Link</label>

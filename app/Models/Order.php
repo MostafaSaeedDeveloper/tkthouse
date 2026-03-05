@@ -27,12 +27,14 @@ class Order extends Model
         'approved_at',
         'tickets_generated_at',
         'total_amount',
+        'exclude_from_statistics',
     ];
 
     protected function casts(): array
     {
         return [
             'requires_approval' => 'boolean',
+            'exclude_from_statistics' => 'boolean',
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',
             'tickets_generated_at' => 'datetime',
@@ -69,5 +71,10 @@ class Order extends Model
     public function issuedTickets()
     {
         return $this->hasMany(IssuedTicket::class);
+    }
+
+    public function scopeIncludedInStatistics($query)
+    {
+        return $query->where('exclude_from_statistics', false);
     }
 }
