@@ -194,16 +194,19 @@
       <div class="tk-card">
         <div class="tk-card-head"><div class="tk-card-title">Send Ticket</div></div>
         <div class="tk-card-body">
-          <form method="POST" action="{{ route('admin.tickets.send-email', $ticket) }}">
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#5e5e72;margin-bottom:7px;">Email Address</label>
+            <form method="POST" action="{{ route('admin.tickets.send-email', $ticket) }}">
+              @csrf
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <input type="email" name="email" class="tk-send-input" value="{{ old('email', $ticket->holder_email) }}" placeholder="recipient@example.com" required>
+                <button class="tk-btn tk-btn-gold" type="submit"><i class="fa fa-envelope"></i> Send Email</button>
+              </div>
+            </form>
+          </div>
+          <form method="POST" action="{{ route('admin.tickets.send-whatsapp', $ticket) }}">
             @csrf
-            <div style="margin-bottom:12px;">
-              <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#5e5e72;margin-bottom:7px;">Email Address</label>
-              <input type="email" name="email" class="tk-send-input" value="{{ old('email', $ticket->holder_email) }}" placeholder="recipient@example.com" required>
-            </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <button class="tk-btn tk-btn-gold" type="submit"><i class="fa fa-envelope"></i> Send Email</button>
-              <a href="{{ route('admin.tickets.send-whatsapp', $ticket) }}" class="tk-btn tk-btn-green"><i class="fa fa-brands fa-whatsapp"></i> Send WhatsApp</a>
-            </div>
+            <button class="tk-btn tk-btn-green" type="submit"><i class="fa fa-brands fa-whatsapp"></i> Send WhatsApp</button>
           </form>
         </div>
       </div>

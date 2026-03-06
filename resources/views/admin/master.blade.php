@@ -170,6 +170,9 @@
   if (window.adminToastSuccess)
     Toast.fire({ icon: 'success', title: window.adminToastSuccess });
 
+  if (window.adminToastError)
+    Toast.fire({ icon: 'error', title: window.adminToastError });
+
   if (Array.isArray(window.adminValidationErrors) && window.adminValidationErrors.length)
     Swal.fire({
       icon: 'error', title: 'Validation Error',

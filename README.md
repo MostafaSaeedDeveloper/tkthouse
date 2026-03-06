@@ -86,3 +86,43 @@ If you see an error like `Invalid Token or inactive vendor`, verify these in Faw
 - Ensure vendor account is active/live (not disabled).
 - For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
 - Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
+
+## WhatsApp Integration via Twilio
+
+To send tickets automatically on WhatsApp when an order becomes `paid`, and to enable **Send WhatsApp** from the ticket details page, configure Twilio as follows:
+
+1. Create a Twilio account and activate the WhatsApp sender.
+2. Add these variables to `.env`:
+   ```env
+   TWILIO_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+   TWILIO_DEFAULT_COUNTRY_CODE=20
+   ```
+3. Ensure customer/holder phone numbers are stored in international format (example: `+2010xxxxxxx`) OR local format like `010...` with `TWILIO_DEFAULT_COUNTRY_CODE` configured.
+4. Clear config cache after updating env values:
+   ```bash
+   php artisan config:clear
+   ```
+5. Test flow:
+   - Complete checkout and change order status to `paid` (or pay from gateway callback).
+   - The system will issue tickets and send WhatsApp message with ticket links.
+   - From Admin > Ticket Details, use **Send WhatsApp** to resend a single ticket manually.
+
+> If Twilio credentials are missing or the ticket/customer phone is empty, WhatsApp sending is skipped and logged.
+
+### Twilio Sandbox Troubleshooting (important)
+
+If the app says message is queued/sent but nothing arrives:
+
+- Make sure the recipient joined your Twilio WhatsApp Sandbox by sending the join code from Twilio console to `+14155238886`.
+- Sandbox works only for joined numbers and usually within the active customer service window.
+- Check `storage/logs/laravel.log` for Twilio response data (`sid`, `status`, `error_code`, `error_message`).
+- Quick debug command:
+  ```bash
+  tail -f storage/logs/laravel.log
+  ```
+- If your local numbers are like `010...`, keep `TWILIO_DEFAULT_COUNTRY_CODE=20` so they become valid `+20...` numbers.
+- Verify Twilio account limitations (trial account, WhatsApp sender approval, destination restrictions).
+
+- If you see `Twilio HTTP error: 429`, Twilio rate limit is hit; wait a few seconds and retry. The app now retries automatically with short backoff.
