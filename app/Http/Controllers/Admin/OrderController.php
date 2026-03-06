@@ -24,6 +24,9 @@ class OrderController extends Controller
     {
         $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
 
+        if (! ($request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false)) {
+            $ordersQuery->includedInStatistics();
+        }
 
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
@@ -80,6 +83,8 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethodLabel = PaymentMethod::query()
@@ -138,6 +143,8 @@ class OrderController extends Controller
 
     public function edit(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethods = PaymentMethod::query()
@@ -153,6 +160,8 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         $validated = $request->validate([
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
             'payment_method' => ['required', 'string', 'max:100'],
@@ -284,6 +293,8 @@ class OrderController extends Controller
 
     public function destroy(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         abort_unless($request->user()?->can('orders.delete'), 403);
 
         $orderNumber = $order->order_number;
@@ -314,6 +325,8 @@ class OrderController extends Controller
 
     public function storeNote(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         $validated = $request->validate([
             'body' => ['required', 'string', 'max:2000'],
         ]);
@@ -329,6 +342,8 @@ class OrderController extends Controller
 
     public function approve(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         if ($order->status !== 'pending_approval') {
             return back()->with('error', 'Only pending approval orders can be approved.');
         }
@@ -360,6 +375,8 @@ class OrderController extends Controller
 
     public function reject(Request $request, Order $order)
     {
+        $this->ensureOrderVisibility($request, $order);
+
         if ($order->status !== 'pending_approval') {
             return back()->with('error', 'Only pending approval orders can be rejected.');
         }
@@ -385,4 +402,10 @@ class OrderController extends Controller
         return back()->with('success', 'Order rejected and email sent successfully.');
     }
 
+    private function ensureOrderVisibility(Request $request, Order $order): void
+    {
+        if ($order->exclude_from_statistics && ! ($request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false)) {
+            abort(404);
+        }
+    }
 }

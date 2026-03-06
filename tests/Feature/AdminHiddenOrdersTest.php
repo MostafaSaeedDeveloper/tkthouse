@@ -89,7 +89,7 @@ class AdminHiddenOrdersTest extends TestCase
             ->assertViewHas('totalRevenue', 100.0);
     }
 
-    public function test_hidden_order_is_visible_to_all_but_stats_flag_is_permission_gated(): void
+    public function test_hidden_order_requires_showing_orders_permission_to_access_directly(): void
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
@@ -116,15 +116,8 @@ class AdminHiddenOrdersTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.orders.index'))
-            ->assertOk()
-            ->assertSee('900003');
-
-        $this->actingAs($admin)
             ->get(route('admin.orders.show', $hiddenOrder))
-            ->assertOk()
-            ->assertDontSee('Show in Stats')
-            ->assertDontSee('No (Excluded)');
+            ->assertNotFound();
 
         $admin->givePermissionTo('showing_orders');
 
