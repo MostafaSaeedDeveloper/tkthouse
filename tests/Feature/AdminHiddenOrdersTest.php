@@ -123,6 +123,8 @@ class AdminHiddenOrdersTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('admin.orders.show', $hiddenOrder))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee('Show in Stats')
+            ->assertSee('No (Excluded)');
     }
 }
