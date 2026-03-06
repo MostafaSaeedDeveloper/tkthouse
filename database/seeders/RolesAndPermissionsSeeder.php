@@ -63,6 +63,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.delete',
             'orders.deleted.view',
             'orders.restore',
+            'showing_orders',
 
             'reports.view',
 

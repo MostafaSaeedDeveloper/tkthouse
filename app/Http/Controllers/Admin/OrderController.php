@@ -18,10 +18,12 @@ use Spatie\Activitylog\Models\Activity;
 class OrderController extends Controller
 {
     private const DELETED_ORDERS_PERMISSION = 'orders.deleted.view';
+    private const SHOW_HIDDEN_ORDERS_PERMISSION = 'showing_orders';
 
     public function index(Request $request)
     {
         $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
+
 
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
@@ -76,7 +78,7 @@ class OrderController extends Controller
         return view('admin.orders.deleted', compact('orders'));
     }
 
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
@@ -134,7 +136,7 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel'));
     }
 
-    public function edit(Order $order)
+    public function edit(Request $request, Order $order)
     {
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
@@ -155,6 +157,7 @@ class OrderController extends Controller
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
             'payment_method' => ['required', 'string', 'max:100'],
             'requires_approval' => ['nullable', 'boolean'],
+            'exclude_from_statistics' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'max:50'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
@@ -181,6 +184,9 @@ class OrderController extends Controller
                 : (bool) $order->requires_approval,
             'approved_at' => $validated['status'] === 'pending_payment' ? ($order->approved_at ?? now()) : null,
             'payment_link_token' => $validated['status'] === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
+            'exclude_from_statistics' => ($request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false)
+                ? (bool) ($validated['exclude_from_statistics'] ?? false)
+                : (bool) $order->exclude_from_statistics,
         ]);
 
         $itemsInput = collect($validated['items'] ?? [])->keyBy('id');
@@ -378,4 +384,5 @@ class OrderController extends Controller
 
         return back()->with('success', 'Order rejected and email sent successfully.');
     }
+
 }

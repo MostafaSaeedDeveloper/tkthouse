@@ -21,9 +21,10 @@ class ReportController extends Controller
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
 
         $itemsQuery = OrderItem::query()
-            ->with(['order:id,created_at,status,total_amount,paid_at'])
+            ->with(['order:id,created_at,status,total_amount,paid_at,exclude_from_statistics'])
             ->whereHas('order', function ($query) use ($startAt, $endAt) {
-                $query->where('status', 'paid');
+                $query->where('status', 'paid')
+                    ->includedInStatistics();
                 if ($startAt && $endAt) {
                     $query->where(function ($inner) use ($startAt, $endAt) {
                         $inner->whereBetween('paid_at', [$startAt, $endAt])

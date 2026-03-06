@@ -22,7 +22,7 @@ class DashboardController extends Controller
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
 
-        $ordersQuery = Order::query();
+        $ordersQuery = Order::query()->includedInStatistics();
         $customersQuery = Customer::query();
 
         if ($startAt && $endAt) {
@@ -31,7 +31,7 @@ class DashboardController extends Controller
         }
 
         $totalOrders = (clone $ordersQuery)->count();
-        $paidOrdersQuery = Order::query()->where('status', 'paid');
+        $paidOrdersQuery = Order::query()->includedInStatistics()->where('status', 'paid');
         if ($startAt && $endAt) {
             $paidOrdersQuery->where(function ($query) use ($startAt, $endAt) {
                 $query->whereBetween('paid_at', [$startAt, $endAt])
@@ -175,10 +175,12 @@ class DashboardController extends Controller
         }
 
         $ordersWindow = Order::query()
+            ->includedInStatistics()
             ->whereBetween('created_at', [$startAt, $endAt])
             ->get(['created_at']);
 
         $revenueWindow = Order::query()
+            ->includedInStatistics()
             ->whereBetween('created_at', [$startAt, $endAt])
             ->get(['created_at', 'total_amount']);
 
