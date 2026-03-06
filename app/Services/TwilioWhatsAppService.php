@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class TwilioWhatsAppService
 {
@@ -17,8 +18,14 @@ class TwilioWhatsAppService
 
         $toPhone = $this->normalizePhone($ticket->holder_phone ?: $ticket->order?->customer?->phone);
         if (! $toPhone) {
+            Log::warning('Ticket WhatsApp skipped: missing holder/customer phone.', ['ticket_id' => $ticket->id]);
+
             return false;
         }
+
+        $issuedTicket = IssuedTicket::query()
+            ->where('ticket_number', $ticket->ticket_number)
+            ->first();
 
         $lines = [
             'Your ticket is ready ✅',
@@ -26,9 +33,12 @@ class TwilioWhatsAppService
             'Name: '.($ticket->holder_name ?: '-'),
             'Event: '.($ticket->eventLabel() ?: '-'),
             'Type: '.($ticket->ticketTypeLabel() ?: '-'),
-            'Ticket link: '.route('admin.tickets.show', $ticket),
-            'PDF: '.route('admin.tickets.download', $ticket),
         ];
+
+        if ($issuedTicket) {
+            $lines[] = 'View ticket: '.$this->signedShowUrl($issuedTicket);
+            $lines[] = 'Download PDF: '.$this->signedDownloadUrl($issuedTicket);
+        }
 
         return $this->sendMessage($toPhone, implode("\n", $lines));
     }
@@ -38,18 +48,15 @@ class TwilioWhatsAppService
         $order->loadMissing(['customer']);
 
         $sentAll = true;
+        $normalizedCustomerPhone = $this->normalizePhone($order->customer?->phone);
 
         $groupedByPhone = $tickets
-            ->filter(fn (IssuedTicket $ticket) => filled($ticket->holder_phone))
+            ->filter(fn (IssuedTicket $ticket) => filled($this->normalizePhone($ticket->holder_phone)))
             ->groupBy(fn (IssuedTicket $ticket) => $this->normalizePhone($ticket->holder_phone));
 
         foreach ($groupedByPhone as $phone => $holderTickets) {
-            if (! $phone) {
-                continue;
-            }
-
             $lines = [
-                'Your booking has been paid successfully ✅',
+                'Payment confirmed ✅',
                 'Order #: '.$order->order_number,
                 'Name: '.($holderTickets->first()->holder_name ?: $order->customer?->full_name ?: '-'),
                 'Tickets:',
@@ -57,27 +64,49 @@ class TwilioWhatsAppService
 
             foreach ($holderTickets->sortBy('ticket_number') as $ticket) {
                 $lines[] = '- #'.$ticket->ticket_number.' | '.($ticket->ticket_name ?: '-');
-                $lines[] = '  Link: '.route('front.tickets.show', $ticket);
+                $lines[] = '  Link: '.$this->signedShowUrl($ticket);
             }
-
-            $lines[] = 'Thank you for your purchase.';
 
             $sentAll = $this->sendMessage($phone, implode("\n", $lines)) && $sentAll;
         }
 
-        $customerPhone = $this->normalizePhone($order->customer?->phone);
-        if ($customerPhone && $groupedByPhone->keys()->doesntContain($customerPhone)) {
-            $summary = [
-                'Your booking has been paid successfully ✅',
+        if ($normalizedCustomerPhone && $groupedByPhone->isEmpty()) {
+            $lines = [
+                'Payment confirmed ✅',
                 'Order #: '.$order->order_number,
                 'Customer: '.($order->customer?->full_name ?: '-'),
+                'Tickets:',
+            ];
+
+            foreach ($tickets->sortBy('ticket_number') as $ticket) {
+                $lines[] = '- #'.$ticket->ticket_number.' | '.($ticket->ticket_name ?: '-');
+                $lines[] = '  Link: '.$this->signedShowUrl($ticket);
+            }
+
+            $sentAll = $this->sendMessage($normalizedCustomerPhone, implode("\n", $lines)) && $sentAll;
+        }
+
+        if ($normalizedCustomerPhone && $groupedByPhone->isNotEmpty() && $groupedByPhone->keys()->doesntContain($normalizedCustomerPhone)) {
+            $summary = [
+                'Payment confirmed ✅',
+                'Order #: '.$order->order_number,
                 'Tickets count: '.$tickets->count(),
             ];
 
-            $sentAll = $this->sendMessage($customerPhone, implode("\n", $summary)) && $sentAll;
+            $sentAll = $this->sendMessage($normalizedCustomerPhone, implode("\n", $summary)) && $sentAll;
         }
 
         return $sentAll;
+    }
+
+    private function signedShowUrl(IssuedTicket $ticket): string
+    {
+        return URL::temporarySignedRoute('front.tickets.public.show', now()->addDays(30), ['ticket' => $ticket]);
+    }
+
+    private function signedDownloadUrl(IssuedTicket $ticket): string
+    {
+        return URL::temporarySignedRoute('front.tickets.public.download', now()->addDays(30), ['ticket' => $ticket]);
     }
 
     private function sendMessage(string $toPhone, string $body): bool
@@ -110,6 +139,12 @@ class TwilioWhatsAppService
 
             return false;
         }
+
+        Log::info('Twilio WhatsApp sent.', [
+            'to' => $toPhone,
+            'sid' => data_get($response->json(), 'sid'),
+            'status' => data_get($response->json(), 'status'),
+        ]);
 
         return true;
     }
@@ -149,4 +184,3 @@ class TwilioWhatsAppService
         return 'whatsapp:'.$trimmed;
     }
 }
-

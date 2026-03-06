@@ -44,6 +44,14 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
 
+
+Route::get('/tickets/public/{ticket:uuid}', [FrontTicketController::class, 'show'])
+    ->middleware('signed')
+    ->name('front.tickets.public.show');
+Route::get('/tickets/public/{ticket:uuid}/download', [FrontTicketController::class, 'download'])
+    ->middleware('signed')
+    ->name('front.tickets.public.download');
+
 Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
     Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
