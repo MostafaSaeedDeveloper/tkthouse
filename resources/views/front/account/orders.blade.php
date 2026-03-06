@@ -21,6 +21,25 @@
 
         @include('front.account.partials.navigation')
 
+        <div class="acc-kpis">
+            <div class="acc-kpi">
+                <div class="acc-kpi-label">Total Orders</div>
+                <div class="acc-kpi-value">{{ number_format($orderStats['total_orders']) }}</div>
+            </div>
+            <div class="acc-kpi">
+                <div class="acc-kpi-label">Paid Orders</div>
+                <div class="acc-kpi-value">{{ number_format($orderStats['paid_orders']) }}</div>
+            </div>
+            <div class="acc-kpi">
+                <div class="acc-kpi-label">Awaiting Action</div>
+                <div class="acc-kpi-value">{{ number_format($orderStats['pending_orders']) }}</div>
+            </div>
+            <div class="acc-kpi">
+                <div class="acc-kpi-label">Total Spent</div>
+                <div class="acc-kpi-value">{{ number_format($orderStats['total_spent'], 2) }} <span>EGP</span></div>
+            </div>
+        </div>
+
         <div class="acc-card">
             <div class="acc-card-head">
                 <div class="acc-card-title">Order History</div>
@@ -32,6 +51,7 @@
                             <th>Order #</th>
                             <th>Status</th>
                             <th>Payment Method</th>
+                            <th>Tickets</th>
                             <th>Total</th>
                             <th>Date</th>
                             <th class="text-end">Action</th>
@@ -54,6 +74,7 @@
                                 <td class="acc-mono">{{ $order->order_number }}</td>
                                 <td><span class="acc-badge {{ $sc }}">{{ ucwords(str_replace('_',' ',$order->status)) }}</span></td>
                                 <td><span class="acc-badge acc-badge-method">{{ $methodLabel }}</span></td>
+                                <td><span class="acc-badge acc-badge-method">{{ $order->issuedTickets->count() }} Issued</span></td>
                                 <td style="font-weight:600;color:#fff;">{{ number_format($order->total_amount,2) }} <span style="color:var(--muted);font-size:11px;">EGP</span></td>
                                 <td style="color:var(--muted);font-size:12px;">{{ $order->created_at?->format('d M Y, g:i A') }}</td>
                                 <td class="text-end">
@@ -65,7 +86,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6"><div class="acc-empty"><i class="fa fa-bag-shopping"></i><span>No orders yet.</span></div></td></tr>
+                            <tr><td colspan="7"><div class="acc-empty"><i class="fa fa-bag-shopping"></i><span>No orders yet.</span></div></td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -92,6 +92,19 @@
 .acc-stat-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; font-weight:600; }
 .acc-stat-link { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--gold); margin-top:12px; font-weight:600; }
 
+
+/* ── KPIs ── */
+.acc-kpis { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+@media(max-width:980px){ .acc-kpis { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media(max-width:520px){ .acc-kpis { grid-template-columns:1fr; } }
+.acc-kpi {
+    background:linear-gradient(145deg, rgba(255,255,255,.02), rgba(255,255,255,.005));
+    border:1px solid var(--border); border-radius:12px; padding:14px 16px;
+}
+.acc-kpi-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; font-family:var(--fh); }
+.acc-kpi-value { margin-top:6px; font-family:var(--fh); font-size:23px; font-weight:800; color:#fff; line-height:1.1; }
+.acc-kpi-value span { font-size:11px; color:var(--muted); font-weight:600; }
+
 /* ── Table ── */
 .acc-table { width:100%; border-collapse:collapse; }
 .acc-table th { font-family:var(--fh); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:12px 22px; text-align:left; border-bottom:1px solid var(--border); }
