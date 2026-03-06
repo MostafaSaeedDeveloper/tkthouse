@@ -36,8 +36,14 @@ return [
     ],
 
     'whatsapp' => [
-        'webhook_url' => env('WHATSAPP_WEBHOOK_URL'),
-        'token' => env('WHATSAPP_WEBHOOK_TOKEN'),
+        'enabled' => env('WHATSAPP_ENABLED', true),
+        'base_url' => env('WHATSAPP_BASE_URL', 'https://wasenderapi.com'),
+        'endpoint' => env('WHATSAPP_ENDPOINT', 'api/send-message'),
+        'token' => env('WHATSAPP_TOKEN'),
+        'instance_id' => env('WHATSAPP_INSTANCE_ID'),
+        'instance_field' => env('WHATSAPP_INSTANCE_FIELD', 'instance_id'),
+        'recipient_field' => env('WHATSAPP_RECIPIENT_FIELD', 'to'),
+        'message_field' => env('WHATSAPP_MESSAGE_FIELD', 'text'),
     ],
 
 

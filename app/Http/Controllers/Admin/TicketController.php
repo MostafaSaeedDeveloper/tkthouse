@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
+use App\Services\WhatsappSenderService;
 use App\Models\Event;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -109,25 +110,26 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket sent by email successfully.');
     }
 
-    public function sendWhatsapp(Ticket $ticket)
+    public function sendWhatsapp(Ticket $ticket, WhatsappSenderService $whatsappSender)
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            return back()->with('error', 'WhatsApp webhook is not configured.');
+        if (blank($ticket->holder_phone)) {
+            return back()->with('error', 'Ticket holder phone is missing.');
         }
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'ticket_number' => $ticket->ticket_number,
-                'holder_name' => $ticket->holder_name,
-                'holder_phone' => $ticket->holder_phone,
-                'ticket_show_url' => route('admin.tickets.show', $ticket),
-                'ticket_pdf_url' => route('admin.tickets.download', $ticket),
-            ])
-            ->throw();
+        if (! $whatsappSender->isEnabled()) {
+            return back()->with('error', 'WhatsApp (WaSenderAPI) is not configured.');
+        }
 
-        return back()->with('success', 'Ticket sent by WhatsApp webhook successfully.');
+        $message = implode("\n", [
+            '🎟️ Ticket #'.$ticket->ticket_number,
+            '👤 '.$ticket->holder_name,
+            '🔍 View ticket: '.route('admin.tickets.show', $ticket),
+            '📄 Download PDF: '.route('admin.tickets.download', $ticket),
+        ]);
+
+        $whatsappSender->sendMessage((string) $ticket->holder_phone, $message);
+
+        return back()->with('success', 'Ticket sent to WhatsApp successfully.');
     }
 
     public function download(Ticket $ticket)

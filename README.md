@@ -86,3 +86,28 @@ If you see an error like `Invalid Token or inactive vendor`, verify these in Faw
 - Ensure vendor account is active/live (not disabled).
 - For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
 - Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
+
+## WhatsApp (WaSenderAPI) setup
+
+To automatically send tickets on payment success and to enable **Send WhatsApp** in the admin ticket page, configure these environment variables:
+
+```env
+WHATSAPP_ENABLED=true
+WHATSAPP_BASE_URL=https://wasenderapi.com
+WHATSAPP_ENDPOINT=api/send-message
+WHATSAPP_TOKEN=your_wasender_api_token
+WHATSAPP_INSTANCE_ID=your_instance_id
+WHATSAPP_INSTANCE_FIELD=instance_id
+WHATSAPP_RECIPIENT_FIELD=to
+WHATSAPP_MESSAGE_FIELD=text
+```
+
+References:
+- https://wasenderapi.com/
+- https://wasenderapi.com/api-docs/getting-started/getting-started-with-wasenderapi
+
+After editing `.env`, clear cached config:
+
+```bash
+php artisan config:clear
+```
