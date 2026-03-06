@@ -8,7 +8,6 @@ use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\Ticket;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -17,6 +16,10 @@ use Throwable;
 
 class TicketIssuanceService
 {
+    public function __construct(private readonly WhatsappMessageService $whatsappMessageService)
+    {
+    }
+
     public function issueIfPaid(Order $order): void
     {
         $order->unsetRelation('items');
@@ -112,29 +115,25 @@ class TicketIssuanceService
 
     private function sendWhatsapp(Order $order): void
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            Log::info('WhatsApp webhook is not configured; skipped sending tickets.', ['order_id' => $order->id]);
+        $phone = (string) ($order->customer->phone ?? '');
+        if ($phone === '') {
+            Log::info('Customer phone is missing; skipped sending WhatsApp message.', ['order_id' => $order->id]);
 
             return;
         }
 
-        $tickets = $order->issuedTickets->map(fn (IssuedTicket $ticket) => [
-            'ticket_number' => $ticket->ticket_number,
-            'show_url' => route('front.tickets.show', $ticket),
-            'pdf_url' => route('front.tickets.download', $ticket),
-        ])->values()->all();
+        $message = (string) config('services.twilio.test_message_template', 'تم إصدار التيكت بنجاح. هذه رسالة تجريبية من نظام التذاكر.');
+        $message .= "\nOrder #: {$order->order_number}";
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'order_number' => $order->order_number,
-                'customer_name' => $order->customer->full_name,
-                'customer_phone' => $order->customer->phone,
-                'customer_email' => $order->customer->email,
-                'tickets' => $tickets,
-            ])
-            ->throw();
+        try {
+            $this->whatsappMessageService->sendText($phone, $message);
+        } catch (Throwable $exception) {
+            Log::error('WhatsApp send failed.', [
+                'order_id' => $order->id,
+                'phone' => $phone,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function sendMailWithRetry(callable $send, array $context = []): void

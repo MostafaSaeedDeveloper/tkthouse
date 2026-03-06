@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -109,25 +110,18 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket sent by email successfully.');
     }
 
-    public function sendWhatsapp(Ticket $ticket)
+    public function sendWhatsapp(Ticket $ticket, WhatsappMessageService $whatsappMessageService)
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            return back()->with('error', 'WhatsApp webhook is not configured.');
+        if (! filled($ticket->holder_phone)) {
+            return back()->with('error', 'Ticket holder phone is missing.');
         }
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'ticket_number' => $ticket->ticket_number,
-                'holder_name' => $ticket->holder_name,
-                'holder_phone' => $ticket->holder_phone,
-                'ticket_show_url' => route('admin.tickets.show', $ticket),
-                'ticket_pdf_url' => route('admin.tickets.download', $ticket),
-            ])
-            ->throw();
+        $message = (string) config('services.twilio.test_message_template', 'تم إصدار التيكت بنجاح. هذه رسالة تجريبية من نظام التذاكر.');
+        $message .= "\nTicket #: ".($ticket->ticket_number ?: '-');
 
-        return back()->with('success', 'Ticket sent by WhatsApp webhook successfully.');
+        $whatsappMessageService->sendText((string) $ticket->holder_phone, $message);
+
+        return back()->with('success', 'Test WhatsApp message sent successfully.');
     }
 
     public function download(Ticket $ticket)
