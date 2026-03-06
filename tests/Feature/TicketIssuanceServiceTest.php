@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\User;
 use App\Services\TicketIssuanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -20,6 +21,10 @@ class TicketIssuanceServiceTest extends TestCase
     public function test_it_generates_tickets_and_sends_email_for_paid_order(): void
     {
         Mail::fake();
+        Http::fake();
+
+        config()->set('services.whatsapp.phone_number_id', '123456789');
+        config()->set('services.whatsapp.token', 'test-token');
 
         $user = User::factory()->create();
         $customer = Customer::create([
@@ -61,11 +66,17 @@ class TicketIssuanceServiceTest extends TestCase
 
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://graph.facebook.com/v20.0/123456789/messages');
     }
 
     public function test_it_generates_tickets_only_when_status_is_paid(): void
     {
         Mail::fake();
+        Http::fake();
+
+        config()->set('services.whatsapp.phone_number_id', '123456789');
+        config()->set('services.whatsapp.token', 'test-token');
 
         $user = User::factory()->create();
         $customer = Customer::create([
@@ -107,5 +118,6 @@ class TicketIssuanceServiceTest extends TestCase
 
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
+        Http::assertSent(fn ($request) => $request->url() === 'https://graph.facebook.com/v20.0/123456789/messages');
     }
 }

@@ -36,6 +36,8 @@ return [
     ],
 
     'whatsapp' => [
+        'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v20.0'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
         'webhook_url' => env('WHATSAPP_WEBHOOK_URL'),
         'token' => env('WHATSAPP_WEBHOOK_TOKEN'),
     ],

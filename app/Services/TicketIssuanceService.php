@@ -11,6 +11,7 @@ use App\Models\Ticket;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Symfony\Component\Mailer\Exception\UnexpectedResponseException;
 use Throwable;
@@ -112,18 +113,72 @@ class TicketIssuanceService
 
     private function sendWhatsapp(Order $order): void
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            Log::info('WhatsApp webhook is not configured; skipped sending tickets.', ['order_id' => $order->id]);
+        $phoneNumber = preg_replace('/\D+/', '', (string) ($order->customer->phone ?? ''));
+        if (! filled($phoneNumber)) {
+            Log::info('WhatsApp send skipped because customer phone is missing.', ['order_id' => $order->id]);
 
             return;
         }
 
-        $tickets = $order->issuedTickets->map(fn (IssuedTicket $ticket) => [
-            'ticket_number' => $ticket->ticket_number,
-            'show_url' => route('front.tickets.show', $ticket),
-            'pdf_url' => route('front.tickets.download', $ticket),
-        ])->values()->all();
+        $tickets = $order->issuedTickets
+            ->map(fn (IssuedTicket $ticket) => [
+                'ticket_number' => $ticket->ticket_number,
+                'show_url' => route('front.tickets.show', $ticket),
+                'pdf_url' => route('front.tickets.download', $ticket),
+            ])
+            ->values();
+
+        $summaryMessage = $tickets
+            ->map(fn (array $ticket, int $index) => ($index + 1).'. '.$ticket['show_url'])
+            ->implode("\n");
+
+        try {
+            $this->sendViaCloudApi($order, $phoneNumber, $summaryMessage);
+        } catch (Throwable $exception) {
+            Log::warning('WhatsApp Cloud API send failed.', [
+                'order_id' => $order->id,
+                'phone' => $phoneNumber,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $this->sendViaWebhook($order, $tickets->all());
+        }
+    }
+
+    private function sendViaCloudApi(Order $order, string $phoneNumber, string $summaryMessage): void
+    {
+        $version = (string) config('services.whatsapp.graph_version', 'v20.0');
+        $phoneNumberId = config('services.whatsapp.phone_number_id');
+        $token = config('services.whatsapp.token');
+
+        if (! filled($phoneNumberId) || ! filled($token)) {
+            throw new \RuntimeException('Cloud API credentials are not configured.');
+        }
+
+        $endpoint = sprintf('https://graph.facebook.com/%s/%s/messages', $version, $phoneNumberId);
+
+        Http::timeout(15)
+            ->withToken((string) $token)
+            ->post($endpoint, [
+                'messaging_product' => 'whatsapp',
+                'to' => $phoneNumber,
+                'type' => 'text',
+                'text' => [
+                    'preview_url' => true,
+                    'body' => trim("Your order #{$order->order_number} has been paid successfully.\n\nYour tickets:\n{$summaryMessage}"),
+                ],
+            ])
+            ->throw();
+    }
+
+    private function sendViaWebhook(Order $order, array $tickets): void
+    {
+        $url = config('services.whatsapp.webhook_url');
+        if (! $url) {
+            Log::info('WhatsApp is not configured (Cloud API/Webhook); skipped sending tickets.', ['order_id' => $order->id]);
+
+            return;
+        }
 
         Http::timeout(15)
             ->withToken((string) config('services.whatsapp.token'))
@@ -133,6 +188,7 @@ class TicketIssuanceService
                 'customer_phone' => $order->customer->phone,
                 'customer_email' => $order->customer->email,
                 'tickets' => $tickets,
+                'checkout_url' => URL::route('front.account.tickets'),
             ])
             ->throw();
     }
