@@ -138,6 +138,16 @@ class TicketIssuanceService
                 return;
             }
 
+            if (! $result['sent']) {
+                Log::error('WhatsApp send rejected by Twilio.', [
+                    'order_id' => $order->id,
+                    'phone' => $result['to'],
+                    'reason' => $result['reason'],
+                ]);
+
+                return;
+            }
+
             Log::info('WhatsApp message accepted by Twilio.', [
                 'order_id' => $order->id,
                 'phone' => $result['to'],
