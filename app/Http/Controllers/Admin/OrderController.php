@@ -102,8 +102,16 @@ class OrderController extends Controller
             ->latest()
             ->get();
 
+        $hiddenHistoryDescriptions = [
+            'Order soft deleted',
+            'Order restored from trash',
+        ];
+
         $notes = $activities->where('log_name', 'order_notes')->values();
-        $history = $activities->where('log_name', '!=', 'order_notes')->values();
+        $history = $activities
+            ->where('log_name', '!=', 'order_notes')
+            ->reject(fn ($log) => in_array($log->description, $hiddenHistoryDescriptions, true))
+            ->values();
 
         $statusTransitions = $history
             ->filter(fn ($log) => filled(data_get($log->properties, 'to_status')))
