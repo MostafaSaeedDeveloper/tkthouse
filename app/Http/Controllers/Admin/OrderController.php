@@ -19,6 +19,10 @@ class OrderController extends Controller
 {
     private const DELETED_ORDERS_PERMISSION = 'orders.deleted.view';
     private const SHOW_HIDDEN_ORDERS_PERMISSION = 'showing_orders';
+    private const HIDDEN_ORDER_HISTORY_DESCRIPTIONS = [
+        'Order soft deleted',
+        'Order restored from trash',
+    ];
 
     public function index(Request $request)
     {
@@ -98,7 +102,10 @@ class OrderController extends Controller
             ->get();
 
         $notes = $activities->where('log_name', 'order_notes')->values();
-        $history = $activities->where('log_name', '!=', 'order_notes')->values();
+        $history = $activities
+            ->where('log_name', '!=', 'order_notes')
+            ->reject(fn (Activity $activity) => in_array($activity->description, self::HIDDEN_ORDER_HISTORY_DESCRIPTIONS, true))
+            ->values();
 
         $statusTransitions = $history
             ->filter(fn ($log) => filled(data_get($log->properties, 'to_status')))
