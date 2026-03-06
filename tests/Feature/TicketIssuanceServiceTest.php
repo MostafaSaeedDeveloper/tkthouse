@@ -68,7 +68,7 @@ class TicketIssuanceServiceTest extends TestCase
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
         Http::assertSent(fn ($request) => str_contains($request->url(), '/Messages.json')
-            && $request['To'] === 'whatsapp:01000000000');
+            && $request['To'] === 'whatsapp:+201000000000');
     }
 
     public function test_it_generates_tickets_only_when_status_is_paid(): void
@@ -121,6 +121,6 @@ class TicketIssuanceServiceTest extends TestCase
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
         Http::assertSent(fn ($request) => str_contains($request->url(), '/Messages.json')
-            && $request['To'] === 'whatsapp:01000000001');
+            && $request['To'] === 'whatsapp:+201000000001');
     }
 }

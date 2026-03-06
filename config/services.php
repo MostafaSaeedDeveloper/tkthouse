@@ -40,6 +40,7 @@ return [
         'account_sid' => env('TWILIO_ACCOUNT_SID'),
         'auth_token' => env('TWILIO_AUTH_TOKEN'),
         'whatsapp_from' => env('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886'),
+        'default_country_code' => env('TWILIO_DEFAULT_COUNTRY_CODE', '+20'),
         'test_message_template' => env('TWILIO_WHATSAPP_TEST_MESSAGE', 'تم إصدار التيكت بنجاح. هذه رسالة تجريبية من نظام التذاكر.'),
     ],
 

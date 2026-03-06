@@ -12,6 +12,7 @@ use App\Services\WhatsappMessageService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Throwable;
 
 class TicketController extends Controller
 {
@@ -119,9 +120,17 @@ class TicketController extends Controller
         $message = (string) config('services.twilio.test_message_template', 'تم إصدار التيكت بنجاح. هذه رسالة تجريبية من نظام التذاكر.');
         $message .= "\nTicket #: ".($ticket->ticket_number ?: '-');
 
-        $whatsappMessageService->sendText((string) $ticket->holder_phone, $message);
+        try {
+            $result = $whatsappMessageService->sendText((string) $ticket->holder_phone, $message);
+        } catch (Throwable $exception) {
+            return back()->with('error', 'WhatsApp send failed: '.$exception->getMessage());
+        }
 
-        return back()->with('success', 'Test WhatsApp message sent successfully.');
+        if ($result['skipped']) {
+            return back()->with('error', 'Twilio WhatsApp configuration is missing.');
+        }
+
+        return back()->with('success', 'WhatsApp request accepted (status: '.($result['status'] ?: 'queued').'). SID: '.($result['sid'] ?: 'N/A'));
     }
 
     public function download(Ticket $ticket)

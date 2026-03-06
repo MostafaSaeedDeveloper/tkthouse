@@ -7,22 +7,33 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsappMessageService
 {
-    public function sendText(string $to, string $message): bool
+    /**
+     * @return array{sent: bool, skipped: bool, to: string, from: string, sid: ?string, status: ?string, reason: ?string}
+     */
+    public function sendText(string $to, string $message): array
     {
         $accountSid = (string) config('services.twilio.account_sid');
         $authToken = (string) config('services.twilio.auth_token');
         $from = (string) config('services.twilio.whatsapp_from');
 
-        if ($accountSid === '' || $authToken === '' || $from === '') {
-            Log::info('Twilio WhatsApp configuration is missing; skipped sending message.', ['to' => $to]);
-
-            return false;
-        }
-
         $toNumber = $this->formatWhatsappNumber($to);
         $fromNumber = $this->formatWhatsappNumber($from);
 
-        Http::asForm()
+        if ($accountSid === '' || $authToken === '' || $from === '') {
+            Log::warning('Twilio WhatsApp configuration is missing; skipped sending message.', ['to' => $toNumber]);
+
+            return [
+                'sent' => false,
+                'skipped' => true,
+                'to' => $toNumber,
+                'from' => $fromNumber,
+                'sid' => null,
+                'status' => null,
+                'reason' => 'missing_twilio_configuration',
+            ];
+        }
+
+        $response = Http::asForm()
             ->timeout(20)
             ->withBasicAuth($accountSid, $authToken)
             ->post("https://api.twilio.com/2010-04-01/Accounts/{$accountSid}/Messages.json", [
@@ -32,7 +43,17 @@ class WhatsappMessageService
             ])
             ->throw();
 
-        return true;
+        $payload = $response->json();
+
+        return [
+            'sent' => true,
+            'skipped' => false,
+            'to' => $toNumber,
+            'from' => $fromNumber,
+            'sid' => data_get($payload, 'sid'),
+            'status' => data_get($payload, 'status'),
+            'reason' => null,
+        ];
     }
 
     private function formatWhatsappNumber(string $value): string
@@ -40,9 +61,24 @@ class WhatsappMessageService
         $number = trim($value);
 
         if (str_starts_with($number, 'whatsapp:')) {
-            return $number;
+            $number = substr($number, 9);
         }
 
-        return 'whatsapp:'.$number;
+        $normalized = preg_replace('/[^0-9+]/', '', $number) ?: '';
+
+        if (str_starts_with($normalized, '00')) {
+            $normalized = '+'.substr($normalized, 2);
+        }
+
+        if (! str_starts_with($normalized, '+')) {
+            if (str_starts_with($normalized, '0')) {
+                $countryCode = ltrim((string) config('services.twilio.default_country_code', '+20'), '+');
+                $normalized = '+'.$countryCode.substr($normalized, 1);
+            } else {
+                $normalized = '+'.$normalized;
+            }
+        }
+
+        return 'whatsapp:'.$normalized;
     }
 }

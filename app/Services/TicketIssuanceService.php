@@ -126,7 +126,24 @@ class TicketIssuanceService
         $message .= "\nOrder #: {$order->order_number}";
 
         try {
-            $this->whatsappMessageService->sendText($phone, $message);
+            $result = $this->whatsappMessageService->sendText($phone, $message);
+
+            if ($result['skipped']) {
+                Log::warning('WhatsApp message skipped.', [
+                    'order_id' => $order->id,
+                    'phone' => $phone,
+                    'reason' => $result['reason'],
+                ]);
+
+                return;
+            }
+
+            Log::info('WhatsApp message accepted by Twilio.', [
+                'order_id' => $order->id,
+                'phone' => $result['to'],
+                'sid' => $result['sid'],
+                'status' => $result['status'],
+            ]);
         } catch (Throwable $exception) {
             Log::error('WhatsApp send failed.', [
                 'order_id' => $order->id,
