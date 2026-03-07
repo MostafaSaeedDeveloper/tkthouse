@@ -2,30 +2,16 @@
   'title' => 'Order Canceled — TKT House',
   'heroIcon' => '🚫',
   'heroTitle' => 'Your Order Has Been Canceled',
-  'heroText' => "Your order was canceled successfully.<br>If this happened by mistake, contact support and we’ll help you immediately.",
+  'heroText' => "Your order was canceled because the payment window has expired.<br>If needed, you can place a new order anytime.",
   'footerText' => 'This email was sent regarding a cancellation update for your TKT House order.',
 ])
 
 @section('content')
-  @php
-    $statusLabels = [
-      'pending_approval' => 'Pending Approval',
-      'pending_payment' => 'Pending Payment',
-      'on_hold' => 'On Hold',
-      'paid' => 'Paid',
-      'canceled' => 'Canceled',
-      'rejected' => 'Rejected',
-      'refunded' => 'Refunded',
-      'partially_refunded' => 'Partially Refunded',
-    ];
-
-  @endphp
-
   <p class="ep">Hi <strong>{{ $order->customer->full_name ?: 'there' }}</strong>,</p>
 
   <p class="ep">
     We wanted to inform you that order <strong>#{{ $order->order_number }}</strong>
-    is now marked as <strong style="color:#f87171;">Canceled</strong>.
+    was canceled because the <strong style="color:#f87171;">payment deadline expired</strong>.
   </p>
 
   <div class="einfo">
@@ -37,10 +23,14 @@
       <span class="einfo-label">Current Status</span>
       <span class="einfo-val red">✕ &nbsp;Canceled</span>
     </div>
+    <div class="einfo-row">
+      <span class="einfo-label">Reason</span>
+      <span class="einfo-val">Payment time limit expired</span>
+    </div>
   </div>
 
   <div class="ealert red">
-    If this cancellation is unexpected, please reply to this email and our team will assist you quickly.
+    Cancellation reason: payment window expired before we received the payment confirmation.
   </div>
 
   <p class="ep ep-sm">
