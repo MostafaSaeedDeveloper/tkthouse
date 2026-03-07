@@ -53,6 +53,13 @@
 
 /* Error alert */
 .auth-alert{background:rgba(232,68,90,.08);border:1px solid rgba(232,68,90,.28);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#f0849a;display:flex;align-items:flex-start;gap:8px;}
+
+.auth-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 10px;}
+.auth-remember{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;}
+.auth-remember input{width:16px;height:16px;accent-color:var(--gold);cursor:pointer;}
+.auth-legal{margin-top:14px;font-size:12px;line-height:1.5;color:var(--muted);}
+.auth-legal a{color:var(--gold);text-decoration:none;font-weight:500;}
+.auth-legal a:hover{text-decoration:underline;}
 </style>
 
 <div class="auth-glow"></div>
@@ -107,9 +114,20 @@
                                 @error('password')<div class="auth-error">{{ $message }}</div>@enderror
                             </div>
 
-                            <div style="text-align:right;margin:-4px 0 10px;">
+                            <div class="auth-meta">
+                                <label class="auth-remember">
+                                    <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+                                    <span>Remember Me</span>
+                                </label>
                                 <a href="{{ route('password.request') }}" style="color:var(--gold);font-size:12px;text-decoration:none;">Forgot password?</a>
                             </div>
+
+                            <p class="auth-legal">
+                                By continuing, you agree to our
+                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
+                                and understand how your information is used as described in our
+                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </p>
 
                             <button class="auth-submit" type="submit">
                                 Sign In →

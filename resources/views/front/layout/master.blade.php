@@ -164,6 +164,43 @@
         .auth-submit:hover { background: #ffc820; }
         .auth-submit:active { transform: scale(0.99); }
 
+        .auth-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin: -6px 0 12px;
+        }
+        .auth-remember {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            color: #e8e8ef;
+            cursor: pointer;
+            margin: 0;
+        }
+        .auth-remember input {
+            width: 16px;
+            height: 16px;
+            accent-color: #f5b800;
+            cursor: pointer;
+        }
+        .auth-legal {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #9a9ab2;
+            margin: 0 0 16px;
+        }
+        .auth-legal a {
+            color: #f5b800;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-legal a:hover { text-decoration: underline; }
+
         /* ── Gold accent line at top ── */
         .auth-modal-accent {
             height: 3px;
@@ -205,9 +242,19 @@
                                 <label>Password</label>
                                 <input type="password" name="password" placeholder="••••••••" required>
                             </div>
-                            <div style="text-align:right;margin:-6px 0 12px;">
+                            <div class="auth-meta-row">
+                                <label class="auth-remember">
+                                    <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+                                    <span>Remember Me</span>
+                                </label>
                                 <a href="#" data-auth-switch="forgot" style="color:#f5b800;font-size:12px;text-decoration:none;">Forgot password?</a>
                             </div>
+                            <p class="auth-legal">
+                                By continuing, you agree to our
+                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
+                                and understand how your information is used as described in our
+                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </p>
                             @error('login')
                                 <div style="margin-top:6px;color:#f0849a;font-size:12px;">{{ $message }}</div>
                             @enderror
@@ -269,6 +316,18 @@
                                     @error('password')<div>{{ $message }}</div>@enderror
                                 </div>
                             @endif
+                            <div class="auth-meta-row" style="margin:16px 0 8px;justify-content:flex-start;">
+                                <label class="auth-remember">
+                                    <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+                                    <span>Remember Me</span>
+                                </label>
+                            </div>
+                            <p class="auth-legal">
+                                By creating an account, you agree to our
+                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
+                                and confirm that you have read our
+                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </p>
                             <button class="auth-submit" type="submit" style="margin-top:20px;">Create Account →</button>
                         </form>
                         <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
