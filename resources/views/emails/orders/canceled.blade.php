@@ -19,7 +19,6 @@
       'partially_refunded' => 'Partially Refunded',
     ];
 
-    $fromLabel = $statusLabels[$oldStatus] ?? str($oldStatus)->replace('_', ' ')->title();
   @endphp
 
   <p class="ep">Hi <strong>{{ $order->customer->full_name ?: 'there' }}</strong>,</p>
@@ -33,10 +32,6 @@
     <div class="einfo-row">
       <span class="einfo-label">Order</span>
       <span class="einfo-val gold">#{{ $order->order_number }}</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Previous Status</span>
-      <span class="einfo-val">{{ $fromLabel }}</span>
     </div>
     <div class="einfo-row">
       <span class="einfo-label">Current Status</span>
