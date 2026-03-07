@@ -36,8 +36,11 @@ return [
     ],
 
     'whatsapp' => [
+        'base_url' => env('WATI_BASE_URL'),
+        'token' => env('WATI_TOKEN'),
+        'number' => env('WATI_WHATSAPP_NUMBER'),
         'webhook_url' => env('WHATSAPP_WEBHOOK_URL'),
-        'token' => env('WHATSAPP_WEBHOOK_TOKEN'),
+        'webhook_token' => env('WHATSAPP_WEBHOOK_TOKEN'),
     ],
 
 
