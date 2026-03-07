@@ -28,6 +28,8 @@
 
     <p class="reports-context mb-3">
         Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
+        Sold tickets: <strong>{{ number_format($totalTickets) }}</strong>.
+        Invitations: <strong>{{ number_format($totalInvitations) }}</strong>.
     </p>
 
     <div class="reports-grid">
@@ -46,6 +48,10 @@
                     <div>
                         <small>Gross Revenue</small>
                         <strong>{{ number_format($report['gross_revenue'], 2) }} EGP</strong>
+                    </div>
+                    <div>
+                        <small>Invitations</small>
+                        <strong>{{ number_format($report['invitations_count']) }}</strong>
                     </div>
                     <div>
                         <small>Male Tickets</small>
