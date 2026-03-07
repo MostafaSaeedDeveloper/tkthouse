@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OrderApprovedMail;
+use App\Mail\OrderNoteToCustomerMail;
 use App\Mail\OrderRejectedMail;
 use App\Models\EventTicket;
 use App\Models\Order;
@@ -323,13 +324,25 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'body' => ['required', 'string', 'max:2000'],
+            'send_to_customer' => ['nullable', 'boolean'],
         ]);
+
+        $sendToCustomer = (bool) ($validated['send_to_customer'] ?? false);
 
         activity('order_notes')
             ->performedOn($order)
             ->causedBy($request->user())
-            ->withProperties(['body' => $validated['body']])
+            ->withProperties([
+                'body' => $validated['body'],
+                'send_to_customer' => $sendToCustomer,
+            ])
             ->log('Order note added');
+
+        if ($sendToCustomer && filled($order->customer?->email)) {
+            Mail::to($order->customer->email)->send(new OrderNoteToCustomerMail($order, $validated['body']));
+
+            return back()->with('success', 'Note added and emailed to customer successfully.');
+        }
 
         return back()->with('success', 'Note added successfully.');
     }
