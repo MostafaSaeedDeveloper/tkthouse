@@ -46,6 +46,10 @@
 .auth-alert{background:rgba(232,68,90,.08);border:1px solid rgba(232,68,90,.28);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#f0849a;display:flex;align-items:flex-start;gap:8px;}
 
 .auth-divider{height:1px;background:var(--border);margin:0 0 18px;}
+
+.auth-legal{margin:14px 0 12px;font-size:12px;line-height:1.5;color:var(--muted);}
+.auth-legal a{color:var(--gold);text-decoration:none;font-weight:500;}
+.auth-legal a:hover{text-decoration:underline;}
 </style>
 
 <div class="auth-glow"></div>
@@ -123,7 +127,15 @@
                                 </div>
                             </div>
 
-                            <button class="auth-submit" type="submit" style="margin-top:20px;">
+
+                            <p class="auth-legal">
+                                By creating an account, you agree to our
+                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
+                                and confirm that you have read our
+                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </p>
+
+                            <button class="auth-submit" type="submit">
                                 Create Account →
                             </button>
                         </form>

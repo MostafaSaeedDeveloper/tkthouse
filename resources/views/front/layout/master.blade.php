@@ -164,6 +164,69 @@
         .auth-submit:hover { background: #ffc820; }
         .auth-submit:active { transform: scale(0.99); }
 
+        .auth-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin: -6px 0 12px;
+        }
+        .auth-remember {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            line-height: 1;
+            color: #e8e8ef;
+            cursor: pointer;
+            margin: 0;
+        }
+        .auth-remember span {
+            position: relative;
+            top: 1px;
+        }
+        .auth-remember input {
+            width: 18px;
+            height: 18px;
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1.5px solid rgba(245,184,0,0.55);
+            border-radius: 4px;
+            background: #0b0b11;
+            display: inline-grid;
+            place-content: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+        }
+        .auth-remember input:hover { border-color: #f5b800; }
+        .auth-remember input:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(245,184,0,0.2);
+        }
+        .auth-remember input:checked {
+            background-color: #f5b800;
+            border-color: #f5b800;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath fill='%23060608' d='M4.26 9.18.72 5.64l1.06-1.06 2.48 2.47L10.22 1.1l1.06 1.06-7.02 7.02z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 11px 9px;
+        }
+        .auth-legal {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #9a9ab2;
+            margin: 0 0 16px;
+        }
+        .auth-legal a {
+            color: #f5b800;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-legal a:hover { text-decoration: underline; }
+        .auth-legal--register { margin-top: 14px; }
+
         /* ── Gold accent line at top ── */
         .auth-modal-accent {
             height: 3px;
@@ -205,9 +268,19 @@
                                 <label>Password</label>
                                 <input type="password" name="password" placeholder="••••••••" required>
                             </div>
-                            <div style="text-align:right;margin:-6px 0 12px;">
+                            <div class="auth-meta-row">
+                                <label class="auth-remember">
+                                    <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+                                    <span>Remember Me</span>
+                                </label>
                                 <a href="#" data-auth-switch="forgot" style="color:#f5b800;font-size:12px;text-decoration:none;">Forgot password?</a>
                             </div>
+                            <p class="auth-legal">
+                                By continuing, you agree to our
+                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
+                                and understand how your information is used as described in our
+                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </p>
                             @error('login')
                                 <div style="margin-top:6px;color:#f0849a;font-size:12px;">{{ $message }}</div>
                             @enderror
@@ -269,7 +342,13 @@
                                     @error('password')<div>{{ $message }}</div>@enderror
                                 </div>
                             @endif
-                            <button class="auth-submit" type="submit" style="margin-top:20px;">Create Account →</button>
+                            <p class="auth-legal auth-legal--register">
+                                By creating an account, you agree to our
+                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
+                                and confirm that you have read our
+                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                            </p>
+                            <button class="auth-submit" type="submit">Create Account →</button>
                         </form>
                         <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
                             Already have an account?
