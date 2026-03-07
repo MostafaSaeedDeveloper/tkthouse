@@ -96,11 +96,6 @@ class AdminOrderDecisionEmailsTest extends TestCase
                 && $mail->order->is($order);
         });
 
-        Mail::assertSent(OrderStatusChangedMail::class, function (OrderStatusChangedMail $mail) use ($customer, $order) {
-            return $mail->hasTo($customer->email)
-                && $mail->order->is($order)
-                && $mail->oldStatus === 'pending_approval'
-                && $mail->newStatus === 'rejected';
-        });
+        Mail::assertNotSent(OrderStatusChangedMail::class);
     }
 }

@@ -404,9 +404,6 @@ class OrderController extends Controller
             ])
             ->log('Order rejected');
 
-        Mail::to($order->customer->email)
-            ->send(new OrderRejectedMail($order));
-
         $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
 
         return back()->with('success', 'Order rejected and email sent successfully.');
@@ -416,6 +413,13 @@ class OrderController extends Controller
     private function sendOrderStatusChangedMail(Order $order, string $oldStatus, string $newStatus): void
     {
         if ($oldStatus === $newStatus || blank($order->customer?->email)) {
+            return;
+        }
+
+        if ($newStatus === 'rejected') {
+            Mail::to($order->customer->email)
+                ->send(new OrderRejectedMail($order));
+
             return;
         }
 
