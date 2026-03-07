@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\OrderApprovedMail;
 use App\Mail\OrderRejectedMail;
+use App\Mail\OrderStatusChangedMail;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\User;
@@ -51,6 +52,13 @@ class AdminOrderDecisionEmailsTest extends TestCase
                 && $mail->order->is($order)
                 && str_contains($mail->paymentLink, $order->payment_link_token);
         });
+
+        Mail::assertSent(OrderStatusChangedMail::class, function (OrderStatusChangedMail $mail) use ($customer, $order) {
+            return $mail->hasTo($customer->email)
+                && $mail->order->is($order)
+                && $mail->oldStatus === 'pending_approval'
+                && $mail->newStatus === 'pending_payment';
+        });
     }
 
     public function test_reject_sends_rejection_email_to_customer(): void
@@ -86,6 +94,13 @@ class AdminOrderDecisionEmailsTest extends TestCase
         Mail::assertSent(OrderRejectedMail::class, function (OrderRejectedMail $mail) use ($customer, $order) {
             return $mail->hasTo($customer->email)
                 && $mail->order->is($order);
+        });
+
+        Mail::assertSent(OrderStatusChangedMail::class, function (OrderStatusChangedMail $mail) use ($customer, $order) {
+            return $mail->hasTo($customer->email)
+                && $mail->order->is($order)
+                && $mail->oldStatus === 'pending_approval'
+                && $mail->newStatus === 'rejected';
         });
     }
 }
