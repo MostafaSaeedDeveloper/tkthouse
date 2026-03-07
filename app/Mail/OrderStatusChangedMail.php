@@ -25,7 +25,11 @@ class OrderStatusChangedMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.orders.status-changed', with: [
+        $view = $this->newStatus === 'canceled'
+            ? 'emails.orders.canceled'
+            : 'emails.orders.status-changed';
+
+        return new Content(view: $view, with: [
             'order' => $this->order,
             'oldStatus' => $this->oldStatus,
             'newStatus' => $this->newStatus,

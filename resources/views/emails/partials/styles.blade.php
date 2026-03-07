@@ -19,7 +19,7 @@ a { color: #f5b800; }
 .logo .w { color: #fff;    font-size: 26px; font-weight: 800; letter-spacing: -1px; }
 
 .ehero      { padding: 30px 32px 24px; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: center; }
-.ehero-icon { font-size: 44px; display: block; margin-bottom: 14px; }
+.ehero-icon { font-size: 44px; display: inline-block; line-height: 1; margin: 0 auto; text-align: center !important; }
 .ehero h1   { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.3px; margin-bottom: 8px; line-height: 1.3; }
 .ehero p    { font-size: 14px; color: #8080a0; line-height: 1.65; }
 
