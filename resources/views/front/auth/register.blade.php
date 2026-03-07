@@ -47,7 +47,7 @@
 
 .auth-divider{height:1px;background:var(--border);margin:0 0 18px;}
 
-.auth-legal{margin-top:8px;font-size:12px;line-height:1.5;color:var(--muted);}
+.auth-legal{margin:14px 0 12px;font-size:12px;line-height:1.5;color:var(--muted);}
 .auth-legal a{color:var(--gold);text-decoration:none;font-weight:500;}
 .auth-legal a:hover{text-decoration:underline;}
 </style>
@@ -135,7 +135,7 @@
                                 <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
                             </p>
 
-                            <button class="auth-submit" type="submit" style="margin-top:20px;">
+                            <button class="auth-submit" type="submit">
                                 Create Account →
                             </button>
                         </form>

@@ -225,6 +225,7 @@
             font-weight: 500;
         }
         .auth-legal a:hover { text-decoration: underline; }
+        .auth-legal--register { margin-top: 14px; }
 
         /* ── Gold accent line at top ── */
         .auth-modal-accent {
@@ -341,13 +342,13 @@
                                     @error('password')<div>{{ $message }}</div>@enderror
                                 </div>
                             @endif
-                            <p class="auth-legal">
+                            <p class="auth-legal auth-legal--register">
                                 By creating an account, you agree to our
                                 <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
                                 and confirm that you have read our
                                 <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
                             </p>
-                            <button class="auth-submit" type="submit" style="margin-top:20px;">Create Account →</button>
+                            <button class="auth-submit" type="submit">Create Account →</button>
                         </form>
                         <p style="text-align:center;margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b6b7e;">
                             Already have an account?
