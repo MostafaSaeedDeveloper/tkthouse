@@ -61,6 +61,10 @@
 .od-note-author,.od-hist-action{color:#dddde8;font-size:12px}.od-note-author span,.od-hist-meta{display:block;color:#5e5e72;font-size:11px}
 .od-note-text{color:#dddde8;font-size:12px}
 .od-note-form textarea{width:100%;background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:8px;color:#dddde8;padding:10px;min-height:90px;margin-top:12px}
+.od-note-meta{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.od-note-send-customer{display:inline-flex;align-items:center;gap:8px;color:#b8b8cc;font-size:12px}
+.od-note-send-customer input{accent-color:#f5b800}
+.od-note-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#7df0a8;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;margin-top:6px}
 .od-note-submit{margin-top:10px;background:#f5b800;border:0;border-radius:8px;padding:7px 14px;font-weight:700}
 
 .od-timeline { position: relative; margin-left: 6px; }
@@ -236,6 +240,9 @@
               <div>
                 <div class="od-note-author">{{ $note->causer?->name ?? 'System' }}<span>{{ $note->created_at?->format('d M Y, H:i') }}</span></div>
                 <div class="od-note-text">{{ data_get($note->properties, 'body', $note->description) }}</div>
+                @if(data_get($note->properties, 'send_to_customer'))
+                  <span class="od-note-badge"><i class="fa fa-envelope"></i> Sent to customer</span>
+                @endif
               </div>
             </div>
           @empty
@@ -245,6 +252,12 @@
           <form class="od-note-form" method="POST" action="{{ route('admin.orders.notes.store', $order) }}">
             @csrf
             <textarea name="body" placeholder="Add an internal note about this order…">{{ old('body') }}</textarea>
+            <div class="od-note-meta">
+              <label class="od-note-send-customer">
+                <input type="checkbox" name="send_to_customer" value="1" {{ old('send_to_customer') ? 'checked' : '' }}>
+                Sent to customer by email
+              </label>
+            </div>
             <button type="submit" class="od-note-submit"><i class="fa fa-paper-plane"></i> Add Note</button>
           </form>
         </div>
