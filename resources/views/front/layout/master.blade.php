@@ -182,10 +182,30 @@
             margin: 0;
         }
         .auth-remember input {
-            width: 16px;
-            height: 16px;
-            accent-color: #f5b800;
+            width: 18px;
+            height: 18px;
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1.5px solid rgba(245,184,0,0.55);
+            border-radius: 4px;
+            background: #0b0b11;
+            display: inline-grid;
+            place-content: center;
             cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+        }
+        .auth-remember input:hover { border-color: #f5b800; }
+        .auth-remember input:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(245,184,0,0.2);
+        }
+        .auth-remember input:checked {
+            background-color: #f5b800;
+            border-color: #f5b800;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath fill='%23060608' d='M4.26 9.18.72 5.64l1.06-1.06 2.48 2.47L10.22 1.1l1.06 1.06-7.02 7.02z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 11px 9px;
         }
         .auth-legal {
             font-family: 'DM Sans', sans-serif;
