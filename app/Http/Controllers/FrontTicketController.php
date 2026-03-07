@@ -31,6 +31,10 @@ class FrontTicketController extends Controller
 
     private function authorizeTicket(Request $request, IssuedTicket $ticket): void
     {
+        if ($request->hasValidSignature()) {
+            return;
+        }
+
         $user = $request->user();
         abort_unless($user, 403);
 

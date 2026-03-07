@@ -8,7 +8,6 @@ use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\Ticket;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -100,6 +99,7 @@ class TicketIssuanceService
             fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
             ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
         );
+
         $this->sendWhatsapp($order);
 
         $order->issuedTickets()->whereNull('sent_at')->update(['sent_at' => now()]);
@@ -112,29 +112,17 @@ class TicketIssuanceService
 
     private function sendWhatsapp(Order $order): void
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            Log::info('WhatsApp webhook is not configured; skipped sending tickets.', ['order_id' => $order->id]);
+        $pendingTickets = $order->issuedTickets->whereNull('sent_at')->values();
 
+        if ($pendingTickets->isEmpty()) {
             return;
         }
 
-        $tickets = $order->issuedTickets->map(fn (IssuedTicket $ticket) => [
-            'ticket_number' => $ticket->ticket_number,
-            'show_url' => route('front.tickets.show', $ticket),
-            'pdf_url' => route('front.tickets.download', $ticket),
-        ])->values()->all();
+        $sent = app(TwilioWhatsAppService::class)->sendOrderTickets($order, $pendingTickets);
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'order_number' => $order->order_number,
-                'customer_name' => $order->customer->full_name,
-                'customer_phone' => $order->customer->phone,
-                'customer_email' => $order->customer->email,
-                'tickets' => $tickets,
-            ])
-            ->throw();
+        if (! $sent) {
+            Log::warning('One or more WhatsApp ticket notifications failed.', ['order_id' => $order->id]);
+        }
     }
 
     private function sendMailWithRetry(callable $send, array $context = []): void
