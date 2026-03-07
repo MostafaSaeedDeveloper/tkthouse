@@ -55,7 +55,8 @@
 .auth-alert{background:rgba(232,68,90,.08);border:1px solid rgba(232,68,90,.28);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#f0849a;display:flex;align-items:flex-start;gap:8px;}
 
 .auth-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 10px;}
-.auth-remember{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;}
+.auth-remember{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;line-height:1;}
+.auth-remember span{position:relative;top:1px;}
 .auth-remember input{width:18px;height:18px;appearance:none;-webkit-appearance:none;border:1.5px solid rgba(245,184,0,.55);border-radius:4px;background:#0b0b11;display:inline-grid;place-content:center;cursor:pointer;transition:border-color .2s,background-color .2s,box-shadow .2s;}.auth-remember input:hover{border-color:var(--gold);}.auth-remember input:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(245,184,0,.2);}.auth-remember input:checked{background-color:var(--gold);border-color:var(--gold);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath fill='%23060608' d='M4.26 9.18.72 5.64l1.06-1.06 2.48 2.47L10.22 1.1l1.06 1.06-7.02 7.02z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:11px 9px;}
 .auth-legal{margin-top:14px;font-size:12px;line-height:1.5;color:var(--muted);}
 .auth-legal a{color:var(--gold);text-decoration:none;font-weight:500;}

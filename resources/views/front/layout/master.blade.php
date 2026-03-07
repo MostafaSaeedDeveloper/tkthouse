@@ -177,9 +177,14 @@
             gap: 8px;
             font-family: 'DM Sans', sans-serif;
             font-size: 13px;
+            line-height: 1;
             color: #e8e8ef;
             cursor: pointer;
             margin: 0;
+        }
+        .auth-remember span {
+            position: relative;
+            top: 1px;
         }
         .auth-remember input {
             width: 18px;
@@ -336,12 +341,6 @@
                                     @error('password')<div>{{ $message }}</div>@enderror
                                 </div>
                             @endif
-                            <div class="auth-meta-row" style="margin:16px 0 8px;justify-content:flex-start;">
-                                <label class="auth-remember">
-                                    <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
-                                    <span>Remember Me</span>
-                                </label>
-                            </div>
                             <p class="auth-legal">
                                 By creating an account, you agree to our
                                 <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
