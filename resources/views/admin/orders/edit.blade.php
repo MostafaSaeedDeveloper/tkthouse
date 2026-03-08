@@ -189,7 +189,7 @@
     <div class="oe-head">
       <div>
         <h1 class="oe-head-title">Edit Order <span>#{{ $displayOrderNumber }}</span></h1>
-        <p class="oe-head-sub">Modify order details, ticket holders, and pricing adjustments.</p>
+        <p class="oe-head-sub">Change order status only without editing pricing or ticket details.</p>
       </div>
       <div class="oe-head-actions">
         <a href="{{ route('admin.orders.show', $order) }}" class="oe-btn">
@@ -284,56 +284,6 @@
           </div>
         </div>
 
-        {{-- Pricing Adjustments --}}
-        <div class="oe-card">
-          <div class="oe-card-head">
-            <div class="oe-card-title">Pricing Adjustments</div>
-          </div>
-          <div class="oe-card-body">
-            <div class="oe-row-3">
-              <div class="oe-field">
-                <label class="oe-label">Discount (EGP)</label>
-                <input class="oe-input" type="number" min="0" step="0.01"
-                  name="discount_fixed"
-                  value="{{ old('discount_fixed', $order->discount_fixed ?? 0) }}"
-                  placeholder="0.00" id="discountFixed">
-              </div>
-              <div class="oe-field">
-                <label class="oe-label">Discount (%)</label>
-                <input class="oe-input" type="number" min="0" max="100" step="0.01"
-                  name="discount_percentage"
-                  value="{{ old('discount_percentage', $order->discount_percentage ?? 0) }}"
-                  placeholder="0.00" id="discountPct">
-              </div>
-              <div class="oe-field">
-                <label class="oe-label">Extra Fees (EGP)</label>
-                <input class="oe-input" type="number" min="0" step="0.01"
-                  name="extra_fees"
-                  value="{{ old('extra_fees', $order->extra_fees ?? 0) }}"
-                  placeholder="0.00" id="extraFees">
-              </div>
-            </div>
-
-            <hr class="oe-divider">
-
-            <div class="oe-pricing-row">
-              <span class="oe-pricing-label">Subtotal</span>
-              <span class="oe-pricing-val">{{ number_format($order->total_amount, 2) }} EGP</span>
-            </div>
-            <div class="oe-pricing-row">
-              <span class="oe-pricing-label">Discount Applied</span>
-              <span class="oe-pricing-val" id="previewDiscount">— EGP</span>
-            </div>
-            <div class="oe-pricing-row">
-              <span class="oe-pricing-label">Extra Fees</span>
-              <span class="oe-pricing-val" id="previewFees">— EGP</span>
-            </div>
-            <div class="oe-pricing-row">
-              <span class="oe-pricing-label" style="color:#fff;font-weight:700;">Grand Total</span>
-              <span class="oe-pricing-val highlight" id="previewTotal">{{ number_format($order->total_amount, 2) }} EGP</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {{-- RIGHT: Order Settings --}}
@@ -359,26 +309,15 @@
 
             <div class="oe-field">
               <label class="oe-label">Payment Method</label>
-              <select class="oe-select" name="payment_method">
-                @foreach($paymentMethods as $method)
-                  <option value="{{ $method->code }}" {{ old('payment_method', $order->payment_method) === $method->code ? 'selected' : '' }}>
-                    {{ $method->name }}{{ $method->is_active ? '' : ' (Inactive)' }}
-                  </option>
-                @endforeach
-              </select>
+              <input class="oe-input" type="text" value="{{ strtoupper((string) $order->payment_method) }}" readonly>
+              <div class="text-muted mt-1" style="font-size:12px;">Payment method is locked in status-only edit mode.</div>
             </div>
             <hr class="oe-divider">
 
             <div class="oe-field">
               <label class="oe-label">Promo Code</label>
-              <select class="oe-select" name="promo_code">
-                <option value="">No Promo Code</option>
-                @foreach($promoCodes as $promo)
-                  <option value="{{ $promo->code }}" {{ old('promo_code', $order->promo_code) === $promo->code ? 'selected' : '' }}>
-                    {{ $promo->code }} — {{ $promo->discount_type === 'percent' ? rtrim(rtrim(number_format((float) $promo->discount_value, 2), '0'), '.') . '%' : number_format((float) $promo->discount_value, 2) . ' EGP' }}{{ $promo->is_active ? '' : ' (Inactive)' }}
-                  </option>
-                @endforeach
-              </select>
+              <input class="oe-input" type="text" value="{{ $order->promo_code ?: 'No Promo Code' }}" readonly>
+              <div class="text-muted mt-1" style="font-size:12px;">Promo code is locked in status-only edit mode.</div>
             </div>
             <hr class="oe-divider">
 
@@ -449,31 +388,6 @@
 
 <script>
 (function () {
-  const subtotal = {{ (float) $order->total_amount }};
-
-  const dFixed  = document.getElementById('discountFixed');
-  const dPct    = document.getElementById('discountPct');
-  const fees    = document.getElementById('extraFees');
-  const pDisc   = document.getElementById('previewDiscount');
-  const pFees   = document.getElementById('previewFees');
-  const pTotal  = document.getElementById('previewTotal');
-
-  function fmt(n) { return n.toLocaleString('en-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP'; }
-
-  function recalc() {
-    const discFixed = parseFloat(dFixed.value) || 0;
-    const discPct   = parseFloat(dPct.value)   || 0;
-    const extraFees = parseFloat(fees.value)   || 0;
-    const discFromPct = subtotal * (discPct / 100);
-    const totalDisc = discFixed + discFromPct;
-    const grand = Math.max(0, subtotal - totalDisc + extraFees);
-    pDisc.textContent  = totalDisc > 0 ? '- ' + fmt(totalDisc) : '— EGP';
-    pFees.textContent  = extraFees > 0 ? '+ ' + fmt(extraFees) : '— EGP';
-    pTotal.textContent = fmt(grand);
-  }
-
-  [dFixed, dPct, fees].forEach(el => el.addEventListener('input', recalc));
-  recalc();
   const copyBtn = document.getElementById('copyPaymentLinkBtn');
   if (copyBtn) {
     copyBtn.addEventListener('click', async function () {
@@ -489,8 +403,6 @@
       }, 1300);
     });
   }
-
-
 })();
 </script>
 @endsection

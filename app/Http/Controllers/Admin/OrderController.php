@@ -177,35 +177,28 @@ class OrderController extends Controller
     {
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
-        $paymentMethods = PaymentMethod::query()
-            ->where('code', '!=', 'card')
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->get(['code', 'name', 'checkout_label']);
-
-        $promoCodes = PromoCode::query()->orderByDesc('is_active')->orderBy('code')->get(['id', 'code', 'discount_type', 'discount_value', 'is_active']);
-
-        return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes'));
+        return view('admin.orders.edit', compact('order'));
     }
 
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
-            'payment_method' => ['required', 'string', 'max:100'],
+            'payment_method' => ['nullable', 'string', 'max:100'],
             'requires_approval' => ['nullable', 'boolean'],
             'exclude_from_statistics' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'max:50'],
             'items' => ['array'],
-            'items.*.id' => ['required', 'integer'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.holder_name' => ['required', 'string', 'max:255'],
-            'items.*.holder_email' => ['required', 'email', 'max:255'],
+            'items.*.id' => ['required_with:items', 'integer'],
+            'items.*.quantity' => ['required_with:items', 'integer', 'min:1'],
+            'items.*.holder_name' => ['required_with:items', 'string', 'max:255'],
+            'items.*.holder_email' => ['required_with:items', 'email', 'max:255'],
             'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
         ]);
 
         $oldStatus = $order->status;
         $oldPaymentMethod = $order->payment_method;
+        $newPaymentMethod = $validated['payment_method'] ?? $order->payment_method;
 
         $paidAt = $order->paid_at;
         if ($validated['status'] === 'paid' && $oldStatus !== 'paid') {
@@ -214,7 +207,7 @@ class OrderController extends Controller
 
         $order->update([
             'status' => $validated['status'],
-            'payment_method' => $validated['payment_method'],
+            'payment_method' => $newPaymentMethod,
             'paid_at' => $paidAt,
             'requires_approval' => array_key_exists('requires_approval', $validated)
                 ? (bool) $validated['requires_approval']
@@ -226,70 +219,74 @@ class OrderController extends Controller
                 : (bool) $order->exclude_from_statistics,
         ]);
 
-        $itemsInput = collect($validated['items'] ?? [])->keyBy('id');
+        $shouldUpdatePricing = $request->has('items') || $request->has('promo_code');
 
-        $order->load('items');
+        if ($shouldUpdatePricing) {
+            $itemsInput = collect($validated['items'] ?? [])->keyBy('id');
 
-        $total = (float) $order->items->sum(static fn ($item) => (float) $item->line_total);
+            $order->load('items');
 
-        if ($itemsInput->isNotEmpty()) {
-            $total = 0;
-        }
+            $total = (float) $order->items->sum(static fn ($item) => (float) $item->line_total);
 
-        foreach ($order->items as $item) {
-            $updated = $itemsInput->get($item->id);
-            if (! $updated) {
-                if ($itemsInput->isNotEmpty()) {
-                    $total += (float) $item->line_total;
+            if ($itemsInput->isNotEmpty()) {
+                $total = 0;
+            }
+
+            foreach ($order->items as $item) {
+                $updated = $itemsInput->get($item->id);
+                if (! $updated) {
+                    if ($itemsInput->isNotEmpty()) {
+                        $total += (float) $item->line_total;
+                    }
+
+                    continue;
                 }
 
-                continue;
+                $lineTotal = ((float) $item->ticket_price) * (int) $updated['quantity'];
+                $item->update([
+                    'quantity' => (int) $updated['quantity'],
+                    'line_total' => $lineTotal,
+                    'holder_name' => $updated['holder_name'],
+                    'holder_email' => $updated['holder_email'],
+                    'holder_phone' => $updated['holder_phone'] ?: null,
+                ]);
+
+                $total += $lineTotal;
             }
 
-            $lineTotal = ((float) $item->ticket_price) * (int) $updated['quantity'];
-            $item->update([
-                'quantity' => (int) $updated['quantity'],
-                'line_total' => $lineTotal,
-                'holder_name' => $updated['holder_name'],
-                'holder_email' => $updated['holder_email'],
-                'holder_phone' => $updated['holder_phone'] ?: null,
+            $promoCodeInput = strtoupper(trim((string) ($validated['promo_code'] ?? '')));
+            $selectedPromo = null;
+            $discountAmount = 0.0;
+
+            if ($promoCodeInput !== '') {
+                $selectedPromo = PromoCode::query()->where('code', $promoCodeInput)->first();
+                if (! $selectedPromo) {
+                    return back()->withErrors(['promo_code' => 'Promo code does not exist.'])->withInput();
+                }
+
+                $discountAmount = $selectedPromo->discount_type === 'percent'
+                    ? round(($total * (float) $selectedPromo->discount_value) / 100, 2)
+                    : round((float) $selectedPromo->discount_value, 2);
+
+                $discountAmount = min($discountAmount, $total);
+            }
+
+            if ($order->promo_code_id && (! $selectedPromo || (int) $order->promo_code_id !== (int) $selectedPromo->id)) {
+                PromoCode::query()->whereKey($order->promo_code_id)->where('used_count', '>', 0)->decrement('used_count');
+            }
+
+            if ($selectedPromo && (int) $order->promo_code_id !== (int) $selectedPromo->id) {
+                $selectedPromo->increment('used_count');
+            }
+
+            $order->update([
+                'promo_code_id' => $selectedPromo?->id,
+                'promo_code' => $selectedPromo?->code,
+                'subtotal_amount' => $total,
+                'discount_amount' => $discountAmount,
+                'total_amount' => max(0, $total - $discountAmount),
             ]);
-
-            $total += $lineTotal;
         }
-
-        $promoCodeInput = strtoupper(trim((string) ($validated['promo_code'] ?? '')));
-        $selectedPromo = null;
-        $discountAmount = 0.0;
-
-        if ($promoCodeInput !== '') {
-            $selectedPromo = PromoCode::query()->where('code', $promoCodeInput)->first();
-            if (! $selectedPromo) {
-                return back()->withErrors(['promo_code' => 'Promo code does not exist.'])->withInput();
-            }
-
-            $discountAmount = $selectedPromo->discount_type === 'percent'
-                ? round(($total * (float) $selectedPromo->discount_value) / 100, 2)
-                : round((float) $selectedPromo->discount_value, 2);
-
-            $discountAmount = min($discountAmount, $total);
-        }
-
-        if ($order->promo_code_id && (! $selectedPromo || (int) $order->promo_code_id !== (int) $selectedPromo->id)) {
-            PromoCode::query()->whereKey($order->promo_code_id)->where('used_count', '>', 0)->decrement('used_count');
-        }
-
-        if ($selectedPromo && (int) $order->promo_code_id !== (int) $selectedPromo->id) {
-            $selectedPromo->increment('used_count');
-        }
-
-        $order->update([
-            'promo_code_id' => $selectedPromo?->id,
-            'promo_code' => $selectedPromo?->code,
-            'subtotal_amount' => $total,
-            'discount_amount' => $discountAmount,
-            'total_amount' => max(0, $total - $discountAmount),
-        ]);
 
         activity('orders')
             ->performedOn($order)
