@@ -16,6 +16,39 @@
         </div>
     </div>
 
+    <div class="block block-rounded mb-3">
+        <div class="block-content py-3">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select js-select2">
+                        <option value="">All</option>
+                        @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $status)
+                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Payment Method</label>
+                    <select name="payment_method" class="form-select js-select2">
+                        <option value="">All</option>
+                        @foreach($paymentMethods as $method)
+                            <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-primary" type="submit">Filter</button>
+                    <a class="btn btn-alt-secondary" href="{{ route('admin.orders.deleted') }}">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="block block-rounded">
         <div class="block-header block-header-default">
             <h3 class="block-title">Trash</h3>

@@ -74,14 +74,42 @@ class OrderController extends Controller
     {
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
 
-        $orders = Order::onlyTrashed()
+        $ordersQuery = Order::onlyTrashed()
             ->withCount('items')
-            ->with(['customer'])
+            ->with(['customer']);
+
+        if ($request->filled('status')) {
+            $ordersQuery->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('payment_method')) {
+            $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $ordersQuery->where(function ($query) use ($search) {
+                $query->where('order_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('email', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $ordersQuery
             ->orderByDesc('deleted_at')
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.orders.deleted', compact('orders'));
+        $paymentMethods = PaymentMethod::query()
+            ->where('code', '!=', 'card')
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get(['code', 'name', 'checkout_label']);
+
+        return view('admin.orders.deleted', compact('orders', 'paymentMethods'));
     }
 
     public function show(Request $request, Order $order)
