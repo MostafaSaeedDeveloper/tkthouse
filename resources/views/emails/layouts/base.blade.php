@@ -17,7 +17,13 @@
   @isset($heroTitle)
   <div class="ehero">
     @isset($heroIcon)
-      <div class="ehero-icon" style="text-align:center;font-size:44px;line-height:1;margin:0 auto 14px;display:block;width:100%;">{{ $heroIcon }}</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">
+        <tr>
+          <td align="center" style="text-align:center;">
+            <div class="ehero-icon">{{ $heroIcon }}</div>
+          </td>
+        </tr>
+      </table>
     @endisset
     <h1>{{ $heroTitle }}</h1>
     @isset($heroText)

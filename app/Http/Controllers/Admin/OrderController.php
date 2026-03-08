@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\OrderApprovedMail;
 use App\Mail\OrderNoteToCustomerMail;
 use App\Mail\OrderRejectedMail;
+use App\Mail\OrderStatusChangedMail;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
@@ -283,6 +284,8 @@ class OrderController extends Controller
                     'to_status' => $order->status,
                 ])
                 ->log('Order status changed');
+
+            $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
         }
 
         app(TicketIssuanceService::class)->issueIfPaid($order);
@@ -375,6 +378,8 @@ class OrderController extends Controller
         Mail::to($order->customer->email)
             ->send(new OrderApprovedMail($order, $paymentLink));
 
+        $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
+
         return back()->with('success', 'Order approved and payment email sent successfully.');
     }
 
@@ -399,10 +404,27 @@ class OrderController extends Controller
             ])
             ->log('Order rejected');
 
-        Mail::to($order->customer->email)
-            ->send(new OrderRejectedMail($order));
+        $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
 
         return back()->with('success', 'Order rejected and email sent successfully.');
+    }
+
+
+    private function sendOrderStatusChangedMail(Order $order, string $oldStatus, string $newStatus): void
+    {
+        if ($oldStatus === $newStatus || blank($order->customer?->email)) {
+            return;
+        }
+
+        if ($newStatus === 'rejected') {
+            Mail::to($order->customer->email)
+                ->send(new OrderRejectedMail($order));
+
+            return;
+        }
+
+        Mail::to($order->customer->email)
+            ->send(new OrderStatusChangedMail($order, $oldStatus, $newStatus));
     }
 
 }
