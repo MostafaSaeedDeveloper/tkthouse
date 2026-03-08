@@ -4,18 +4,6 @@
 @php
   $displayOrderNumber = preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number;
 
-  $statusOptions = [
-    'pending_approval' => 'Pending Approval',
-    'pending_payment' => 'Pending Payment',
-    'on_hold' => 'On Hold',
-    'paid' => 'Paid',
-    'refunded' => 'Refunded',
-    'partially_refunded' => 'Partially Refunded',
-    'canceled' => 'Canceled',
-    'rejected' => 'Rejected',
-  ];
-
-
   $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
 @endphp
 
@@ -268,8 +256,18 @@
                     </td>
                     <td style="text-align:center;">
                       <span class="oe-inv-qty">x{{ $item->quantity }}</span>
+                      <input type="hidden" name="items[{{ $item->id }}][id]" value="{{ $item->id }}">
+                      <input type="hidden" name="items[{{ $item->id }}][quantity]" value="{{ $item->quantity }}">
+                      <input type="hidden" name="items[{{ $item->id }}][holder_name]" value="{{ $item->holder_name }}">
+                      <input type="hidden" name="items[{{ $item->id }}][holder_email]" value="{{ $item->holder_email }}">
+                      <input type="hidden" name="items[{{ $item->id }}][holder_phone]" value="{{ $item->holder_phone }}">
                     </td>
                     <td>
+                      <div class="oe-field" style="margin-bottom:8px;">
+                        <input class="oe-input" type="number" min="0" step="0.01"
+                          name="items[{{ $item->id }}][ticket_price]"
+                          value="{{ old('items.' . $item->id . '.ticket_price', number_format((float) $item->ticket_price, 2, '.', '')) }}">
+                      </div>
                       <div class="oe-inv-price">{{ number_format((float)$item->line_total, 2) }} EGP</div>
                       @if($item->quantity > 1)
                         <span class="oe-inv-unit">{{ number_format((float)$item->line_total / $item->quantity, 2) }} EGP / ea</span>

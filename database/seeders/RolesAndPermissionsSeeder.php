@@ -60,6 +60,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.view',
             'orders.create',
             'orders.update',
+            'update_status',
             'orders.delete',
             'orders.deleted.view',
             'orders.restore',
@@ -118,6 +119,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'event-images.delete',
             'orders.view',
             'orders.update',
+            'update_status',
             'attendees.view',
             'attendees.export',
         ]);
@@ -135,6 +137,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'fees.delete',
             'orders.view',
             'orders.update',
+            'update_status',
             'orders.delete',
             'orders.deleted.view',
             'orders.restore',
