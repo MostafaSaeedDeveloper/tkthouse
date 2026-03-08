@@ -8,6 +8,16 @@
   $customerName = $order->customer?->full_name ?: 'N/A';
   $customerInitials = collect(explode(' ', $customerName))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('');
   $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
+  $statusOptions = [
+    'pending_approval' => 'Pending Approval',
+    'pending_payment' => 'Pending Payment',
+    'on_hold' => 'On Hold',
+    'paid' => 'Paid',
+    'refunded' => 'Refunded',
+    'partially_refunded' => 'Partially Refunded',
+    'canceled' => 'Canceled',
+    'rejected' => 'Rejected',
+  ];
 @endphp
 
 <style>
@@ -40,6 +50,8 @@
 .od-btn-approve,.od-btn-back { display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 16px;text-decoration:none;border:0; }
 .od-btn-approve { background:#f5b800;color:#000; }
 .od-btn-back { background:#15151b;color:#5e5e72;border:1px solid rgba(255,255,255,0.07); }
+.od-status-form{display:flex;gap:8px;align-items:center;}
+.od-status-form select{min-width:190px;background:#15151b;color:#dddde8;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:9px 10px;font-size:13px;}
 .od-ticket { background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:12px; }
 .od-ticket-name-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
 .od-ticket-name{color:#fff;font-weight:700;font-size:17px;line-height:1.25;}
@@ -97,6 +109,16 @@
             <button class="od-btn-back" type="submit"><i class="fa fa-times text-danger"></i> Reject</button>
           </form>
         @endif
+        <form method="POST" action="{{ route('admin.orders.status.update', $order) }}" class="od-status-form">
+          @csrf
+          @method('PATCH')
+          <select name="status" aria-label="Order Status">
+            @foreach($statusOptions as $value => $label)
+              <option value="{{ $value }}" {{ (string) $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
+          </select>
+          <button class="od-btn-approve" type="submit"><i class="fa fa-refresh"></i> Update Status</button>
+        </form>
         <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
       @endcan
       <a href="{{ route('admin.orders.index') }}" class="od-btn-back"><i class="fa fa-arrow-left"></i> Back</a>

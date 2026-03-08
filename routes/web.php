@@ -110,6 +110,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
     Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->middleware('permission:orders.update')->name('orders.edit');
     Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.update')->name('orders.update');
+    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('permission:orders.update')->name('orders.status.update');
     Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->middleware('permission:orders.update')->name('orders.notes.store');
     Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->middleware('permission:orders.update')->name('orders.approve');
     Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.update')->name('orders.reject');

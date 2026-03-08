@@ -188,6 +188,46 @@ class OrderController extends Controller
         return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes'));
     }
 
+
+    public function updateStatus(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
+        ]);
+
+        $oldStatus = (string) $order->status;
+        $newStatus = (string) $validated['status'];
+
+        $paidAt = $order->paid_at;
+        if ($newStatus === 'paid' && $oldStatus !== 'paid') {
+            $paidAt = now();
+        }
+
+        $order->update([
+            'status' => $newStatus,
+            'paid_at' => $paidAt,
+            'approved_at' => $newStatus === 'pending_payment' ? ($order->approved_at ?? now()) : null,
+            'payment_link_token' => $newStatus === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
+        ]);
+
+        if ($oldStatus !== (string) $order->status) {
+            activity('orders')
+                ->performedOn($order)
+                ->causedBy($request->user())
+                ->withProperties([
+                    'from_status' => $oldStatus,
+                    'to_status' => $order->status,
+                ])
+                ->log('Order status changed');
+
+            $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
+        }
+
+        app(TicketIssuanceService::class)->issueIfPaid($order);
+
+        return back()->with('success', 'Order status updated successfully.');
+    }
+
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
