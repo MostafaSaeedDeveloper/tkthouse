@@ -198,8 +198,10 @@ class OrderController extends Controller
         $promoCodes = PromoCode::query()->orderByDesc('is_active')->orderBy('code')->get(['id', 'code', 'discount_type', 'discount_value', 'is_active']);
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;
+        $baseTotal = max(0, (float) $order->subtotal_amount - (float) $order->discount_amount);
+        $existingExtraFees = max(0, (float) $order->total_amount - $baseTotal);
 
-        return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes', 'statusOptions'));
+        return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes', 'statusOptions', 'existingExtraFees'));
     }
 
     public function update(Request $request, Order $order)
@@ -210,6 +212,7 @@ class OrderController extends Controller
             'requires_approval' => ['nullable', 'boolean'],
             'exclude_from_statistics' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'max:50'],
+            'extra_fees' => ['nullable', 'numeric', 'min:0'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
@@ -303,12 +306,14 @@ class OrderController extends Controller
             $selectedPromo->increment('used_count');
         }
 
+        $extraFees = (float) ($validated['extra_fees'] ?? 0);
+
         $order->update([
             'promo_code_id' => $selectedPromo?->id,
             'promo_code' => $selectedPromo?->code,
             'subtotal_amount' => $total,
             'discount_amount' => $discountAmount,
-            'total_amount' => max(0, $total - $discountAmount),
+            'total_amount' => max(0, ($total - $discountAmount) + $extraFees),
         ]);
 
         activity('orders')

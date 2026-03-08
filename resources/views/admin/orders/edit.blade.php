@@ -307,7 +307,7 @@
                 <label class="oe-label">Extra Fees (EGP)</label>
                 <input class="oe-input" type="number" min="0" step="0.01"
                   name="extra_fees"
-                  value="{{ old('extra_fees', $order->extra_fees ?? 0) }}"
+                  value="{{ old('extra_fees', number_format((float) $existingExtraFees, 2, '.', '')) }}"
                   placeholder="0.00" id="extraFees">
               </div>
             </div>
@@ -316,7 +316,7 @@
 
             <div class="oe-pricing-row">
               <span class="oe-pricing-label">Subtotal</span>
-              <span class="oe-pricing-val">{{ number_format($order->total_amount, 2) }} EGP</span>
+              <span class="oe-pricing-val">{{ number_format(max(0, (float) $order->subtotal_amount - (float) $order->discount_amount), 2) }} EGP</span>
             </div>
             <div class="oe-pricing-row">
               <span class="oe-pricing-label">Discount Applied</span>
@@ -447,7 +447,7 @@
 
 <script>
 (function () {
-  const subtotal = {{ (float) $order->total_amount }};
+  const subtotal = {{ (float) max(0, (float) $order->subtotal_amount - (float) $order->discount_amount) }};
 
   const dFixed  = document.getElementById('discountFixed');
   const dPct    = document.getElementById('discountPct');
