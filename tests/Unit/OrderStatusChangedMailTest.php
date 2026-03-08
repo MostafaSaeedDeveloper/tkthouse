@@ -36,6 +36,7 @@ class OrderStatusChangedMailTest extends TestCase
         $mail = new OrderStatusChangedMail($order, 'pending_payment', 'canceled');
 
         $this->assertSame('emails.orders.canceled', $mail->content()->view);
+        $this->assertSame('Payment Time Expired #700100', $mail->envelope()->subject);
     }
 
     public function test_uses_default_status_changed_template_for_non_canceled_statuses(): void
@@ -61,5 +62,6 @@ class OrderStatusChangedMailTest extends TestCase
         $mail = new OrderStatusChangedMail($order, 'pending_payment', 'on_hold');
 
         $this->assertSame('emails.orders.status-changed', $mail->content()->view);
+        $this->assertSame('Order status updated #700101', $mail->envelope()->subject);
     }
 }

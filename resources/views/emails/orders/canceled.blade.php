@@ -10,9 +10,8 @@
   <p class="ep">Hi <strong>{{ $order->customer->full_name ?: 'there' }}</strong>,</p>
 
   <p class="ep">
-    Your order <strong>#{{ $order->order_number }}</strong> was approved for payment,
-    but the payment was not completed before the allowed deadline, so the order has been
-    <strong style="color:#f87171;">canceled</strong>.
+    Your order was successfully approved for payment, however the payment was not completed within the allowed time window.
+    As a result, the order has been automatically canceled.
   </p>
 
   <div class="einfo">

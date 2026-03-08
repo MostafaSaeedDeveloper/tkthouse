@@ -20,7 +20,11 @@ class OrderStatusChangedMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Order status updated #'.$this->order->order_number);
+        $subject = $this->newStatus === 'canceled'
+            ? 'Payment Time Expired #'.$this->order->order_number
+            : 'Order status updated #'.$this->order->order_number;
+
+        return new Envelope(subject: $subject);
     }
 
     public function content(): Content
