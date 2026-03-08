@@ -1,8 +1,8 @@
 @extends('emails.layouts.base', [
-  'title' => 'Payment Window Expired — TKT House',
+  'title' => 'Payment Time Expired — TKT House',
   'heroIcon' => '⌛',
   'heroTitle' => 'Payment Time Expired',
-  'heroText' => "Your order had been approved, but payment was not completed within the allowed time window.",
+  'heroText' => "Your order had been approved, but payment was not completed within the allowed time.",
   'footerText' => 'This email was sent regarding your approved booking request on TKT House.',
 ])
 
@@ -10,7 +10,7 @@
   <p class="ep">Hi <strong>{{ $order->customer->full_name ?: 'there' }}</strong>,</p>
 
   <p class="ep">
-    Your order was successfully approved for payment, however the payment was not completed within the allowed time window.
+    Your order was successfully approved for payment, however the payment was not completed within the allowed time.
     As a result, the order has been automatically canceled.
   </p>
 
