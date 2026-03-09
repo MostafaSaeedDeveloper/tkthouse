@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Services\FawaterakService;
 use App\Services\PaymobService;
 use App\Services\TicketIssuanceService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -211,6 +212,7 @@ class CheckoutController extends Controller
                 'paid_at' => now(),
             ]);
             app(TicketIssuanceService::class)->issueIfPaid($order);
+            app(WhatsAppService::class)->sendPaymentConfirmed($order);
 
             $this->logPaymentEvent($order, null, 'Payment completed successfully', [
                 'provider' => 'paymob',
@@ -269,6 +271,7 @@ class CheckoutController extends Controller
         ]);
 
         app(TicketIssuanceService::class)->issueIfPaid($order);
+        app(WhatsAppService::class)->sendPaymentConfirmed($order);
 
         activity('orders')
             ->performedOn($order)
@@ -306,6 +309,7 @@ class CheckoutController extends Controller
                 'paid_at' => now(),
             ]);
             app(TicketIssuanceService::class)->issueIfPaid($order);
+            app(WhatsAppService::class)->sendPaymentConfirmed($order);
 
             $this->logPaymentEvent($order, null, 'Payment completed successfully', [
                 'provider' => 'fawaterak',
