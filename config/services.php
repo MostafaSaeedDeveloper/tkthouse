@@ -42,6 +42,13 @@ return [
 
 
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+    ],
+
+
     'fawaterak' => [
         'api_url' => env('FAWATERAK_API_URL', 'https://app.fawaterk.com/api/v2'),
         'api_key' => env('FAWATERAK_API_KEY'),
