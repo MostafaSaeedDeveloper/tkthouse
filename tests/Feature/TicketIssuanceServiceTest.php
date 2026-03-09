@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\User;
 use App\Services\TicketIssuanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -20,6 +21,11 @@ class TicketIssuanceServiceTest extends TestCase
     public function test_it_generates_tickets_and_sends_email_for_paid_order(): void
     {
         Mail::fake();
+        Http::fake();
+
+        config()->set('services.twilio.account_sid', 'AC_TEST');
+        config()->set('services.twilio.auth_token', 'token_test');
+        config()->set('services.twilio.whatsapp_from', 'whatsapp:+14155238886');
 
         $user = User::factory()->create();
         $customer = Customer::create([
@@ -61,11 +67,18 @@ class TicketIssuanceServiceTest extends TestCase
 
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/Messages.json')
+            && $request['To'] === 'whatsapp:+201000000000');
     }
 
     public function test_it_generates_tickets_only_when_status_is_paid(): void
     {
         Mail::fake();
+        Http::fake();
+
+        config()->set('services.twilio.account_sid', 'AC_TEST');
+        config()->set('services.twilio.auth_token', 'token_test');
+        config()->set('services.twilio.whatsapp_from', 'whatsapp:+14155238886');
 
         $user = User::factory()->create();
         $customer = Customer::create([
@@ -107,5 +120,7 @@ class TicketIssuanceServiceTest extends TestCase
 
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/Messages.json')
+            && $request['To'] === 'whatsapp:+201000000001');
     }
 }
