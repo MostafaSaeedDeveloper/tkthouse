@@ -8,7 +8,6 @@ use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\Ticket;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -100,7 +99,7 @@ class TicketIssuanceService
             fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
             ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
         );
-        $this->sendWhatsapp($order);
+        $this->sendWhatsapp($order, app(WhatsappSenderService::class));
 
         $order->issuedTickets()->whereNull('sent_at')->update(['sent_at' => now()]);
     }
@@ -110,31 +109,42 @@ class TicketIssuanceService
         return sprintf('%06d%03d%02d', $orderId, $itemId, $seatIndex);
     }
 
-    private function sendWhatsapp(Order $order): void
+    private function sendWhatsapp(Order $order, WhatsappSenderService $whatsappSender): void
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            Log::info('WhatsApp webhook is not configured; skipped sending tickets.', ['order_id' => $order->id]);
+        if (! $whatsappSender->isEnabled()) {
+            Log::info('WhatsApp (WaSenderAPI) is not configured; skipped sending tickets.', ['order_id' => $order->id]);
 
             return;
         }
 
-        $tickets = $order->issuedTickets->map(fn (IssuedTicket $ticket) => [
-            'ticket_number' => $ticket->ticket_number,
-            'show_url' => route('front.tickets.show', $ticket),
-            'pdf_url' => route('front.tickets.download', $ticket),
-        ])->values()->all();
+        $phoneGroups = $order->issuedTickets
+            ->whereNull('sent_at')
+            ->filter(fn (IssuedTicket $ticket) => filled($ticket->holder_phone))
+            ->groupBy(fn (IssuedTicket $ticket) => trim((string) $ticket->holder_phone));
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'order_number' => $order->order_number,
-                'customer_name' => $order->customer->full_name,
-                'customer_phone' => $order->customer->phone,
-                'customer_email' => $order->customer->email,
-                'tickets' => $tickets,
-            ])
-            ->throw();
+        foreach ($phoneGroups as $phone => $tickets) {
+            $lines = [
+                '✅ Payment confirmed for order #'.$order->order_number,
+                '🎟️ Your tickets:',
+            ];
+
+            foreach ($tickets->values() as $ticket) {
+                $lines[] = '- #'.$ticket->ticket_number;
+                $lines[] = '  '.route('front.tickets.show', $ticket);
+            }
+
+            $message = implode("\n", $lines);
+
+            try {
+                $whatsappSender->sendMessage((string) $phone, $message);
+            } catch (Throwable $exception) {
+                Log::error('WhatsApp send failed.', [
+                    'order_id' => $order->id,
+                    'recipient' => $phone,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function sendMailWithRetry(callable $send, array $context = []): void
