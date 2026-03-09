@@ -28,6 +28,7 @@ class AddMissingAdminPermissionsSeeder extends Seeder
             'orders.deleted.view',
             'orders.delete',
             'orders.restore',
+            'update_status',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -40,6 +41,7 @@ class AddMissingAdminPermissionsSeeder extends Seeder
                 'orders.deleted.view',
                 'orders.delete',
                 'orders.restore',
+                'update_status',
                 'promo-codes.view',
             ],
             'support' => [

@@ -77,6 +77,16 @@
 .od-tl-time { color: #5e5e72; font-size: 12px; margin-top: 2px; }
 .od-hist-status { display:inline-flex; align-items:center; gap:6px; margin-top:4px; font-size:11px; color:#9ba0bd; }
 .od-hist-status strong { color:#f5b800; font-weight:700; }
+
+.od-status-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1050;padding:16px;}
+.od-status-modal-backdrop.show{display:flex;}
+.od-status-modal{width:100%;max-width:440px;background:#0d0d10;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;}
+.od-status-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.od-status-modal-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;}
+.od-status-modal-close{background:transparent;border:0;color:#a2a2b3;font-size:18px;line-height:1;}
+.od-status-modal-body{padding:16px;}
+.od-status-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
+
 </style>
 
 <div class="content od-wrap">
@@ -98,6 +108,9 @@
           </form>
         @endif
         <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
+      @endcan
+      @can('update_status')
+        <button type="button" class="od-btn-back" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
       @endcan
       <a href="{{ route('admin.orders.index') }}" class="od-btn-back"><i class="fa fa-arrow-left"></i> Back</a>
     </div>
@@ -324,22 +337,81 @@
   </div>
 </div>
 
+  @can('update_status')
+    <div class="od-status-modal-backdrop" id="statusModal" aria-hidden="true">
+      <div class="od-status-modal" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
+        <div class="od-status-modal-head">
+          <div class="od-status-modal-title" id="statusModalTitle">Update Order Status</div>
+          <button type="button" class="od-status-modal-close" id="closeStatusModalBtn" aria-label="Close">&times;</button>
+        </div>
+        <form method="POST" action="{{ route('admin.orders.status.update', $order) }}">
+          @csrf
+          <div class="od-status-modal-body">
+            <label class="od-info-label" for="statusModalSelect" style="display:block;margin-bottom:8px;">Status</label>
+            <select id="statusModalSelect" class="form-control" name="status">
+              @foreach($statusOptions as $value => $label)
+                <option value="{{ $value }}" {{ $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
+              @endforeach
+            </select>
+            <div class="od-status-modal-actions">
+              <button type="button" class="od-btn-back" id="cancelStatusModalBtn">Cancel</button>
+              <button type="submit" class="od-btn-approve">Save Status</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  @endcan
+
 <script>
 (function () {
   const copyBtn = document.getElementById('copyPaymentLinkBtn');
-  if (!copyBtn) return;
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async function () {
+      const originalText = this.textContent;
+      try {
+        await navigator.clipboard.writeText(this.dataset.paymentLink || '');
+        this.textContent = 'Copied ✓';
+      } catch (error) {
+        this.textContent = 'Copy failed';
+      }
+      setTimeout(() => {
+        this.textContent = originalText;
+      }, 1300);
+    });
+  }
 
-  copyBtn.addEventListener('click', async function () {
-    const originalText = this.textContent;
-    try {
-      await navigator.clipboard.writeText(this.dataset.paymentLink || '');
-      this.textContent = 'Copied ✓';
-    } catch (error) {
-      this.textContent = 'Copy failed';
+  const statusModal = document.getElementById('statusModal');
+  const openStatusModalBtn = document.getElementById('openStatusModalBtn');
+  const closeStatusModalBtn = document.getElementById('closeStatusModalBtn');
+  const cancelStatusModalBtn = document.getElementById('cancelStatusModalBtn');
+
+  if (!statusModal || !openStatusModalBtn) {
+    return;
+  }
+
+  const closeModal = () => {
+    statusModal.classList.remove('show');
+    statusModal.setAttribute('aria-hidden', 'true');
+  };
+
+  openStatusModalBtn.addEventListener('click', () => {
+    statusModal.classList.add('show');
+    statusModal.setAttribute('aria-hidden', 'false');
+  });
+
+  [closeStatusModalBtn, cancelStatusModalBtn].forEach((btn) => {
+    if (!btn) {
+      return;
     }
-    setTimeout(() => {
-      this.textContent = originalText;
-    }, 1300);
+
+    btn.addEventListener('click', closeModal);
+  });
+
+  statusModal.addEventListener('click', (event) => {
+    if (event.target === statusModal) {
+      closeModal();
+    }
   });
 })();
 </script>

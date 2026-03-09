@@ -25,6 +25,16 @@ class OrderController extends Controller
         'Order soft deleted',
         'Order restored from trash',
     ];
+    private const ORDER_STATUS_OPTIONS = [
+        'pending_approval' => 'Pending Approval',
+        'pending_payment' => 'Pending Payment',
+        'on_hold' => 'On Hold',
+        'paid' => 'Paid',
+        'refunded' => 'Refunded',
+        'partially_refunded' => 'Partially Refunded',
+        'canceled' => 'Canceled',
+        'rejected' => 'Rejected',
+    ];
 
     public function index(Request $request)
     {
@@ -170,7 +180,9 @@ class OrderController extends Controller
             ],
         ]);
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel'));
+        $statusOptions = self::ORDER_STATUS_OPTIONS;
+
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions'));
     }
 
     public function edit(Request $request, Order $order)
@@ -185,7 +197,11 @@ class OrderController extends Controller
 
         $promoCodes = PromoCode::query()->orderByDesc('is_active')->orderBy('code')->get(['id', 'code', 'discount_type', 'discount_value', 'is_active']);
 
-        return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes'));
+        $statusOptions = self::ORDER_STATUS_OPTIONS;
+        $baseTotal = max(0, (float) $order->subtotal_amount - (float) $order->discount_amount);
+        $existingExtraFees = max(0, (float) $order->total_amount - $baseTotal);
+
+        return view('admin.orders.edit', compact('order', 'paymentMethods', 'promoCodes', 'statusOptions', 'existingExtraFees'));
     }
 
     public function update(Request $request, Order $order)
@@ -196,9 +212,11 @@ class OrderController extends Controller
             'requires_approval' => ['nullable', 'boolean'],
             'exclude_from_statistics' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'max:50'],
+            'extra_fees' => ['nullable', 'numeric', 'min:0'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.ticket_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.holder_name' => ['required', 'string', 'max:255'],
             'items.*.holder_email' => ['required', 'email', 'max:255'],
             'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
@@ -246,8 +264,13 @@ class OrderController extends Controller
                 continue;
             }
 
-            $lineTotal = ((float) $item->ticket_price) * (int) $updated['quantity'];
+            $ticketPrice = array_key_exists('ticket_price', $updated)
+                ? (float) $updated['ticket_price']
+                : (float) $item->ticket_price;
+
+            $lineTotal = $ticketPrice * (int) $updated['quantity'];
             $item->update([
+                'ticket_price' => $ticketPrice,
                 'quantity' => (int) $updated['quantity'],
                 'line_total' => $lineTotal,
                 'holder_name' => $updated['holder_name'],
@@ -283,12 +306,14 @@ class OrderController extends Controller
             $selectedPromo->increment('used_count');
         }
 
+        $extraFees = (float) ($validated['extra_fees'] ?? 0);
+
         $order->update([
             'promo_code_id' => $selectedPromo?->id,
             'promo_code' => $selectedPromo?->code,
             'subtotal_amount' => $total,
             'discount_amount' => $discountAmount,
-            'total_amount' => max(0, $total - $discountAmount),
+            'total_amount' => max(0, ($total - $discountAmount) + $extraFees),
         ]);
 
         activity('orders')
@@ -435,6 +460,46 @@ class OrderController extends Controller
         $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
 
         return back()->with('success', 'Order rejected and email sent successfully.');
+    }
+
+    public function updateStatus(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
+        ]);
+
+        $oldStatus = (string) $order->status;
+        $newStatus = (string) $validated['status'];
+
+        if ($oldStatus === $newStatus) {
+            return back()->with('success', 'Order status is already set to the selected value.');
+        }
+
+        $paidAt = $order->paid_at;
+        if ($newStatus === 'paid' && $oldStatus !== 'paid') {
+            $paidAt = now();
+        }
+
+        $order->update([
+            'status' => $newStatus,
+            'paid_at' => $paidAt,
+            'approved_at' => $newStatus === 'pending_payment' ? ($order->approved_at ?? now()) : null,
+            'payment_link_token' => $newStatus === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
+        ]);
+
+        activity('orders')
+            ->performedOn($order)
+            ->causedBy($request->user())
+            ->withProperties([
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+            ])
+            ->log('Order status changed');
+
+        $this->sendOrderStatusChangedMail($order, $oldStatus, $newStatus);
+        app(TicketIssuanceService::class)->issueIfPaid($order);
+
+        return back()->with('success', 'Order status updated successfully.');
     }
 
 

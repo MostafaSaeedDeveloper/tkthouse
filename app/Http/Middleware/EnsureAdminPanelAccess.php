@@ -52,6 +52,7 @@ class EnsureAdminPanelAccess
         'orders.view',
         'orders.create',
         'orders.update',
+        'update_status',
         'orders.delete',
         'orders.deleted.view',
         'orders.restore',
