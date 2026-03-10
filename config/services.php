@@ -41,6 +41,11 @@ return [
     ],
 
 
+    'ultramsg' => [
+        'base_url' => env('ULTRAMSG_BASE_URL', 'https://api.ultramsg.com'),
+        'instance_id' => env('ULTRAMSG_INSTANCE_ID'),
+        'token' => env('ULTRAMSG_TOKEN'),
+    ],
 
     'fawaterak' => [
         'api_url' => env('FAWATERAK_API_URL', 'https://app.fawaterk.com/api/v2'),

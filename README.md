@@ -86,3 +86,39 @@ If you see an error like `Invalid Token or inactive vendor`, verify these in Faw
 - Ensure vendor account is active/live (not disabled).
 - For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
 - Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
+
+
+## UltraMsg WhatsApp Integration
+
+This project now sends WhatsApp messages through UltraMsg in two flows:
+
+- After a successful payment, the buyer receives a WhatsApp message with ticket numbers and download links.
+- From Admin Ticket page, **Send WhatsApp** sends one message for the selected ticket including ticket number and PDF download link.
+
+### Environment variables
+
+Add these keys in your `.env`:
+
+```env
+ULTRAMSG_BASE_URL=https://api.ultramsg.com
+ULTRAMSG_INSTANCE_ID=instance12345
+ULTRAMSG_TOKEN=your_ultramsg_token
+```
+
+### UltraMsg API endpoint used
+
+The app calls:
+
+- `POST {ULTRAMSG_BASE_URL}/{ULTRAMSG_INSTANCE_ID}/messages/chat`
+
+Form payload:
+
+- `token`: UltraMsg token
+- `to`: recipient WhatsApp number in international format (for example: `+201001234567`)
+- `body`: message text
+
+### Notes
+
+- Phone numbers are normalized automatically to international format.
+- If phone is missing/invalid, sending is skipped and logged.
+- Keep `ULTRAMSG_TOKEN` secret and do not expose it in frontend code.
