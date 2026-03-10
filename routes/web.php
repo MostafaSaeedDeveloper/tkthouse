@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\GuestListController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController;
@@ -95,6 +96,13 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
         ->middlewareFor('destroy', 'permission:events.delete');
 
     Route::resource('tickets', TicketController::class)
+        ->middlewareFor(['index', 'show'], 'permission:tickets.view')
+        ->middlewareFor(['create', 'store'], 'permission:tickets.create')
+        ->middlewareFor(['edit', 'update'], 'permission:tickets.update')
+        ->middlewareFor('destroy', 'permission:tickets.delete');
+
+    Route::resource('guest-list', GuestListController::class)
+        ->parameters(['guest-list' => 'guest_list'])
         ->middlewareFor(['index', 'show'], 'permission:tickets.view')
         ->middlewareFor(['create', 'store'], 'permission:tickets.create')
         ->middlewareFor(['edit', 'update'], 'permission:tickets.update')

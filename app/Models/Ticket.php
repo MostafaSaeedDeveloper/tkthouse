@@ -10,8 +10,10 @@ class Ticket extends Model
     use HasFactory;
 
     protected $fillable = [
+        'event_id',
         'order_id',
         'order_item_id',
+        'source',
         'name',
         'price',
         'description',
@@ -35,6 +37,16 @@ class Ticket extends Model
         ];
     }
 
+    public function scopeStandard($query)
+    {
+        return $query->where('source', 'standard');
+    }
+
+    public function scopeInvitation($query)
+    {
+        return $query->where('source', 'invitation');
+    }
+
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
@@ -48,6 +60,11 @@ class Ticket extends Model
     public function orderItem()
     {
         return $this->belongsTo(OrderItem::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function eventLabel(): string

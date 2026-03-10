@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
+use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -46,8 +47,13 @@ class ReportController extends Controller
             ]);
 
         $normalizedItems = $this->normalizeItems($items);
+        $invitationCounts = $this->invitationCounts($startAt, $endAt);
         $eventOptions = $normalizedItems
             ->pluck('event_name')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->merge($invitationCounts->keys())
             ->filter()
             ->unique()
             ->sort()
@@ -62,11 +68,12 @@ class ReportController extends Controller
             ? $normalizedItems
             : $normalizedItems->where('event_name', $selectedEvent)->values();
 
-        $eventReports = $this->buildEventReports($filteredItems);
+        $eventReports = $this->buildEventReports($filteredItems, $invitationCounts, $selectedEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
             'totalTickets' => $eventReports->sum('tickets_sold'),
+            'totalInvitations' => $eventReports->sum('invitations_count'),
             'totalRevenue' => $eventReports->sum('gross_revenue'),
             'totalOrders' => $filteredItems->pluck('order_id')->filter()->unique()->count(),
             'rangeOptions' => [
@@ -155,9 +162,9 @@ class ReportController extends Controller
             ->values();
     }
 
-    private function buildEventReports(Collection $items): Collection
+    private function buildEventReports(Collection $items, Collection $invitationCounts, string $selectedEvent): Collection
     {
-        return $items
+        $reports = $items
             ->groupBy('event_name')
             ->map(function (Collection $eventItems, string $eventName) {
                 $ticketsSold = $eventItems->sum('quantity');
@@ -171,6 +178,7 @@ class ReportController extends Controller
                 return [
                     'event_name' => $eventName,
                     'tickets_sold' => $ticketsSold,
+                    'invitations_count' => 0,
                     'male_tickets' => $maleTickets,
                     'female_tickets' => $femaleTickets,
                     'gross_revenue' => round((float) $eventItems->sum('gross_contribution'), 2),
@@ -184,8 +192,54 @@ class ReportController extends Controller
                         ->values(),
                 ];
             })
-            ->sortByDesc('tickets_sold')
+            ->values()
+            ->keyBy('event_name');
+
+        foreach ($invitationCounts as $eventName => $count) {
+            if (! $reports->has($eventName)) {
+                $reports->put($eventName, [
+                    'event_name' => $eventName,
+                    'tickets_sold' => 0,
+                    'invitations_count' => 0,
+                    'male_tickets' => 0,
+                    'female_tickets' => 0,
+                    'gross_revenue' => 0,
+                    'ticket_types' => collect(),
+                ]);
+            }
+
+            $report = $reports->get($eventName);
+            $report['invitations_count'] = (int) $count;
+            $reports->put($eventName, $report);
+        }
+
+        if ($selectedEvent !== '' && $reports->has($selectedEvent) === false) {
+            return collect();
+        }
+
+        return $reports
+            ->values()
+            ->sortByDesc(fn (array $report) => $report['tickets_sold'] + $report['invitations_count'])
             ->values();
+    }
+
+    private function invitationCounts(?Carbon $startAt, ?Carbon $endAt): Collection
+    {
+        $query = Ticket::query()
+            ->invitation()
+            ->with('event:id,name');
+
+        if ($startAt && $endAt) {
+            $query->whereBetween('created_at', [$startAt, $endAt]);
+        }
+
+        return $query->get(['id', 'name', 'event_id'])
+            ->map(function (Ticket $ticket) {
+                return $ticket->event?->name
+                    ?: (str_contains((string) $ticket->name, ' - ') ? trim((string) strstr((string) $ticket->name, ' - ', true)) : (string) $ticket->name);
+            })
+            ->filter()
+            ->countBy();
     }
 
     private function extractEventAndTicketType(string $ticketName): array
