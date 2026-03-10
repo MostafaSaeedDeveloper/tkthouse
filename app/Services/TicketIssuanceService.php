@@ -96,10 +96,12 @@ class TicketIssuanceService
             );
         }
 
-        $this->sendMailWithRetry(
-            fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
-            ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
-        );
+        if (filled($order->customer?->email)) {
+            $this->sendMailWithRetry(
+                fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
+                ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
+            );
+        }
         $this->sendOrderWhatsapp($order);
 
         $order->issuedTickets()->whereNull('sent_at')->update(['sent_at' => now()]);

@@ -202,8 +202,12 @@
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button class="tk-btn tk-btn-gold" type="submit"><i class="fa fa-envelope"></i> Send Email</button>
-              <a href="{{ route('admin.tickets.send-whatsapp', $ticket) }}" class="tk-btn tk-btn-green"><i class="fa fa-brands fa-whatsapp"></i> Send WhatsApp</a>
             </div>
+          </form>
+
+          <form method="POST" action="{{ route('admin.tickets.send-whatsapp', $ticket) }}" style="margin-top:10px;">
+            @csrf
+            <button class="tk-btn tk-btn-green" type="submit"><i class="fa fa-brands fa-whatsapp"></i> Send WhatsApp</button>
           </form>
         </div>
       </div>

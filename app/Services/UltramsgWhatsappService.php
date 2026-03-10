@@ -112,6 +112,11 @@ $this->publicDownloadLink((string) $ticket->ticket_number)
             return null;
         }
 
+        $digitsOnly = preg_replace('/[^\d]/', '', $normalized);
+        if (preg_match('/^01\d{9}$/', $digitsOnly)) {
+            $normalized = '+20'.$digitsOnly;
+        }
+
         if (str_starts_with($normalized, '00')) {
             $normalized = '+'.substr($normalized, 2);
         }
