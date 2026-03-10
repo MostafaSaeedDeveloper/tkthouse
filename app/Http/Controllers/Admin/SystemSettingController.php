@@ -25,11 +25,14 @@ class SystemSettingController extends Controller
             'logo_light' => ['nullable', 'image', 'max:2048'],
             'logo_dark' => ['nullable', 'image', 'max:2048'],
             'logo_footer' => ['nullable', 'image', 'max:2048'],
+            'whatsapp_ticket_sending_enabled' => ['nullable', 'boolean'],
         ]);
 
         foreach (['site_name', 'primary_color', 'secondary_color'] as $key) {
             SystemSettings::set($key, $validated[$key] ?? null);
         }
+
+        SystemSettings::set('whatsapp_ticket_sending_enabled', $request->boolean('whatsapp_ticket_sending_enabled'));
 
         foreach (['logo_light' => 'site_logo_light', 'logo_dark' => 'site_logo_dark', 'logo_footer' => 'site_logo_footer'] as $fileKey => $settingKey) {
             if (! $request->hasFile($fileKey)) {

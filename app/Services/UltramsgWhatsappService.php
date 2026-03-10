@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\SystemSettings;
 use App\Models\Order;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Http;
@@ -15,6 +16,15 @@ class UltramsgWhatsappService
 {
     public function sendTicket(Ticket $ticket, ?string $phoneOverride = null): bool
     {
+        if (! $this->isTicketWhatsappSendingEnabled()) {
+            Log::info('Ticket WhatsApp skipped: disabled from system settings.', [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+            ]);
+
+            return false;
+        }
+
         $phone = $this->normalizePhone((string) ($phoneOverride ?? $ticket->holder_phone));
         if (! $phone) {
             Log::warning('Ticket WhatsApp skipped: holder phone is missing or invalid.', [
@@ -55,6 +65,15 @@ class UltramsgWhatsappService
 
     public function sendOrderTickets(Order $order): bool
     {
+        if (! $this->isTicketWhatsappSendingEnabled()) {
+            Log::info('Order WhatsApp skipped: disabled from system settings.', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+            ]);
+
+            return false;
+        }
+
         $order->loadMissing(['customer', 'issuedTickets']);
 
         $phone = $this->normalizePhone((string) ($order->customer->phone ?? ''));
@@ -247,6 +266,11 @@ class UltramsgWhatsappService
         $type = trim((string) Str::after($ticketName, ' - '));
 
         return $type !== '' ? $type : 'General';
+    }
+
+    private function isTicketWhatsappSendingEnabled(): bool
+    {
+        return (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
     }
 
     private function normalizePhone(string $phone): ?string

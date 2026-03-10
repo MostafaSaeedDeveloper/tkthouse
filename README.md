@@ -127,4 +127,5 @@ Form payload:
 - WhatsApp now includes a signed public download link (valid for 7 days) so the recipient can download without dashboard login.
 - If phone is missing/invalid, sending is skipped and logged.
 - For PDF delivery reliability, the app tries document URL (signed and short), then base64 document payload, before falling back to plain text with link.
+- Ticket WhatsApp sending can be globally enabled/disabled from Admin Settings (`whatsapp_ticket_sending_enabled`).
 - Keep `ULTRAMSG_TOKEN` secret and do not expose it in frontend code.
