@@ -192,7 +192,7 @@
       {{-- Send --}}
       @can('tickets.update')
       <div class="tk-card">
-        <div class="tk-card-head"><div class="tk-card-title">Send Ticket</div></div>
+        <div class="tk-card-head"><div class="tk-card-title">Send Ticket via Email</div></div>
         <div class="tk-card-body">
           <form method="POST" action="{{ route('admin.tickets.send-email', $ticket) }}">
             @csrf
