@@ -137,16 +137,30 @@ class UltramsgWhatsappService
     private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): void
     {
         $filename = $this->ticketFilename($ticketNumber);
-        $documentLinks = [
-            $this->signedPdfDownloadLink($ticketNumber),
-            $this->shortDownloadLink($ticketNumber),
+        $attempts = [
+            ['type' => 'signed_url', 'document' => $this->signedPdfDownloadLink($ticketNumber)],
+            ['type' => 'short_url', 'document' => $this->shortDownloadLink($ticketNumber)],
         ];
 
-        foreach ($documentLinks as $index => $link) {
+        try {
+            $pdfBinary = $this->fetchPdfBinary($ticketNumber);
+            $pdfBase64 = base64_encode($pdfBinary);
+
+            $attempts[] = ['type' => 'base64_data_uri', 'document' => 'data:application/pdf;base64,'.$pdfBase64];
+            $attempts[] = ['type' => 'base64_raw', 'document' => $pdfBase64];
+        } catch (Throwable $exception) {
+            Log::warning('UltraMsg PDF prefetch failed.', [
+                ...$context,
+                'ticket_number' => $ticketNumber,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        foreach ($attempts as $index => $attempt) {
             try {
                 $this->sendDocumentMessage(
                     phone: $phone,
-                    documentUrl: $link,
+                    documentUrl: (string) $attempt['document'],
                     filename: $filename,
                     caption: $caption,
                 );
@@ -156,13 +170,21 @@ class UltramsgWhatsappService
                 Log::warning('UltraMsg document attempt failed.', [
                     ...$context,
                     'attempt' => $index + 1,
-                    'document_url' => $link,
+                    'attempt_type' => $attempt['type'],
                     'error' => $exception->getMessage(),
                 ]);
             }
         }
 
         $this->sendTextMessage($phone, $fallbackText);
+    }
+
+    private function fetchPdfBinary(string $ticketNumber): string
+    {
+        $response = Http::timeout(30)->get($this->signedPdfDownloadLink($ticketNumber));
+        $response->throw();
+
+        return $response->body();
     }
 
     private function assertSent(array $payload, string $rawBody): void

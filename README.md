@@ -126,5 +126,5 @@ Form payload:
 - Phone numbers are normalized automatically to international format and sent as digits only to UltraMsg.
 - WhatsApp now includes a signed public download link (valid for 7 days) so the recipient can download without dashboard login.
 - If phone is missing/invalid, sending is skipped and logged.
-- For document sending, the app tries both a signed direct PDF URL and the short ticket URL before falling back to text.
+- For PDF delivery reliability, the app tries document URL (signed and short), then base64 document payload, before falling back to plain text with link.
 - Keep `ULTRAMSG_TOKEN` secret and do not expose it in frontend code.
