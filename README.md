@@ -92,8 +92,8 @@ If you see an error like `Invalid Token or inactive vendor`, verify these in Faw
 
 This project now sends WhatsApp messages through UltraMsg in two flows:
 
-- After a successful payment, the buyer receives a WhatsApp message with ticket numbers and download links.
-- From Admin Ticket page, **Send WhatsApp** sends one message for the selected ticket including ticket number and PDF download link.
+- After a successful payment, the buyer receives a WhatsApp confirmation plus ticket QR images with download links.
+- From Admin Ticket page, **Send WhatsApp** sends the selected ticket as a WhatsApp image message (QR) with ticket number and PDF download link.
 
 ### Environment variables
 
