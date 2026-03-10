@@ -33,6 +33,8 @@ Route::get('/cookie-policy', [PagesController::class, 'cookie'])->name('front.co
 
 Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
 
+Route::get('/t/{ticketNumber}', [FrontTicketController::class, 'shortDownload'])
+    ->name('front.tickets.short-download');
 Route::get('/tickets/public/{ticketNumber}/download', [FrontTicketController::class, 'publicDownloadByNumber'])->name('front.tickets.public-download');
 Route::get('/payments/fawaterak/callback/{order}/{token}', [CheckoutController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
 

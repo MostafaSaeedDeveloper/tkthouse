@@ -7,6 +7,7 @@ use App\Models\IssuedTicket;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class FrontTicketController extends Controller
@@ -28,6 +29,17 @@ class FrontTicketController extends Controller
         $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
 
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
+    }
+
+    public function shortDownload(string $ticketNumber)
+    {
+        $signedUrl = URL::temporarySignedRoute(
+            'front.tickets.public-download',
+            now()->addDays(7),
+            ['ticketNumber' => $ticketNumber]
+        );
+
+        return redirect($signedUrl);
     }
 
     public function publicDownloadByNumber(Request $request, string $ticketNumber)

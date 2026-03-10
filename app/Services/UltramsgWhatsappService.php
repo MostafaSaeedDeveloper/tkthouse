@@ -6,7 +6,6 @@ use App\Models\Order;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\URL;
 use RuntimeException;
 
 class UltramsgWhatsappService
@@ -98,11 +97,9 @@ $this->publicDownloadLink((string) $ticket->ticket_number)
 
     private function publicDownloadLink(string $ticketNumber): string
     {
-        return URL::temporarySignedRoute(
-            'front.tickets.public-download',
-            now()->addDays(7),
-            ['ticketNumber' => $ticketNumber]
-        );
+        return route('front.tickets.short-download', [
+            'ticketNumber' => $ticketNumber,
+        ]);
     }
 
     private function normalizePhone(string $phone): ?string
