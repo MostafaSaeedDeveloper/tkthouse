@@ -62,8 +62,9 @@ class TicketController extends Controller
     public function show(Ticket $ticket)
     {
         $ticket->load('order');
+        $whatsappEnabled = (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
 
-        return view('admin.tickets.show', compact('ticket'));
+        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled'));
     }
 
     public function edit(Ticket $ticket)

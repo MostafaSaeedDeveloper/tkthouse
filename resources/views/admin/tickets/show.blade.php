@@ -204,8 +204,14 @@
               <button class="tk-btn tk-btn-gold" type="submit"><i class="fa fa-envelope"></i> Send Email</button>
             </div>
           </form>
+        </div>
+      </div>
 
-          <form method="POST" action="{{ route('admin.tickets.send-whatsapp', $ticket) }}" style="margin-top:10px;">
+      @if($whatsappEnabled)
+      <div class="tk-card">
+        <div class="tk-card-head"><div class="tk-card-title">Send Ticket via WhatsApp</div></div>
+        <div class="tk-card-body">
+          <form method="POST" action="{{ route('admin.tickets.send-whatsapp', $ticket) }}">
             @csrf
             <div style="margin-bottom:12px;">
               <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#5e5e72;margin-bottom:7px;">WhatsApp Number</label>
@@ -215,6 +221,7 @@
           </form>
         </div>
       </div>
+      @endif
       @endcan
 
     </div>{{-- /left --}}
