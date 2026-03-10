@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 class UltramsgWhatsappService
 {
@@ -36,12 +37,24 @@ class UltramsgWhatsappService
             'Ticket Number: '.$ticket->ticket_number,
         ]);
 
-        $this->sendDocumentMessage(
-            phone: $phone,
-            documentUrl: $this->signedPdfDownloadLink((string) $ticket->ticket_number),
-            filename: $this->ticketFilename((string) $ticket->ticket_number),
-            caption: $caption,
-        );
+        $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
+
+        try {
+            $this->sendDocumentMessage(
+                phone: $phone,
+                documentUrl: $this->signedPdfDownloadLink((string) $ticket->ticket_number),
+                filename: $this->ticketFilename((string) $ticket->ticket_number),
+                caption: $caption,
+            );
+        } catch (Throwable $exception) {
+            Log::warning('UltraMsg document send failed, fallback to chat link.', [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'error' => $exception->getMessage(),
+            ]);
+
+            $this->sendTextMessage($phone, $caption."\nDownload Link: ".$shortLink);
+        }
 
         return true;
     }
@@ -69,18 +82,31 @@ class UltramsgWhatsappService
         foreach ($order->issuedTickets as $ticket) {
             $holderName = trim((string) ($ticket->holder_name ?: 'Ticket Holder'));
             $ticketType = $this->ticketTypeFromName((string) $ticket->ticket_name);
+            $caption = implode("\n", [
+                '🎟️ Ticket PDF',
+                'Holder: '.$holderName,
+                'Ticket Type: '.$ticketType,
+                'Ticket Number: '.$ticket->ticket_number,
+            ]);
 
-            $this->sendDocumentMessage(
-                phone: $phone,
-                documentUrl: $this->signedPdfDownloadLink((string) $ticket->ticket_number),
-                filename: $this->ticketFilename((string) $ticket->ticket_number),
-                caption: implode("\n", [
-                    '🎟️ Ticket PDF',
-                    'Holder: '.$holderName,
-                    'Ticket Type: '.$ticketType,
-                    'Ticket Number: '.$ticket->ticket_number,
-                ]),
-            );
+            $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
+
+            try {
+                $this->sendDocumentMessage(
+                    phone: $phone,
+                    documentUrl: $this->signedPdfDownloadLink((string) $ticket->ticket_number),
+                    filename: $this->ticketFilename((string) $ticket->ticket_number),
+                    caption: $caption,
+                );
+            } catch (Throwable $exception) {
+                Log::warning('UltraMsg order document send failed, fallback to chat link.', [
+                    'order_id' => $order->id,
+                    'ticket_number' => $ticket->ticket_number,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                $this->sendTextMessage($phone, $caption."\nDownload Link: ".$shortLink);
+            }
         }
 
         return true;
@@ -159,6 +185,11 @@ class UltramsgWhatsappService
             now()->addDays(7),
             ['ticketNumber' => $ticketNumber]
         );
+    }
+
+    private function shortDownloadLink(string $ticketNumber): string
+    {
+        return route('front.tickets.short-download', ['ticketNumber' => $ticketNumber]);
     }
 
     private function ticketFilename(string $ticketNumber): string
