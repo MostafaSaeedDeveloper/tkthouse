@@ -39,6 +39,25 @@
                 <div class="col-md-4 mb-3"><label class="form-label">Logo Dark</label><input type="file" class="form-control" name="logo_dark" accept="image/*"></div>
                 <div class="col-md-4 mb-3"><label class="form-label">Logo Footer</label><input type="file" class="form-control" name="logo_footer" accept="image/*"></div>
             </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch mt-2">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="whatsapp_ticket_sending_enabled"
+                            name="whatsapp_ticket_sending_enabled"
+                            value="1"
+                            @checked(old('whatsapp_ticket_sending_enabled', data_get($settings, 'whatsapp_ticket_sending_enabled', true)))
+                        >
+                        <label class="form-check-label" for="whatsapp_ticket_sending_enabled">
+                            Enable sending tickets via WhatsApp
+                        </label>
+                        <div class="form-text">Disable this to stop WhatsApp sending from admin and post-payment flows.</div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="block-content block-content-full text-end bg-body-light">
             <button class="btn btn-primary" type="submit">Save Settings</button>

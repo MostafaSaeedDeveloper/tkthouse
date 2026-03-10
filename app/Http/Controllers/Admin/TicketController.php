@@ -6,9 +6,12 @@ use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
+use App\Services\UltramsgWhatsappService;
+use App\Support\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -59,8 +62,9 @@ class TicketController extends Controller
     public function show(Ticket $ticket)
     {
         $ticket->load('order');
+        $whatsappEnabled = (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
 
-        return view('admin.tickets.show', compact('ticket'));
+        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled'));
     }
 
     public function edit(Ticket $ticket)
@@ -109,25 +113,29 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket sent by email successfully.');
     }
 
-    public function sendWhatsapp(Ticket $ticket)
+    public function sendWhatsapp(Request $request, Ticket $ticket, UltramsgWhatsappService $whatsappService)
     {
-        $url = config('services.whatsapp.webhook_url');
-        if (! $url) {
-            return back()->with('error', 'WhatsApp webhook is not configured.');
+        if (! (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true)) {
+            return back()->with('error', 'WhatsApp ticket sending is disabled from settings.');
         }
 
-        Http::timeout(15)
-            ->withToken((string) config('services.whatsapp.token'))
-            ->post($url, [
-                'ticket_number' => $ticket->ticket_number,
-                'holder_name' => $ticket->holder_name,
-                'holder_phone' => $ticket->holder_phone,
-                'ticket_show_url' => route('admin.tickets.show', $ticket),
-                'ticket_pdf_url' => route('admin.tickets.download', $ticket),
-            ])
-            ->throw();
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:255'],
+        ]);
 
-        return back()->with('success', 'Ticket sent by WhatsApp webhook successfully.');
+        try {
+            $sent = $whatsappService->sendTicket($ticket, $data['phone']);
+
+            if (! $sent) {
+                return back()->with('error', 'Ticket phone is missing or invalid.');
+            }
+
+            return back()->with('success', 'Ticket sent by WhatsApp successfully.');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Unable to send WhatsApp message right now.');
+        }
     }
 
     public function download(Ticket $ticket)

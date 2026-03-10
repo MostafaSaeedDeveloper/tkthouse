@@ -86,3 +86,46 @@ If you see an error like `Invalid Token or inactive vendor`, verify these in Faw
 - Ensure vendor account is active/live (not disabled).
 - For local development, add your app URL to **IFRAM Domains** (for example `http://127.0.0.1:8000`).
 - Optional but recommended: set Success/Fail Redirect URLs and webhooks in Fawaterak dashboard.
+
+
+## UltraMsg WhatsApp Integration
+
+This project now sends WhatsApp messages through UltraMsg in two flows:
+
+- After a successful payment, the buyer receives a WhatsApp confirmation plus ticket PDF documents (with holder name and ticket type).
+- From Admin Ticket page, **Send WhatsApp** sends the selected ticket as a WhatsApp PDF document message including holder name, ticket type, and ticket number.
+
+### Environment variables
+
+Add these keys in your `.env`:
+
+```env
+ULTRAMSG_BASE_URL=https://api.ultramsg.com
+ULTRAMSG_INSTANCE_ID=instance12345
+ULTRAMSG_TOKEN=your_ultramsg_token
+```
+
+### UltraMsg API endpoint used
+
+The app calls:
+
+- `POST {ULTRAMSG_BASE_URL}/{ULTRAMSG_INSTANCE_ID}/messages/chat`
+- `POST {ULTRAMSG_BASE_URL}/{ULTRAMSG_INSTANCE_ID}/messages/document`
+
+Form payload:
+
+- `token`: UltraMsg token
+- `to`: recipient WhatsApp number in international format (for example: `201001234567`)
+- `body`: message text (for chat endpoint)
+- `document`: public PDF URL (for document endpoint)
+- `filename`: attached file name (for document endpoint)
+- `caption`: document caption text (for document endpoint)
+
+### Notes
+
+- Phone numbers are normalized automatically to international format and sent as digits only to UltraMsg.
+- WhatsApp now includes a signed public download link (valid for 7 days) so the recipient can download without dashboard login.
+- If phone is missing/invalid, sending is skipped and logged.
+- For PDF delivery reliability, the app tries document URL (signed and short), then base64 document payload, before falling back to plain text with link.
+- Ticket WhatsApp sending can be globally enabled/disabled from Admin Settings (`whatsapp_ticket_sending_enabled`).
+- Keep `ULTRAMSG_TOKEN` secret and do not expose it in frontend code.
