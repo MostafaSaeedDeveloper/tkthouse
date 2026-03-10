@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
 use App\Services\UltramsgWhatsappService;
+use App\Support\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -61,8 +62,9 @@ class TicketController extends Controller
     public function show(Ticket $ticket)
     {
         $ticket->load('order');
+        $whatsappEnabled = (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
 
-        return view('admin.tickets.show', compact('ticket'));
+        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled'));
     }
 
     public function edit(Ticket $ticket)
@@ -113,6 +115,10 @@ class TicketController extends Controller
 
     public function sendWhatsapp(Request $request, Ticket $ticket, UltramsgWhatsappService $whatsappService)
     {
+        if (! (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true)) {
+            return back()->with('error', 'WhatsApp ticket sending is disabled from settings.');
+        }
+
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:255'],
         ]);
