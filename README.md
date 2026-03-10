@@ -114,11 +114,12 @@ The app calls:
 Form payload:
 
 - `token`: UltraMsg token
-- `to`: recipient WhatsApp number in international format (for example: `+201001234567`)
+- `to`: recipient WhatsApp number in international format (for example: `201001234567`)
 - `body`: message text
 
 ### Notes
 
-- Phone numbers are normalized automatically to international format.
+- Phone numbers are normalized automatically to international format and sent as digits only to UltraMsg.
+- WhatsApp now includes a signed public download link (valid for 7 days) so the recipient can download without dashboard login.
 - If phone is missing/invalid, sending is skipped and logged.
 - Keep `ULTRAMSG_TOKEN` secret and do not expose it in frontend code.

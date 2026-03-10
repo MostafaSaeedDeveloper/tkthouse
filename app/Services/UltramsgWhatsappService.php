@@ -6,6 +6,8 @@ use App\Models\Order;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
+use RuntimeException;
 
 class UltramsgWhatsappService
 {
@@ -24,7 +26,7 @@ class UltramsgWhatsappService
         $body = implode("\n", [
             '🎟️ Your ticket is ready',
             'Ticket Number: '.$ticket->ticket_number,
-            'Download Link: '.route('admin.tickets.download', $ticket),
+            'Download Link: '.$this->publicDownloadLink($ticket->ticket_number),
         ]);
 
         $this->sendMessage($phone, $body);
@@ -56,7 +58,7 @@ class UltramsgWhatsappService
             $lines[] = sprintf(
                 '- %s: %s',
                 $ticket->ticket_number,
-                route('front.tickets.download', $ticket)
+$this->publicDownloadLink((string) $ticket->ticket_number)
             );
         }
 
@@ -72,17 +74,35 @@ class UltramsgWhatsappService
         $baseUrl = rtrim((string) config('services.ultramsg.base_url', 'https://api.ultramsg.com'), '/');
 
         if ($instanceId === '' || $token === '') {
-            throw new \RuntimeException('UltraMsg is not configured. Please set ULTRAMSG_INSTANCE_ID and ULTRAMSG_TOKEN.');
+            throw new RuntimeException('UltraMsg is not configured. Please set ULTRAMSG_INSTANCE_ID and ULTRAMSG_TOKEN.');
         }
 
-        Http::asForm()
+        $response = Http::asForm()
             ->timeout(15)
             ->post($baseUrl.'/'.$instanceId.'/messages/chat', [
                 'token' => $token,
-                'to' => $phone,
+                'to' => ltrim($phone, '+'),
                 'body' => $body,
-            ])
-            ->throw();
+                'priority' => 10,
+            ]);
+
+        $response->throw();
+
+        $payload = $response->json();
+        $sent = data_get($payload, 'sent');
+
+        if (! in_array($sent, [True, 'true', 1, '1'], true)) {
+            throw new RuntimeException('UltraMsg accepted request but did not mark it as sent. Response: '.$response->body());
+        }
+    }
+
+    private function publicDownloadLink(string $ticketNumber): string
+    {
+        return URL::temporarySignedRoute(
+            'front.tickets.public-download',
+            now()->addDays(7),
+            ['ticketNumber' => $ticketNumber]
+        );
     }
 
     private function normalizePhone(string $phone): ?string

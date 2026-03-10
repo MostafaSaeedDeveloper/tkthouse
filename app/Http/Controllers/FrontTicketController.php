@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\IssuedTicket;
+use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -25,6 +26,21 @@ class FrontTicketController extends Controller
         $qrDataUri = $ticket->qrUrl();
 
         $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
+
+        return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
+    }
+
+    public function publicDownloadByNumber(Request $request, string $ticketNumber)
+    {
+        abort_unless($request->hasValidSignature(), 403);
+
+        $ticket = Ticket::query()->where('ticket_number', $ticketNumber)->firstOrFail();
+        $event = $this->resolveEvent($ticket->name ?? '');
+        $qrDataUri = $ticket->qr_payload
+            ? 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->qr_payload)
+            : 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->ticket_number);
+
+        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
 
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }

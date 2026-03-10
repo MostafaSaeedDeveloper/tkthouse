@@ -9,7 +9,6 @@ use App\Models\Ticket;
 use App\Services\UltramsgWhatsappService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Throwable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
