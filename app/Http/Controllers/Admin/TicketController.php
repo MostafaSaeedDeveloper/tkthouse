@@ -111,10 +111,14 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket sent by email successfully.');
     }
 
-    public function sendWhatsapp(Ticket $ticket, UltramsgWhatsappService $whatsappService)
+    public function sendWhatsapp(Request $request, Ticket $ticket, UltramsgWhatsappService $whatsappService)
     {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:255'],
+        ]);
+
         try {
-            $sent = $whatsappService->sendTicket($ticket);
+            $sent = $whatsappService->sendTicket($ticket, $data['phone']);
 
             if (! $sent) {
                 return back()->with('error', 'Ticket phone is missing or invalid.');

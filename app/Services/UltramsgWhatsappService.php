@@ -10,9 +10,9 @@ use RuntimeException;
 
 class UltramsgWhatsappService
 {
-    public function sendTicket(Ticket $ticket): bool
+    public function sendTicket(Ticket $ticket, ?string $phoneOverride = null): bool
     {
-        $phone = $this->normalizePhone((string) $ticket->holder_phone);
+        $phone = $this->normalizePhone((string) ($phoneOverride ?? $ticket->holder_phone));
         if (! $phone) {
             Log::warning('Ticket WhatsApp skipped: holder phone is missing or invalid.', [
                 'ticket_id' => $ticket->id,
