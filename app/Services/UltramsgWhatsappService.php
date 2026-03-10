@@ -39,22 +39,16 @@ class UltramsgWhatsappService
 
         $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
 
-        try {
-            $this->sendDocumentMessage(
-                phone: $phone,
-                documentUrl: $this->signedPdfDownloadLink((string) $ticket->ticket_number),
-                filename: $this->ticketFilename((string) $ticket->ticket_number),
-                caption: $caption,
-            );
-        } catch (Throwable $exception) {
-            Log::warning('UltraMsg document send failed, fallback to chat link.', [
+        $this->sendDocumentWithFallbacks(
+            phone: $phone,
+            ticketNumber: (string) $ticket->ticket_number,
+            caption: $caption,
+            fallbackText: $caption."\nDownload Link: ".$shortLink,
+            context: [
                 'ticket_id' => $ticket->id,
                 'ticket_number' => $ticket->ticket_number,
-                'error' => $exception->getMessage(),
-            ]);
-
-            $this->sendTextMessage($phone, $caption."\nDownload Link: ".$shortLink);
-        }
+            ],
+        );
 
         return true;
     }
@@ -91,22 +85,16 @@ class UltramsgWhatsappService
 
             $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
 
-            try {
-                $this->sendDocumentMessage(
-                    phone: $phone,
-                    documentUrl: $this->signedPdfDownloadLink((string) $ticket->ticket_number),
-                    filename: $this->ticketFilename((string) $ticket->ticket_number),
-                    caption: $caption,
-                );
-            } catch (Throwable $exception) {
-                Log::warning('UltraMsg order document send failed, fallback to chat link.', [
+            $this->sendDocumentWithFallbacks(
+                phone: $phone,
+                ticketNumber: (string) $ticket->ticket_number,
+                caption: $caption,
+                fallbackText: $caption."\nDownload Link: ".$shortLink,
+                context: [
                     'order_id' => $order->id,
                     'ticket_number' => $ticket->ticket_number,
-                    'error' => $exception->getMessage(),
-                ]);
-
-                $this->sendTextMessage($phone, $caption."\nDownload Link: ".$shortLink);
-            }
+                ],
+            );
         }
 
         return true;
@@ -144,6 +132,37 @@ class UltramsgWhatsappService
         $response->throw();
 
         $this->assertSent((array) $response->json(), $response->body());
+    }
+
+    private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): void
+    {
+        $filename = $this->ticketFilename($ticketNumber);
+        $documentLinks = [
+            $this->signedPdfDownloadLink($ticketNumber),
+            $this->shortDownloadLink($ticketNumber),
+        ];
+
+        foreach ($documentLinks as $index => $link) {
+            try {
+                $this->sendDocumentMessage(
+                    phone: $phone,
+                    documentUrl: $link,
+                    filename: $filename,
+                    caption: $caption,
+                );
+
+                return;
+            } catch (Throwable $exception) {
+                Log::warning('UltraMsg document attempt failed.', [
+                    ...$context,
+                    'attempt' => $index + 1,
+                    'document_url' => $link,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $this->sendTextMessage($phone, $fallbackText);
     }
 
     private function assertSent(array $payload, string $rawBody): void
