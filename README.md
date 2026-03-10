@@ -94,6 +94,8 @@ This project now sends WhatsApp messages through UltraMsg in two flows:
 
 - After a successful payment, the buyer receives a WhatsApp confirmation plus ticket PDF documents (with holder name and ticket type).
 - From Admin Ticket page, **Send WhatsApp** sends the selected ticket as a WhatsApp PDF document message including holder name, ticket type, and ticket number.
+- After a successful payment, the buyer receives a WhatsApp confirmation plus ticket QR images with download links.
+- From Admin Ticket page, **Send WhatsApp** sends the selected ticket as a WhatsApp image message (QR) with ticket number and PDF download link.
 
 ### Environment variables
 
