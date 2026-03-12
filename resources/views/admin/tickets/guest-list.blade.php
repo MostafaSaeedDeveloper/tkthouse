@@ -176,7 +176,7 @@
         if ($el.data('select2')) return;
         $el.select2({
           width: '100%',
-          dropdownParent: $modal,
+          dropdownParent: $modal.find('.modal-content'),
         });
       });
     });
