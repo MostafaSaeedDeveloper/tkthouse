@@ -70,6 +70,7 @@ class GuestListController extends Controller
             'guests.*.name' => ['required', 'string', 'max:255'],
             'guests.*.email' => ['nullable', 'email', 'max:255'],
             'guests.*.phone' => ['nullable', 'string', 'max:255'],
+            'guests.*.gender' => ['nullable', 'in:male,female'],
             'status' => ['nullable', 'in:not_checked_in,checked_in,canceled'],
         ]);
 
@@ -83,6 +84,7 @@ class GuestListController extends Controller
                 name: $guest['name'],
                 email: $guest['email'] ?? null,
                 phone: $guest['phone'] ?? null,
+                gender: $guest['gender'] ?? null,
                 status: $status,
                 description: 'Guest list invitation',
             );
@@ -95,8 +97,8 @@ class GuestListController extends Controller
     {
         return response()->streamDownload(function () {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['guest_type', 'name', 'email', 'phone', 'quantity']);
-            fputcsv($handle, ['Regular', 'Guest Name', 'guest@example.com', '01000000000', '1']);
+            fputcsv($handle, ['guest_type', 'name', 'email', 'phone', 'gender', 'quantity']);
+            fputcsv($handle, ['Regular', 'Guest Name', 'guest@example.com', '01000000000', 'male', '1']);
             fclose($handle);
         }, 'guest-list-template.csv', ['Content-Type' => 'text/csv']);
     }
@@ -137,6 +139,9 @@ class GuestListController extends Controller
             $guestType = $this->normalizeGuestType((string) $mapped->get('guest_type', 'Regular'));
             $email = trim((string) $mapped->get('email', '')) ?: null;
             $phone = trim((string) $mapped->get('phone', '')) ?: null;
+            $gender = in_array(mb_strtolower(trim((string) $mapped->get('gender', ''))), ['male', 'female'], true)
+                ? mb_strtolower(trim((string) $mapped->get('gender', '')))
+                : null;
             $quantity = max(1, (int) $mapped->get('quantity', 1));
 
             for ($i = 0; $i < $quantity; $i++) {
@@ -146,6 +151,7 @@ class GuestListController extends Controller
                     name: $name,
                     email: $email,
                     phone: $phone,
+                    gender: $gender,
                     status: 'not_checked_in',
                     description: 'Imported guest list invitation',
                 );
@@ -163,7 +169,7 @@ class GuestListController extends Controller
 
         return response()->streamDownload(function () use ($tickets) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['ticket_number', 'event_name', 'guest_type', 'name', 'email', 'phone', 'status']);
+            fputcsv($handle, ['ticket_number', 'event_name', 'guest_type', 'name', 'email', 'phone', 'gender', 'status']);
 
             foreach ($tickets as $ticket) {
                 fputcsv($handle, [
@@ -173,6 +179,7 @@ class GuestListController extends Controller
                     $ticket->holder_name,
                     $ticket->holder_email,
                     $ticket->holder_phone,
+                    $ticket->holder_gender,
                     $ticket->status,
                 ]);
             }
@@ -187,6 +194,7 @@ class GuestListController extends Controller
         string $name,
         ?string $email,
         ?string $phone,
+        ?string $gender,
         string $status,
         string $description,
     ): void {
@@ -201,6 +209,7 @@ class GuestListController extends Controller
             'holder_name' => $name,
             'holder_email' => $email,
             'holder_phone' => $phone,
+            'holder_gender' => $gender,
             'ticket_number' => $ticketNumber,
             'qr_payload' => $ticketNumber,
             'issued_at' => now(),

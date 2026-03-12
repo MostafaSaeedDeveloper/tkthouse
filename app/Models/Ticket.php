@@ -22,6 +22,7 @@ class Ticket extends Model
         'holder_name',
         'holder_email',
         'holder_phone',
+        'holder_gender',
         'qr_payload',
         'issued_at',
         'checked_in_at',

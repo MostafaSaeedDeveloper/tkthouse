@@ -43,9 +43,8 @@
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0">Guest Rows</h5>
-                    <button type="button" id="addRow" class="btn btn-sm btn-alt-primary">Add row</button>
+                <div class="mb-2">
+                    <h5 class="mb-0">guest list</h5>
                 </div>
 
                 <div class="table-responsive">
@@ -55,10 +54,18 @@
                                 <th>Name *</th>
                                 <th>Email</th>
                                 <th>Phone</th>
+                                <th>Gender</th>
                                 <th style="width:80px"></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="text-start">
+                                    <button type="button" id="addInvitationRow" class="btn btn-sm btn-alt-primary">Add Invitation</button>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
@@ -76,16 +83,25 @@
 <script>
 (function () {
     const tbody = document.querySelector('#rowsTable tbody');
-    const addRowButton = document.getElementById('addRow');
+    const addRowButton = document.getElementById('addInvitationRow');
     let rowIndex = 0;
     const initialCount = {{ max(1, (int) $selectedCount) }};
 
-    function addRow(name = '', email = '', phone = '') {
+    function addRow(name = '', email = '', phone = '', gender = '') {
         const tr = document.createElement('tr');
+        const normalizedGender = ['male', 'female'].includes(String(gender).toLowerCase()) ? String(gender).toLowerCase() : '';
+
         tr.innerHTML = `
             <td><input type="text" name="guests[${rowIndex}][name]" class="form-control" value="${name}" required></td>
             <td><input type="email" name="guests[${rowIndex}][email]" class="form-control" value="${email}"></td>
             <td><input type="text" name="guests[${rowIndex}][phone]" class="form-control" value="${phone}"></td>
+            <td>
+                <select name="guests[${rowIndex}][gender]" class="form-select">
+                    <option value="" ${normalizedGender === '' ? 'selected' : ''}>-</option>
+                    <option value="male" ${normalizedGender === 'male' ? 'selected' : ''}>Male</option>
+                    <option value="female" ${normalizedGender === 'female' ? 'selected' : ''}>Female</option>
+                </select>
+            </td>
             <td class="text-center"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></td>
         `;
         tbody.appendChild(tr);

@@ -23,7 +23,7 @@ class AdminGuestListTest extends TestCase
             'event_name' => 'My Event',
             'guest_type' => 'Regular',
             'guests' => [
-                ['name' => 'Guest One', 'email' => 'guest1@example.com', 'phone' => '01000'],
+                ['name' => 'Guest One', 'email' => 'guest1@example.com', 'phone' => '01000', 'gender' => 'male'],
                 ['name' => 'Guest Two', 'email' => null, 'phone' => null],
             ],
         ]);
@@ -34,6 +34,7 @@ class AdminGuestListTest extends TestCase
             'holder_name' => 'Guest One',
             'guest_type' => 'Guest Regular',
             'source' => 'guest_list',
+            'holder_gender' => 'male',
         ]);
 
         Mail::assertSent(AdminTicketIssuedMail::class, 1);
@@ -45,8 +46,8 @@ class AdminGuestListTest extends TestCase
         $admin = User::factory()->create();
 
         $csv = implode("\n", [
-            'guest_type,name,email,phone,quantity',
-            'VIP,Imported Guest,imported@example.com,01001,2',
+            'guest_type,name,email,phone,gender,quantity',
+            'VIP,Imported Guest,imported@example.com,01001,female,2',
         ]);
 
         $file = UploadedFile::fake()->createWithContent('guest-import.csv', $csv);
@@ -61,6 +62,7 @@ class AdminGuestListTest extends TestCase
         $this->assertDatabaseHas('tickets', [
             'holder_name' => 'Imported Guest',
             'guest_type' => 'Guest VIP',
+            'holder_gender' => 'female',
         ]);
 
         Mail::assertSent(AdminTicketIssuedMail::class, 2);

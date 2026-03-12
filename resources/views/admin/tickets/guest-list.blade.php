@@ -148,7 +148,7 @@
                 </div>
             </div>
             <div class="mt-3 text-muted small">
-                Template now contains only ticket data (guest_type, name, email, phone, quantity).
+                Template now contains only ticket data (guest_type, name, email, phone, gender, quantity).
             </div>
         </div>
         <div class="modal-footer">
