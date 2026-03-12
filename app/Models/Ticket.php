@@ -13,6 +13,8 @@ class Ticket extends Model
         'order_id',
         'order_item_id',
         'name',
+        'source',
+        'guest_type',
         'price',
         'description',
         'status',
@@ -55,6 +57,20 @@ class Ticket extends Model
         $name = (string) ($this->name ?? '');
 
         return trim((string) strstr($name, ' - ', true)) ?: $name;
+    }
+
+    public function isGuestList(): bool
+    {
+        return $this->source === 'guest_list';
+    }
+
+    public function guestTypeLabel(): ?string
+    {
+        if (! $this->isGuestList()) {
+            return null;
+        }
+
+        return $this->guest_type ? 'Guest '.trim((string) $this->guest_type) : 'Guest';
     }
 
     public function ticketTypeLabel(): string

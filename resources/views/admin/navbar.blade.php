@@ -128,12 +128,28 @@
         @endif
 
         @if($canTickets)
-          <li class="nav-main-item">
-            <a class="nav-main-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}"
-               href="{{ route('admin.tickets.index') }}">
+          @php($ticketsMenuOpen = request()->routeIs('admin.tickets.*') || request()->routeIs('admin.guest-list.*'))
+          <li class="nav-main-item {{ $ticketsMenuOpen ? 'open' : '' }}">
+            <a class="nav-main-link nav-main-link-submenu"
+               data-toggle="submenu"
+               aria-haspopup="true"
+               aria-expanded="{{ $ticketsMenuOpen ? 'true' : 'false' }}"
+               href="#">
               <i class="nav-main-link-icon fa fa-ticket"></i>
               <span class="nav-main-link-name">Tickets</span>
             </a>
+            <ul class="nav-main-submenu">
+              <li class="nav-main-item">
+                <a class="nav-main-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}" href="{{ route('admin.tickets.index') }}">
+                  <span class="nav-main-link-name">All Tickets</span>
+                </a>
+              </li>
+              <li class="nav-main-item">
+                <a class="nav-main-link {{ request()->routeIs('admin.guest-list.*') ? 'active' : '' }}" href="{{ route('admin.guest-list.index') }}">
+                  <span class="nav-main-link-name">GUESTlist</span>
+                </a>
+              </li>
+            </ul>
           </li>
         @endif
       @endif
