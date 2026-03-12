@@ -146,7 +146,7 @@
               </li>
               <li class="nav-main-item">
                 <a class="nav-main-link {{ request()->routeIs('admin.guest-list.*') ? 'active' : '' }}" href="{{ route('admin.guest-list.index') }}">
-                  <span class="nav-main-link-name">GUESTlist</span>
+                  <span class="nav-main-link-name">Guestlist</span>
                 </a>
               </li>
             </ul>
