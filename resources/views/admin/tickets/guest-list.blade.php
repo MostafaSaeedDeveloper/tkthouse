@@ -96,7 +96,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Event</label>
-                    <select name="event_name" class="form-select" required>
+                    <select name="event_name" class="form-select no-select2" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
@@ -135,7 +135,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Event</label>
-                    <select name="event_name" class="form-select" required>
+                    <select name="event_name" class="form-select no-select2" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
