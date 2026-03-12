@@ -71,6 +71,13 @@
                                 <td>{{ str($ticket->status)->headline() }}</td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-alt-info" href="{{ route('admin.tickets.show', $ticket) }}"><i class="fa fa-eye"></i></a>
+                                    @can('tickets.delete')
+                                        <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-alt-danger" type="submit"><i class="fa fa-trash"></i></button>
+                                        </form>
+                                    @endcan
                                 </td>
                             </tr>
                         @empty
