@@ -19,7 +19,7 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
-        $ticketsQuery = Ticket::query()->with('order');
+        $ticketsQuery = Ticket::query()->sales()->with('order');
 
         if ($request->filled('status')) {
             $ticketsQuery->where('status', $request->string('status'));
@@ -54,7 +54,7 @@ class TicketController extends Controller
     {
         $validated = $this->validateTicket($request);
 
-        Ticket::create($validated + ['name' => $validated['holder_name'] ?? 'Ticket']);
+        Ticket::create($validated + ['name' => $validated['holder_name'] ?? 'Ticket', 'ticket_source' => 'sale']);
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket created successfully.');
     }

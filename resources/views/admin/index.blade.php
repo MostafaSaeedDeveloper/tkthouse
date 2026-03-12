@@ -189,6 +189,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
          ║   Events    → {{ number_format($totalEvents) }}
          ║   Pending   → {{ number_format($pendingOrders) }}
          ║   Tickets   → {{ number_format($ticketsSold) }}
+         ║   Guest List→ {{ number_format($guestInvitations) }}
          ╚══════════════════════════════════════╝ --}}
     <div class="db-stats">
 
@@ -262,6 +263,15 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             </div>
             <div class="db-stat-val">{{ number_format($ticketsSold) }}</div>
             <div class="db-stat-sub">Paid orders only</div>
+        </div>
+
+        <div class="db-stat blue fade-up delay-4">
+            <div class="db-stat-top">
+                <div class="db-stat-label">Guest List</div>
+                <div class="db-stat-icon">📨</div>
+            </div>
+            <div class="db-stat-val">{{ number_format($guestInvitations) }}</div>
+            <div class="db-stat-sub">Invitations created</div>
         </div>
 
     </div>
@@ -402,6 +412,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
                         <a href="{{ route('admin.orders.index') }}"    class="db-quick-link"><span class="db-quick-icon">🧾</span> Orders</a>
                         <a href="{{ route('admin.customers.index') }}" class="db-quick-link"><span class="db-quick-icon">👥</span> Customers</a>
                         <a href="{{ route('admin.tickets.index') }}"   class="db-quick-link"><span class="db-quick-icon">🎫</span> Tickets</a>
+                        <a href="{{ route('admin.guest-lists.index') }}" class="db-quick-link"><span class="db-quick-icon">📨</span> Guest List</a>
                         <a href="{{ route('admin.users.index') }}"     class="db-quick-link"><span class="db-quick-icon">🔑</span> Users</a>
                         <a href="{{ route('admin.roles.index') }}"     class="db-quick-link"><span class="db-quick-icon">🛡️</span> Roles</a>
                     </div>

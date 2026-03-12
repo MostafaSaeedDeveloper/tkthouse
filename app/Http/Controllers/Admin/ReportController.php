@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
+use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -64,11 +65,23 @@ class ReportController extends Controller
 
         $eventReports = $this->buildEventReports($filteredItems);
 
+        $guestInvitationRows = Ticket::query()
+            ->guestList()
+            ->with('event:id,name')
+            ->when($startAt && $endAt, fn ($q) => $q->whereBetween('issued_at', [$startAt, $endAt]))
+            ->get(['event_id', 'issued_at']);
+
+        $guestInvitationsByEvent = $guestInvitationRows
+            ->groupBy(fn (Ticket $ticket) => $ticket->event?->name ?: 'Unknown Event')
+            ->map(fn ($rows) => $rows->count());
+
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
             'totalTickets' => $eventReports->sum('tickets_sold'),
             'totalRevenue' => $eventReports->sum('gross_revenue'),
             'totalOrders' => $filteredItems->pluck('order_id')->filter()->unique()->count(),
+            'totalGuestInvitations' => $guestInvitationRows->count(),
+            'guestInvitationsByEvent' => $guestInvitationsByEvent,
             'rangeOptions' => [
                 'today' => 'Today',
                 'yesterday' => 'Yesterday',
