@@ -116,7 +116,11 @@ class GuestListController extends Controller
             return back()->with('error', 'Import file is empty.');
         }
 
-        $headers = $rows->shift()->map(fn ($header) => trim((string) $header));
+        $headers = collect($rows->shift() ?? [])->map(fn ($header) => trim((string) $header));
+        if ($headers->isEmpty()) {
+            return back()->with('error', 'Import file has no header row.');
+        }
+
         $created = 0;
 
         foreach ($rows as $row) {
