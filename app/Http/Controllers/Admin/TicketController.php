@@ -94,9 +94,13 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Ticket updated successfully.');
     }
 
-    public function destroy(Ticket $ticket)
+    public function destroy(Request $request, Ticket $ticket)
     {
         $ticket->delete();
+
+        if ($request->input('redirect_to') === 'guest-list') {
+            return redirect()->route('admin.guest-list.index')->with('success', 'Ticket deleted successfully.');
+        }
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket deleted successfully.');
     }

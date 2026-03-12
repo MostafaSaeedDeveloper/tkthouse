@@ -46,8 +46,8 @@ class AdminGuestListTest extends TestCase
         $admin = User::factory()->create();
 
         $csv = implode("\n", [
-            'guest_type,name,email,phone,gender,quantity',
-            'VIP,Imported Guest,imported@example.com,01001,female,2',
+            'guest_type,name,email,phone,gender',
+            'VIP,Imported Guest,imported@example.com,01001,female',
         ]);
 
         $file = UploadedFile::fake()->createWithContent('guest-import.csv', $csv);
@@ -58,13 +58,13 @@ class AdminGuestListTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        $this->assertSame(2, Ticket::query()->where('source', 'guest_list')->count());
+        $this->assertSame(1, Ticket::query()->where('source', 'guest_list')->count());
         $this->assertDatabaseHas('tickets', [
             'holder_name' => 'Imported Guest',
             'guest_type' => 'Guest VIP',
             'holder_gender' => 'female',
         ]);
 
-        Mail::assertSent(AdminTicketIssuedMail::class, 2);
+        Mail::assertSent(AdminTicketIssuedMail::class, 1);
     }
 }

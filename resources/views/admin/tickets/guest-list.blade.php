@@ -75,6 +75,7 @@
                                         <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
+                                            <input type="hidden" name="redirect_to" value="guest-list">
                                             <button class="btn btn-sm btn-alt-danger" type="submit"><i class="fa fa-trash"></i></button>
                                         </form>
                                     @endcan
@@ -155,7 +156,7 @@
                 </div>
             </div>
             <div class="mt-3 text-muted small">
-                Template now contains only ticket data (guest_type, name, email, phone, gender, quantity).
+                Template now contains only ticket data (guest_type, name, email, phone, gender).
             </div>
         </div>
         <div class="modal-footer">

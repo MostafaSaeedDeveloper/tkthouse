@@ -97,8 +97,8 @@ class GuestListController extends Controller
     {
         return response()->streamDownload(function () {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['guest_type', 'name', 'email', 'phone', 'gender', 'quantity']);
-            fputcsv($handle, ['Regular', 'Guest Name', 'guest@example.com', '01000000000', 'male', '1']);
+            fputcsv($handle, ['guest_type', 'name', 'email', 'phone', 'gender']);
+            fputcsv($handle, ['Regular', 'Guest Name', 'guest@example.com', '01000000000', 'male']);
             fclose($handle);
         }, 'guest-list-template.csv', ['Content-Type' => 'text/csv']);
     }
@@ -146,22 +146,18 @@ class GuestListController extends Controller
             $gender = in_array(mb_strtolower(trim((string) $mapped->get('gender', ''))), ['male', 'female'], true)
                 ? mb_strtolower(trim((string) $mapped->get('gender', '')))
                 : null;
-            $quantity = max(1, (int) $mapped->get('quantity', 1));
+            $this->createGuestTicket(
+                eventName: $data['event_name'],
+                guestType: $guestType,
+                name: $name,
+                email: $email,
+                phone: $phone,
+                gender: $gender,
+                status: 'not_checked_in',
+                description: 'Imported guest list invitation',
+            );
 
-            for ($i = 0; $i < $quantity; $i++) {
-                $this->createGuestTicket(
-                    eventName: $data['event_name'],
-                    guestType: $guestType,
-                    name: $name,
-                    email: $email,
-                    phone: $phone,
-                    gender: $gender,
-                    status: 'not_checked_in',
-                    description: 'Imported guest list invitation',
-                );
-
-                $created++;
-            }
+            $created++;
         }
 
         return back()->with('success', "Import finished: {$created} guest tickets created.");
