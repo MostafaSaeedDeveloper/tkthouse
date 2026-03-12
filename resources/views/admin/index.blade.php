@@ -283,13 +283,6 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             <div class="db-stat-sub">Guest List only</div>
         </div>
 
-        <div class="db-stat red fade-up delay-3">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Guest Pending</div>
-                <div class="db-stat-icon">⌛</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($guestPending) }}</div>
-            <div class="db-stat-sub">Not checked in yet</div>
         </div>
 
     </div>

@@ -74,8 +74,6 @@ class DashboardController extends Controller
 
         $guestInvitations = (clone $guestInvitationsQuery)->count();
         $guestCheckedIn = (clone $guestInvitationsQuery)->where('status', 'checked_in')->count();
-        $guestPending = (clone $guestInvitationsQuery)->where('status', 'not_checked_in')->count();
-
 
         $recentOrders = (clone $ordersQuery)
             ->with(['customer', 'items'])
@@ -128,7 +126,6 @@ class DashboardController extends Controller
             'ticketsSold',
             'guestInvitations',
             'guestCheckedIn',
-            'guestPending',
             'totalCustomers',
             'totalEvents',
             'recentOrders',
