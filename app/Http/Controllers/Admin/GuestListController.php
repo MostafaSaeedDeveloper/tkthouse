@@ -9,7 +9,7 @@ use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use ZipArchive;
 
 class GuestListController extends Controller
@@ -54,7 +54,10 @@ class GuestListController extends Controller
     public function create()
     {
         return view('admin.guest-lists.create', [
-            'events' => Event::query()->orderBy('name')->get(['id', 'name']),
+            'events' => Event::query()
+                ->with(['tickets:id,event_id,name'])
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ]);
     }
 
@@ -62,29 +65,32 @@ class GuestListController extends Controller
     {
         $data = $request->validate([
             'event_id' => ['required', 'exists:events,id'],
+            'guest_type' => ['required', 'string', 'max:255'],
             'guests' => ['required', 'array', 'min:1'],
             'guests.*.name' => ['required', 'string', 'max:255'],
             'guests.*.email' => ['nullable', 'email', 'max:255'],
             'guests.*.phone' => ['nullable', 'string', 'max:255'],
-            'guests.*.type' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $event = Event::query()->findOrFail((int) $data['event_id']);
+        $event = Event::query()->with('tickets:id,event_id,name')->findOrFail((int) $data['event_id']);
+        $guestTypeLabel = $this->resolveGuestTypeLabel((string) $data['guest_type'], $event);
 
         foreach ($data['guests'] as $guest) {
+            $ticketNumber = $this->generateTicketNumber();
+
             $ticket = Ticket::create([
                 'event_id' => $event->id,
-                'name' => $event->name.' - Guest List',
+                'name' => $event->name.' - '.$guestTypeLabel,
                 'description' => 'Guest list invitation',
                 'price' => 0,
                 'status' => 'not_checked_in',
                 'ticket_source' => 'guest_list',
-                'guest_category' => $guest['type'] ?? null,
+                'guest_category' => $guestTypeLabel,
                 'holder_name' => $guest['name'],
                 'holder_email' => $guest['email'] ?? null,
                 'holder_phone' => $guest['phone'] ?? null,
-                'ticket_number' => $this->generateTicketNumber(),
-                'qr_payload' => (string) Str::uuid(),
+                'ticket_number' => $ticketNumber,
+                'qr_payload' => $ticketNumber,
                 'issued_at' => now(),
             ]);
 
@@ -120,14 +126,16 @@ class GuestListController extends Controller
         ]);
 
         $event = Event::query()->findOrFail((int) $data['event_id']);
+        $ticketType = trim((string) ($data['type'] ?? ''));
+        $guestTypeLabel = $ticketType === '' ? 'Guest Regular' : $this->normalizeGuestType($ticketType);
 
         $guest_list->update([
             'event_id' => $event->id,
-            'name' => $event->name.' - Guest List',
+            'name' => $event->name.' - '.$guestTypeLabel,
             'holder_name' => $data['name'],
             'holder_email' => $data['email'] ?? null,
             'holder_phone' => $data['phone'] ?? null,
-            'guest_category' => $data['type'] ?? null,
+            'guest_category' => $guestTypeLabel,
             'status' => $data['status'],
         ]);
 
@@ -146,12 +154,18 @@ class GuestListController extends Controller
     {
         $data = $request->validate([
             'event_id' => ['required', 'exists:events,id'],
+            'guest_type' => ['required', 'string', 'max:255'],
             'file' => ['required', 'file', 'mimes:csv,txt,xlsx'],
         ]);
 
+        $event = Event::query()->with('tickets:id,event_id,name')->findOrFail((int) $data['event_id']);
+        $guestTypeLabel = $this->resolveGuestTypeLabel((string) $data['guest_type'], $event);
+
         $rows = $this->parseImportRows($request->file('file')->getRealPath(), $request->file('file')->getClientOriginalExtension());
 
-        return back()->withInput()->with('imported_guests', $rows)->with('import_event_id', (int) $data['event_id']);
+        return back()->withInput()->with('imported_guests', $rows)
+            ->with('import_event_id', (int) $data['event_id'])
+            ->with('import_guest_type', $guestTypeLabel);
     }
 
     public function export(Request $request)
@@ -350,5 +364,38 @@ class GuestListController extends Controller
         } while (Ticket::query()->where('ticket_number', $number)->exists());
 
         return $number;
+    }
+
+    private function resolveGuestTypeLabel(string $requestedType, Event $event): string
+    {
+        $ticketType = trim($requestedType);
+
+        if ($ticketType === '') {
+            throw ValidationException::withMessages([
+                'guest_type' => 'Guest type is required.',
+            ]);
+        }
+
+        $eventTypes = $event->tickets
+            ->pluck('name')
+            ->map(fn (string $name) => trim($name))
+            ->filter()
+            ->values();
+
+        if ($eventTypes->isNotEmpty() && ! $eventTypes->contains($ticketType)) {
+            throw ValidationException::withMessages([
+                'guest_type' => 'Selected guest type must match one of the event ticket types.',
+            ]);
+        }
+
+        return $this->normalizeGuestType($ticketType);
+    }
+
+    private function normalizeGuestType(string $type): string
+    {
+        $clean = trim($type);
+        $clean = preg_replace('/^guest\s+/i', '', $clean) ?? $clean;
+
+        return 'Guest '.$clean;
     }
 }
