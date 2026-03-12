@@ -64,7 +64,7 @@
                     <tbody>
                         @forelse($tickets as $ticket)
                             <tr>
-                                <td>{{ $ticket->ticket_number }}</td>
+                                <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a></td>
                                 <td>{{ $ticket->holder_name }}</td>
                                 <td>{{ $ticket->eventLabel() }}</td>
                                 <td>{{ $ticket->guest_type }}</td>
@@ -96,7 +96,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Event</label>
-                    <select name="event_name" class="form-select no-select2" required>
+                    <select name="event_name" class="form-select js-modal-select2" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
@@ -135,7 +135,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Event</label>
-                    <select name="event_name" class="form-select no-select2" required>
+                    <select name="event_name" class="form-select js-modal-select2" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
@@ -160,3 +160,40 @@
   </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(() => {
+  if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
+
+  function initModalSelect2(modalId) {
+    const $modal = jQuery(modalId);
+    if (! $modal.length) return;
+
+    $modal.on('shown.bs.modal', function () {
+      $modal.find('select.js-modal-select2').each(function () {
+        const $el = jQuery(this);
+        if ($el.data('select2')) return;
+        $el.select2({
+          width: '100%',
+          dropdownParent: $modal,
+        });
+      });
+    });
+
+    $modal.on('hidden.bs.modal', function () {
+      $modal.find('select.js-modal-select2').each(function () {
+        const $el = jQuery(this);
+        if ($el.data('select2')) {
+          $el.select2('destroy');
+        }
+      });
+    });
+  }
+
+  initModalSelect2('#createInvitationModal');
+  initModalSelect2('#importGuestListModal');
+})();
+</script>
+@endpush
+

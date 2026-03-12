@@ -44,7 +44,7 @@
                 </div>
 
                 <div class="mb-2">
-                    <h5 class="mb-0">guest list</h5>
+                    <h5 class="mb-0">Guest List</h5>
                 </div>
 
                 <div class="table-responsive">
