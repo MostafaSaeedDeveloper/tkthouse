@@ -8,15 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->boolean('exclude_from_statistics')->default(false)->after('total_amount');
-        });
+        if (! Schema::hasColumn('orders', 'exclude_from_statistics')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->boolean('exclude_from_statistics')->default(false)->after('total_amount');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn('exclude_from_statistics');
-        });
+        if (Schema::hasColumn('orders', 'exclude_from_statistics')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn('exclude_from_statistics');
+            });
+        }
     }
 };
