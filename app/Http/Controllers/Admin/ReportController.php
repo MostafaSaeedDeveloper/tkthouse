@@ -91,8 +91,6 @@ class ReportController extends Controller
                 return [
                     'guest_invitations' => $eventTickets->count(),
                     'guest_checked_in' => $eventTickets->where('status', 'checked_in')->count(),
-                    'guest_male' => $eventTickets->where('holder_gender', 'male')->count(),
-                    'guest_female' => $eventTickets->where('holder_gender', 'female')->count(),
                 ];
             });
 
@@ -205,8 +203,6 @@ class ReportController extends Controller
                 $guestStats = $guestStatsByEvent->get($eventName, [
                     'guest_invitations' => 0,
                     'guest_checked_in' => 0,
-                    'guest_male' => 0,
-                    'guest_female' => 0,
                 ]);
 
                 return [
@@ -216,8 +212,6 @@ class ReportController extends Controller
                     'female_tickets' => $femaleTickets,
                     'guest_invitations' => $guestStats['guest_invitations'],
                     'guest_checked_in' => $guestStats['guest_checked_in'],
-                    'guest_male' => $guestStats['guest_male'],
-                    'guest_female' => $guestStats['guest_female'],
                     'gross_revenue' => round((float) $eventItems->sum('gross_contribution'), 2),
                     'ticket_types' => $eventItems
                         ->groupBy('ticket_type')
@@ -242,8 +236,6 @@ class ReportController extends Controller
                 'female_tickets' => 0,
                 'guest_invitations' => $guestStats['guest_invitations'] ?? 0,
                 'guest_checked_in' => $guestStats['guest_checked_in'] ?? 0,
-                'guest_male' => $guestStats['guest_male'] ?? 0,
-                'guest_female' => $guestStats['guest_female'] ?? 0,
                 'gross_revenue' => 0,
                 'ticket_types' => collect(),
             ]);

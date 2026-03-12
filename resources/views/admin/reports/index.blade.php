@@ -66,10 +66,6 @@
                         <small>Guest Checked In</small>
                         <strong>{{ number_format($report['guest_checked_in']) }}</strong>
                     </div>
-                    <div>
-                        <small>Guest Male / Female</small>
-                        <strong>{{ number_format($report['guest_male']) }} / {{ number_format($report['guest_female']) }}</strong>
-                    </div>
                 </div>
 
                 <div class="report-gender-bars">
