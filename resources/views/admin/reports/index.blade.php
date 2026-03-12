@@ -30,6 +30,26 @@
         Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
     </p>
 
+
+    <div class="reports-guest-summary mb-4">
+        <div class="reports-guest-card">
+            <small>Guest List Invitations</small>
+            <strong>{{ number_format($guestInvitations) }}</strong>
+        </div>
+        <div class="reports-guest-card">
+            <small>Guest Male</small>
+            <strong>{{ number_format($guestMale) }}</strong>
+        </div>
+        <div class="reports-guest-card">
+            <small>Guest Female</small>
+            <strong>{{ number_format($guestFemale) }}</strong>
+        </div>
+        <div class="reports-guest-card">
+            <small>Guest Checked In</small>
+            <strong>{{ number_format($guestCheckedIn) }}</strong>
+        </div>
+    </div>
+
     <div class="reports-grid">
         @forelse($eventReports as $report)
             @php
@@ -156,6 +176,30 @@
     color: var(--muted);
     font-size: 13px;
 }
+
+.reports-page .reports-guest-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.reports-page .reports-guest-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+    padding: 10px 12px;
+}
+.reports-page .reports-guest-card small {
+    color: var(--muted);
+    display: block;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+.reports-page .reports-guest-card strong {
+    color: var(--gold);
+    font-family: var(--font-num);
+    font-size: 20px;
+}
+
 .reports-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .report-card {
     border: 1px solid var(--border);
@@ -202,7 +246,11 @@
     color: var(--muted);
     text-align: center;
 }
+@media (max-width: 800px) {
+    .reports-page .reports-guest-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 540px) {
+    .reports-page .reports-guest-summary { grid-template-columns: 1fr; }
     .report-metrics { grid-template-columns: 1fr; }
 }
 </style>

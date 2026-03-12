@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
+use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -54,9 +55,23 @@ class ReportController extends Controller
             ->values();
 
         $selectedEvent = trim((string) $request->input('event', ''));
+
+        $guestInvitationsQuery = Ticket::query()->where('source', 'guest_list');
+        if ($startAt && $endAt) {
+            $guestInvitationsQuery->whereBetween('created_at', [$startAt, $endAt]);
+        }
         if ($selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
             $selectedEvent = '';
         }
+
+        if ($selectedEvent !== '') {
+            $guestInvitationsQuery->where('name', 'like', $selectedEvent.' - %');
+        }
+
+        $guestInvitations = (clone $guestInvitationsQuery)->count();
+        $guestMale = (clone $guestInvitationsQuery)->where('holder_gender', 'male')->count();
+        $guestFemale = (clone $guestInvitationsQuery)->where('holder_gender', 'female')->count();
+        $guestCheckedIn = (clone $guestInvitationsQuery)->where('status', 'checked_in')->count();
 
         $filteredItems = $selectedEvent === ''
             ? $normalizedItems
@@ -69,6 +84,10 @@ class ReportController extends Controller
             'totalTickets' => $eventReports->sum('tickets_sold'),
             'totalRevenue' => $eventReports->sum('gross_revenue'),
             'totalOrders' => $filteredItems->pluck('order_id')->filter()->unique()->count(),
+            'guestInvitations' => $guestInvitations,
+            'guestMale' => $guestMale,
+            'guestFemale' => $guestFemale,
+            'guestCheckedIn' => $guestCheckedIn,
             'rangeOptions' => [
                 'today' => 'Today',
                 'yesterday' => 'Yesterday',
