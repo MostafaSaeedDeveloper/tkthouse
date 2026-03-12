@@ -43,6 +43,24 @@ class GuestListController extends Controller
         return view('admin.tickets.guest-list', compact('tickets', 'eventNames', 'guestTypes'));
     }
 
+    public function create(Request $request)
+    {
+        $data = $request->validate([
+            'event_name' => ['required', 'string', 'max:255'],
+            'guest_type' => ['required', 'string', 'max:255'],
+            'count' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ]);
+
+        $eventNames = Event::query()->orderBy('name')->pluck('name');
+
+        return view('admin.tickets.guest-list-create', [
+            'eventNames' => $eventNames,
+            'selectedEventName' => $data['event_name'],
+            'selectedGuestType' => $this->normalizeGuestType($data['guest_type']),
+            'selectedCount' => (int) ($data['count'] ?? 1),
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -59,22 +77,15 @@ class GuestListController extends Controller
         $guestType = $this->normalizeGuestType($data['guest_type']);
 
         foreach ($data['guests'] as $guest) {
-            $ticketNumber = $this->generateTicketNumber();
-            $ticket = Ticket::create([
-                'name' => $data['event_name'].' - '.$guestType,
-                'source' => 'guest_list',
-                'guest_type' => $guestType,
-                'description' => 'Guest list invitation',
-                'status' => $status,
-                'holder_name' => $guest['name'],
-                'holder_email' => $guest['email'] ?? null,
-                'holder_phone' => $guest['phone'] ?? null,
-                'ticket_number' => $ticketNumber,
-                'qr_payload' => $ticketNumber,
-                'issued_at' => now(),
-            ]);
-
-            $this->sendTicketEmailIfProvided($ticket);
+            $this->createGuestTicket(
+                eventName: $data['event_name'],
+                guestType: $guestType,
+                name: $guest['name'],
+                email: $guest['email'] ?? null,
+                phone: $guest['phone'] ?? null,
+                status: $status,
+                description: 'Guest list invitation',
+            );
         }
 
         return redirect()->route('admin.guest-list.index')->with('success', 'Guest invitations created successfully.');
@@ -84,8 +95,8 @@ class GuestListController extends Controller
     {
         return response()->streamDownload(function () {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['event_name', 'guest_type', 'name', 'email', 'phone', 'quantity']);
-            fputcsv($handle, ['Sample Event', 'Regular', 'Guest Name', 'guest@example.com', '01000000000', '1']);
+            fputcsv($handle, ['guest_type', 'name', 'email', 'phone', 'quantity']);
+            fputcsv($handle, ['Regular', 'Guest Name', 'guest@example.com', '01000000000', '1']);
             fclose($handle);
         }, 'guest-list-template.csv', ['Content-Type' => 'text/csv']);
     }
@@ -93,16 +104,17 @@ class GuestListController extends Controller
     public function import(Request $request)
     {
         $data = $request->validate([
+            'event_name' => ['required', 'string', 'max:255'],
             'file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
         $rows = collect(array_map('str_getcsv', file($data['file']->getRealPath())));
+
         if ($rows->isEmpty()) {
             return back()->with('error', 'Import file is empty.');
         }
 
         $headers = $rows->shift()->map(fn ($header) => trim((string) $header));
-
         $created = 0;
 
         foreach ($rows as $row) {
@@ -111,14 +123,14 @@ class GuestListController extends Controller
             }
 
             $mapped = $headers->combine($row);
+
             if (! $mapped instanceof Collection) {
                 continue;
             }
 
-            $eventName = trim((string) $mapped->get('event_name', ''));
             $name = trim((string) $mapped->get('name', ''));
 
-            if ($eventName === '' || $name === '') {
+            if ($name === '') {
                 continue;
             }
 
@@ -128,22 +140,16 @@ class GuestListController extends Controller
             $quantity = max(1, (int) $mapped->get('quantity', 1));
 
             for ($i = 0; $i < $quantity; $i++) {
-                $ticketNumber = $this->generateTicketNumber();
-                $ticket = Ticket::create([
-                    'name' => $eventName.' - '.$guestType,
-                    'source' => 'guest_list',
-                    'guest_type' => $guestType,
-                    'description' => 'Imported guest list invitation',
-                    'status' => 'not_checked_in',
-                    'holder_name' => $name,
-                    'holder_email' => $email,
-                    'holder_phone' => $phone,
-                    'ticket_number' => $ticketNumber,
-                    'qr_payload' => $ticketNumber,
-                    'issued_at' => now(),
-                ]);
+                $this->createGuestTicket(
+                    eventName: $data['event_name'],
+                    guestType: $guestType,
+                    name: $name,
+                    email: $email,
+                    phone: $phone,
+                    status: 'not_checked_in',
+                    description: 'Imported guest list invitation',
+                );
 
-                $this->sendTicketEmailIfProvided($ticket);
                 $created++;
             }
         }
@@ -173,6 +179,34 @@ class GuestListController extends Controller
 
             fclose($handle);
         }, 'guest-list-export.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    private function createGuestTicket(
+        string $eventName,
+        string $guestType,
+        string $name,
+        ?string $email,
+        ?string $phone,
+        string $status,
+        string $description,
+    ): void {
+        $ticketNumber = $this->generateTicketNumber();
+
+        $ticket = Ticket::create([
+            'name' => $eventName.' - '.$guestType,
+            'source' => 'guest_list',
+            'guest_type' => $guestType,
+            'description' => $description,
+            'status' => $status,
+            'holder_name' => $name,
+            'holder_email' => $email,
+            'holder_phone' => $phone,
+            'ticket_number' => $ticketNumber,
+            'qr_payload' => $ticketNumber,
+            'issued_at' => now(),
+        ]);
+
+        $this->sendTicketEmailIfProvided($ticket);
     }
 
     private function normalizeGuestType(string $guestType): string

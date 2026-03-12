@@ -45,13 +45,14 @@ class AdminGuestListTest extends TestCase
         $admin = User::factory()->create();
 
         $csv = implode("\n", [
-            'event_name,guest_type,name,email,phone,quantity',
-            'My Event,VIP,Imported Guest,imported@example.com,01001,2',
+            'guest_type,name,email,phone,quantity',
+            'VIP,Imported Guest,imported@example.com,01001,2',
         ]);
 
         $file = UploadedFile::fake()->createWithContent('guest-import.csv', $csv);
 
         $response = $this->actingAs($admin)->post(route('admin.guest-list.import'), [
+            'event_name' => 'My Event',
             'file' => $file,
         ]);
 

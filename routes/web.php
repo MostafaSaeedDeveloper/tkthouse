@@ -103,6 +103,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
 
 
     Route::get('guest-list', [GuestListController::class, 'index'])->middleware('permission:tickets.view')->name('guest-list.index');
+    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware('permission:tickets.create')->name('guest-list.create');
     Route::post('guest-list', [GuestListController::class, 'store'])->middleware('permission:tickets.create')->name('guest-list.store');
     Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware('permission:tickets.create')->name('guest-list.import');
     Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware('permission:tickets.view')->name('guest-list.export');
