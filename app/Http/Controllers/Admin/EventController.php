@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\OrderItem;
+use App\Models\Ticket;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +55,17 @@ class EventController extends Controller
     {
         $event->load(['tickets', 'fees', 'images']);
 
-        return view('admin.events.show', compact('event'));
+        $ticketsSold = OrderItem::query()
+            ->where('ticket_name', 'like', $event->name.' - %')
+            ->whereHas('order', fn ($query) => $query->where('status', 'paid')->includedInStatistics())
+            ->sum('quantity');
+
+        $guestInvitations = Ticket::query()
+            ->guestList()
+            ->where('event_id', $event->id)
+            ->count();
+
+        return view('admin.events.show', compact('event', 'ticketsSold', 'guestInvitations'));
     }
 
     public function edit(Event $event)

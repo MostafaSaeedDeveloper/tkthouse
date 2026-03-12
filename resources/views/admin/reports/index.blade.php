@@ -30,6 +30,12 @@
         Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
     </p>
 
+
+    <div class="report-summary mb-3">
+        <span class="report-type-badge"><span>Tickets Sold</span><strong>{{ number_format($totalTickets) }}</strong></span>
+        <span class="report-type-badge"><span>Guest List Invitations</span><strong>{{ number_format($totalGuestInvitations) }}</strong></span>
+    </div>
+
     <div class="reports-grid">
         @forelse($eventReports as $report)
             @php
@@ -39,7 +45,7 @@
             <article class="report-card">
                 <div class="report-card-top">
                     <h3>{{ $report['event_name'] }}</h3>
-                    <span class="report-total">{{ number_format($report['tickets_sold']) }} sold</span>
+                    <span class="report-total">{{ number_format($report['tickets_sold']) }} sold / {{ number_format($guestInvitationsByEvent[$report['event_name']] ?? 0) }} invited</span>
                 </div>
 
                 <div class="report-metrics">
@@ -156,6 +162,7 @@
     color: var(--muted);
     font-size: 13px;
 }
+.report-summary { display:flex; gap:8px; flex-wrap:wrap; }
 .reports-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .report-card {
     border: 1px solid var(--border);

@@ -9,6 +9,28 @@
         </div>
     </div>
 
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <div class="block block-rounded h-100">
+                <div class="block-content">
+                    <div class="text-muted">Tickets Sold</div>
+                    <div class="fs-2 fw-bold">{{ number_format($ticketsSold) }}</div>
+                    <small class="text-muted">Paid sales tickets only.</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="block block-rounded h-100">
+                <div class="block-content">
+                    <div class="text-muted">Guest List Invitations</div>
+                    <div class="fs-2 fw-bold">{{ number_format($guestInvitations) }}</div>
+                    <small class="text-muted">Separate from tickets sold.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="block block-rounded">
         <div class="block-content">
             <p><strong>Status:</strong> {{ str($event->status)->replace('_', ' ')->title() }}</p>

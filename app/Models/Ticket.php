@@ -12,16 +12,20 @@ class Ticket extends Model
     protected $fillable = [
         'order_id',
         'order_item_id',
+        'event_id',
         'name',
         'price',
         'description',
         'status',
+        'ticket_source',
+        'guest_category',
         'ticket_number',
         'holder_name',
         'holder_email',
         'holder_phone',
         'qr_payload',
         'issued_at',
+        'invitation_sent_at',
         'checked_in_at',
         'canceled_at',
     ];
@@ -30,9 +34,20 @@ class Ticket extends Model
     {
         return [
             'issued_at' => 'datetime',
+            'invitation_sent_at' => 'datetime',
             'checked_in_at' => 'datetime',
             'canceled_at' => 'datetime',
         ];
+    }
+
+    public function scopeSales($query)
+    {
+        return $query->where('ticket_source', 'sale');
+    }
+
+    public function scopeGuestList($query)
+    {
+        return $query->where('ticket_source', 'guest_list');
     }
 
     public function orderItems()
@@ -43,6 +58,11 @@ class Ticket extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function orderItem()
