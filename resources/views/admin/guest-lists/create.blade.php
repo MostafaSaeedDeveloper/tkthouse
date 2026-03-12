@@ -5,6 +5,13 @@
     $rows = old('guests', session('imported_guests', [['name' => '', 'email' => '', 'phone' => '']]));
     $selectedEventId = (int) old('event_id', session('import_event_id', 0));
     $selectedGuestType = old('guest_type', session('import_guest_type', ''));
+    $eventsData = $events->map(function ($event) {
+        return [
+            'id' => $event->id,
+            'name' => $event->name,
+            'types' => $event->tickets->pluck('name')->values()->all(),
+        ];
+    })->values();
 @endphp
 <div class="content">
     @include('admin.partials.flash')
@@ -133,11 +140,7 @@
 @push('scripts')
 <script>
 (() => {
-    const events = @json($events->map(fn($event) => [
-        'id' => $event->id,
-        'name' => $event->name,
-        'types' => $event->tickets->pluck('name')->values(),
-    ])->values());
+    const events = @json($eventsData);
 
     const tableBody = document.querySelector('#guest-table tbody');
     const addRowBtn = document.getElementById('add-row');
