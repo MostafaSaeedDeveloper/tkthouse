@@ -19,6 +19,7 @@ class PagesController extends Controller
         $eventName = trim((string) ($filters['event_name'] ?? ''));
         $eventLocation = trim((string) ($filters['event_location'] ?? ''));
         $eventDate = $filters['event_date'] ?? null;
+        $hasHomeFilters = $eventName !== '' || $eventLocation !== '' || ! empty($eventDate);
 
         $applyHomeSearch = function ($query) use ($eventName, $eventLocation, $eventDate) {
             $query
@@ -60,13 +61,23 @@ class PagesController extends Controller
             ->take(6)
             ->get();
 
+        $locations = Event::query()
+            ->whereIn('status', ['active', 'sold_out'])
+            ->whereNotNull('location')
+            ->where('location', '!=', '')
+            ->distinct()
+            ->orderBy('location')
+            ->pluck('location');
+
         return view('front.index', compact(
             'upcomingEvents',
             'featuredEvents',
             'previousEvents',
+            'locations',
             'eventName',
             'eventLocation',
             'eventDate',
+            'hasHomeFilters',
         ));
     }
 

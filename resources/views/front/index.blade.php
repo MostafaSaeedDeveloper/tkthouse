@@ -25,6 +25,8 @@
             <!--Main Content Wrap Start-->
             <style>
             @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+            @import url('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+            @import url('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');
 
             .banner_slider .slide {
                 position: relative;
@@ -180,6 +182,55 @@
                 .ev-home-search {
                     grid-template-columns: 1fr;
                 }
+            }
+
+
+            .select2-container--default .select2-selection--single {
+                height: 44px;
+                background: var(--ev-surface2);
+                border: 1px solid var(--ev-border);
+                border-radius: 10px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                color: var(--ev-text);
+                line-height: 42px;
+                padding-left: 12px;
+                font-size: 13px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 42px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__arrow b {
+                border-color: var(--ev-muted) transparent transparent transparent;
+            }
+            .select2-dropdown {
+                background: var(--ev-surface2);
+                border: 1px solid var(--ev-border);
+            }
+            .select2-search--dropdown .select2-search__field {
+                background: #0f0f16;
+                color: var(--ev-text);
+                border: 1px solid var(--ev-border);
+            }
+            .select2-results__option { color: var(--ev-text); }
+            .select2-container--default .select2-results__option--highlighted[aria-selected] {
+                background: rgba(245,184,0,0.2);
+                color: #fff;
+            }
+            .flatpickr-calendar {
+                background: #111118;
+                border: 1px solid var(--ev-border);
+                box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+            }
+            .flatpickr-day,
+            .flatpickr-current-month,
+            .flatpickr-weekday { color: #e8e8ef; }
+            .flatpickr-day.selected,
+            .flatpickr-day.startRange,
+            .flatpickr-day.endRange {
+                background: var(--ev-gold);
+                border-color: var(--ev-gold);
+                color: #000;
             }
 
             /* ── Grid ── */
@@ -339,6 +390,7 @@
             .ev-home-empty-btn:hover { background: #ffc820; color: #000; text-decoration: none; }
             </style>
 
+            @if(! $hasHomeFilters || $upcomingEvents->isNotEmpty())
             <section class="ev-home-section">
                 <div class="container">
 
@@ -356,8 +408,13 @@
 
                     <form class="ev-home-search" method="GET" action="{{ route('front.home') }}">
                         <input class="ev-home-input" type="search" name="event_name" value="{{ $eventName }}" placeholder="Search by event name">
-                        <input class="ev-home-input" type="search" name="event_location" value="{{ $eventLocation }}" placeholder="Search by location">
-                        <input class="ev-home-input" type="date" name="event_date" value="{{ $eventDate }}">
+                        <select class="ev-home-input js-location-select" name="event_location" data-placeholder="Select location">
+                            <option value="">All locations</option>
+                            @foreach($locations as $location)
+                                <option value="{{ $location }}" @selected($eventLocation === $location)>{{ $location }}</option>
+                            @endforeach
+                        </select>
+                        <input class="ev-home-input js-event-date" type="text" name="event_date" value="{{ $eventDate }}" placeholder="Select date" autocomplete="off">
                         <button class="ev-home-search-btn" type="submit">Search</button>
                         <a class="ev-home-clear-btn" href="{{ route('front.home') }}">Clear</a>
                     </form>
@@ -410,6 +467,7 @@
 
                 </div>
             </section>
+            @endif
 
             <section class="ev-home-section">
                 <div class="container">
@@ -461,5 +519,27 @@
             </section>
             <!--Main Content Wrap End-->
 
+
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    (function () {
+        if (window.jQuery && jQuery.fn.select2) {
+            $('.js-location-select').select2({
+                width: '100%',
+                placeholder: 'Select location',
+                allowClear: true
+            });
+        }
+
+        if (window.flatpickr) {
+            flatpickr('.js-event-date', {
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+            });
+        }
+    })();
+</script>
 
 @endsection
