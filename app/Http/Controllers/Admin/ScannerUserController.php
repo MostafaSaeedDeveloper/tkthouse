@@ -40,6 +40,28 @@ class ScannerUserController extends Controller
         return view('admin/scanners/create');
     }
 
+
+    public function show(User $user)
+    {
+        abort_unless($user->hasRole('scanner'), 404);
+
+        $scanLogs = ScanLog::query()
+            ->where('scanned_by_user_id', $user->id)
+            ->latest('scanned_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        $stats = [
+            'total_scans' => ScanLog::query()->where('scanned_by_user_id', $user->id)->whereIn('action', ['lookup_success', 'status_update'])->count(),
+            'successful_lookups' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'lookup_success')->count(),
+            'failed_lookups' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'lookup_failed')->count(),
+            'checkins' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'status_update')->where('new_status', 'checked_in')->count(),
+            'logins' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'scanner_login')->count(),
+        ];
+
+        return view('admin/scanners/show', compact('user', 'scanLogs', 'stats'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

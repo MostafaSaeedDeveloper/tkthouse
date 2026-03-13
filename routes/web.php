@@ -119,6 +119,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
 
     Route::get('scanners', [ScannerUserController::class, 'index'])->middleware('permission:scanners.view')->name('scanners.index');
     Route::get('scanners/create', [ScannerUserController::class, 'create'])->middleware('permission:scanners.view')->name('scanners.create');
+    Route::get('scanners/{user}', [ScannerUserController::class, 'show'])->middleware('permission:scanners.view')->name('scanners.show');
     Route::post('scanners', [ScannerUserController::class, 'store'])->middleware('permission:scanners.view')->name('scanners.store');
     Route::delete('scanners/{user}', [ScannerUserController::class, 'destroy'])->middleware('permission:scanners.view')->name('scanners.destroy');
     Route::get('scanners/export-history', [ScannerUserController::class, 'exportHistory'])->middleware('permission:scanners.view')->name('scanners.export-history');

@@ -191,6 +191,20 @@ class TicketController extends Controller
 
         abort_unless(auth()->user()?->can('scanner.access') || auth()->user()?->hasRole('scanner'), 403);
 
+        auth()->user()?->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ])->save();
+
+        ScanLog::create([
+            'action' => 'scanner_login',
+            'scanned_by_user_id' => auth()->id(),
+            'scanner_name' => auth()->user()?->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'scanned_at' => now(),
+        ]);
+
         return redirect()->route('admin.tickets.scanner');
     }
 

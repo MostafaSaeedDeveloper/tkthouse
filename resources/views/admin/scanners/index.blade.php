@@ -32,7 +32,7 @@
             <th>Username</th>
             <th>Email</th>
             <th>Scanner Link</th>
-            <th style="width:220px">Actions</th>
+            <th style="width:280px">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -45,6 +45,7 @@
                 <a href="{{ route('front.scanner.login') }}" target="_blank">{{ route('front.scanner.login') }}</a>
               </td>
               <td>
+                <a href="{{ route('admin.scanners.show', $scanner) }}" class="btn btn-sm btn-alt-info">Show</a>
                 <form method="POST" action="{{ route('admin.scanners.destroy', $scanner) }}" class="d-inline" onsubmit="return confirm('Delete this scanner user?');">
                   @csrf
                   @method('DELETE')
