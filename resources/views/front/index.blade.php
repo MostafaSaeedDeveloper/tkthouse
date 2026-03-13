@@ -160,12 +160,18 @@
             .ev-home-input {
                 width: 100%;
                 background: var(--ev-surface2);
-                border: 1px solid rgba(255,255,255,0.12);
+                border: 1px solid rgba(255,255,255,0.06);
                 color: var(--ev-text);
                 border-radius: 10px;
                 padding: 11px 12px;
                 font-size: 13px;
                 box-shadow: none;
+                appearance: none;
+                -webkit-appearance: none;
+                background-clip: padding-box;
+            }
+            .ev-home-input::placeholder {
+                color: rgba(232,232,239,0.45);
             }
             .ev-home-input:focus {
                 outline: none;
@@ -221,8 +227,13 @@
             .select2-container--default .select2-selection--single {
                 height: 44px;
                 background: var(--ev-surface2);
-                border: 1px solid rgba(255,255,255,0.12);
+                border: 1px solid rgba(255,255,255,0.06);
                 border-radius: 10px;
+            }
+            .select2-container--default.select2-container--focus .select2-selection--single,
+            .select2-container--default.select2-container--open .select2-selection--single {
+                border-color: rgba(245,184,0,0.45);
+                box-shadow: 0 0 0 3px rgba(245,184,0,0.08);
             }
             .select2-container--default .select2-selection--single .select2-selection__rendered {
                 color: var(--ev-text);
