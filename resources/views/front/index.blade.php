@@ -160,15 +160,17 @@
             .ev-home-input {
                 width: 100%;
                 background: var(--ev-surface2);
-                border: 1px solid var(--ev-border);
+                border: 1px solid rgba(255,255,255,0.12);
                 color: var(--ev-text);
                 border-radius: 10px;
                 padding: 11px 12px;
                 font-size: 13px;
+                box-shadow: none;
             }
             .ev-home-input:focus {
                 outline: none;
                 border-color: rgba(245,184,0,0.45);
+                box-shadow: 0 0 0 3px rgba(245,184,0,0.08);
             }
             .ev-home-search-btn,
             .ev-home-clear-btn {
@@ -219,7 +221,7 @@
             .select2-container--default .select2-selection--single {
                 height: 44px;
                 background: var(--ev-surface2);
-                border: 1px solid var(--ev-border);
+                border: 1px solid rgba(255,255,255,0.12);
                 border-radius: 10px;
             }
             .select2-container--default .select2-selection--single .select2-selection__rendered {
@@ -265,6 +267,25 @@
             .flatpickr-day.selected,
             .flatpickr-day.startRange,
             .flatpickr-day.endRange {
+                background: var(--ev-gold);
+                border-color: var(--ev-gold);
+                color: #000;
+            }
+            .flatpickr-day.today {
+                border-color: rgba(245,184,0,0.45);
+                color: var(--ev-gold);
+            }
+            .flatpickr-day.today:not(.selected) {
+                background: transparent;
+            }
+            .flatpickr-day:focus,
+            .flatpickr-day:hover {
+                background: rgba(245,184,0,0.16);
+                border-color: rgba(245,184,0,0.28);
+                color: #fff;
+            }
+            .flatpickr-day.selected:focus,
+            .flatpickr-day.selected:hover {
                 background: var(--ev-gold);
                 border-color: var(--ev-gold);
                 color: #000;
