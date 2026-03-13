@@ -77,7 +77,15 @@ class TicketController extends Controller
         $ticket->load('order');
         $whatsappEnabled = (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
 
-        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled'));
+        $scanLogs = ScanLog::query()
+            ->with('scannerUser')
+            ->where('ticket_id', $ticket->id)
+            ->where('action', 'status_update')
+            ->latest('scanned_at')
+            ->take(30)
+            ->get();
+
+        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled', 'scanLogs'));
     }
 
     public function edit(Ticket $ticket)
