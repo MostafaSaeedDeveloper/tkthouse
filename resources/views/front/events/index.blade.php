@@ -45,12 +45,12 @@
     margin: 52px 0 10px;
 }
 .ev-section-title:first-of-type {
-    margin-top: 20px;
+    margin: 0 0 24px;
 }
 
 
 .ev-toolbar {
-    margin-top: 20px;
+    margin: 0 0 24px;
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -100,14 +100,22 @@
     color: var(--muted);
     font-size: 12px;
     align-self: center;
+    line-height: 1.4;
 }
 @media (max-width: 768px) {
     .ev-search-row,
     .ev-filter-row {
         grid-template-columns: 1fr;
     }
+    .ev-toolbar {
+        padding: 12px;
+    }
     .ev-search-btn {
         min-height: 42px;
+        width: 100%;
+    }
+    .ev-filter-hint {
+        font-size: 11px;
     }
 }
 
@@ -325,8 +333,6 @@
 <div class="kode_content_wrap ev-page">
     <section>
         <div class="container">
-        <h2 class="ev-section-title">Upcoming Events</h2>
-
         <form class="ev-toolbar" method="GET" action="{{ route('front.events') }}">
             <div class="ev-search-row">
                 <input
@@ -349,6 +355,8 @@
                 <div class="ev-filter-hint">Tip: Search prioritizes exact and starts-with matches for faster discovery.</div>
             </div>
         </form>
+
+        <h2 class="ev-section-title">Upcoming Events</h2>
 
         <div class="ev-grid">
             @if($when !== 'previous')

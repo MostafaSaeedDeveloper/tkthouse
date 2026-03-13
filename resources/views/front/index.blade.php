@@ -21,6 +21,22 @@
                 @endforelse
             </div>
 
+            <div class="ev-home-search-wrap">
+                <div class="container">
+                    <form class="ev-home-search" method="GET" action="{{ route('front.home') }}">
+                        <input class="ev-home-input" type="search" name="event_name" value="{{ $eventName }}" placeholder="Search by event name">
+                        <select class="ev-home-input js-location-select" name="event_location" data-placeholder="Select location">
+                            <option value="">All locations</option>
+                            @foreach($locations as $location)
+                                <option value="{{ $location }}" @selected($eventLocation === $location)>{{ $location }}</option>
+                            @endforeach
+                        </select>
+                        <input class="ev-home-input js-event-date" type="text" name="event_date" value="{{ $eventDate }}" placeholder="Select date" autocomplete="off">
+                        <button class="ev-home-search-btn" type="submit">Search</button>
+                        <a class="ev-home-clear-btn" href="{{ route('front.home') }}">Clear</a>
+                    </form>
+                </div>
+            </div>
 
             <!--Main Content Wrap Start-->
             <style>
@@ -124,8 +140,14 @@
             .ev-see-all svg { width: 12px; height: 12px; }
 
 
+            .ev-home-search-wrap {
+                background: var(--ev-bg);
+                padding: 22px 0 10px;
+                font-family: var(--ev-font-b);
+            }
+
             .ev-home-search {
-                margin: 18px 0 28px;
+                margin: 0 0 20px;
                 border: 1px solid var(--ev-border);
                 border-radius: var(--ev-radius);
                 background: var(--ev-surface);
@@ -181,6 +203,15 @@
             @media (max-width: 680px) {
                 .ev-home-search {
                     grid-template-columns: 1fr;
+                    padding: 12px;
+                }
+                .ev-home-search-btn,
+                .ev-home-clear-btn {
+                    width: 100%;
+                    min-height: 42px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
                 }
             }
 
@@ -411,18 +442,6 @@
                         </a>
                     </div>
 
-                    <form class="ev-home-search" method="GET" action="{{ route('front.home') }}">
-                        <input class="ev-home-input" type="search" name="event_name" value="{{ $eventName }}" placeholder="Search by event name">
-                        <select class="ev-home-input js-location-select" name="event_location" data-placeholder="Select location">
-                            <option value="">All locations</option>
-                            @foreach($locations as $location)
-                                <option value="{{ $location }}" @selected($eventLocation === $location)>{{ $location }}</option>
-                            @endforeach
-                        </select>
-                        <input class="ev-home-input js-event-date" type="text" name="event_date" value="{{ $eventDate }}" placeholder="Select date" autocomplete="off">
-                        <button class="ev-home-search-btn" type="submit">Search</button>
-                        <a class="ev-home-clear-btn" href="{{ route('front.home') }}">Clear</a>
-                    </form>
 
                     {{-- Cards grid --}}
                     <div class="ev-home-grid">
