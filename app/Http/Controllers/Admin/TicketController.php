@@ -216,6 +216,17 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.scanner');
     }
 
+
+    public function scannerLogout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('front.scanner.login');
+    }
+
     public function scanner(Request $request)
     {
         $this->ensureScannerAccess();

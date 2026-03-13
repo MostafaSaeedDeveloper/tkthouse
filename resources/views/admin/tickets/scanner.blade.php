@@ -376,7 +376,7 @@ html, body {
     <a href="{{ route('admin.dashboard') }}" class="sc-logo"><img style="height: 30px" src="{{asset('images/logo-light.png')}}" alt=""><span>.</span></a>
     <div class="sc-top-actions">
       <span class="sc-badge"><i class="fa fa-qrcode" style="margin-right:5px;"></i>Scanner</span>
-      <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+      <form method="POST" action="{{ route('front.scanner.logout') }}" style="margin:0;">
         @csrf
         <button class="sc-logout" type="submit"><i class="fa fa-right-from-bracket"></i> Logout</button>
       </form>

@@ -165,6 +165,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
 
 Route::get('/scanner', [TicketController::class, 'scannerLogin'])->name('front.scanner.login');
 Route::post('/scanner', [TicketController::class, 'scannerLoginSubmit'])->name('front.scanner.login.submit');
+Route::post('/scanner/logout', [TicketController::class, 'scannerLogout'])->middleware('auth')->name('front.scanner.logout');
 
 Route::redirect('/admin', '/dashboard');
 Route::redirect('/admin/dashboard', '/dashboard');
