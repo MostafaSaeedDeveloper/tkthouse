@@ -334,7 +334,7 @@
                     type="search"
                     name="q"
                     value="{{ $search }}"
-                    placeholder="Search by event name, location, or venue"
+                    placeholder="Search by event name or location"
                     aria-label="Search events"
                 >
                 <button class="ev-search-btn" type="submit">Search</button>

@@ -27,11 +27,7 @@ class PagesController extends Controller
                 })
                 ->when($eventLocation !== '', function ($subQuery) use ($eventLocation) {
                     $value = '%'.mb_strtolower($eventLocation).'%';
-                    $subQuery->where(function ($innerQuery) use ($value) {
-                        $innerQuery
-                            ->whereRaw('LOWER(location) LIKE ?', [$value])
-                            ->orWhereRaw('LOWER(venue) LIKE ?', [$value]);
-                    });
+                    $subQuery->whereRaw('LOWER(location) LIKE ?', [$value]);
                 })
                 ->when($eventDate, function ($subQuery) use ($eventDate) {
                     $subQuery->whereDate('event_date', $eventDate);
@@ -101,17 +97,15 @@ class PagesController extends Controller
             $query->where(function ($subQuery) use ($contains) {
                 $subQuery
                     ->whereRaw('LOWER(name) LIKE ?', [$contains])
-                    ->orWhereRaw('LOWER(location) LIKE ?', [$contains])
-                    ->orWhereRaw('LOWER(venue) LIKE ?', [$contains]);
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$contains]);
             })->orderByRaw(
                 "CASE
                     WHEN LOWER(name) LIKE ? THEN 0
                     WHEN LOWER(name) LIKE ? THEN 1
                     WHEN LOWER(location) LIKE ? THEN 2
-                    WHEN LOWER(venue) LIKE ? THEN 3
-                    ELSE 4
+                    ELSE 3
                 END",
-                [$startsWith, $contains, $contains, $contains]
+                [$startsWith, $contains, $contains]
             );
         };
 

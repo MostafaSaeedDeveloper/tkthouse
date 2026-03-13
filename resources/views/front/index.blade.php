@@ -356,7 +356,7 @@
 
                     <form class="ev-home-search" method="GET" action="{{ route('front.home') }}">
                         <input class="ev-home-input" type="search" name="event_name" value="{{ $eventName }}" placeholder="Search by event name">
-                        <input class="ev-home-input" type="search" name="event_location" value="{{ $eventLocation }}" placeholder="Search by location or venue">
+                        <input class="ev-home-input" type="search" name="event_location" value="{{ $eventLocation }}" placeholder="Search by location">
                         <input class="ev-home-input" type="date" name="event_date" value="{{ $eventDate }}">
                         <button class="ev-home-search-btn" type="submit">Search</button>
                         <a class="ev-home-clear-btn" href="{{ route('front.home') }}">Clear</a>
