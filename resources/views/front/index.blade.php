@@ -396,8 +396,7 @@
             .ev-home-empty-btn:hover { background: #ffc820; color: #000; text-decoration: none; }
             </style>
 
-            @if(! $hasHomeFilters || $upcomingEvents->isNotEmpty())
-            <section class="ev-home-section">
+                        <section class="ev-home-section">
                 <div class="container">
 
                     {{-- Section header --}}
@@ -462,18 +461,25 @@
 
                             </a>
                         @empty
-                            <div class="ev-home-empty">
-                                <div class="ev-home-empty-icon">🎫</div>
-                                <h3>No upcoming events yet</h3>
-                                <p>Stay tuned — new dates coming soon.</p>
-                                <a class="ev-home-empty-btn" href="{{ route('front.events') }}">Explore Events →</a>
-                            </div>
+                            @if(! $hasHomeFilters)
+                                <div class="ev-home-empty">
+                                    <div class="ev-home-empty-icon">🎫</div>
+                                    <h3>No upcoming events yet</h3>
+                                    <p>Stay tuned — new dates coming soon.</p>
+                                    <a class="ev-home-empty-btn" href="{{ route('front.events') }}">Explore Events →</a>
+                                </div>
+                            @else
+                                <div class="ev-home-empty">
+                                    <div class="ev-home-empty-icon">🔎</div>
+                                    <h3>No upcoming results</h3>
+                                    <p>Try another name, location, or date to find upcoming events.</p>
+                                </div>
+                            @endif
                         @endforelse
                     </div>
 
                 </div>
             </section>
-            @endif
 
             <section class="ev-home-section">
                 <div class="container">
