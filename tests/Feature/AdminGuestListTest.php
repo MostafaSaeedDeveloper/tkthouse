@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Mail\AdminTicketIssuedMail;
+use App\Mail\GuestInvitationMail;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,7 +37,7 @@ class AdminGuestListTest extends TestCase
             'holder_gender' => 'male',
         ]);
 
-        Mail::assertSent(AdminTicketIssuedMail::class, 1);
+        Mail::assertSent(GuestInvitationMail::class, 1);
     }
 
     public function test_admin_can_import_guest_list_csv(): void
@@ -65,6 +65,6 @@ class AdminGuestListTest extends TestCase
             'holder_gender' => 'female',
         ]);
 
-        Mail::assertSent(AdminTicketIssuedMail::class, 1);
+        Mail::assertSent(GuestInvitationMail::class, 1);
     }
 }

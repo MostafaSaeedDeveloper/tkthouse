@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\AdminTicketIssuedMail;
+use App\Mail\GuestInvitationMail;
 use App\Models\Event;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -240,10 +240,8 @@ class GuestListController extends Controller
             'event' => Event::query()->where('name', $ticket->eventLabel())->first(),
         ])->output();
 
-        Mail::to($ticket->holder_email)->send(new AdminTicketIssuedMail(
+        Mail::to($ticket->holder_email)->send(new GuestInvitationMail(
             ticket: $ticket,
-            showUrl: route('admin.tickets.show', $ticket),
-            recipientEmail: $ticket->holder_email,
             pdfBinary: $pdf,
         ));
     }
