@@ -57,6 +57,17 @@
                     </div>
                 </div>
 
+                <div class="report-metrics">
+                    <div>
+                        <small>Guest Invitations</small>
+                        <strong>{{ number_format($report['guest_invitations']) }}</strong>
+                    </div>
+                    <div>
+                        <small>Guest Checked In</small>
+                        <strong>{{ number_format($report['guest_checked_in']) }}</strong>
+                    </div>
+                </div>
+
                 <div class="report-gender-bars">
                     <div class="report-gender-track">
                         <div class="report-gender-fill male" style="width: {{ $malePercent }}%"></div>
@@ -156,6 +167,8 @@
     color: var(--muted);
     font-size: 13px;
 }
+
+
 .reports-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 .report-card {
     border: 1px solid var(--border);

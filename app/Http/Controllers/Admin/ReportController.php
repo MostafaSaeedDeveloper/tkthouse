@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
+use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -54,15 +55,46 @@ class ReportController extends Controller
             ->values();
 
         $selectedEvent = trim((string) $request->input('event', ''));
+
         if ($selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
             $selectedEvent = '';
         }
+
 
         $filteredItems = $selectedEvent === ''
             ? $normalizedItems
             : $normalizedItems->where('event_name', $selectedEvent)->values();
 
-        $eventReports = $this->buildEventReports($filteredItems);
+
+        $guestTicketsQuery = Ticket::query()->where('source', 'guest_list');
+        if ($startAt && $endAt) {
+            $guestTicketsQuery->whereBetween('created_at', [$startAt, $endAt]);
+        }
+        if ($selectedEvent !== '') {
+            $guestTicketsQuery->where('name', 'like', $selectedEvent.' - %');
+        }
+
+        $guestStatsByEvent = $guestTicketsQuery
+            ->get(['name', 'status', 'holder_gender'])
+            ->map(function (Ticket $ticket) {
+                [$eventName] = $this->extractEventAndTicketType((string) ($ticket->name ?? ''));
+
+                return [
+                    'event_name' => $eventName,
+                    'status' => (string) ($ticket->status ?? ''),
+                    'holder_gender' => strtolower((string) ($ticket->holder_gender ?? '')),
+                ];
+            })
+            ->filter(fn (array $item) => $item['event_name'] !== '')
+            ->groupBy('event_name')
+            ->map(function (Collection $eventTickets) {
+                return [
+                    'guest_invitations' => $eventTickets->count(),
+                    'guest_checked_in' => $eventTickets->where('status', 'checked_in')->count(),
+                ];
+            });
+
+        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -155,11 +187,11 @@ class ReportController extends Controller
             ->values();
     }
 
-    private function buildEventReports(Collection $items): Collection
+    private function buildEventReports(Collection $items, Collection $guestStatsByEvent): Collection
     {
-        return $items
+        $reports = $items
             ->groupBy('event_name')
-            ->map(function (Collection $eventItems, string $eventName) {
+            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent) {
                 $ticketsSold = $eventItems->sum('quantity');
                 $maleTickets = $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'male')
@@ -168,11 +200,18 @@ class ReportController extends Controller
                     ->filter(fn (array $item) => $item['holder_gender'] === 'female')
                     ->sum('quantity');
 
+                $guestStats = $guestStatsByEvent->get($eventName, [
+                    'guest_invitations' => 0,
+                    'guest_checked_in' => 0,
+                ]);
+
                 return [
                     'event_name' => $eventName,
                     'tickets_sold' => $ticketsSold,
                     'male_tickets' => $maleTickets,
                     'female_tickets' => $femaleTickets,
+                    'guest_invitations' => $guestStats['guest_invitations'],
+                    'guest_checked_in' => $guestStats['guest_checked_in'],
                     'gross_revenue' => round((float) $eventItems->sum('gross_contribution'), 2),
                     'ticket_types' => $eventItems
                         ->groupBy('ticket_type')
@@ -183,8 +222,27 @@ class ReportController extends Controller
                         ->sortByDesc('count')
                         ->values(),
                 ];
-            })
-            ->sortByDesc('tickets_sold')
+            });
+
+        foreach ($guestStatsByEvent as $eventName => $guestStats) {
+            if ($reports->has($eventName)) {
+                continue;
+            }
+
+            $reports->put($eventName, [
+                'event_name' => $eventName,
+                'tickets_sold' => 0,
+                'male_tickets' => 0,
+                'female_tickets' => 0,
+                'guest_invitations' => $guestStats['guest_invitations'] ?? 0,
+                'guest_checked_in' => $guestStats['guest_checked_in'] ?? 0,
+                'gross_revenue' => 0,
+                'ticket_types' => collect(),
+            ]);
+        }
+
+        return $reports
+            ->sortByDesc(fn (array $report) => $report['tickets_sold'] + $report['guest_invitations'])
             ->values();
     }
 

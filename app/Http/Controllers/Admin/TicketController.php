@@ -19,7 +19,10 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
-        $ticketsQuery = Ticket::query()->with('order');
+        $ticketsQuery = Ticket::query()->with('order')
+            ->where(function ($query) {
+                $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
+            });
 
         if ($request->filled('status')) {
             $ticketsQuery->where('status', $request->string('status'));
@@ -54,7 +57,15 @@ class TicketController extends Controller
     {
         $validated = $this->validateTicket($request);
 
-        Ticket::create($validated + ['name' => $validated['holder_name'] ?? 'Ticket']);
+        $ticketNumber = $this->generateTicketNumber();
+
+        Ticket::create($validated + [
+            'name' => $validated['holder_name'] ?? 'Ticket',
+            'source' => 'standard',
+            'ticket_number' => $ticketNumber,
+            'qr_payload' => $ticketNumber,
+            'issued_at' => now(),
+        ]);
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket created successfully.');
     }
@@ -83,9 +94,13 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Ticket updated successfully.');
     }
 
-    public function destroy(Ticket $ticket)
+    public function destroy(Request $request, Ticket $ticket)
     {
         $ticket->delete();
+
+        if ($request->input('redirect_to') === 'guest-list') {
+            return redirect()->route('admin.guest-list.index')->with('success', 'Ticket deleted successfully.');
+        }
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket deleted successfully.');
     }
@@ -202,6 +217,16 @@ class TicketController extends Controller
             'holder_email' => ['nullable', 'email', 'max:255'],
             'holder_phone' => ['nullable', 'string', 'max:255'],
         ]);
+    }
+
+
+    private function generateTicketNumber(): string
+    {
+        do {
+            $ticketNumber = (string) random_int(1000000000, 9999999999);
+        } while (Ticket::query()->where('ticket_number', $ticketNumber)->exists());
+
+        return $ticketNumber;
     }
 
     private function extractTicketNumber(string $payload): string

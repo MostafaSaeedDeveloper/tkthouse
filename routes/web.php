@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\GuestListController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController;
@@ -99,6 +100,14 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
         ->middlewareFor(['create', 'store'], 'permission:tickets.create')
         ->middlewareFor(['edit', 'update'], 'permission:tickets.update')
         ->middlewareFor('destroy', 'permission:tickets.delete');
+
+
+    Route::get('guest-list', [GuestListController::class, 'index'])->middleware('permission:tickets.view')->name('guest-list.index');
+    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware('permission:tickets.create')->name('guest-list.create');
+    Route::post('guest-list', [GuestListController::class, 'store'])->middleware('permission:tickets.create')->name('guest-list.store');
+    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware('permission:tickets.create')->name('guest-list.import');
+    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware('permission:tickets.view')->name('guest-list.export');
+    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware('permission:tickets.view')->name('guest-list.template');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
     Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');

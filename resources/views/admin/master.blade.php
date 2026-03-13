@@ -197,7 +197,7 @@
 <script>
 (() => {
   if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
-  jQuery('select').not('.no-select2, .swal2-select').filter(function () {
+  jQuery('select').not('.no-select2, .swal2-select, .js-modal-select2').filter(function () {
     return jQuery(this).closest('.swal2-container').length === 0;
   }).each(function () {
     const $el = jQuery(this);

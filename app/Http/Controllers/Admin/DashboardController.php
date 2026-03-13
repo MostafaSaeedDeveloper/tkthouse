@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -65,6 +66,14 @@ class DashboardController extends Controller
         $totalCustomers = (clone $customersQuery)->count();
         $totalEvents = Event::where('status', 'active')->count();
 
+
+        $guestInvitationsQuery = Ticket::query()->where('source', 'guest_list');
+        if ($startAt && $endAt) {
+            $guestInvitationsQuery->whereBetween('created_at', [$startAt, $endAt]);
+        }
+
+        $guestInvitations = (clone $guestInvitationsQuery)->count();
+
         $recentOrders = (clone $ordersQuery)
             ->with(['customer', 'items'])
             ->latest()
@@ -114,6 +123,7 @@ class DashboardController extends Controller
             'grossRevenue',
             'pendingOrders',
             'ticketsSold',
+            'guestInvitations',
             'totalCustomers',
             'totalEvents',
             'recentOrders',

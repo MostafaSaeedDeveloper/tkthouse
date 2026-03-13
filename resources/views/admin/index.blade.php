@@ -264,6 +264,18 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             <div class="db-stat-sub">Paid orders only</div>
         </div>
 
+
+        <div class="db-stat blue fade-up delay-1">
+            <div class="db-stat-top">
+                <div class="db-stat-label">Guest Invitations</div>
+                <div class="db-stat-icon">📋</div>
+            </div>
+            <div class="db-stat-val">{{ number_format($guestInvitations) }}</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
+        </div>
+
+    </div>
+
     </div>
 
 
