@@ -481,6 +481,7 @@
                 </div>
             </section>
 
+            @if(! $hasHomeFilters || $previousEvents->isNotEmpty())
             <section class="ev-home-section">
                 <div class="container">
                     <div class="ev-home-header">
@@ -520,15 +521,11 @@
                                 </div>
                             </a>
                         @empty
-                            <div class="ev-home-empty">
-                                <div class="ev-home-empty-icon">🕒</div>
-                                <h3>No previous events yet</h3>
-                                <p>Your event history will appear here.</p>
-                            </div>
                         @endforelse
                     </div>
                 </div>
             </section>
+            @endif
             <!--Main Content Wrap End-->
 
 
