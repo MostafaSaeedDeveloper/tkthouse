@@ -39,13 +39,12 @@
           @forelse($scannerUsers as $scanner)
             <tr>
               <td>{{ $scanner->name }}</td>
-              <td>{{ $scanner->username }}</td>
+              <td><a href="{{ route('admin.scanners.show', $scanner) }}">{{ $scanner->username }}</a></td>
               <td>{{ $scanner->email }}</td>
               <td>
                 <span class="badge bg-info">{{ number_format($scanner->scans_count ?? 0) }}</span>
               </td>
               <td>
-                <a href="{{ route('admin.scanners.show', $scanner) }}" class="btn btn-sm btn-alt-info">Show</a>
                 <form method="POST" action="{{ route('admin.scanners.destroy', $scanner) }}" class="d-inline" onsubmit="return confirm('Delete this scanner user?');">
                   @csrf
                   @method('DELETE')

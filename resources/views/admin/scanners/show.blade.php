@@ -53,7 +53,7 @@
                 <td><span class="badge bg-primary">{{ str($log->action)->replace('_',' ')->title() }}</span></td>
                 <td>{{ $log->ticket_number ?? '-' }}</td>
                 <td>{{ $log->event_name ?? '-' }}</td>
-                <td>{{ ($log->previous_status || $log->new_status) ? (($log->previous_status ?? '-') . ' → ' . ($log->new_status ?? '-')) : '-' }}</td>
+                <td>{{ ($log->previous_status || $log->new_status) ? ((str($log->previous_status ?? '-')->replace('_',' ')->title()) . ' → ' . (str($log->new_status ?? '-')->replace('_',' ')->title())) : '-' }}</td>
                 <td>{{ $log->ip_address ?? '-' }}</td>
               </tr>
             @empty

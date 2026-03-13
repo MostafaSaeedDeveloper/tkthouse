@@ -39,7 +39,7 @@
   $canPaymentMethods = auth()->user()?->can('payment-methods.view');
 
   $showEventsSalesSection = $canReports || $canEvents || $canOrders || $canCustomers || $canAffiliates || $canPromoCodes || $canTickets;
-  $showSystemSection = $canUsers || $canScanners || $canRoles || $canPermissions || $canActivityLogs || $canSettings || $canPaymentMethods;
+  $showSystemSection = $canUsers || $canRoles || $canPermissions || $canActivityLogs || $canSettings || $canPaymentMethods;
 
   $usersMenuOpen = request()->routeIs('admin.users.*')
       || request()->routeIs('admin.roles.*')
@@ -153,10 +153,6 @@
             </ul>
           </li>
         @endif
-      @endif
-
-      @if($showSystemSection)
-        <li class="nav-main-heading">System</li>
 
         @if($canScanners)
           <li class="nav-main-item">
@@ -167,7 +163,10 @@
             </a>
           </li>
         @endif
+      @endif
 
+      @if($showSystemSection)
+        <li class="nav-main-heading">System</li>
         @if($canUsers || $canRoles || $canPermissions || $canActivityLogs)
           <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
             <a class="nav-main-link nav-main-link-submenu"

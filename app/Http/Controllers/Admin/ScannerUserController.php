@@ -20,7 +20,7 @@ class ScannerUserController extends Controller
         $scannerUsers = User::query()
             ->with(['roles'])
             ->withCount(['scanLogs as scans_count' => function ($query) {
-                $query->whereIn('action', ['lookup_success', 'status_update']);
+                $query->where('action', 'status_update');
             }])
             ->whereHas('roles', fn ($query) => $query->where('name', 'scanner'))
             ->when($search !== '', function ($query) use ($search) {
@@ -50,12 +50,13 @@ class ScannerUserController extends Controller
 
         $scanLogs = ScanLog::query()
             ->where('scanned_by_user_id', $user->id)
+            ->where('action', '!=', 'lookup_success')
             ->latest('scanned_at')
             ->paginate(20)
             ->withQueryString();
 
         $stats = [
-            'total_scans' => ScanLog::query()->where('scanned_by_user_id', $user->id)->whereIn('action', ['lookup_success', 'status_update'])->count(),
+            'total_scans' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'status_update')->count(),
             'successful_lookups' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'lookup_success')->count(),
             'failed_lookups' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'lookup_failed')->count(),
             'checkins' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'status_update')->where('new_status', 'checked_in')->count(),
