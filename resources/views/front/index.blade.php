@@ -90,6 +90,9 @@
                 padding: 64px 0 80px;
                 font-family: var(--ev-font-b);
             }
+            .ev-home-section.ev-home-section--upcoming {
+                padding-top: 28px;
+            }
 
             /* ── Section header ── */
             .ev-home-header {
@@ -142,7 +145,7 @@
 
             .ev-home-search-wrap {
                 background: var(--ev-bg);
-                padding: 22px 0 10px;
+                padding: 30px 0 2px;
                 font-family: var(--ev-font-b);
             }
 
@@ -160,7 +163,7 @@
             .ev-home-input {
                 width: 100%;
                 background: var(--ev-surface2);
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.03);
                 color: var(--ev-text);
                 border-radius: 10px;
                 padding: 11px 12px;
@@ -227,7 +230,7 @@
             .select2-container--default .select2-selection--single {
                 height: 44px;
                 background: var(--ev-surface2);
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.03);
                 border-radius: 10px;
             }
             .select2-container--default.select2-container--focus .select2-selection--single,
@@ -459,7 +462,7 @@
             .ev-home-empty-btn:hover { background: #ffc820; color: #000; text-decoration: none; }
             </style>
 
-                        <section class="ev-home-section">
+                        <section class="ev-home-section ev-home-section--upcoming">
                 <div class="container">
 
                     {{-- Section header --}}
