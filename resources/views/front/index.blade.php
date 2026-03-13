@@ -121,6 +121,67 @@
             .ev-see-all:hover { color: var(--ev-gold); border-color: rgba(245,184,0,0.35); text-decoration: none; }
             .ev-see-all svg { width: 12px; height: 12px; }
 
+
+            .ev-home-search {
+                margin: 18px 0 28px;
+                border: 1px solid var(--ev-border);
+                border-radius: var(--ev-radius);
+                background: var(--ev-surface);
+                padding: 14px;
+                display: grid;
+                grid-template-columns: 1.2fr 1fr 0.8fr auto auto;
+                gap: 10px;
+                align-items: center;
+            }
+            .ev-home-input {
+                width: 100%;
+                background: var(--ev-surface2);
+                border: 1px solid var(--ev-border);
+                color: var(--ev-text);
+                border-radius: 10px;
+                padding: 11px 12px;
+                font-size: 13px;
+            }
+            .ev-home-input:focus {
+                outline: none;
+                border-color: rgba(245,184,0,0.45);
+            }
+            .ev-home-search-btn,
+            .ev-home-clear-btn {
+                border-radius: 10px;
+                border: 1px solid transparent;
+                padding: 10px 14px;
+                font-family: var(--ev-font-h);
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                font-size: 11px;
+                font-weight: 800;
+                text-decoration: none;
+                white-space: nowrap;
+                text-align: center;
+            }
+            .ev-home-search-btn {
+                background: var(--ev-gold);
+                color: #000;
+            }
+            .ev-home-clear-btn {
+                background: transparent;
+                color: var(--ev-muted);
+                border-color: var(--ev-border);
+            }
+            .ev-home-search-btn:hover { background: #ffc820; }
+            .ev-home-clear-btn:hover { color: var(--ev-gold); border-color: rgba(245,184,0,0.35); }
+            @media (max-width: 992px) {
+                .ev-home-search {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
+            @media (max-width: 680px) {
+                .ev-home-search {
+                    grid-template-columns: 1fr;
+                }
+            }
+
             /* ── Grid ── */
             .ev-home-grid {
                 display: grid;
@@ -292,6 +353,14 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </a>
                     </div>
+
+                    <form class="ev-home-search" method="GET" action="{{ route('front.home') }}">
+                        <input class="ev-home-input" type="search" name="event_name" value="{{ $eventName }}" placeholder="Search by event name">
+                        <input class="ev-home-input" type="search" name="event_location" value="{{ $eventLocation }}" placeholder="Search by location or venue">
+                        <input class="ev-home-input" type="date" name="event_date" value="{{ $eventDate }}">
+                        <button class="ev-home-search-btn" type="submit">Search</button>
+                        <a class="ev-home-clear-btn" href="{{ route('front.home') }}">Clear</a>
+                    </form>
 
                     {{-- Cards grid --}}
                     <div class="ev-home-grid">
