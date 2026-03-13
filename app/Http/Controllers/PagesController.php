@@ -8,11 +8,37 @@ use Illuminate\Support\Facades\Mail;
 
 class PagesController extends Controller
 {
-    public function home()
+    public function home(Request $request)
     {
+        $filters = $request->validate([
+            'event_name' => ['nullable', 'string', 'max:120'],
+            'event_location' => ['nullable', 'string', 'max:120'],
+            'event_date' => ['nullable', 'date'],
+        ]);
+
+        $eventName = trim((string) ($filters['event_name'] ?? ''));
+        $eventLocation = trim((string) ($filters['event_location'] ?? ''));
+        $eventDate = $filters['event_date'] ?? null;
+        $hasHomeFilters = $eventName !== '' || $eventLocation !== '' || ! empty($eventDate);
+
+        $applyHomeSearch = function ($query) use ($eventName, $eventLocation, $eventDate) {
+            $query
+                ->when($eventName !== '', function ($subQuery) use ($eventName) {
+                    $subQuery->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($eventName).'%']);
+                })
+                ->when($eventLocation !== '', function ($subQuery) use ($eventLocation) {
+                    $value = '%'.mb_strtolower($eventLocation).'%';
+                    $subQuery->whereRaw('LOWER(location) LIKE ?', [$value]);
+                })
+                ->when($eventDate, function ($subQuery) use ($eventDate) {
+                    $subQuery->whereDate('event_date', $eventDate);
+                });
+        };
+
         $upcomingEvents = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
+            ->tap($applyHomeSearch)
             ->orderBy('event_date')
             ->orderBy('event_time')
             ->take(6)
@@ -29,12 +55,30 @@ class PagesController extends Controller
         $previousEvents = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '<', now()->toDateString())
+            ->tap($applyHomeSearch)
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
             ->take(6)
             ->get();
 
-        return view('front.index', compact('upcomingEvents', 'featuredEvents', 'previousEvents'));
+        $locations = Event::query()
+            ->whereIn('status', ['active', 'sold_out'])
+            ->whereNotNull('location')
+            ->where('location', '!=', '')
+            ->distinct()
+            ->orderBy('location')
+            ->pluck('location');
+
+        return view('front.index', compact(
+            'upcomingEvents',
+            'featuredEvents',
+            'previousEvents',
+            'locations',
+            'eventName',
+            'eventLocation',
+            'eventDate',
+            'hasHomeFilters',
+        ));
     }
 
     public function about()
@@ -44,22 +88,59 @@ class PagesController extends Controller
 
     public function events()
     {
+        $filters = request()->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'when' => ['nullable', 'in:all,upcoming,previous'],
+        ]);
+
+        $search = trim((string) ($filters['q'] ?? ''));
+        $when = $filters['when'] ?? 'all';
+
+        $applySearch = function ($query) use ($search) {
+            if ($search === '') {
+                return;
+            }
+
+            $lowerSearch = mb_strtolower($search);
+            $startsWith = $lowerSearch.'%';
+            $contains = '%'.$lowerSearch.'%';
+
+            $query->where(function ($subQuery) use ($contains) {
+                $subQuery
+                    ->whereRaw('LOWER(name) LIKE ?', [$contains])
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$contains]);
+            })->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) LIKE ? THEN 0
+                    WHEN LOWER(name) LIKE ? THEN 1
+                    WHEN LOWER(location) LIKE ? THEN 2
+                    ELSE 3
+                END",
+                [$startsWith, $contains, $contains]
+            );
+        };
+
         $events = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
+            ->when($when !== 'previous', $applySearch)
+            ->when($when === 'previous', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderBy('event_date')
             ->orderBy('event_time')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         $previousEvents = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '<', now()->toDateString())
+            ->when($when !== 'upcoming', $applySearch)
+            ->when($when === 'upcoming', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
             ->take(10)
             ->get();
 
-        return view('front.events.index', compact('events', 'previousEvents'));
+        return view('front.events.index', compact('events', 'previousEvents', 'search', 'when'));
     }
 
     public function eventShow(Event $event)

@@ -21,10 +21,28 @@
                 @endforelse
             </div>
 
+            <div class="ev-home-search-wrap">
+                <div class="container">
+                    <form class="ev-home-search" method="GET" action="{{ route('front.home') }}">
+                        <input class="ev-home-input" type="search" name="event_name" value="{{ $eventName }}" placeholder="Search by event name">
+                        <select class="ev-home-input js-location-select" name="event_location" data-placeholder="Select location">
+                            <option value="">All locations</option>
+                            @foreach($locations as $location)
+                                <option value="{{ $location }}" @selected($eventLocation === $location)>{{ $location }}</option>
+                            @endforeach
+                        </select>
+                        <input class="ev-home-input js-event-date" type="text" name="event_date" value="{{ $eventDate }}" placeholder="Select date" autocomplete="off">
+                        <button class="ev-home-search-btn" type="submit">Search</button>
+                        <a class="ev-home-clear-btn" href="{{ route('front.home') }}">Clear</a>
+                    </form>
+                </div>
+            </div>
 
             <!--Main Content Wrap Start-->
             <style>
             @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+            @import url('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+            @import url('https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css');
 
             .banner_slider .slide {
                 position: relative;
@@ -53,6 +71,11 @@
                 background: transparent !important;
             }
 
+
+            textarea, input[type="text"], input[type="password"], input[type="datetime"], input[type="datetime-local"], input[type="date"], input[type="month"], input[type="time"], input[type="week"], input[type="number"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="color"], .uneditable-input {
+                border: 1px solid #26262d;
+            }
+
             :root {
                 --ev-bg:       #060608;
                 --ev-surface:  #0e0e12;
@@ -71,6 +94,9 @@
                 background: var(--ev-bg);
                 padding: 64px 0 80px;
                 font-family: var(--ev-font-b);
+            }
+            .ev-home-section.ev-home-section--upcoming {
+                padding-top: 28px;
             }
 
             /* ── Section header ── */
@@ -120,6 +146,169 @@
             }
             .ev-see-all:hover { color: var(--ev-gold); border-color: rgba(245,184,0,0.35); text-decoration: none; }
             .ev-see-all svg { width: 12px; height: 12px; }
+
+
+            .ev-home-search-wrap {
+                background: var(--ev-bg);
+                padding: 30px 0 2px;
+                font-family: var(--ev-font-b);
+            }
+
+            .ev-home-search {
+                margin: 0 0 20px;
+                border: 1px solid var(--ev-border);
+                border-radius: var(--ev-radius);
+                background: var(--ev-surface);
+                padding: 14px;
+                display: grid;
+                grid-template-columns: 1.2fr 1fr 0.8fr auto auto;
+                gap: 10px;
+                align-items: center;
+            }
+            .ev-home-input {
+                width: 100%;
+                background: var(--ev-surface2);
+                border: 1px solid rgba(255,255,255,0.03);
+                color: var(--ev-text);
+                border-radius: 10px;
+                padding: 11px 12px;
+                font-size: 13px;
+                box-shadow: none;
+                appearance: none;
+                -webkit-appearance: none;
+                background-clip: padding-box;
+            }
+            .ev-home-input::placeholder {
+                color: rgba(232,232,239,0.45);
+            }
+            .ev-home-input:focus {
+                outline: none;
+                border-color: rgba(245,184,0,0.45);
+                box-shadow: 0 0 0 3px rgba(245,184,0,0.08);
+            }
+            .ev-home-search-btn,
+            .ev-home-clear-btn {
+                border-radius: 10px;
+                border: 1px solid transparent;
+                padding: 10px 14px;
+                font-family: var(--ev-font-h);
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                font-size: 11px;
+                font-weight: 800;
+                text-decoration: none;
+                white-space: nowrap;
+                text-align: center;
+            }
+            .ev-home-search-btn {
+                background: var(--ev-gold);
+                color: #000;
+            }
+            .ev-home-clear-btn {
+                background: transparent;
+                color: var(--ev-muted);
+                border-color: var(--ev-border);
+            }
+            .ev-home-search-btn:hover { background: #ffc820; }
+            .ev-home-clear-btn:hover { color: var(--ev-gold); border-color: rgba(245,184,0,0.35); }
+            @media (max-width: 992px) {
+                .ev-home-search {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
+            @media (max-width: 680px) {
+                .ev-home-search {
+                    grid-template-columns: 1fr;
+                    padding: 12px;
+                }
+                .ev-home-search-btn,
+                .ev-home-clear-btn {
+                    width: 100%;
+                    min-height: 42px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            }
+
+
+            .select2-container--default .select2-selection--single {
+                height: 44px;
+                background: var(--ev-surface2);
+                border: 1px solid rgba(255,255,255,0.03);
+                border-radius: 10px;
+            }
+            .select2-container--default.select2-container--focus .select2-selection--single,
+            .select2-container--default.select2-container--open .select2-selection--single {
+                border-color: rgba(245,184,0,0.45);
+                box-shadow: 0 0 0 3px rgba(245,184,0,0.08);
+            }
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                color: var(--ev-text);
+                line-height: 42px;
+                padding-left: 12px;
+                font-size: 13px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 42px;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__arrow b {
+                border-color: var(--ev-muted) transparent transparent transparent;
+            }
+            .select2-dropdown {
+                background: var(--ev-surface2);
+                border: 1px solid var(--ev-border);
+            }
+            .select2-search--dropdown .select2-search__field {
+                background: #0f0f16;
+                color: var(--ev-text);
+                border: 1px solid var(--ev-border);
+            }
+            .select2-results__option { color: var(--ev-text); }
+            .select2-container { width: 100% !important; }
+            .select2-container--open { z-index: 9999; }
+            .select2-container--default .select2-results__option[aria-selected=true] {
+                background: transparent;
+                color: #cfd0dc;
+            }
+            .select2-container--default .select2-results__option--highlighted[aria-selected] {
+                background: rgba(245,184,0,0.2);
+                color: #fff;
+            }
+            .flatpickr-calendar {
+                background: #111118;
+                border: 1px solid var(--ev-border);
+                box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+            }
+            .flatpickr-day,
+            .flatpickr-current-month,
+            .flatpickr-weekday { color: #e8e8ef; }
+            .flatpickr-day.selected,
+            .flatpickr-day.startRange,
+            .flatpickr-day.endRange {
+                background: var(--ev-gold);
+                border-color: var(--ev-gold);
+                color: #000;
+            }
+            .flatpickr-day.today {
+                border-color: rgba(245,184,0,0.45);
+                color: var(--ev-gold);
+            }
+            .flatpickr-day.today:not(.selected) {
+                background: transparent;
+            }
+            .flatpickr-day:focus,
+            .flatpickr-day:hover {
+                background: rgba(245,184,0,0.16);
+                border-color: rgba(245,184,0,0.28);
+                color: #fff;
+            }
+            .flatpickr-day.selected:focus,
+            .flatpickr-day.selected:hover {
+                background: var(--ev-gold);
+                border-color: var(--ev-gold);
+                color: #000;
+            }
 
             /* ── Grid ── */
             .ev-home-grid {
@@ -278,7 +467,7 @@
             .ev-home-empty-btn:hover { background: #ffc820; color: #000; text-decoration: none; }
             </style>
 
-            <section class="ev-home-section">
+                        <section class="ev-home-section ev-home-section--upcoming">
                 <div class="container">
 
                     {{-- Section header --}}
@@ -292,6 +481,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </a>
                     </div>
+
 
                     {{-- Cards grid --}}
                     <div class="ev-home-grid">
@@ -330,18 +520,27 @@
 
                             </a>
                         @empty
-                            <div class="ev-home-empty">
-                                <div class="ev-home-empty-icon">🎫</div>
-                                <h3>No upcoming events yet</h3>
-                                <p>Stay tuned — new dates coming soon.</p>
-                                <a class="ev-home-empty-btn" href="{{ route('front.events') }}">Explore Events →</a>
-                            </div>
+                            @if(! $hasHomeFilters)
+                                <div class="ev-home-empty">
+                                    <div class="ev-home-empty-icon">🎫</div>
+                                    <h3>No upcoming events yet</h3>
+                                    <p>Stay tuned — new dates coming soon.</p>
+                                    <a class="ev-home-empty-btn" href="{{ route('front.events') }}">Explore Events →</a>
+                                </div>
+                            @else
+                                <div class="ev-home-empty">
+                                    <div class="ev-home-empty-icon">🔎</div>
+                                    <h3>No upcoming results</h3>
+                                    <p>Try another name, location, or date to find upcoming events.</p>
+                                </div>
+                            @endif
                         @endforelse
                     </div>
 
                 </div>
             </section>
 
+            @if(! $hasHomeFilters || $previousEvents->isNotEmpty())
             <section class="ev-home-section">
                 <div class="container">
                     <div class="ev-home-header">
@@ -381,16 +580,76 @@
                                 </div>
                             </a>
                         @empty
-                            <div class="ev-home-empty">
-                                <div class="ev-home-empty-icon">🕒</div>
-                                <h3>No previous events yet</h3>
-                                <p>Your event history will appear here.</p>
-                            </div>
                         @endforelse
                     </div>
                 </div>
             </section>
+            @endif
             <!--Main Content Wrap End-->
 
+
+
+<script>
+    (function () {
+        function loadScript(src) {
+            return new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+        }
+
+        function initLocationSelect() {
+            if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+                return;
+            }
+
+            var $select = window.jQuery('.js-location-select');
+            if (! $select.length || $select.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+
+            $select.select2({
+                width: '100%',
+                placeholder: 'Select location',
+                allowClear: true,
+            });
+        }
+
+        function initDatePicker() {
+            if (!window.flatpickr) {
+                return;
+            }
+
+            var dateField = document.querySelector('.js-event-date');
+            if (!dateField || dateField.dataset.flatpickrReady === '1') {
+                return;
+            }
+
+            window.flatpickr(dateField, {
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+            });
+            dateField.dataset.flatpickrReady = '1';
+        }
+
+        window.addEventListener('load', function () {
+            var loadSelect2 = Promise.resolve();
+            if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+                loadSelect2 = loadScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js');
+            }
+
+            var loadFlatpickr = Promise.resolve();
+            if (!window.flatpickr) {
+                loadFlatpickr = loadScript('https://cdn.jsdelivr.net/npm/flatpickr');
+            }
+
+            loadSelect2.then(initLocationSelect).catch(function () {});
+            loadFlatpickr.then(initDatePicker).catch(function () {});
+        });
+    })();
+</script>
 
 @endsection
