@@ -42,7 +42,6 @@
   $showSystemSection = $canUsers || $canScanners || $canRoles || $canPermissions || $canActivityLogs || $canSettings || $canPaymentMethods;
 
   $usersMenuOpen = request()->routeIs('admin.users.*')
-      || request()->routeIs('admin.scanners.*')
       || request()->routeIs('admin.roles.*')
       || request()->routeIs('admin.permissions.*')
       || request()->routeIs('admin.activity-logs.*');
@@ -159,6 +158,16 @@
       @if($showSystemSection)
         <li class="nav-main-heading">System</li>
 
+        @if($canScanners)
+          <li class="nav-main-item">
+            <a class="nav-main-link {{ request()->routeIs('admin.scanners.*') ? 'active' : '' }}"
+               href="{{ route('admin.scanners.index') }}">
+              <i class="nav-main-link-icon fa fa-qrcode"></i>
+              <span class="nav-main-link-name">Scanners</span>
+            </a>
+          </li>
+        @endif
+
         @if($canUsers || $canRoles || $canPermissions || $canActivityLogs)
           <li class="nav-main-item {{ $usersMenuOpen ? 'open' : '' }}">
             <a class="nav-main-link nav-main-link-submenu"
@@ -178,16 +187,6 @@
                   </a>
                 </li>
               @endif
-              @if($canScanners)
-                <li class="nav-main-item">
-                  <a class="nav-main-link {{ request()->routeIs('admin.scanners.*') ? 'active' : '' }}"
-                     href="{{ route('admin.scanners.index') }}">
-                    <span class="nav-main-link-name">Scanners</span>
-                  </a>
-                </li>
-              @endif
-
-
               @if($canRoles)
                 <li class="nav-main-item">
                   <a class="nav-main-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
