@@ -66,6 +66,17 @@
                         <small>Guest Checked In</small>
                         <strong>{{ number_format($report['guest_checked_in']) }}</strong>
                     </div>
+                    <div>
+                        <small>Paid Checked In</small>
+                        <strong>{{ number_format($report['paid_checked_in']) }}</strong>
+                    </div>
+                </div>
+
+                <div class="report-metrics">
+                    <div>
+                        <small>Total Checked In</small>
+                        <strong>{{ number_format($report['total_checked_in']) }}</strong>
+                    </div>
                 </div>
 
                 <div class="report-gender-bars">
