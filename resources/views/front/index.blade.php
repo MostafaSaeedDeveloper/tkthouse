@@ -213,6 +213,12 @@
                 border: 1px solid var(--ev-border);
             }
             .select2-results__option { color: var(--ev-text); }
+            .select2-container { width: 100% !important; }
+            .select2-container--open { z-index: 9999; }
+            .select2-container--default .select2-results__option[aria-selected=true] {
+                background: transparent;
+                color: #cfd0dc;
+            }
             .select2-container--default .select2-results__option--highlighted[aria-selected] {
                 background: rgba(245,184,0,0.2);
                 color: #fff;
@@ -521,24 +527,66 @@
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     (function () {
-        if (window.jQuery && jQuery.fn.select2) {
-            $('.js-location-select').select2({
-                width: '100%',
-                placeholder: 'Select location',
-                allowClear: true
+        function loadScript(src) {
+            return new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
             });
         }
 
-        if (window.flatpickr) {
-            flatpickr('.js-event-date', {
+        function initLocationSelect() {
+            if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+                return;
+            }
+
+            var $select = window.jQuery('.js-location-select');
+            if (! $select.length || $select.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+
+            $select.select2({
+                width: '100%',
+                placeholder: 'Select location',
+                allowClear: true,
+            });
+        }
+
+        function initDatePicker() {
+            if (!window.flatpickr) {
+                return;
+            }
+
+            var dateField = document.querySelector('.js-event-date');
+            if (!dateField || dateField.dataset.flatpickrReady === '1') {
+                return;
+            }
+
+            window.flatpickr(dateField, {
                 dateFormat: 'Y-m-d',
                 allowInput: true,
             });
+            dateField.dataset.flatpickrReady = '1';
         }
+
+        window.addEventListener('load', function () {
+            var loadSelect2 = Promise.resolve();
+            if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.select2) {
+                loadSelect2 = loadScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js');
+            }
+
+            var loadFlatpickr = Promise.resolve();
+            if (!window.flatpickr) {
+                loadFlatpickr = loadScript('https://cdn.jsdelivr.net/npm/flatpickr');
+            }
+
+            loadSelect2.then(initLocationSelect).catch(function () {});
+            loadFlatpickr.then(initDatePicker).catch(function () {});
+        });
     })();
 </script>
 
