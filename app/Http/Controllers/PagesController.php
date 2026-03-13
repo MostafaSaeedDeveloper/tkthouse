@@ -44,22 +44,61 @@ class PagesController extends Controller
 
     public function events()
     {
+        $filters = request()->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'when' => ['nullable', 'in:all,upcoming,previous'],
+        ]);
+
+        $search = trim((string) ($filters['q'] ?? ''));
+        $when = $filters['when'] ?? 'all';
+
+        $applySearch = function ($query) use ($search) {
+            if ($search === '') {
+                return;
+            }
+
+            $lowerSearch = mb_strtolower($search);
+            $startsWith = $lowerSearch.'%';
+            $contains = '%'.$lowerSearch.'%';
+
+            $query->where(function ($subQuery) use ($contains) {
+                $subQuery
+                    ->whereRaw('LOWER(name) LIKE ?', [$contains])
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$contains])
+                    ->orWhereRaw('LOWER(venue) LIKE ?', [$contains]);
+            })->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) LIKE ? THEN 0
+                    WHEN LOWER(name) LIKE ? THEN 1
+                    WHEN LOWER(location) LIKE ? THEN 2
+                    WHEN LOWER(venue) LIKE ? THEN 3
+                    ELSE 4
+                END",
+                [$startsWith, $contains, $contains, $contains]
+            );
+        };
+
         $events = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '>=', now()->toDateString())
+            ->when($when !== 'previous', $applySearch)
+            ->when($when === 'previous', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderBy('event_date')
             ->orderBy('event_time')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         $previousEvents = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
             ->whereDate('event_date', '<', now()->toDateString())
+            ->when($when !== 'upcoming', $applySearch)
+            ->when($when === 'upcoming', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
             ->take(10)
             ->get();
 
-        return view('front.events.index', compact('events', 'previousEvents'));
+        return view('front.events.index', compact('events', 'previousEvents', 'search', 'when'));
     }
 
     public function eventShow(Event $event)

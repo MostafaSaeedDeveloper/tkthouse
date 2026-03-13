@@ -48,6 +48,69 @@
     margin-top: 20px;
 }
 
+
+.ev-toolbar {
+    margin-top: 20px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+}
+.ev-search-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+}
+.ev-search-input,
+.ev-filter-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 14px;
+}
+.ev-search-input:focus,
+.ev-filter-select:focus {
+    outline: none;
+    border-color: rgba(245,184,0,0.5);
+}
+.ev-search-btn {
+    background: var(--gold);
+    color: #000;
+    border: 0;
+    border-radius: 10px;
+    padding: 0 16px;
+    font-family: var(--font-head);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.ev-filter-row {
+    display: grid;
+    grid-template-columns: 200px auto;
+    gap: 10px;
+}
+.ev-filter-hint {
+    color: var(--muted);
+    font-size: 12px;
+    align-self: center;
+}
+@media (max-width: 768px) {
+    .ev-search-row,
+    .ev-filter-row {
+        grid-template-columns: 1fr;
+    }
+    .ev-search-btn {
+        min-height: 42px;
+    }
+}
+
 /* ── Grid ── */
 .ev-grid {
     display: grid;
@@ -264,8 +327,31 @@
         <div class="container">
         <h2 class="ev-section-title">Upcoming Events</h2>
 
-        <div class="ev-grid">
+        <form class="ev-toolbar" method="GET" action="{{ route('front.events') }}">
+            <div class="ev-search-row">
+                <input
+                    class="ev-search-input"
+                    type="search"
+                    name="q"
+                    value="{{ $search }}"
+                    placeholder="Search by event name, location, or venue"
+                    aria-label="Search events"
+                >
+                <button class="ev-search-btn" type="submit">Search</button>
+            </div>
 
+            <div class="ev-filter-row">
+                <select class="ev-filter-select" name="when" aria-label="Filter event time">
+                    <option value="all" @selected($when === 'all')>All events</option>
+                    <option value="upcoming" @selected($when === 'upcoming')>Upcoming only</option>
+                    <option value="previous" @selected($when === 'previous')>Previous only</option>
+                </select>
+                <div class="ev-filter-hint">Tip: Search prioritizes exact and starts-with matches for faster discovery.</div>
+            </div>
+        </form>
+
+        <div class="ev-grid">
+            @if($when !== 'previous')
             @forelse($events as $event)
                 <a class="ev-card" href="{{ route('front.events.show', $event) }}">
 
@@ -318,11 +404,18 @@
                     <a class="ev-empty-btn" href="{{ route('front.home') }}">← Back to Home</a>
                 </div>
             @endforelse
+            @else
+                <div class="ev-empty">
+                    <div class="ev-empty-icon">🔎</div>
+                    <h3>Upcoming events hidden</h3>
+                    <p>Change the filter to view upcoming events.</p>
+                </div>
+            @endif
 
         </div>
 
         {{-- Pagination --}}
-        @if($events->hasPages())
+        @if($when !== 'previous' && $events->hasPages())
             <div class="ev-pagination">
                 {{-- Prev --}}
                 @if($events->onFirstPage())
@@ -349,8 +442,12 @@
 
 
         <h2 class="ev-section-title">Previous Events</h2>
+        @if($when === 'upcoming')
+            <p class="ev-filter-hint">Previous events are hidden while "Upcoming only" is selected.</p>
+        @endif
 
         <div class="ev-grid">
+            @if($when !== 'upcoming')
             @forelse($previousEvents as $event)
                 <a class="ev-card" href="{{ route('front.events.show', $event) }}">
                     <div class="ev-card-img">
@@ -388,6 +485,13 @@
                     <p>Finished events will appear here after their date passes.</p>
                 </div>
             @endforelse
+        @else
+            <div class="ev-empty">
+                <div class="ev-empty-icon">🔎</div>
+                <h3>Previous events hidden</h3>
+                <p>Change the filter to view past events.</p>
+            </div>
+        @endif
         </div>
 
         </div>
