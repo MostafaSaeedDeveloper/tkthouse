@@ -208,11 +208,25 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.scanner');
     }
 
-    public function scanner()
+    public function scanner(Request $request)
     {
         $this->ensureScannerAccess();
 
-        return view('admin.tickets.scanner');
+        $payload = trim((string) $request->input('code'));
+        if ($payload === '') {
+            return view('admin.tickets.scanner');
+        }
+
+        $ticket = Ticket::query()
+            ->with('order')
+            ->where('ticket_number', $this->extractTicketNumber($payload))
+            ->first();
+
+        if (! $ticket) {
+            return view('admin.tickets.scanner', ['lastCode' => $payload])->with('error', 'Ticket not found.');
+        }
+
+        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
     }
 
     public function scannerLookup(Request $request)
@@ -292,7 +306,7 @@ class TicketController extends Controller
             'scanned_at' => now(),
         ]);
 
-        return back()->with('success', 'Ticket status updated successfully.');
+        return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('success', 'Ticket status updated successfully.');
     }
 
     private function validateTicket(Request $request): array

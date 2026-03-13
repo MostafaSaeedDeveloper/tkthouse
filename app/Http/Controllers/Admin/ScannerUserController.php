@@ -19,6 +19,9 @@ class ScannerUserController extends Controller
 
         $scannerUsers = User::query()
             ->with(['roles'])
+            ->withCount(['scanLogs as scans_count' => function ($query) {
+                $query->whereIn('action', ['lookup_success', 'status_update']);
+            }])
             ->whereHas('roles', fn ($query) => $query->where('name', 'scanner'))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {

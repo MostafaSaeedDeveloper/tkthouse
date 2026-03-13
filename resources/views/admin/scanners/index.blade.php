@@ -31,8 +31,8 @@
             <th>Name</th>
             <th>Username</th>
             <th>Email</th>
-            <th>Scanner Link</th>
-            <th style="width:280px">Actions</th>
+            <th>Scan Count</th>
+            <th style="width:200px">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -42,7 +42,7 @@
               <td>{{ $scanner->username }}</td>
               <td>{{ $scanner->email }}</td>
               <td>
-                <a href="{{ route('front.scanner.login') }}" target="_blank">{{ route('front.scanner.login') }}</a>
+                <span class="badge bg-info">{{ number_format($scanner->scans_count ?? 0) }}</span>
               </td>
               <td>
                 <a href="{{ route('admin.scanners.show', $scanner) }}" class="btn btn-sm btn-alt-info">Show</a>
