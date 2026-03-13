@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\ScannerUserController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemSettingController;
@@ -116,6 +117,13 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
     Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->middleware('permission:scanner.access')->name('tickets.scanner.status');
 
+    Route::get('scanners', [ScannerUserController::class, 'index'])->middleware('permission:users.view')->name('scanners.index');
+    Route::get('scanners/create', [ScannerUserController::class, 'create'])->middleware('permission:users.create')->name('scanners.create');
+    Route::post('scanners', [ScannerUserController::class, 'store'])->middleware('permission:users.create')->name('scanners.store');
+    Route::post('scanners/{user}/regenerate-link', [ScannerUserController::class, 'regenerateLink'])->middleware('permission:users.update')->name('scanners.regenerate-link');
+    Route::delete('scanners/{user}', [ScannerUserController::class, 'destroy'])->middleware('permission:users.delete')->name('scanners.destroy');
+    Route::get('scanners/export-history', [ScannerUserController::class, 'exportHistory'])->middleware('permission:reports.view')->name('scanners.export-history');
+
     Route::get('orders', [OrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
     Route::get('orders/deleted', [OrderController::class, 'deleted'])->middleware('permission:orders.deleted.view')->name('orders.deleted');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.delete')->name('orders.destroy');
@@ -154,6 +162,9 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
         ->middlewareFor(['edit', 'update'], 'permission:promo-codes.update')
         ->middlewareFor('destroy', 'permission:promo-codes.delete');
 });
+
+Route::get('/scan/{token}', [TicketController::class, 'scannerShortLink'])->name('front.scanner.short-link');
+Route::post('/scan/{token}', [TicketController::class, 'scannerShortLinkLogin'])->name('front.scanner.short-link.login');
 
 Route::redirect('/admin', '/dashboard');
 Route::redirect('/admin/dashboard', '/dashboard');
