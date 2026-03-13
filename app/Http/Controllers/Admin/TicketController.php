@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ScannerLink;
 use App\Models\ScanLog;
 use App\Services\UltramsgWhatsappService;
 use App\Support\SystemSettings;
@@ -168,46 +167,29 @@ class TicketController extends Controller
     }
 
 
-    public function scannerShortLink(string $token)
+    public function scannerLogin()
     {
-        $link = ScannerLink::query()
-            ->with('user')
-            ->where('token', $token)
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        if (auth()->check() && auth()->id() === $link->user_id) {
+        if (auth()->check() && auth()->user()?->can('scanner.access')) {
             return redirect()->route('admin.tickets.scanner');
         }
 
-        return view('admin.tickets.short-scanner-login', [
-            'token' => $token,
-            'scannerUser' => $link->user,
-        ]);
+        return view('admin.tickets.scanner-login');
     }
 
-    public function scannerShortLinkLogin(Request $request, string $token)
+    public function scannerLoginSubmit(Request $request)
     {
-        $link = ScannerLink::query()
-            ->with('user')
-            ->where('token', $token)
-            ->where('is_active', true)
-            ->firstOrFail();
-
         $data = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        $isSameUser = strcasecmp($data['username'], (string) $link->user->username) === 0;
-
-        if (! $isSameUser || ! Auth::attempt(['username' => $data['username'], 'password' => $data['password']])) {
-            return back()->withErrors(['username' => 'Invalid scanner credentials.'])->withInput();
+        if (! Auth::attempt(['username' => $data['username'], 'password' => $data['password']])) {
+            return back()->withErrors(['username' => 'Invalid credentials.'])->withInput();
         }
 
-        $link->update(['last_used_at' => now()]);
-
         $request->session()->regenerate();
+
+        abort_unless(auth()->user()?->can('scanner.access') || auth()->user()?->hasRole('scanner'), 403);
 
         return redirect()->route('admin.tickets.scanner');
     }

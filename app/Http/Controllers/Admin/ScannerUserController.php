@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ScanLog;
-use App\Models\ScannerLink;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -20,7 +18,7 @@ class ScannerUserController extends Controller
         $search = trim((string) $request->string('search'));
 
         $scannerUsers = User::query()
-            ->with(['roles', 'scannerLink'])
+            ->with(['roles'])
             ->whereHas('roles', fn ($query) => $query->where('name', 'scanner'))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
@@ -63,24 +61,8 @@ class ScannerUserController extends Controller
         $user->syncRoles([$scannerRole->name]);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        ScannerLink::updateOrCreate(
-            ['user_id' => $user->id],
-            ['token' => Str::random(10), 'is_active' => true]
-        );
 
         return redirect()->route('admin.scanners.index')->with('success', 'Scanner user added successfully.');
-    }
-
-    public function regenerateLink(User $user)
-    {
-        abort_unless($user->hasRole('scanner'), 404);
-
-        ScannerLink::updateOrCreate(
-            ['user_id' => $user->id],
-            ['token' => Str::random(10), 'is_active' => true]
-        );
-
-        return back()->with('success', 'Scanner short link regenerated.');
     }
 
     public function destroy(User $user)

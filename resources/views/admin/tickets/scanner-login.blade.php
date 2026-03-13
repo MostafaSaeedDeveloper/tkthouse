@@ -14,12 +14,16 @@
         <div class="col-md-6 col-xl-4">
           <div class="block block-rounded mb-0">
             <div class="block-header block-header-default">
-              <h3 class="block-title">Scanner Quick Login</h3>
+              <h3 class="block-title">Scanner Login</h3>
             </div>
             <div class="block-content">
-              <p class="text-muted">Enter scanner username and password to open QR scanner directly.</p>
-              <p class="mb-3"><strong>Name:</strong> {{ $scannerUser->name }}</p>
-              <form method="POST" action="{{ route('front.scanner.short-link.login', $token) }}">
+              <p class="text-muted">For gate team only. Login with scanner username/password to open QR scanner.</p>
+
+              @if($errors->any())
+                <div class="alert alert-danger">{{ $errors->first() }}</div>
+              @endif
+
+              <form method="POST" action="{{ route('front.scanner.login.submit') }}">
                 @csrf
                 <div class="mb-3">
                   <label class="form-label">Username</label>

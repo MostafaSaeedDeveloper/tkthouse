@@ -5,7 +5,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
       <h2 class="h4 mb-1">Scanners</h2>
-      <p class="text-muted mb-0">Manage scanner users and their short links.</p>
+      <p class="text-muted mb-0">Manage scanner users for the gate team.</p>
     </div>
     <div class="d-flex gap-2">
       <a href="{{ route('admin.scanners.export-history') }}" class="btn btn-alt-primary">
@@ -31,7 +31,7 @@
             <th>Name</th>
             <th>Username</th>
             <th>Email</th>
-            <th>Short Link</th>
+            <th>Scanner Link</th>
             <th style="width:220px">Actions</th>
           </tr>
         </thead>
@@ -42,19 +42,9 @@
               <td>{{ $scanner->username }}</td>
               <td>{{ $scanner->email }}</td>
               <td>
-                @if($scanner->scannerLink)
-                  <a href="{{ route('front.scanner.short-link', $scanner->scannerLink->token) }}" target="_blank">
-                    {{ route('front.scanner.short-link', $scanner->scannerLink->token) }}
-                  </a>
-                @else
-                  -
-                @endif
+                <a href="{{ route('front.scanner.login') }}" target="_blank">{{ route('front.scanner.login') }}</a>
               </td>
               <td>
-                <form method="POST" action="{{ route('admin.scanners.regenerate-link', $scanner) }}" class="d-inline">
-                  @csrf
-                  <button class="btn btn-sm btn-alt-warning" type="submit">Regenerate Link</button>
-                </form>
                 <form method="POST" action="{{ route('admin.scanners.destroy', $scanner) }}" class="d-inline" onsubmit="return confirm('Delete this scanner user?');">
                   @csrf
                   @method('DELETE')

@@ -84,10 +84,6 @@ class User extends Authenticatable
         return $this->hasMany(Order::class, 'affiliate_user_id');
     }
 
-    public function scannerLink()
-    {
-        return $this->hasOne(ScannerLink::class);
-    }
 
     public function sendPasswordResetNotification($token): void
     {

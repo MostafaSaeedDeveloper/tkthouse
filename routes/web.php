@@ -120,7 +120,6 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::get('scanners', [ScannerUserController::class, 'index'])->middleware('permission:users.view')->name('scanners.index');
     Route::get('scanners/create', [ScannerUserController::class, 'create'])->middleware('permission:users.create')->name('scanners.create');
     Route::post('scanners', [ScannerUserController::class, 'store'])->middleware('permission:users.create')->name('scanners.store');
-    Route::post('scanners/{user}/regenerate-link', [ScannerUserController::class, 'regenerateLink'])->middleware('permission:users.update')->name('scanners.regenerate-link');
     Route::delete('scanners/{user}', [ScannerUserController::class, 'destroy'])->middleware('permission:users.delete')->name('scanners.destroy');
     Route::get('scanners/export-history', [ScannerUserController::class, 'exportHistory'])->middleware('permission:reports.view')->name('scanners.export-history');
 
@@ -163,8 +162,8 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
         ->middlewareFor('destroy', 'permission:promo-codes.delete');
 });
 
-Route::get('/scan/{token}', [TicketController::class, 'scannerShortLink'])->name('front.scanner.short-link');
-Route::post('/scan/{token}', [TicketController::class, 'scannerShortLinkLogin'])->name('front.scanner.short-link.login');
+Route::get('/scanner', [TicketController::class, 'scannerLogin'])->name('front.scanner.login');
+Route::post('/scanner', [TicketController::class, 'scannerLoginSubmit'])->name('front.scanner.login.submit');
 
 Route::redirect('/admin', '/dashboard');
 Route::redirect('/admin/dashboard', '/dashboard');
