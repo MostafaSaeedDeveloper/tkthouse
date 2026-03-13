@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GuestListController extends Controller
@@ -234,9 +235,7 @@ class GuestListController extends Controller
 
         $pdf = Pdf::loadView('admin.tickets.pdf', [
             'ticket' => $ticket,
-            'qrDataUri' => $ticket->qr_payload
-                ? 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->qr_payload)
-                : 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->ticket_number),
+            'qrDataUri' => $this->qrDataUri($ticket),
             'event' => Event::query()->where('name', $ticket->eventLabel())->first(),
         ])->output();
 
@@ -244,6 +243,24 @@ class GuestListController extends Controller
             ticket: $ticket,
             pdfBinary: $pdf,
         ));
+    }
+
+
+    private function qrDataUri(Ticket $ticket): string
+    {
+        $payload = $ticket->qr_payload ?: $ticket->ticket_number;
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $payload);
+
+        try {
+            $response = Http::timeout(15)->get($url);
+            if ($response->successful()) {
+                return 'data:image/png;base64,'.base64_encode($response->body());
+            }
+        } catch (\Throwable) {
+            // Ignore and fallback to URL
+        }
+
+        return $url;
     }
 
     private function generateTicketNumber(): string
