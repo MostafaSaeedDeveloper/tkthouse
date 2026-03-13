@@ -117,11 +117,11 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
     Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->middleware('permission:scanner.access')->name('tickets.scanner.status');
 
-    Route::get('scanners', [ScannerUserController::class, 'index'])->middleware('permission:users.view')->name('scanners.index');
-    Route::get('scanners/create', [ScannerUserController::class, 'create'])->middleware('permission:users.create')->name('scanners.create');
-    Route::post('scanners', [ScannerUserController::class, 'store'])->middleware('permission:users.create')->name('scanners.store');
-    Route::delete('scanners/{user}', [ScannerUserController::class, 'destroy'])->middleware('permission:users.delete')->name('scanners.destroy');
-    Route::get('scanners/export-history', [ScannerUserController::class, 'exportHistory'])->middleware('permission:reports.view')->name('scanners.export-history');
+    Route::get('scanners', [ScannerUserController::class, 'index'])->middleware('permission:scanners.view')->name('scanners.index');
+    Route::get('scanners/create', [ScannerUserController::class, 'create'])->middleware('permission:scanners.view')->name('scanners.create');
+    Route::post('scanners', [ScannerUserController::class, 'store'])->middleware('permission:scanners.view')->name('scanners.store');
+    Route::delete('scanners/{user}', [ScannerUserController::class, 'destroy'])->middleware('permission:scanners.view')->name('scanners.destroy');
+    Route::get('scanners/export-history', [ScannerUserController::class, 'exportHistory'])->middleware('permission:scanners.view')->name('scanners.export-history');
 
     Route::get('orders', [OrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
     Route::get('orders/deleted', [OrderController::class, 'deleted'])->middleware('permission:orders.deleted.view')->name('orders.deleted');

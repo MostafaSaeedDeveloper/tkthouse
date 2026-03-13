@@ -30,7 +30,7 @@
   $canTickets = auth()->user()?->can('tickets.view');
 
   $canUsers = auth()->user()?->can('users.view');
-  $canScanners = auth()->user()?->can('users.view');
+  $canScanners = auth()->user()?->can('scanners.view');
   $canRoles = auth()->user()?->can('roles.view');
   $canPermissions = auth()->user()?->can('permissions.view');
   $canActivityLogs = auth()->user()?->can('activity-logs.view');

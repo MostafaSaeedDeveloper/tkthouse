@@ -24,6 +24,7 @@ class EnsureAdminPanelAccess
         'users.create',
         'users.update',
         'users.delete',
+        'scanners.view',
         'roles.view',
         'roles.create',
         'roles.update',
