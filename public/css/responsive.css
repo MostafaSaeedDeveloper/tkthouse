@@ -1622,6 +1622,50 @@
 	.header-style-3 .header-1st-row .bx-wrapper {
 		width: 52% !important;
 	}
+
+	/* Mobile header layout: account, logo, menu in one row */
+	.header-style-3 .header-2st-row .pull-left{
+		display:none !important;
+	}
+	.header-style-3 .header-2st-row .container{
+		display:flex;
+		align-items:center;
+		justify-content:space-between;
+	}
+	.mobile-account{
+		display:block;
+		width:auto;
+	}
+	.mobile-account .playlist_menu_bar{
+		float:none;
+		width:auto;
+		margin:0;
+	}
+	.mobile-account .playlist_menu_bar li{
+		float:none;
+		display:inline-block;
+		margin:0;
+	}
+	.header-style-3 .header-2st-row .center-logo{
+		flex:1;
+		width:auto;
+		text-align:center;
+		margin:0;
+	}
+	.header-style-3 .header-2st-row .logo{
+		width:auto;
+		padding:0;
+		display:inline-block;
+	}
+	.header-style-3 .header-2st-row .pull-right{
+		width:auto;
+		display:flex;
+		align-items:center;
+		text-align:right;
+	}
+	header.header-style-3 div.dl-menuwrapper{
+		margin:0 0 0 12px;
+	}
 	.music-top-chart-list:hover .music-top-chart-hover {
 		top: 75%;
 	}
