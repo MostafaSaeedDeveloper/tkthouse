@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\IssuedTicket;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ScanLog;
@@ -148,7 +149,13 @@ class TicketController extends Controller
         $event = $this->resolveEvent($ticket->name ?? '');
 
         $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri', 'event'))->output();
-        $showUrl = route('admin.tickets.show', $ticket);
+        $issuedTicket = IssuedTicket::query()
+            ->where('ticket_number', $ticket->ticket_number)
+            ->first();
+
+        $showUrl = $issuedTicket
+            ? route('front.tickets.show', $issuedTicket)
+            : route('front.account.tickets');
 
         Mail::to($data['email'])->send(new AdminTicketIssuedMail(
             ticket: $ticket,
