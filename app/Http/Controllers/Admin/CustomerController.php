@@ -46,7 +46,7 @@ class CustomerController extends Controller
             abort_unless($hasVisibleOrder, 403);
         }
 
-        $customer->load(['orders' => function (Builder $query) use ($managedEvent) {
+        $customer->load(['orders' => function ($query) use ($managedEvent) {
             $this->applyEventScopeToOrdersQuery($query, $managedEvent);
             $query->latest()->withCount('items');
         }]);
@@ -54,7 +54,7 @@ class CustomerController extends Controller
         return view('admin.customers.show', compact('customer'));
     }
 
-    private function applyEventScopeToOrdersQuery(Builder $query, ?Event $event): void
+    private function applyEventScopeToOrdersQuery($query, ?Event $event): void
     {
         if (! $event) {
             return;
