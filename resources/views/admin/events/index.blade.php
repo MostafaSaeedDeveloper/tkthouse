@@ -33,7 +33,7 @@
                             <th>Date</th>
                             <th>Location</th>
                             <th>Status</th>
-                            <th class="text-end" style="width: 180px">Actions</th>
+                            <th class="text-end" style="width: 260px">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -52,6 +52,12 @@
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-alt-info" href="{{ route('front.events.show', $event) }}" title="View on website" target="_blank" rel="noopener">
                                         <i class="fa fa-eye"></i>
+                                    </a>
+                                    <a class="btn btn-sm btn-alt-success" href="{{ route('admin.events.dashboard', $event) }}" title="Event dashboard">
+                                        <i class="fa fa-gauge"></i>
+                                    </a>
+                                    <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.events.report', $event) }}" title="Event report">
+                                        <i class="fa fa-chart-line"></i>
                                     </a>
                                     <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.events.edit', $event) }}" title="Edit">
                                         <i class="fa fa-pen"></i>

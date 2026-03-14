@@ -4,6 +4,8 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="h4 mb-0">{{ $event->name }}</h2>
         <div>
+            <a href="{{ route('admin.events.dashboard', $event) }}" class="btn btn-sm btn-alt-success"><i class="fa fa-gauge me-1"></i>Dashboard</a>
+            <a href="{{ route('admin.events.report', $event) }}" class="btn btn-sm btn-alt-warning"><i class="fa fa-chart-line me-1"></i>Report</a>
             <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-sm btn-alt-primary"><i class="fa fa-pen me-1"></i>Edit</a>
             <a href="{{ route('admin.events.index') }}" class="btn btn-sm btn-alt-secondary">Back</a>
         </div>

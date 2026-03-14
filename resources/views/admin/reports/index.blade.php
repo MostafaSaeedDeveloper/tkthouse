@@ -6,19 +6,25 @@
 <div class="content reports-page">
     <div class="d-md-flex justify-content-md-between align-items-md-center mb-4">
         <div>
-            <h1 class="h3 mb-1">Reports</h1>
-            <p class="text-muted mb-0">Detailed per-event performance, tickets and revenue.</p>
+            <h1 class="h3 mb-1">{{ $reportTitle ?? 'Reports' }}</h1>
+            <p class="text-muted mb-0">{{ $reportDescription ?? 'Detailed per-event performance, tickets and revenue.' }}</p>
         </div>
+            @if($forcedEvent)
+            <div class="mt-3 mt-md-0 d-flex gap-2">
+                <a href="{{ route('admin.events.dashboard', $forcedEvent) }}" class="btn btn-sm btn-alt-info">Event Dashboard</a>
+                <a href="{{ route('admin.reports.index') }}" class="btn btn-sm btn-alt-secondary">All Events Reports</a>
+            </div>
+        @endif
     </div>
 
     <div class="reports-toolbar mb-4">
         <div class="reports-range-buttons">
             @foreach($rangeOptions as $key => $label)
-                <a href="{{ route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
+                <a href="{{ $forcedEvent ? route('admin.events.report', ['event' => $forcedEvent, 'range' => $key]) : route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
                    class="reports-range-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
             @endforeach
         </div>
-        <form method="GET" action="{{ route('admin.reports.index') }}" class="reports-filters-form">
+        <form method="GET" action="{{ $forcedEvent ? route('admin.events.report', $forcedEvent) : route('admin.reports.index') }}" class="reports-filters-form">
             <input type="hidden" name="range" value="custom">
             <input type="text" name="from" class="reports-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
             <input type="text" name="to" class="reports-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
