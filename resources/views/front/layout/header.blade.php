@@ -76,13 +76,22 @@
                                 </ul>
                             </div>
                         </div>
+                        <div class="mobile-account visible-xs-block">
+                            <ul class="playlist_menu_bar">
+                                @auth
+                                    <li><a href="{{ route('front.account.profile') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
+                                @else
+                                    <li><a href="#" data-toggle="modal" data-target="#login-register1" title="Customer Login"><i class="fa fa-user-circle"></i></a></li>
+                                @endauth
+                            </ul>
+                        </div>
                         <div class="center-logo">
                             <div class="logo">
                                 <h1><a href="{{ route('front.home') }}"><img class="logo-light" src="{{ $logoLight }}" alt="{{ $siteName }}"><img class="logo-drak" src="{{ $logoDark }}" alt="{{ $siteName }}"></a></h1>
                             </div>
                         </div>
                         <div class="pull-right">
-                            <ul class="playlist_menu_bar">
+                            <ul class="playlist_menu_bar hidden-xs">
                                 @auth
                                     <li><a href="{{ route('front.account.profile') }}" title="My Dashboard"><i class="fa fa-user-circle"></i></a></li>
                                 @else
