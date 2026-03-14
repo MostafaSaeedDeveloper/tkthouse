@@ -64,8 +64,13 @@ class FrontTicketController extends Controller
 
         $ticket->loadMissing('order.customer');
 
-        $canView = (int) $ticket->order->user_id === (int) $user->id
-            || $ticket->order->customer?->email === $user->email;
+        $orderUserId = $ticket->order?->user_id;
+        $orderCustomerEmail = $ticket->order?->customer?->email;
+        $holderEmail = $ticket->holder_email;
+
+        $canView = ($orderUserId !== null && (int) $orderUserId === (int) $user->id)
+            || ($orderCustomerEmail !== null && strcasecmp($orderCustomerEmail, (string) $user->email) === 0)
+            || ($holderEmail !== null && strcasecmp($holderEmail, (string) $user->email) === 0);
 
         abort_unless($canView, 403);
     }
