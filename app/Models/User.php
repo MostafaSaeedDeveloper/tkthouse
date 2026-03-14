@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Event;
 use App\Notifications\CustomerResetPasswordNotification;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,6 +31,7 @@ class User extends Authenticatable
         'password',
         'last_login_at',
         'last_login_ip',
+        'managed_event_id',
     ];
 
     protected $hidden = [
@@ -67,6 +69,12 @@ class User extends Authenticatable
             ->logOnly(['name', 'username', 'email', 'phone', 'profile_image', 'last_login_at', 'last_login_ip'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+
+    public function managedEvent()
+    {
+        return $this->belongsTo(Event::class, 'managed_event_id');
     }
 
     public function referredBy()

@@ -7,11 +7,13 @@ use App\Mail\OrderApprovedMail;
 use App\Mail\OrderNoteToCustomerMail;
 use App\Mail\OrderRejectedMail;
 use App\Mail\OrderStatusChangedMail;
+use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
 use App\Services\TicketIssuanceService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -38,7 +40,10 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
+        $managedEvent = $request->user()?->managedEvent;
+
         $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
+        $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
 
 
         if ($request->filled('status')) {
@@ -63,7 +68,12 @@ class OrderController extends Controller
 
         $orders = $ordersQuery->orderByDesc('id')->paginate(15)->withQueryString();
         $canViewDeletedOrders = $request->user()?->can(self::DELETED_ORDERS_PERMISSION) ?? false;
-        $deletedOrdersCount = $canViewDeletedOrders ? Order::onlyTrashed()->count() : 0;
+        $deletedOrdersCount = 0;
+        if ($canViewDeletedOrders) {
+            $deletedQuery = Order::onlyTrashed();
+            $this->applyEventScopeToOrdersQuery($deletedQuery, $managedEvent);
+            $deletedOrdersCount = $deletedQuery->count();
+        }
 
         $ticketColorMap = EventTicket::query()
             ->select('name', 'color')
@@ -84,9 +94,12 @@ class OrderController extends Controller
     {
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
 
+        $managedEvent = $request->user()?->managedEvent;
+
         $ordersQuery = Order::onlyTrashed()
             ->withCount('items')
             ->with(['customer']);
+        $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
 
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
@@ -124,6 +137,8 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethodLabel = PaymentMethod::query()
@@ -187,6 +202,8 @@ class OrderController extends Controller
 
     public function edit(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
         $paymentMethods = PaymentMethod::query()
@@ -206,6 +223,8 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         $validated = $request->validate([
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
             'payment_method' => ['required', 'string', 'max:100'],
@@ -348,6 +367,8 @@ class OrderController extends Controller
 
     public function destroy(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         abort_unless($request->user()?->can('orders.delete'), 403);
 
         $orderNumber = $order->order_number;
@@ -366,6 +387,7 @@ class OrderController extends Controller
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
 
         $targetOrder = Order::onlyTrashed()->findOrFail($order);
+        $this->abortIfOrderOutsideManagedEvent($request, $targetOrder);
         $targetOrder->restore();
 
         activity('orders')
@@ -378,6 +400,8 @@ class OrderController extends Controller
 
     public function storeNote(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         $validated = $request->validate([
             'body' => ['required', 'string', 'max:2000'],
             'send_to_customer' => ['nullable', 'boolean'],
@@ -405,6 +429,8 @@ class OrderController extends Controller
 
     public function approve(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         if ($order->status !== 'pending_approval') {
             return back()->with('error', 'Only pending approval orders can be approved.');
         }
@@ -438,6 +464,8 @@ class OrderController extends Controller
 
     public function reject(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         if ($order->status !== 'pending_approval') {
             return back()->with('error', 'Only pending approval orders can be rejected.');
         }
@@ -464,6 +492,8 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
+        $this->abortIfOrderOutsideManagedEvent($request, $order);
+
         $validated = $request->validate([
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
         ]);
@@ -502,6 +532,38 @@ class OrderController extends Controller
         return back()->with('success', 'Order status updated successfully.');
     }
 
+
+
+    private function applyEventScopeToOrdersQuery(Builder $query, ?Event $event): void
+    {
+        if (! $event) {
+            return;
+        }
+
+        $query->whereHas('items', function (Builder $itemsQuery) use ($event) {
+            $itemsQuery->where(function (Builder $ticketQuery) use ($event) {
+                $ticketQuery->where('ticket_name', 'like', $event->name.' - %')
+                    ->orWhere('ticket_name', $event->name);
+            });
+        });
+    }
+
+    private function abortIfOrderOutsideManagedEvent(Request $request, Order $order): void
+    {
+        $event = $request->user()?->managedEvent;
+        if (! $event) {
+            return;
+        }
+
+        $belongs = $order->items()
+            ->where(function (Builder $query) use ($event) {
+                $query->where('ticket_name', 'like', $event->name.' - %')
+                    ->orWhere('ticket_name', $event->name);
+            })
+            ->exists();
+
+        abort_unless($belongs, 403);
+    }
 
     private function sendOrderStatusChangedMail(Order $order, string $oldStatus, string $newStatus): void
     {
