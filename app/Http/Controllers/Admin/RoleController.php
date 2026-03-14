@@ -17,7 +17,7 @@ class RoleController extends Controller
         $isSuperAdmin = $this->isSuperAdminAccount($request->user());
 
         $roles = Role::with('permissions')
-            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->when(! $isSuperAdmin, fn ($query) => $this->whereNotProtectedRole($query))
             ->latest()
             ->paginate(15);
 
@@ -41,7 +41,11 @@ class RoleController extends Controller
                 'string',
                 'max:255',
                 'unique:roles,name',
-                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->isProtectedRoleName((string) $value)) {
+                        $fail('The '.$attribute.' is not allowed.');
+                    }
+                }]),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
@@ -75,7 +79,11 @@ class RoleController extends Controller
                 'string',
                 'max:255',
                 'unique:roles,name,'.$role->id,
-                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->isProtectedRoleName((string) $value)) {
+                        $fail('The '.$attribute.' is not allowed.');
+                    }
+                }]),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
@@ -103,7 +111,7 @@ class RoleController extends Controller
 
     private function ensureCanManageRole(?User $actor, Role $role): void
     {
-        if ($role->name === 'superadmin' && ! $this->isSuperAdminAccount($actor)) {
+        if ($this->isProtectedRoleName($role->name) && ! $this->isSuperAdminAccount($actor)) {
             abort(403);
         }
     }
@@ -114,6 +122,32 @@ class RoleController extends Controller
             return false;
         }
 
-        return $user->username === 'superadmin' || $user->hasRole('superadmin');
+        if ($this->normalizeSuperAdminKey($user->username) === 'superadmin') {
+            return true;
+        }
+
+        return $user->roles()->where(function ($query) {
+            $this->whereProtectedRole($query);
+        })->exists();
+    }
+
+    private function isProtectedRoleName(?string $roleName): bool
+    {
+        return $this->normalizeSuperAdminKey($roleName ?? '') === 'superadmin';
+    }
+
+    private function normalizeSuperAdminKey(string $value): string
+    {
+        return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim($value)));
+    }
+
+    private function whereProtectedRole($query)
+    {
+        return $query->whereRaw("LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '_', ''), '-', '')) = ?", ['superadmin']);
+    }
+
+    private function whereNotProtectedRole($query)
+    {
+        return $query->whereRaw("LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '_', ''), '-', '')) != ?", ['superadmin']);
     }
 }

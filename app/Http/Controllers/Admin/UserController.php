@@ -23,7 +23,7 @@ class UserController extends Controller
         $role = $request->string('role')->toString();
         $permission = $request->string('permission')->toString();
 
-        if (! $isSuperAdmin && $role === 'superadmin') {
+        if (! $isSuperAdmin && $this->isProtectedRoleName($role)) {
             $role = '';
         }
 
@@ -31,8 +31,8 @@ class UserController extends Controller
             ->with(['roles', 'permissions', 'managedEvent:id,name'])
             ->when(! $isSuperAdmin, function ($query) {
                 $query
-                    ->where('username', '!=', 'superadmin')
-                    ->whereDoesntHave('roles', fn ($roleQuery) => $roleQuery->where('name', 'superadmin'));
+                    ->whereRaw("LOWER(username) != ?", ['superadmin'])
+                    ->whereDoesntHave('roles', fn ($roleQuery) => $this->whereProtectedRole($roleQuery));
             })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
@@ -53,7 +53,7 @@ class UserController extends Controller
             ->withQueryString();
 
         $roles = Role::query()
-            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->when(! $isSuperAdmin, fn ($query) => $this->whereNotProtectedRole($query))
             ->orderBy('name')
             ->pluck('name');
         $permissions = Permission::orderBy('name')->pluck('name');
@@ -66,7 +66,7 @@ class UserController extends Controller
         $isSuperAdmin = $this->isSuperAdminAccount(auth()->user());
 
         $roles = Role::query()
-            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->when(! $isSuperAdmin, fn ($query) => $this->whereNotProtectedRole($query))
             ->orderBy('name')
             ->get();
         $permissions = Permission::orderBy('name')->get();
@@ -86,14 +86,22 @@ class UserController extends Controller
                 'string',
                 'max:255',
                 'unique:users,username',
-                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->normalizeSuperAdminKey((string) $value) === 'superadmin') {
+                        $fail('The '.$attribute.' is not allowed.');
+                    }
+                }]),
             ],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'role' => [
                 'nullable',
                 'exists:roles,name',
-                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->isProtectedRoleName((string) $value)) {
+                        $fail('The selected '.$attribute.' is invalid.');
+                    }
+                }]),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
@@ -124,7 +132,7 @@ class UserController extends Controller
         $isSuperAdmin = $this->isSuperAdminAccount(auth()->user());
 
         $roles = Role::query()
-            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->when(! $isSuperAdmin, fn ($query) => $this->whereNotProtectedRole($query))
             ->orderBy('name')
             ->get();
         $permissions = Permission::orderBy('name')->get();
@@ -145,14 +153,22 @@ class UserController extends Controller
                 'string',
                 'max:255',
                 'unique:users,username,'.$user->id,
-                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->normalizeSuperAdminKey((string) $value) === 'superadmin') {
+                        $fail('The '.$attribute.' is not allowed.');
+                    }
+                }]),
             ],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'password' => ['nullable', 'string', 'min:8'],
             'role' => [
                 'nullable',
                 'exists:roles,name',
-                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->isProtectedRoleName((string) $value)) {
+                        $fail('The selected '.$attribute.' is invalid.');
+                    }
+                }]),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
@@ -204,6 +220,32 @@ class UserController extends Controller
             return false;
         }
 
-        return $user->username === 'superadmin' || $user->hasRole('superadmin');
+        if ($this->normalizeSuperAdminKey($user->username) === 'superadmin') {
+            return true;
+        }
+
+        return $user->roles()->where(function ($query) {
+            $this->whereProtectedRole($query);
+        })->exists();
+    }
+
+    private function isProtectedRoleName(?string $roleName): bool
+    {
+        return $this->normalizeSuperAdminKey($roleName ?? '') === 'superadmin';
+    }
+
+    private function normalizeSuperAdminKey(string $value): string
+    {
+        return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim($value)));
+    }
+
+    private function whereProtectedRole($query)
+    {
+        return $query->whereRaw("LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '_', ''), '-', '')) = ?", ['superadmin']);
+    }
+
+    private function whereNotProtectedRole($query)
+    {
+        return $query->whereRaw("LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '_', ''), '-', '')) != ?", ['superadmin']);
     }
 }
