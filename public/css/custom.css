@@ -659,3 +659,32 @@ a:hover { color: var(--tkth-gold); }
   background: rgba(245,184,0,0.1) !important;
   color: var(--tkth-gold) !important;
 }
+
+@media screen and (max-width:767px){
+    body.msl-black .header-style-3 .header-2st-row .pull-left {
+    display: none;
+}
+.header-style-3 .header-2st-row .logo {
+    position: absolute;
+    right: 0%;
+    left: 0%;
+    top: 6px;
+    height: 91px;
+}
+.header-style-3 .header-2st-row .logo img {
+    height: 35px;
+}
+body.msl-black .header-style-3 .header-2st-row {
+    background: #000;
+    margin-top: -30px;
+}
+.banner_slider .slide {
+    position: relative;
+    height: 185px !important;
+    overflow: hidden;
+}
+.kode_event_conter_capstion img {
+    height: auto !important;
+    margin-bottom: 21px;
+}
+}
