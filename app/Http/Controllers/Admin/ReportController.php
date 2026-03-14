@@ -94,7 +94,34 @@ class ReportController extends Controller
                 ];
             });
 
-        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent);
+        $paidCheckedInTicketsQuery = Ticket::query()
+            ->where('status', 'checked_in')
+            ->where(function ($query) {
+                $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
+            });
+
+        if ($startAt && $endAt) {
+            $paidCheckedInTicketsQuery->whereBetween('checked_in_at', [$startAt, $endAt]);
+        }
+
+        if ($selectedEvent !== '') {
+            $paidCheckedInTicketsQuery->where('name', 'like', $selectedEvent.' - %');
+        }
+
+        $paidCheckedInByEvent = $paidCheckedInTicketsQuery
+            ->get(['name'])
+            ->map(function (Ticket $ticket) {
+                [$eventName] = $this->extractEventAndTicketType((string) ($ticket->name ?? ''));
+
+                return [
+                    'event_name' => $eventName,
+                ];
+            })
+            ->filter(fn (array $item) => $item['event_name'] !== '')
+            ->groupBy('event_name')
+            ->map(fn (Collection $tickets) => $tickets->count());
+
+        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -187,11 +214,11 @@ class ReportController extends Controller
             ->values();
     }
 
-    private function buildEventReports(Collection $items, Collection $guestStatsByEvent): Collection
+    private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
     {
         $reports = $items
             ->groupBy('event_name')
-            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent) {
+            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent) {
                 $ticketsSold = $eventItems->sum('quantity');
                 $maleTickets = $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'male')
@@ -212,6 +239,8 @@ class ReportController extends Controller
                     'female_tickets' => $femaleTickets,
                     'guest_invitations' => $guestStats['guest_invitations'],
                     'guest_checked_in' => $guestStats['guest_checked_in'],
+                    'paid_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)),
+                    'total_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) $guestStats['guest_checked_in'],
                     'gross_revenue' => round((float) $eventItems->sum('gross_contribution'), 2),
                     'ticket_types' => $eventItems
                         ->groupBy('ticket_type')
@@ -236,6 +265,8 @@ class ReportController extends Controller
                 'female_tickets' => 0,
                 'guest_invitations' => $guestStats['guest_invitations'] ?? 0,
                 'guest_checked_in' => $guestStats['guest_checked_in'] ?? 0,
+                'paid_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)),
+                'total_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) ($guestStats['guest_checked_in'] ?? 0),
                 'gross_revenue' => 0,
                 'ticket_types' => collect(),
             ]);

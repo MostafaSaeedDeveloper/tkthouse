@@ -6,6 +6,8 @@ use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
+use Illuminate\Support\Facades\Auth;
+use App\Models\ScanLog;
 use App\Services\UltramsgWhatsappService;
 use App\Support\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -75,7 +77,15 @@ class TicketController extends Controller
         $ticket->load('order');
         $whatsappEnabled = (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
 
-        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled'));
+        $scanLogs = ScanLog::query()
+            ->with('scannerUser')
+            ->where('ticket_id', $ticket->id)
+            ->where('action', 'status_update')
+            ->latest('scanned_at')
+            ->take(30)
+            ->get();
+
+        return view('admin.tickets.show', compact('ticket', 'whatsappEnabled', 'scanLogs'));
     }
 
     public function edit(Ticket $ticket)
@@ -164,11 +174,78 @@ class TicketController extends Controller
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
 
-    public function scanner()
+
+    public function scannerLogin()
+    {
+        if (auth()->check() && auth()->user()?->can('scanner.access')) {
+            return redirect()->route('admin.tickets.scanner');
+        }
+
+        return view('admin.tickets.scanner-login');
+    }
+
+    public function scannerLoginSubmit(Request $request)
+    {
+        $data = $request->validate([
+            'username' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ]);
+
+        if (! Auth::attempt(['username' => $data['username'], 'password' => $data['password']])) {
+            return back()->withErrors(['username' => 'Invalid credentials.'])->withInput();
+        }
+
+        $request->session()->regenerate();
+
+        abort_unless(auth()->user()?->can('scanner.access') || auth()->user()?->hasRole('scanner'), 403);
+
+        auth()->user()?->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ])->save();
+
+        ScanLog::create([
+            'action' => 'scanner_login',
+            'scanned_by_user_id' => auth()->id(),
+            'scanner_name' => auth()->user()?->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'scanned_at' => now(),
+        ]);
+
+        return redirect()->route('admin.tickets.scanner');
+    }
+
+
+    public function scannerLogout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('front.scanner.login');
+    }
+
+    public function scanner(Request $request)
     {
         $this->ensureScannerAccess();
 
-        return view('admin.tickets.scanner');
+        $payload = trim((string) $request->input('code'));
+        if ($payload === '') {
+            return view('admin.tickets.scanner');
+        }
+
+        $ticket = Ticket::query()
+            ->with('order')
+            ->where('ticket_number', $this->extractTicketNumber($payload))
+            ->first();
+
+        if (! $ticket) {
+            return view('admin.tickets.scanner', ['lastCode' => $payload])->with('error', 'Ticket not found.');
+        }
+
+        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
     }
 
     public function scannerLookup(Request $request)
@@ -185,8 +262,34 @@ class TicketController extends Controller
             ->first();
 
         if (! $ticket) {
+            ScanLog::create([
+                'ticket_number' => $ticketNumber,
+                'action' => 'lookup_failed',
+                'payload' => $payload,
+                'scanned_by_user_id' => auth()->id(),
+                'scanner_name' => auth()->user()?->name,
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'scanned_at' => now(),
+            ]);
+
             return back()->with('error', 'Ticket not found.');
         }
+
+        ScanLog::create([
+            'ticket_id' => $ticket->id,
+            'event_name' => $ticket->eventLabel(),
+            'ticket_number' => $ticket->ticket_number,
+            'action' => 'lookup_success',
+            'previous_status' => $ticket->status,
+            'new_status' => $ticket->status,
+            'payload' => $payload,
+            'scanned_by_user_id' => auth()->id(),
+            'scanner_name' => auth()->user()?->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'scanned_at' => now(),
+        ]);
 
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
     }
@@ -199,13 +302,30 @@ class TicketController extends Controller
             'status' => ['required', 'in:not_checked_in,checked_in,canceled'],
         ]);
 
+        $previousStatus = $ticket->status;
+
         $ticket->update([
             'status' => $data['status'],
             'checked_in_at' => $data['status'] === 'checked_in' ? now() : null,
             'canceled_at' => $data['status'] === 'canceled' ? now() : null,
         ]);
 
-        return back()->with('success', 'Ticket status updated successfully.');
+        ScanLog::create([
+            'ticket_id' => $ticket->id,
+            'event_name' => $ticket->eventLabel(),
+            'ticket_number' => $ticket->ticket_number,
+            'action' => 'status_update',
+            'previous_status' => $previousStatus,
+            'new_status' => $data['status'],
+            'payload' => $ticket->ticket_number,
+            'scanned_by_user_id' => auth()->id(),
+            'scanner_name' => auth()->user()?->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'scanned_at' => now(),
+        ]);
+
+        return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('success', 'Ticket status updated successfully.');
     }
 
     private function validateTicket(Request $request): array

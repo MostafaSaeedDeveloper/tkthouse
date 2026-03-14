@@ -265,6 +265,25 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
         </div>
 
 
+
+        <div class="db-stat fade-up delay-4">
+            <div class="db-stat-top">
+                <div class="db-stat-label">Total Scans</div>
+                <div class="db-stat-icon">📲</div>
+            </div>
+            <div class="db-stat-val">{{ number_format($totalScans) }}</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
+        </div>
+
+        <div class="db-stat green fade-up delay-1">
+            <div class="db-stat-top">
+                <div class="db-stat-label">Checked-in Scans</div>
+                <div class="db-stat-icon">✅</div>
+            </div>
+            <div class="db-stat-val">{{ number_format($checkInsCount) }}</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
+        </div>
+
         <div class="db-stat blue fade-up delay-1">
             <div class="db-stat-top">
                 <div class="db-stat-label">Guest Invitations</div>

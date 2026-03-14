@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\ScanLog;
 use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -74,6 +75,14 @@ class DashboardController extends Controller
 
         $guestInvitations = (clone $guestInvitationsQuery)->count();
 
+        $scanLogsQuery = ScanLog::query();
+        if ($startAt && $endAt) {
+            $scanLogsQuery->whereBetween('scanned_at', [$startAt, $endAt]);
+        }
+
+        $totalScans = (clone $scanLogsQuery)->whereIn('action', ['lookup_success', 'status_update'])->count();
+        $checkInsCount = (clone $scanLogsQuery)->where('action', 'status_update')->where('new_status', 'checked_in')->count();
+
         $recentOrders = (clone $ordersQuery)
             ->with(['customer', 'items'])
             ->latest()
@@ -124,6 +133,8 @@ class DashboardController extends Controller
             'pendingOrders',
             'ticketsSold',
             'guestInvitations',
+            'totalScans',
+            'checkInsCount',
             'totalCustomers',
             'totalEvents',
             'recentOrders',

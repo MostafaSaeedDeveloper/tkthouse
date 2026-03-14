@@ -75,6 +75,17 @@ html, body {
   border-radius: 6px;
   padding: 3px 10px;
 }
+.sc-top-actions { display:flex; align-items:center; gap:8px; }
+.sc-logout {
+  border: 1px solid rgba(232,68,90,.35);
+  background: rgba(232,68,90,.12);
+  color: #ff8a98;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 /* ── Camera Box ─────────────────────────────────────── */
 .sc-camera-wrap {
@@ -319,7 +330,7 @@ html, body {
 .sc-actions {
   padding: 16px 20px 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   border-top: 1px solid var(--border);
 }
@@ -363,7 +374,13 @@ html, body {
   {{-- Top bar --}}
   <div class="sc-topbar">
     <a href="{{ route('admin.dashboard') }}" class="sc-logo"><img style="height: 30px" src="{{asset('images/logo-light.png')}}" alt=""><span>.</span></a>
-    <span class="sc-badge"><i class="fa fa-qrcode" style="margin-right:5px;"></i>Scanner</span>
+    <div class="sc-top-actions">
+      <span class="sc-badge"><i class="fa fa-qrcode" style="margin-right:5px;"></i>Scanner</span>
+      <form method="POST" action="{{ route('front.scanner.logout') }}" style="margin:0;">
+        @csrf
+        <button class="sc-logout" type="submit"><i class="fa fa-right-from-bracket"></i> Logout</button>
+      </form>
+    </div>
   </div>
 
   @include('admin.partials.flash')
@@ -473,7 +490,6 @@ html, body {
           <button name="status" value="checked_in"     class="sc-act-btn sc-act-checkin"  type="submit"><i class="fa fa-circle-check"></i>  Check In</button>
           <button name="status" value="not_checked_in" class="sc-act-btn sc-act-checkout" type="submit"><i class="fa fa-rotate-left"></i>     Check Out</button>
           <button name="status" value="canceled"       class="sc-act-btn sc-act-cancel"   type="submit"><i class="fa fa-ban"></i>             Cancel</button>
-          <a href="{{ route('admin.tickets.show', $ticket) }}" class="sc-act-btn sc-act-view"><i class="fa fa-arrow-up-right-from-square"></i> Open Full Ticket</a>
         </div>
       </form>
 

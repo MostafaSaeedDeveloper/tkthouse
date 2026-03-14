@@ -189,6 +189,30 @@
         </div>
       </div>
 
+
+      {{-- Log History --}}
+      <div class="tk-card">
+        <div class="tk-card-head"><div class="tk-card-title">Log History</div></div>
+        <div class="tk-card-body">
+          @forelse($scanLogs as $log)
+            @php
+              $fromStatus = $log->previous_status ? str($log->previous_status)->replace('_',' ')->title() : '-';
+              $toStatus = $log->new_status ? str($log->new_status)->replace('_',' ')->title() : '-';
+              $scannerDisplay = $log->scanner_name ?: ($log->scannerUser?->name ?? $log->scannerUser?->username ?? 'Unknown');
+            @endphp
+            <div class="tk-info-row">
+              <span class="tk-info-label">{{ $log->scanned_at?->format('d M Y, H:i') ?: '-' }}</span>
+              <span class="tk-info-val">
+                {{ $fromStatus }} → {{ $toStatus }}
+                <span style="display:block;color:#5e5e72;font-size:11px;margin-top:2px;">by {{ $scannerDisplay }}</span>
+              </span>
+            </div>
+          @empty
+            <div style="color:#5e5e72;font-size:13px;">No status history yet.</div>
+          @endforelse
+        </div>
+      </div>
+
       {{-- Send --}}
       @can('tickets.update')
       <div class="tk-card">

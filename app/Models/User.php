@@ -84,6 +84,11 @@ class User extends Authenticatable
         return $this->hasMany(Order::class, 'affiliate_user_id');
     }
 
+    public function scanLogs()
+    {
+        return $this->hasMany(ScanLog::class, 'scanned_by_user_id');
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new CustomerResetPasswordNotification($token));
