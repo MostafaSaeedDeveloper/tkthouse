@@ -11,6 +11,7 @@ use App\Models\ScanLog;
 use App\Services\UltramsgWhatsappService;
 use App\Support\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -21,10 +22,14 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
+        $managedEvent = $request->user()?->managedEvent;
+
         $ticketsQuery = Ticket::query()->with('order')
             ->where(function ($query) {
                 $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
             });
+
+        $this->applyManagedEventScopeToTicketsQuery($ticketsQuery, $managedEvent?->name);
 
         if ($request->filled('status')) {
             $ticketsQuery->where('status', $request->string('status'));
@@ -32,7 +37,10 @@ class TicketController extends Controller
 
         if ($request->filled('event_name')) {
             $eventName = trim((string) $request->input('event_name'));
-            $ticketsQuery->where('name', 'like', $eventName.' - %');
+            $ticketsQuery->where(function ($query) use ($eventName) {
+                $query->where('name', 'like', $eventName.' - %')
+                    ->orWhere('name', $eventName);
+            });
         }
 
         if ($request->filled('search')) {
@@ -45,7 +53,11 @@ class TicketController extends Controller
         }
 
         $tickets = $ticketsQuery->latest()->paginate(15)->withQueryString();
-        $eventNames = Event::query()->orderBy('name')->pluck('name');
+
+        $eventNames = Event::query()
+            ->when($managedEvent, fn (Builder $query) => $query->whereKey($managedEvent->id))
+            ->orderBy('name')
+            ->pluck('name');
 
         return view('admin.tickets.index', compact('tickets', 'eventNames'));
     }
@@ -72,8 +84,10 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket created successfully.');
     }
 
-    public function show(Ticket $ticket)
+    public function show(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $ticket->load('order');
         $whatsappEnabled = (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
 
@@ -88,8 +102,10 @@ class TicketController extends Controller
         return view('admin.tickets.show', compact('ticket', 'whatsappEnabled', 'scanLogs'));
     }
 
-    public function edit(Ticket $ticket)
+    public function edit(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $ticket->load('order');
 
         return view('admin.tickets.edit', compact('ticket'));
@@ -97,6 +113,8 @@ class TicketController extends Controller
 
     public function update(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $validated = $this->validateTicket($request);
 
         $ticket->update($validated);
@@ -106,6 +124,8 @@ class TicketController extends Controller
 
     public function destroy(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $ticket->delete();
 
         if ($request->input('redirect_to') === 'guest-list') {
@@ -117,6 +137,8 @@ class TicketController extends Controller
 
     public function sendEmail(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
         ]);
@@ -140,6 +162,8 @@ class TicketController extends Controller
 
     public function sendWhatsapp(Request $request, Ticket $ticket, UltramsgWhatsappService $whatsappService)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         if (! (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true)) {
             return back()->with('error', 'WhatsApp ticket sending is disabled from settings.');
         }
@@ -163,8 +187,10 @@ class TicketController extends Controller
         }
     }
 
-    public function download(Ticket $ticket)
+    public function download(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $ticket->loadMissing('order');
         $qrDataUri = $this->qrDataUri($ticket);
         $event = $this->resolveEvent($ticket->name ?? '');
@@ -236,10 +262,14 @@ class TicketController extends Controller
             return view('admin.tickets.scanner');
         }
 
-        $ticket = Ticket::query()
+        $ticketNumber = $this->extractTicketNumber($payload);
+
+        $ticketQuery = Ticket::query()
             ->with('order')
-            ->where('ticket_number', $this->extractTicketNumber($payload))
-            ->first();
+            ->where('ticket_number', $ticketNumber);
+        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $request->user()?->managedEvent?->name);
+
+        $ticket = $ticketQuery->first();
 
         if (! $ticket) {
             return view('admin.tickets.scanner', ['lastCode' => $payload])->with('error', 'Ticket not found.');
@@ -256,10 +286,12 @@ class TicketController extends Controller
 
         $ticketNumber = $this->extractTicketNumber($payload);
 
-        $ticket = Ticket::query()
+        $ticketQuery = Ticket::query()
             ->with('order')
-            ->where('ticket_number', $ticketNumber)
-            ->first();
+            ->where('ticket_number', $ticketNumber);
+        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $request->user()?->managedEvent?->name);
+
+        $ticket = $ticketQuery->first();
 
         if (! $ticket) {
             ScanLog::create([
@@ -296,6 +328,8 @@ class TicketController extends Controller
 
     public function scannerStatus(Request $request, Ticket $ticket)
     {
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
         $this->ensureScannerAccess();
 
         $data = $request->validate([
@@ -326,6 +360,32 @@ class TicketController extends Controller
         ]);
 
         return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('success', 'Ticket status updated successfully.');
+    }
+
+
+    private function applyManagedEventScopeToTicketsQuery(Builder $query, ?string $eventName): void
+    {
+        if (! filled($eventName)) {
+            return;
+        }
+
+        $query->where(function (Builder $ticketQuery) use ($eventName) {
+            $ticketQuery->where('name', 'like', $eventName.' - %')
+                ->orWhere('name', $eventName);
+        });
+    }
+
+    private function abortIfTicketOutsideManagedEvent(Request $request, Ticket $ticket): void
+    {
+        $eventName = $request->user()?->managedEvent?->name;
+        if (! filled($eventName)) {
+            return;
+        }
+
+        $ticketName = (string) ($ticket->name ?? '');
+        $matches = $ticketName === $eventName || str_starts_with($ticketName, $eventName.' - ');
+
+        abort_unless($matches, 403);
     }
 
     private function validateTicket(Request $request): array
