@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Admin\EventInsightsController;
 use App\Http\Controllers\Admin\GuestListController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PermissionController;
@@ -71,6 +72,9 @@ Auth::routes(['register' => false]);
 
 Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
+
+    Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware('permission:dashboard.view')->name('events.dashboard');
+    Route::get('events/{event}/report', [ReportController::class, 'event'])->middleware('permission:reports.view')->name('events.report');
 
     Route::resource('users', UserController::class)->except('show')
         ->middlewareFor('index', 'permission:users.view')

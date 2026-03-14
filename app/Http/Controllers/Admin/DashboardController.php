@@ -16,6 +16,10 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        if ($request->user()?->managedEvent) {
+            return app(EventInsightsController::class)->dashboard($request, $request->user()->managedEvent);
+        }
+
         $selectedRange = (string) $request->input('range', 'last30');
         $allowedRanges = ['today', 'yesterday', 'last7', 'last30', 'this_month', 'last_month', 'all', 'custom'];
         if (! in_array($selectedRange, $allowedRanges, true)) {

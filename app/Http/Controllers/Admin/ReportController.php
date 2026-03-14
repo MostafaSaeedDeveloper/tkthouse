@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\OrderItem;
 use App\Models\Ticket;
 use Carbon\Carbon;
@@ -11,8 +12,23 @@ use Illuminate\Support\Collection;
 
 class ReportController extends Controller
 {
-    public function index(Request $request)
+    public function event(Request $request, Event $event)
     {
+        $managedEvent = $request->user()?->managedEvent;
+        if ($managedEvent) {
+            abort_unless((int) $managedEvent->id === (int) $event->id, 403);
+        }
+
+        return $this->index($request, $event);
+    }
+
+    public function index(Request $request, ?Event $forcedEvent = null)
+    {
+        $managedEvent = $request->user()?->managedEvent;
+        if ($managedEvent && $forcedEvent === null) {
+            $forcedEvent = $managedEvent;
+        }
+
         $selectedRange = (string) $request->input('range', 'last30');
         $allowedRanges = ['today', 'yesterday', 'last7', 'last30', 'this_month', 'last_month', 'all', 'custom'];
         if (! in_array($selectedRange, $allowedRanges, true)) {
@@ -54,12 +70,11 @@ class ReportController extends Controller
             ->sort()
             ->values();
 
-        $selectedEvent = trim((string) $request->input('event', ''));
+        $selectedEvent = $forcedEvent?->name ?? trim((string) $request->input('event', ''));
 
-        if ($selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
+        if ($forcedEvent === null && $selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
             $selectedEvent = '';
         }
-
 
         $filteredItems = $selectedEvent === ''
             ? $normalizedItems
@@ -71,7 +86,10 @@ class ReportController extends Controller
             $guestTicketsQuery->whereBetween('created_at', [$startAt, $endAt]);
         }
         if ($selectedEvent !== '') {
-            $guestTicketsQuery->where('name', 'like', $selectedEvent.' - %');
+            $guestTicketsQuery->where(function ($query) use ($selectedEvent) {
+                $query->where('name', 'like', $selectedEvent.' - %')
+                    ->orWhere('name', $selectedEvent);
+            });
         }
 
         $guestStatsByEvent = $guestTicketsQuery
@@ -105,7 +123,10 @@ class ReportController extends Controller
         }
 
         if ($selectedEvent !== '') {
-            $paidCheckedInTicketsQuery->where('name', 'like', $selectedEvent.' - %');
+            $paidCheckedInTicketsQuery->where(function ($query) use ($selectedEvent) {
+                $query->where('name', 'like', $selectedEvent.' - %')
+                    ->orWhere('name', $selectedEvent);
+            });
         }
 
         $paidCheckedInByEvent = $paidCheckedInTicketsQuery
@@ -143,6 +164,9 @@ class ReportController extends Controller
             'eventOptions' => $eventOptions,
             'startAt' => $startAt,
             'endAt' => $endAt,
+            'forcedEvent' => $forcedEvent,
+            'reportTitle' => $forcedEvent ? $forcedEvent->name.' Report' : 'Reports',
+            'reportDescription' => $forcedEvent ? 'Dedicated report for this event only.' : 'Detailed per-event performance, tickets and revenue.',
         ]);
     }
 
