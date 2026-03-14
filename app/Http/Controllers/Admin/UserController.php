@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -15,12 +16,24 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $currentUser = $request->user();
+        $isSuperAdmin = $this->isSuperAdminAccount($currentUser);
+
         $search = trim((string) $request->string('search'));
         $role = $request->string('role')->toString();
         $permission = $request->string('permission')->toString();
 
+        if (! $isSuperAdmin && $role === 'superadmin') {
+            $role = '';
+        }
+
         $users = User::query()
             ->with(['roles', 'permissions', 'managedEvent:id,name'])
+            ->when(! $isSuperAdmin, function ($query) {
+                $query
+                    ->where('username', '!=', 'superadmin')
+                    ->whereDoesntHave('roles', fn ($roleQuery) => $roleQuery->where('name', 'superadmin'));
+            })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery
@@ -39,7 +52,10 @@ class UserController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $roles = Role::orderBy('name')->pluck('name');
+        $roles = Role::query()
+            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->orderBy('name')
+            ->pluck('name');
         $permissions = Permission::orderBy('name')->pluck('name');
 
         return view('admin.users.index', compact('users', 'roles', 'permissions', 'search', 'role', 'permission'));
@@ -47,7 +63,12 @@ class UserController extends Controller
 
     public function create()
     {
-        $roles = Role::orderBy('name')->get();
+        $isSuperAdmin = $this->isSuperAdminAccount(auth()->user());
+
+        $roles = Role::query()
+            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->orderBy('name')
+            ->get();
         $permissions = Permission::orderBy('name')->get();
         $events = Event::query()->orderBy('name')->get(['id', 'name']);
 
@@ -56,12 +77,24 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:255', 'unique:users,username'],
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:users,username',
+                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+            ],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['nullable', 'exists:roles,name'],
+            'role' => [
+                'nullable',
+                'exists:roles,name',
+                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+            ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
             'managed_event_id' => ['nullable', 'exists:events,id'],
@@ -86,7 +119,14 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $roles = Role::orderBy('name')->get();
+        $this->ensureCanManageUser(auth()->user(), $user);
+
+        $isSuperAdmin = $this->isSuperAdminAccount(auth()->user());
+
+        $roles = Role::query()
+            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->orderBy('name')
+            ->get();
         $permissions = Permission::orderBy('name')->get();
         $events = Event::query()->orderBy('name')->get(['id', 'name']);
 
@@ -95,12 +135,25 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->ensureCanManageUser($request->user(), $user);
+        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:users,username,'.$user->id,
+                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+            ],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['nullable', 'exists:roles,name'],
+            'role' => [
+                'nullable',
+                'exists:roles,name',
+                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+            ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
             'managed_event_id' => ['nullable', 'exists:events,id'],
@@ -130,9 +183,27 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->ensureCanManageUser(auth()->user(), $user);
+
         $user->delete();
         activity('users')->causedBy(auth()->user())->log('User deleted: '.$user->username);
 
         return back()->with('success', 'User deleted successfully.');
+    }
+
+    private function ensureCanManageUser(?User $actor, User $target): void
+    {
+        if ($this->isSuperAdminAccount($target) && ! $this->isSuperAdminAccount($actor)) {
+            abort(403);
+        }
+    }
+
+    private function isSuperAdminAccount(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->username === 'superadmin' || $user->hasRole('superadmin');
     }
 }

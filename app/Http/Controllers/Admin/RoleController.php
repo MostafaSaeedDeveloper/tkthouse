@@ -3,16 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RoleController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $roles = Role::with('permissions')->latest()->paginate(15);
+        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
+
+        $roles = Role::with('permissions')
+            ->when(! $isSuperAdmin, fn ($query) => $query->where('name', '!=', 'superadmin'))
+            ->latest()
+            ->paginate(15);
 
         return view('admin.roles.index', compact('roles'));
     }
@@ -26,8 +33,16 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
+        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
+
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:roles,name',
+                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+            ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ]);
@@ -42,6 +57,8 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
+        $this->ensureCanManageRole(auth()->user(), $role);
+
         $permissions = Permission::orderBy('name')->get();
 
         return view('admin.roles.edit', compact('role', 'permissions'));
@@ -49,8 +66,17 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        $this->ensureCanManageRole($request->user(), $role);
+        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
+
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles,name,'.$role->id],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:roles,name,'.$role->id,
+                Rule::when(! $isSuperAdmin, ['not_in:superadmin']),
+            ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ]);
@@ -65,11 +91,29 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
+        $this->ensureCanManageRole(auth()->user(), $role);
+
         $roleName = $role->name;
         $role->delete();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('roles')->causedBy(auth()->user())->log('Role deleted: '.$roleName);
 
         return back()->with('success', 'Role deleted successfully.');
+    }
+
+    private function ensureCanManageRole(?User $actor, Role $role): void
+    {
+        if ($role->name === 'superadmin' && ! $this->isSuperAdminAccount($actor)) {
+            abort(403);
+        }
+    }
+
+    private function isSuperAdminAccount(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->username === 'superadmin' || $user->hasRole('superadmin');
     }
 }
