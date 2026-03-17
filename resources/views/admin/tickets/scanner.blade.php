@@ -113,6 +113,13 @@ html, body {
 .sc-camera-wrap #reader #reader__dashboard,
 .sc-camera-wrap #reader__dashboard_section_csr,
 .sc-camera-wrap #reader__status_span { display: none !important; }
+.sc-camera-wrap #reader__scan_region {
+  background: transparent !important;
+}
+.sc-camera-wrap #reader__scan_region > img,
+.sc-camera-wrap #reader__scan_region > svg {
+  display: none !important;
+}
 
 /* Scan overlay corners */
 .sc-corners {
@@ -365,6 +372,15 @@ html, body {
   font-size: 13px;
 }
 .sc-idle i { font-size: 36px; color: rgba(245,184,0,0.2); display: block; margin-bottom: 12px; }
+.sc-error-note {
+  margin: -8px 0 16px;
+  background: rgba(232,68,90,.12);
+  color: #ff9ca8;
+  border: 1px solid rgba(232,68,90,.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
 </style>
 </head>
 
@@ -384,6 +400,10 @@ html, body {
   </div>
 
   @include('admin.partials.flash')
+
+  @if(session('error'))
+    <div class="sc-error-note"><i class="fa fa-circle-exclamation" style="margin-right:6px;"></i>{{ session('error') }}</div>
+  @endif
 
   @if(! isset($ticket))
     {{-- Camera --}}
@@ -536,8 +556,14 @@ html, body {
   };
 
   qr.start(
-    { facingMode: 'environment' },
-    { fps: 14, qrbox: { width: 240, height: 240 } },
+    { facingMode: { ideal: 'environment' } },
+    {
+      fps: 20,
+      aspectRatio: 1,
+      disableFlip: false,
+      rememberLastUsedCamera: true,
+      qrbox: undefined
+    },
     submitCode,
     () => {}
   ).catch(() => {
