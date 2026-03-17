@@ -330,7 +330,7 @@ html, body {
 .sc-actions {
   padding: 16px 20px 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   border-top: 1px solid var(--border);
 }
@@ -352,9 +352,9 @@ html, body {
   letter-spacing: 0.2px;
 }
 .sc-act-checkin  { background: rgba(34,197,94,.12);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
-.sc-act-checkout { background: rgba(245,158,11,.1);  color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
 .sc-act-cancel   { background: rgba(232,68,90,.1);   color: var(--red);   border: 1px solid rgba(232,68,90,.3); }
 .sc-act-view     { background: var(--surface2);      color: var(--text);  border: 1px solid var(--border); grid-column: span 2; }
+.sc-scan-another { margin-top: 14px; }
 .sc-act-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
 /* ── Empty / Loading state ──────────────────────────── */
@@ -385,42 +385,44 @@ html, body {
 
   @include('admin.partials.flash')
 
-  {{-- Camera --}}
-  <div class="sc-camera-wrap">
-    <div id="reader"></div>
-    <div class="sc-corners">
-      <div class="sc-corner tl"></div>
-      <div class="sc-corner tr"></div>
-      <div class="sc-corner bl"></div>
-      <div class="sc-corner br"></div>
-      <div class="sc-scanline"></div>
+  @if(! isset($ticket))
+    {{-- Camera --}}
+    <div class="sc-camera-wrap">
+      <div id="reader"></div>
+      <div class="sc-corners">
+        <div class="sc-corner tl"></div>
+        <div class="sc-corner tr"></div>
+        <div class="sc-corner bl"></div>
+        <div class="sc-corner br"></div>
+        <div class="sc-scanline"></div>
+      </div>
+      <div class="sc-camera-hint">Point camera at ticket QR code</div>
     </div>
-    <div class="sc-camera-hint">Point camera at ticket QR code</div>
-  </div>
 
-  {{-- Manual entry --}}
-  <div class="sc-or">or enter manually</div>
+    {{-- Manual entry --}}
+    <div class="sc-or">or enter manually</div>
 
-  <form method="POST" action="{{ route('admin.tickets.scanner.lookup') }}">
-    @csrf
-    <div class="sc-input-wrap">
-      <input
-        class="sc-input"
-        type="text"
-        id="scanner-code"
-        name="code"
-        value="{{ old('code', $lastCode ?? '') }}"
-        placeholder="Ticket number or QR data…"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-        required>
-      <i class="fa fa-ticket sc-input-icon"></i>
-    </div>
-    <button class="sc-submit" type="submit">
-      <i class="fa fa-magnifying-glass"></i> Look Up Ticket
-    </button>
-  </form>
+    <form method="POST" action="{{ route('admin.tickets.scanner.lookup') }}" id="scanner-form">
+      @csrf
+      <div class="sc-input-wrap">
+        <input
+          class="sc-input"
+          type="text"
+          id="scanner-code"
+          name="code"
+          value="{{ old('code', $lastCode ?? '') }}"
+          placeholder="Ticket number or QR data…"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          required>
+        <i class="fa fa-ticket sc-input-icon"></i>
+      </div>
+      <button class="sc-submit" type="submit">
+        <i class="fa fa-magnifying-glass"></i> Look Up Ticket
+      </button>
+    </form>
+  @endif
 
   {{-- Result --}}
   @isset($ticket)
@@ -487,11 +489,18 @@ html, body {
       <form method="POST" action="{{ route('admin.tickets.scanner.status', $ticket) }}">
         @csrf
         <div class="sc-actions">
-          <button name="status" value="checked_in"     class="sc-act-btn sc-act-checkin"  type="submit"><i class="fa fa-circle-check"></i>  Check In</button>
-          <button name="status" value="not_checked_in" class="sc-act-btn sc-act-checkout" type="submit"><i class="fa fa-rotate-left"></i>     Check Out</button>
-          <button name="status" value="canceled"       class="sc-act-btn sc-act-cancel"   type="submit"><i class="fa fa-ban"></i>             Cancel</button>
+          @if($ticket->status !== 'checked_in')
+            <button name="status" value="checked_in" class="sc-act-btn sc-act-checkin" type="submit"><i class="fa fa-circle-check"></i> Check In</button>
+          @endif
+          @if($ticket->status !== 'canceled')
+            <button name="status" value="canceled" class="sc-act-btn sc-act-cancel" type="submit"><i class="fa fa-ban"></i> Cancel</button>
+          @endif
         </div>
       </form>
+
+      <a href="{{ route('admin.tickets.scanner') }}" class="sc-act-btn sc-act-view sc-scan-another">
+        <i class="fa fa-qrcode"></i> Scan Another
+      </a>
 
     </div>
   @else
@@ -506,20 +515,30 @@ html, body {
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
 (() => {
+  const ticketLoaded = {{ isset($ticket) ? 'true' : 'false' }};
+  if (ticketLoaded) return;
+
+  const form = document.getElementById('scanner-form');
   const input = document.getElementById('scanner-code');
   const readerEl = document.getElementById('reader');
-  if (!window.Html5Qrcode || !readerEl) return;
+  if (!window.Html5Qrcode || !readerEl || !input || !form) return;
 
   const qr = new Html5Qrcode('reader');
+  let isSubmitting = false;
+
+  const submitCode = (decoded) => {
+    if (isSubmitting) return;
+
+    isSubmitting = true;
+    input.value = decoded;
+    qr.stop().catch(() => {});
+    form.submit();
+  };
 
   qr.start(
     { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 220, height: 220 } },
-    (decoded) => {
-      input.value = decoded;
-      // auto-submit on scan
-      input.closest('form') ? input.closest('form').submit() : null;
-    },
+    { fps: 14, qrbox: { width: 240, height: 240 } },
+    submitCode,
     () => {}
   ).catch(() => {
     // camera not available — hide the camera box gracefully
