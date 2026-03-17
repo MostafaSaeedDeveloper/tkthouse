@@ -84,7 +84,7 @@ class DashboardController extends Controller
             $scanLogsQuery->whereBetween('scanned_at', [$startAt, $endAt]);
         }
 
-        $totalScans = (clone $scanLogsQuery)->whereIn('action', ['lookup_success', 'status_update'])->count();
+        $totalScans = (clone $scanLogsQuery)->where('action', 'lookup_success')->count();
         $checkInsCount = (clone $scanLogsQuery)->where('action', 'status_update')->where('new_status', 'checked_in')->count();
 
         $recentOrders = (clone $ordersQuery)
