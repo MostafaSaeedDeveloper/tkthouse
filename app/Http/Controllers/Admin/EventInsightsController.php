@@ -101,7 +101,7 @@ class EventInsightsController extends Controller
             $scanLogsQuery->whereBetween('scanned_at', [$startAt, $endAt]);
         }
 
-        $totalScans = (clone $scanLogsQuery)->whereIn('action', ['lookup_success', 'status_update'])->count();
+        $totalScans = (clone $scanLogsQuery)->where('action', 'lookup_success')->count();
 
         [$labels, $ordersData, $revenueData] = $this->buildAnalyticsSeries($paidItems, $grossRevenue, $startAt, $endAt, $selectedRange);
 
