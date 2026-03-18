@@ -115,47 +115,63 @@ html, body {
 .sc-camera-wrap #reader__status_span { display: none !important; }
 .sc-camera-wrap #reader__scan_region {
   background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.sc-camera-wrap #reader__scan_region * {
+  border: none !important;
+  box-shadow: none !important;
 }
 .sc-camera-wrap #reader__scan_region > img,
 .sc-camera-wrap #reader__scan_region > svg {
   display: none !important;
 }
 
-/* Scan overlay corners */
+/* Scan overlay frame */
 .sc-corners {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 10;
+  display: grid;
+  place-items: center;
+}
+.sc-focus {
+  position: relative;
+  width: min(72vw, 290px);
+  height: min(72vw, 290px);
+  max-width: calc(100% - 52px);
+  max-height: calc(100% - 52px);
 }
 .sc-corner {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-color: var(--gold);
   border-style: solid;
   border-width: 0;
 }
-.sc-corner.tl { top: 18px; left: 18px; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
-.sc-corner.tr { top: 18px; right: 18px; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
-.sc-corner.bl { bottom: 18px; left: 18px; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
-.sc-corner.br { bottom: 18px; right: 18px; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+.sc-corner.tl { top: 0; left: 0; border-top-width: 4px; border-left-width: 4px; border-radius: 4px 0 0 0; }
+.sc-corner.tr { top: 0; right: 0; border-top-width: 4px; border-right-width: 4px; border-radius: 0 4px 0 0; }
+.sc-corner.bl { bottom: 0; left: 0; border-bottom-width: 4px; border-left-width: 4px; border-radius: 0 0 0 4px; }
+.sc-corner.br { bottom: 0; right: 0; border-bottom-width: 4px; border-right-width: 4px; border-radius: 0 0 4px 0; }
 
 /* Scan line animation */
 .sc-scanline {
   position: absolute;
-  left: 18px; right: 18px;
+  left: 10px;
+  right: 10px;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  box-shadow: 0 0 10px var(--gold);
-  animation: scanline 2s ease-in-out infinite;
+  box-shadow: 0 0 12px var(--gold);
+  animation: scanline 1.8s ease-in-out infinite;
   z-index: 11;
 }
 @keyframes scanline {
-  0%   { top: 18px; opacity: 0; }
+  0%   { top: 10px; opacity: 0; }
   10%  { opacity: 1; }
   90%  { opacity: 1; }
-  100% { top: calc(100% - 18px); opacity: 0; }
+  100% { top: calc(100% - 10px); opacity: 0; }
 }
 
 .sc-camera-hint {
@@ -361,7 +377,15 @@ html, body {
 .sc-act-checkin  { background: rgba(34,197,94,.12);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
 .sc-act-cancel   { background: rgba(232,68,90,.1);   color: var(--red);   border: 1px solid rgba(232,68,90,.3); }
 .sc-act-view     { background: var(--surface2);      color: var(--text);  border: 1px solid var(--border); grid-column: span 2; }
-.sc-scan-another { margin-top: 14px; }
+.sc-scan-another {
+  margin-top: 14px;
+  background: linear-gradient(180deg, #f8c400, #efb200);
+  color: #101015;
+  border: 1px solid rgba(245,184,0,.65);
+  font-size: 14px;
+  font-weight: 800;
+}
+.sc-scan-another:hover { filter: brightness(1.05); }
 .sc-act-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
 /* ── Empty / Loading state ──────────────────────────── */
@@ -420,11 +444,13 @@ html, body {
     <div class="sc-camera-wrap">
       <div id="reader"></div>
       <div class="sc-corners">
-        <div class="sc-corner tl"></div>
-        <div class="sc-corner tr"></div>
-        <div class="sc-corner bl"></div>
-        <div class="sc-corner br"></div>
-        <div class="sc-scanline"></div>
+        <div class="sc-focus">
+          <div class="sc-corner tl"></div>
+          <div class="sc-corner tr"></div>
+          <div class="sc-corner bl"></div>
+          <div class="sc-corner br"></div>
+          <div class="sc-scanline"></div>
+        </div>
       </div>
       <div class="sc-camera-hint">Point camera at ticket QR code</div>
     </div>
