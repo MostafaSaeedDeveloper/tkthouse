@@ -336,6 +336,14 @@ class TicketController extends Controller
             'scanned_at' => now(),
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Ticket found.',
+                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
+            ]);
+        }
+
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
     }
 
