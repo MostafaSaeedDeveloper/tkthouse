@@ -381,6 +381,16 @@ html, body {
   padding: 10px 12px;
   font-size: 12px;
 }
+.sc-camera-error {
+  margin-bottom: 14px;
+  background: rgba(245,158,11,.12);
+  color: #f7c66a;
+  border: 1px solid rgba(245,158,11,.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: none;
+}
 </style>
 </head>
 
@@ -418,6 +428,8 @@ html, body {
       </div>
       <div class="sc-camera-hint">Point camera at ticket QR code</div>
     </div>
+
+    <div id="scanner-camera-error" class="sc-camera-error"></div>
 
     {{-- Manual entry --}}
     <div class="sc-or">or enter manually</div>
@@ -555,21 +567,42 @@ html, body {
     form.submit();
   };
 
-  qr.start(
-    { facingMode: { ideal: 'environment' } },
-    {
-      fps: 20,
-      aspectRatio: 1,
-      disableFlip: false,
-      rememberLastUsedCamera: true,
-      qrbox: undefined
-    },
-    submitCode,
-    () => {}
-  ).catch(() => {
-    // camera not available — hide the camera box gracefully
-    readerEl.closest('.sc-camera-wrap').style.display = 'none';
-  });
+  const cameraErrorEl = document.getElementById('scanner-camera-error');
+
+  const showCameraError = (message) => {
+    if (!cameraErrorEl) return;
+    cameraErrorEl.style.display = 'block';
+    cameraErrorEl.innerHTML = `<i class="fa fa-triangle-exclamation" style="margin-right:6px;"></i>${message}`;
+  };
+
+  const startScanner = async () => {
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+      const rearCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label || ''));
+      const cameraConfig = rearCamera ? { deviceId: { exact: rearCamera.id } } : { facingMode: 'environment' };
+
+      await qr.start(
+        cameraConfig,
+        {
+          fps: 12,
+          aspectRatio: 1,
+          disableFlip: false,
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8);
+            return { width: edge, height: edge };
+          }
+        },
+        submitCode,
+        () => {}
+      );
+    } catch (error) {
+      showCameraError('Camera scanner unavailable on this device/browser. You can still enter ticket code manually.');
+      readerEl.closest('.sc-camera-wrap').style.display = 'none';
+      console.error(error);
+    }
+  };
+
+  startScanner();
 })();
 </script>
 </body>
