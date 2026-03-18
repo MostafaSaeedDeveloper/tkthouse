@@ -275,6 +275,14 @@ class TicketController extends Controller
             return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found.']);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Ticket found.',
+                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
+            ]);
+        }
+
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
     }
 
@@ -301,6 +309,14 @@ class TicketController extends Controller
                 'user_agent' => (string) $request->userAgent(),
                 'scanned_at' => now(),
             ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Ticket not found. Please scan again or type the correct ticket number.',
+                    'html' => view('admin.tickets.partials.scanner-result', ['ticket' => null])->render(),
+                ], 404);
+            }
 
             return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found. Please scan again or type the correct ticket number.']);
         }

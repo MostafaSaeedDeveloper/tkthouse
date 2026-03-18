@@ -118,6 +118,7 @@ Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')-
     Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
     Route::get('tickets/{ticket}/download', [TicketController::class, 'download'])->middleware('permission:tickets.view')->name('tickets.download');
     Route::get('scanner', [TicketController::class, 'scanner'])->middleware('permission:scanner.access')->name('tickets.scanner');
+    Route::post('scanner', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.ajax');
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
     Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->middleware('permission:scanner.access')->name('tickets.scanner.status');
 

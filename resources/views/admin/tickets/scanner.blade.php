@@ -435,11 +435,11 @@ html, body {
 
   @include('admin.partials.flash')
 
-  @if(!empty($errorMessage) || session('error'))
-    <div class="sc-error-note"><i class="fa fa-circle-exclamation" style="margin-right:6px;"></i>{{ $errorMessage ?? session('error') }}</div>
-  @endif
+  <div id="scanner-error-note" class="sc-error-note" @if(empty($errorMessage) && !session('error')) style="display:none;" @endif>
+    <i class="fa fa-circle-exclamation" style="margin-right:6px;"></i><span id="scanner-error-text">{{ $errorMessage ?? session('error') }}</span>
+  </div>
 
-  @if(! isset($ticket))
+  <div id="scanner-input-section" @if(isset($ticket)) style="display:none;" @endif>
     {{-- Camera --}}
     <div class="sc-camera-wrap">
       <div id="reader"></div>
@@ -460,7 +460,7 @@ html, body {
     {{-- Manual entry --}}
     <div class="sc-or">or enter manually</div>
 
-    <form method="POST" action="{{ route('admin.tickets.scanner.lookup') }}" id="scanner-form">
+    <form method="POST" action="{{ route('admin.tickets.scanner.ajax') }}" id="scanner-form">
       @csrf
       <div class="sc-input-wrap">
         <input
@@ -480,120 +480,40 @@ html, body {
         <i class="fa fa-magnifying-glass"></i> Look Up Ticket
       </button>
     </form>
-  @endif
+  </div>
 
   {{-- Result --}}
-  @isset($ticket)
-    @php
-      $initials = collect(explode(' ', (string)($ticket->holder_name ?: 'NA')))
-        ->filter()->map(fn($p) => mb_substr($p,0,1))->take(2)->implode('');
-      $statusLabel = match($ticket->status) {
-        'checked_in'     => 'Checked In',
-        'not_checked_in' => 'Not Checked In',
-        'canceled'       => 'Canceled',
-        default          => str($ticket->status)->replace('_',' ')->title(),
-      };
-    @endphp
-
-    <div class="sc-result">
-
-      <div class="sc-result-header">
-        <div class="sc-result-title">Ticket Found</div>
-        <span class="sc-status {{ $ticket->status }}">
-          @if($ticket->status === 'checked_in')     <i class="fa fa-circle-check"></i>
-          @elseif($ticket->status === 'canceled')   <i class="fa fa-circle-xmark"></i>
-          @else                                      <i class="fa fa-clock"></i>
-          @endif
-          {{ $statusLabel }}
-        </span>
-      </div>
-
-      <div class="sc-holder">
-        <div class="sc-avatar">{{ $initials ?: 'NA' }}</div>
-        <div>
-          <div class="sc-holder-name">{{ $ticket->holder_name ?: 'Unknown' }}</div>
-          <div class="sc-holder-email">{{ $ticket->holder_email ?: '-' }}</div>
-          @if($ticket->holder_phone)
-            <div class="sc-holder-phone"><i class="fa fa-phone" style="font-size:10px;margin-right:4px;"></i>{{ $ticket->holder_phone }}</div>
-          @endif
-        </div>
-      </div>
-
-      <div class="sc-info">
-        <div class="sc-info-row">
-          <span class="sc-info-label">Ticket #</span>
-          <span class="sc-info-val" style="font-family:monospace;font-size:12px;">{{ $ticket->ticket_number }}</span>
-        </div>
-        <div class="sc-info-row">
-          <span class="sc-info-label">Event</span>
-          <span class="sc-info-val">{{ $ticket->eventLabel() ?: '-' }}</span>
-        </div>
-        <div class="sc-info-row">
-          <span class="sc-info-label">Ticket Type</span>
-          <span class="sc-info-val">{{ $ticket->ticketTypeLabel() ?: '-' }}</span>
-        </div>
-        <div class="sc-info-row">
-          <span class="sc-info-label">Order #</span>
-          <span class="sc-info-val">{{ $ticket->order?->order_number ?? '-' }}</span>
-        </div>
-        @if($ticket->checked_in_at)
-          <div class="sc-info-row">
-            <span class="sc-info-label">Checked In At</span>
-            <span class="sc-info-val" style="color:var(--green);">{{ $ticket->checked_in_at->format('d M, H:i') }}</span>
-          </div>
-        @endif
-      </div>
-
-      <form method="POST" action="{{ route('admin.tickets.scanner.status', $ticket) }}">
-        @csrf
-        <div class="sc-actions">
-          @if($ticket->status !== 'checked_in')
-            <button name="status" value="checked_in" class="sc-act-btn sc-act-checkin" type="submit"><i class="fa fa-circle-check"></i> Check In</button>
-          @endif
-          @if($ticket->status !== 'canceled')
-            <button name="status" value="canceled" class="sc-act-btn sc-act-cancel" type="submit"><i class="fa fa-ban"></i> Cancel</button>
-          @endif
-        </div>
-      </form>
-
-      <a href="{{ route('admin.tickets.scanner') }}" class="sc-act-btn sc-act-view sc-scan-another">
-        <i class="fa fa-qrcode"></i> Scan Another
-      </a>
-
-    </div>
-  @else
-    <div class="sc-idle">
-      <i class="fa fa-qrcode"></i>
-      Scan a QR code or enter a ticket number above
-    </div>
-  @endisset
+  <div id="scanner-result-region">
+    @include('admin.tickets.partials.scanner-result', ['ticket' => $ticket ?? null])
+  </div>
 
 </div>
 
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
 (() => {
-  const ticketLoaded = {{ isset($ticket) ? 'true' : 'false' }};
-  if (ticketLoaded) return;
-
   const form = document.getElementById('scanner-form');
   const input = document.getElementById('scanner-code');
   const readerEl = document.getElementById('reader');
-  if (!window.Html5Qrcode || !readerEl || !input || !form) return;
+  const inputSection = document.getElementById('scanner-input-section');
+  const resultRegion = document.getElementById('scanner-result-region');
+  const errorNote = document.getElementById('scanner-error-note');
+  const errorText = document.getElementById('scanner-error-text');
+  const cameraErrorEl = document.getElementById('scanner-camera-error');
+  const csrfToken = form?.querySelector('input[name="_token"]')?.value || '';
 
-  const qr = new Html5Qrcode('reader');
+  if (!form || !input || !resultRegion) return;
+
+  const idleHtml = resultRegion.innerHTML;
+  const qr = (window.Html5Qrcode && readerEl) ? new Html5Qrcode('reader') : null;
+  let scannerStarted = false;
   let isSubmitting = false;
 
-  const submitCode = (decoded) => {
-    if (isSubmitting) return;
-
-    isSubmitting = true;
-    input.value = decoded;
-    qr.stop().catch(() => {});
-    form.submit();
+  const setError = (message) => {
+    if (!errorNote || !errorText) return;
+    errorText.textContent = message || '';
+    errorNote.style.display = message ? 'block' : 'none';
   };
-
-  const cameraErrorEl = document.getElementById('scanner-camera-error');
 
   const showCameraError = (message) => {
     if (!cameraErrorEl) return;
@@ -601,7 +521,17 @@ html, body {
     cameraErrorEl.innerHTML = `<i class="fa fa-triangle-exclamation" style="margin-right:6px;"></i>${message}`;
   };
 
+  const stopScanner = async () => {
+    if (!qr || !scannerStarted) return;
+    try {
+      await qr.stop();
+    } catch (_) {}
+    scannerStarted = false;
+  };
+
   const startScanner = async () => {
+    if (!qr || scannerStarted || inputSection?.style.display === 'none') return;
+
     try {
       const cameras = await Html5Qrcode.getCameras();
       const rearCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label || ''));
@@ -613,19 +543,89 @@ html, body {
           fps: 12,
           aspectRatio: 1,
           disableFlip: false,
-          qrbox: undefined
+          qrbox: undefined,
         },
-        submitCode,
+        (decoded) => lookupTicket(decoded, true),
         () => {}
       );
+
+      scannerStarted = true;
     } catch (error) {
       showCameraError('Camera scanner unavailable on this device/browser. You can still enter ticket code manually.');
-      readerEl.closest('.sc-camera-wrap').style.display = 'none';
+      const wrap = readerEl?.closest('.sc-camera-wrap');
+      if (wrap) wrap.style.display = 'none';
       console.error(error);
     }
   };
 
-  startScanner();
+  const lookupTicket = async (code, fromScanner = false) => {
+    if (!code || isSubmitting) return;
+
+    isSubmitting = true;
+    setError('');
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await response.json();
+
+      if (data?.html) {
+        resultRegion.innerHTML = data.html;
+      }
+
+      if (response.ok && data?.ok) {
+        if (inputSection) inputSection.style.display = 'none';
+        await stopScanner();
+        return;
+      }
+
+      if (inputSection) inputSection.style.display = '';
+      setError(data?.message || 'Ticket not found.');
+      input.focus();
+      input.select();
+
+      if (!fromScanner) {
+        await startScanner();
+      }
+    } catch (error) {
+      setError('Lookup failed. Please try again.');
+      console.error(error);
+    } finally {
+      setTimeout(() => { isSubmitting = false; }, fromScanner ? 700 : 100);
+    }
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await lookupTicket(input.value.trim(), false);
+  });
+
+  document.addEventListener('click', async (event) => {
+    const trigger = event.target.closest('[data-scan-another]');
+    if (!trigger) return;
+
+    event.preventDefault();
+    resultRegion.innerHTML = idleHtml;
+    if (inputSection) inputSection.style.display = '';
+    setError('');
+    input.value = '';
+    input.focus();
+    await startScanner();
+    isSubmitting = false;
+  });
+
+  if (inputSection?.style.display !== 'none') {
+    startScanner();
+  }
 })();
 </script>
 </body>
