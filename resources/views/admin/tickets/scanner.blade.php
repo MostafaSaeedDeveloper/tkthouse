@@ -489,6 +489,10 @@ html, body {
     </form>
   </div>
 
+  <template id="scanner-idle-template">
+    @include('admin.tickets.partials.scanner-result', ['ticket' => null])
+  </template>
+
   {{-- Result --}}
   <div id="scanner-result-region">
     @include('admin.tickets.partials.scanner-result', ['ticket' => $ticket ?? null])
@@ -511,7 +515,8 @@ html, body {
 
   if (!form || !input || !resultRegion) return;
 
-  const idleHtml = resultRegion.innerHTML;
+  const idleTemplate = document.getElementById('scanner-idle-template');
+  const idleHtml = idleTemplate?.innerHTML || '';
   const qr = (window.Html5Qrcode && readerEl) ? new Html5Qrcode('reader') : null;
   let scannerStarted = false;
   let isSubmitting = false;
