@@ -269,17 +269,18 @@ class TicketController extends Controller
             return view('admin.tickets.scanner');
         }
 
-        $ticketNumber = $this->extractTicketNumber($payload);
-
-        $ticketQuery = Ticket::query()
-            ->with('order')
-            ->where('ticket_number', $ticketNumber);
-        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $request->user()?->managedEvent?->name);
-
-        $ticket = $ticketQuery->first();
+        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvent?->name);
 
         if (! $ticket) {
-            return view('admin.tickets.scanner', ['lastCode' => $payload])->with('error', 'Ticket not found.');
+            return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found.']);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Ticket found.',
+                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
+            ]);
         }
 
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
@@ -290,15 +291,12 @@ class TicketController extends Controller
         $this->ensureScannerAccess();
 
         $payload = trim((string) $request->input('code'));
+        $request->validate([
+            'code' => ['required', 'string', 'max:1000'],
+        ]);
 
         $ticketNumber = $this->extractTicketNumber($payload);
-
-        $ticketQuery = Ticket::query()
-            ->with('order')
-            ->where('ticket_number', $ticketNumber);
-        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $request->user()?->managedEvent?->name);
-
-        $ticket = $ticketQuery->first();
+        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvent?->name);
 
         if (! $ticket) {
             ScanLog::create([
@@ -312,7 +310,15 @@ class TicketController extends Controller
                 'scanned_at' => now(),
             ]);
 
-            return back()->with('error', 'Ticket not found.');
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Ticket not found. Please scan again or type the correct ticket number.',
+                    'html' => view('admin.tickets.partials.scanner-result', ['ticket' => null])->render(),
+                ], 404);
+            }
+
+            return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found. Please scan again or type the correct ticket number.']);
         }
 
         ScanLog::create([
@@ -329,6 +335,14 @@ class TicketController extends Controller
             'user_agent' => (string) $request->userAgent(),
             'scanned_at' => now(),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Ticket found.',
+                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
+            ]);
+        }
 
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
     }
@@ -423,6 +437,23 @@ class TicketController extends Controller
         }
 
         return $payload;
+    }
+
+    private function findScannedTicket(string $payload, ?string $managedEventName): ?Ticket
+    {
+        $ticketNumber = $this->extractTicketNumber($payload);
+
+        $ticketQuery = Ticket::query()
+            ->with('order')
+            ->where(function (Builder $query) use ($payload, $ticketNumber) {
+                $query->where('ticket_number', $ticketNumber)
+                    ->orWhere('qr_payload', $payload)
+                    ->orWhere('ticket_number', $payload);
+            });
+
+        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventName);
+
+        return $ticketQuery->first();
     }
 
     private function qrDataUri(Ticket $ticket): string

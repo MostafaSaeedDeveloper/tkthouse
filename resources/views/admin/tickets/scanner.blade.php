@@ -113,42 +113,65 @@ html, body {
 .sc-camera-wrap #reader #reader__dashboard,
 .sc-camera-wrap #reader__dashboard_section_csr,
 .sc-camera-wrap #reader__status_span { display: none !important; }
+.sc-camera-wrap #reader__scan_region {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.sc-camera-wrap #reader__scan_region * {
+  border: none !important;
+  box-shadow: none !important;
+}
+.sc-camera-wrap #reader__scan_region > img,
+.sc-camera-wrap #reader__scan_region > svg {
+  display: none !important;
+}
 
-/* Scan overlay corners */
+/* Scan overlay frame */
 .sc-corners {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 10;
+  display: grid;
+  place-items: center;
+}
+.sc-focus {
+  position: relative;
+  width: min(72vw, 290px);
+  height: min(72vw, 290px);
+  max-width: calc(100% - 52px);
+  max-height: calc(100% - 52px);
 }
 .sc-corner {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-color: var(--gold);
   border-style: solid;
   border-width: 0;
 }
-.sc-corner.tl { top: 18px; left: 18px; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
-.sc-corner.tr { top: 18px; right: 18px; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
-.sc-corner.bl { bottom: 18px; left: 18px; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
-.sc-corner.br { bottom: 18px; right: 18px; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+.sc-corner.tl { top: 0; left: 0; border-top-width: 4px; border-left-width: 4px; border-radius: 4px 0 0 0; }
+.sc-corner.tr { top: 0; right: 0; border-top-width: 4px; border-right-width: 4px; border-radius: 0 4px 0 0; }
+.sc-corner.bl { bottom: 0; left: 0; border-bottom-width: 4px; border-left-width: 4px; border-radius: 0 0 0 4px; }
+.sc-corner.br { bottom: 0; right: 0; border-bottom-width: 4px; border-right-width: 4px; border-radius: 0 0 4px 0; }
 
 /* Scan line animation */
 .sc-scanline {
   position: absolute;
-  left: 18px; right: 18px;
+  left: 10px;
+  right: 10px;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  box-shadow: 0 0 10px var(--gold);
-  animation: scanline 2s ease-in-out infinite;
+  box-shadow: 0 0 12px var(--gold);
+  animation: scanline 1.8s ease-in-out infinite;
   z-index: 11;
 }
 @keyframes scanline {
-  0%   { top: 18px; opacity: 0; }
+  0%   { top: 10px; opacity: 0; }
   10%  { opacity: 1; }
   90%  { opacity: 1; }
-  100% { top: calc(100% - 18px); opacity: 0; }
+  100% { top: calc(100% - 10px); opacity: 0; }
 }
 
 .sc-camera-hint {
@@ -330,7 +353,7 @@ html, body {
 .sc-actions {
   padding: 16px 20px 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   border-top: 1px solid var(--border);
 }
@@ -352,9 +375,24 @@ html, body {
   letter-spacing: 0.2px;
 }
 .sc-act-checkin  { background: rgba(34,197,94,.12);  color: var(--green); border: 1px solid rgba(34,197,94,.3); }
-.sc-act-checkout { background: rgba(245,158,11,.1);  color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
 .sc-act-cancel   { background: rgba(232,68,90,.1);   color: var(--red);   border: 1px solid rgba(232,68,90,.3); }
 .sc-act-view     { background: var(--surface2);      color: var(--text);  border: 1px solid var(--border); grid-column: span 2; }
+.sc-scan-another {
+  display: flex;
+  width: auto;
+  margin: 18px 20px 20px;
+  padding: 14px 16px;
+  background: var(--gold);
+  color: #0d0d10;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+.sc-scan-another:hover { background: #ffc107; filter: none; }
+.sc-scan-another i { font-size: 15px; }
 .sc-act-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
 /* ── Empty / Loading state ──────────────────────────── */
@@ -365,6 +403,25 @@ html, body {
   font-size: 13px;
 }
 .sc-idle i { font-size: 36px; color: rgba(245,184,0,0.2); display: block; margin-bottom: 12px; }
+.sc-error-note {
+  margin: -8px 0 16px;
+  background: rgba(232,68,90,.12);
+  color: #ff9ca8;
+  border: 1px solid rgba(232,68,90,.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.sc-camera-error {
+  margin-bottom: 14px;
+  background: rgba(245,158,11,.12);
+  color: #f7c66a;
+  border: 1px solid rgba(245,158,11,.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  display: none;
+}
 </style>
 </head>
 
@@ -385,146 +442,202 @@ html, body {
 
   @include('admin.partials.flash')
 
-  {{-- Camera --}}
-  <div class="sc-camera-wrap">
-    <div id="reader"></div>
-    <div class="sc-corners">
-      <div class="sc-corner tl"></div>
-      <div class="sc-corner tr"></div>
-      <div class="sc-corner bl"></div>
-      <div class="sc-corner br"></div>
-      <div class="sc-scanline"></div>
-    </div>
-    <div class="sc-camera-hint">Point camera at ticket QR code</div>
+  <div id="scanner-error-note" class="sc-error-note" @if(empty($errorMessage) && !session('error')) style="display:none;" @endif>
+    <i class="fa fa-circle-exclamation" style="margin-right:6px;"></i><span id="scanner-error-text">{{ $errorMessage ?? session('error') }}</span>
   </div>
 
-  {{-- Manual entry --}}
-  <div class="sc-or">or enter manually</div>
-
-  <form method="POST" action="{{ route('admin.tickets.scanner.lookup') }}">
-    @csrf
-    <div class="sc-input-wrap">
-      <input
-        class="sc-input"
-        type="text"
-        id="scanner-code"
-        name="code"
-        value="{{ old('code', $lastCode ?? '') }}"
-        placeholder="Ticket number or QR data…"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-        required>
-      <i class="fa fa-ticket sc-input-icon"></i>
+  <div id="scanner-input-section" @if(isset($ticket)) style="display:none;" @endif>
+    {{-- Camera --}}
+    <div class="sc-camera-wrap">
+      <div id="reader"></div>
+      <div class="sc-corners">
+        <div class="sc-focus">
+          <div class="sc-corner tl"></div>
+          <div class="sc-corner tr"></div>
+          <div class="sc-corner bl"></div>
+          <div class="sc-corner br"></div>
+          <div class="sc-scanline"></div>
+        </div>
+      </div>
+      <div class="sc-camera-hint">Point camera at ticket QR code</div>
     </div>
-    <button class="sc-submit" type="submit">
-      <i class="fa fa-magnifying-glass"></i> Look Up Ticket
-    </button>
-  </form>
+
+    <div id="scanner-camera-error" class="sc-camera-error"></div>
+
+    {{-- Manual entry --}}
+    <div class="sc-or">or enter manually</div>
+
+    <form method="POST" action="{{ route('admin.tickets.scanner.ajax') }}" id="scanner-form">
+      @csrf
+      <div class="sc-input-wrap">
+        <input
+          class="sc-input"
+          type="text"
+          id="scanner-code"
+          name="code"
+          value="{{ old('code', $lastCode ?? '') }}"
+          placeholder="Ticket number or QR data…"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          required>
+        <i class="fa fa-ticket sc-input-icon"></i>
+      </div>
+      <button class="sc-submit" type="submit">
+        <i class="fa fa-magnifying-glass"></i> Look Up Ticket
+      </button>
+    </form>
+  </div>
+
+  <template id="scanner-idle-template">
+    @include('admin.tickets.partials.scanner-result', ['ticket' => null])
+  </template>
 
   {{-- Result --}}
-  @isset($ticket)
-    @php
-      $initials = collect(explode(' ', (string)($ticket->holder_name ?: 'NA')))
-        ->filter()->map(fn($p) => mb_substr($p,0,1))->take(2)->implode('');
-      $statusLabel = match($ticket->status) {
-        'checked_in'     => 'Checked In',
-        'not_checked_in' => 'Not Checked In',
-        'canceled'       => 'Canceled',
-        default          => str($ticket->status)->replace('_',' ')->title(),
-      };
-    @endphp
-
-    <div class="sc-result">
-
-      <div class="sc-result-header">
-        <div class="sc-result-title">Ticket Found</div>
-        <span class="sc-status {{ $ticket->status }}">
-          @if($ticket->status === 'checked_in')     <i class="fa fa-circle-check"></i>
-          @elseif($ticket->status === 'canceled')   <i class="fa fa-circle-xmark"></i>
-          @else                                      <i class="fa fa-clock"></i>
-          @endif
-          {{ $statusLabel }}
-        </span>
-      </div>
-
-      <div class="sc-holder">
-        <div class="sc-avatar">{{ $initials ?: 'NA' }}</div>
-        <div>
-          <div class="sc-holder-name">{{ $ticket->holder_name ?: 'Unknown' }}</div>
-          <div class="sc-holder-email">{{ $ticket->holder_email ?: '-' }}</div>
-          @if($ticket->holder_phone)
-            <div class="sc-holder-phone"><i class="fa fa-phone" style="font-size:10px;margin-right:4px;"></i>{{ $ticket->holder_phone }}</div>
-          @endif
-        </div>
-      </div>
-
-      <div class="sc-info">
-        <div class="sc-info-row">
-          <span class="sc-info-label">Ticket #</span>
-          <span class="sc-info-val" style="font-family:monospace;font-size:12px;">{{ $ticket->ticket_number }}</span>
-        </div>
-        <div class="sc-info-row">
-          <span class="sc-info-label">Event</span>
-          <span class="sc-info-val">{{ $ticket->eventLabel() ?: '-' }}</span>
-        </div>
-        <div class="sc-info-row">
-          <span class="sc-info-label">Ticket Type</span>
-          <span class="sc-info-val">{{ $ticket->ticketTypeLabel() ?: '-' }}</span>
-        </div>
-        <div class="sc-info-row">
-          <span class="sc-info-label">Order #</span>
-          <span class="sc-info-val">{{ $ticket->order?->order_number ?? '-' }}</span>
-        </div>
-        @if($ticket->checked_in_at)
-          <div class="sc-info-row">
-            <span class="sc-info-label">Checked In At</span>
-            <span class="sc-info-val" style="color:var(--green);">{{ $ticket->checked_in_at->format('d M, H:i') }}</span>
-          </div>
-        @endif
-      </div>
-
-      <form method="POST" action="{{ route('admin.tickets.scanner.status', $ticket) }}">
-        @csrf
-        <div class="sc-actions">
-          <button name="status" value="checked_in"     class="sc-act-btn sc-act-checkin"  type="submit"><i class="fa fa-circle-check"></i>  Check In</button>
-          <button name="status" value="not_checked_in" class="sc-act-btn sc-act-checkout" type="submit"><i class="fa fa-rotate-left"></i>     Check Out</button>
-          <button name="status" value="canceled"       class="sc-act-btn sc-act-cancel"   type="submit"><i class="fa fa-ban"></i>             Cancel</button>
-        </div>
-      </form>
-
-    </div>
-  @else
-    <div class="sc-idle">
-      <i class="fa fa-qrcode"></i>
-      Scan a QR code or enter a ticket number above
-    </div>
-  @endisset
+  <div id="scanner-result-region">
+    @include('admin.tickets.partials.scanner-result', ['ticket' => $ticket ?? null])
+  </div>
 
 </div>
 
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
 (() => {
+  const form = document.getElementById('scanner-form');
   const input = document.getElementById('scanner-code');
   const readerEl = document.getElementById('reader');
-  if (!window.Html5Qrcode || !readerEl) return;
+  const inputSection = document.getElementById('scanner-input-section');
+  const resultRegion = document.getElementById('scanner-result-region');
+  const errorNote = document.getElementById('scanner-error-note');
+  const errorText = document.getElementById('scanner-error-text');
+  const cameraErrorEl = document.getElementById('scanner-camera-error');
+  const csrfToken = form?.querySelector('input[name="_token"]')?.value || '';
 
-  const qr = new Html5Qrcode('reader');
+  if (!form || !input || !resultRegion) return;
 
-  qr.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 220, height: 220 } },
-    (decoded) => {
-      input.value = decoded;
-      // auto-submit on scan
-      input.closest('form') ? input.closest('form').submit() : null;
-    },
-    () => {}
-  ).catch(() => {
-    // camera not available — hide the camera box gracefully
-    readerEl.closest('.sc-camera-wrap').style.display = 'none';
+  const idleTemplate = document.getElementById('scanner-idle-template');
+  const idleHtml = idleTemplate?.innerHTML || '';
+  const qr = (window.Html5Qrcode && readerEl) ? new Html5Qrcode('reader') : null;
+  let scannerStarted = false;
+  let isSubmitting = false;
+
+  const setError = (message) => {
+    if (!errorNote || !errorText) return;
+    errorText.textContent = message || '';
+    errorNote.style.display = message ? 'block' : 'none';
+  };
+
+  const showCameraError = (message) => {
+    if (!cameraErrorEl) return;
+    cameraErrorEl.style.display = 'block';
+    cameraErrorEl.innerHTML = `<i class="fa fa-triangle-exclamation" style="margin-right:6px;"></i>${message}`;
+  };
+
+  const stopScanner = async () => {
+    if (!qr || !scannerStarted) return;
+    try {
+      await qr.stop();
+    } catch (_) {}
+    scannerStarted = false;
+  };
+
+  const startScanner = async () => {
+    if (!qr || scannerStarted || inputSection?.style.display === 'none') return;
+
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+      const rearCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label || ''));
+      const cameraConfig = rearCamera ? { deviceId: { exact: rearCamera.id } } : { facingMode: 'environment' };
+
+      await qr.start(
+        cameraConfig,
+        {
+          fps: 12,
+          aspectRatio: 1,
+          disableFlip: false,
+          qrbox: undefined,
+        },
+        (decoded) => lookupTicket(decoded, true),
+        () => {}
+      );
+
+      scannerStarted = true;
+    } catch (error) {
+      showCameraError('Camera scanner unavailable on this device/browser. You can still enter ticket code manually.');
+      const wrap = readerEl?.closest('.sc-camera-wrap');
+      if (wrap) wrap.style.display = 'none';
+      console.error(error);
+    }
+  };
+
+  const lookupTicket = async (code, fromScanner = false) => {
+    if (!code || isSubmitting) return;
+
+    isSubmitting = true;
+    setError('');
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await response.json();
+
+      if (data?.html) {
+        resultRegion.innerHTML = data.html;
+      }
+
+      if (response.ok && data?.ok) {
+        if (inputSection) inputSection.style.display = 'none';
+        await stopScanner();
+        return;
+      }
+
+      if (inputSection) inputSection.style.display = '';
+      setError(data?.message || 'Ticket not found.');
+      input.focus();
+      input.select();
+
+      if (!fromScanner) {
+        await startScanner();
+      }
+    } catch (error) {
+      setError('Lookup failed. Please try again.');
+      console.error(error);
+    } finally {
+      setTimeout(() => { isSubmitting = false; }, fromScanner ? 700 : 100);
+    }
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await lookupTicket(input.value.trim(), false);
   });
+
+  document.addEventListener('click', async (event) => {
+    const trigger = event.target.closest('[data-scan-another]');
+    if (!trigger) return;
+
+    event.preventDefault();
+    resultRegion.innerHTML = idleHtml;
+    if (inputSection) inputSection.style.display = '';
+    setError('');
+    input.value = '';
+    input.focus();
+    await startScanner();
+    isSubmitting = false;
+  });
+
+  if (inputSection?.style.display !== 'none') {
+    startScanner();
+  }
 })();
 </script>
 </body>
