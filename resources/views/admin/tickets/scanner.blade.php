@@ -378,8 +378,9 @@ html, body {
 .sc-act-cancel   { background: rgba(232,68,90,.1);   color: var(--red);   border: 1px solid rgba(232,68,90,.3); }
 .sc-act-view     { background: var(--surface2);      color: var(--text);  border: 1px solid var(--border); grid-column: span 2; }
 .sc-scan-another {
-  width: calc(100% - 40px);
-  margin: 18px auto 4px;
+  width: calc(100% - 64px);
+  max-width: 100%;
+  margin: 18px auto 16px;
   padding: 14px 16px;
   background: var(--gold);
   color: #0d0d10;
