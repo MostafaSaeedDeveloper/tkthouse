@@ -435,8 +435,8 @@ html, body {
 
   @include('admin.partials.flash')
 
-  @if(session('error'))
-    <div class="sc-error-note"><i class="fa fa-circle-exclamation" style="margin-right:6px;"></i>{{ session('error') }}</div>
+  @if(!empty($errorMessage) || session('error'))
+    <div class="sc-error-note"><i class="fa fa-circle-exclamation" style="margin-right:6px;"></i>{{ $errorMessage ?? session('error') }}</div>
   @endif
 
   @if(! isset($ticket))
@@ -613,10 +613,7 @@ html, body {
           fps: 12,
           aspectRatio: 1,
           disableFlip: false,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8);
-            return { width: edge, height: edge };
-          }
+          qrbox: undefined
         },
         submitCode,
         () => {}

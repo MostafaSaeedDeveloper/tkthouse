@@ -272,7 +272,7 @@ class TicketController extends Controller
         $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvent?->name);
 
         if (! $ticket) {
-            return view('admin.tickets.scanner', ['lastCode' => $payload])->with('error', 'Ticket not found.');
+            return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found.']);
         }
 
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
@@ -302,7 +302,7 @@ class TicketController extends Controller
                 'scanned_at' => now(),
             ]);
 
-            return view('admin.tickets.scanner', ['lastCode' => $payload])->with('error', 'Ticket not found. Please scan again or type the correct ticket number.');
+            return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found. Please scan again or type the correct ticket number.']);
         }
 
         ScanLog::create([
