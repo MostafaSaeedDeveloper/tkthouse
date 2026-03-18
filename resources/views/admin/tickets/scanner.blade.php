@@ -378,19 +378,19 @@ html, body {
 .sc-act-cancel   { background: rgba(232,68,90,.1);   color: var(--red);   border: 1px solid rgba(232,68,90,.3); }
 .sc-act-view     { background: var(--surface2);      color: var(--text);  border: 1px solid var(--border); grid-column: span 2; }
 .sc-scan-another {
-  width: fit-content;
-  min-width: 220px;
-  max-width: calc(100% - 40px);
+  width: calc(100% - 40px);
   margin: 18px auto 4px;
-  padding: 14px 22px;
-  background: linear-gradient(180deg, #f8c400, #efb200);
-  color: #101015;
-  border: 1px solid rgba(245,184,0,.65);
+  padding: 14px 16px;
+  background: var(--gold);
+  color: #0d0d10;
+  border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
   font-weight: 800;
+  letter-spacing: 0.3px;
 }
-.sc-scan-another:hover { filter: brightness(1.05); }
+.sc-scan-another:hover { background: #ffc107; filter: none; }
 .sc-scan-another i { font-size: 15px; }
 .sc-act-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
