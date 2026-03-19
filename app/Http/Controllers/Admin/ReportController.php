@@ -340,6 +340,12 @@ class ReportController extends Controller
             }
         }
 
+        if ($eventNames->count() === 1) {
+            $eventName = (string) $eventNames->first();
+
+            return [$eventName, $ticketName !== '' ? $ticketName : 'General'];
+        }
+
         $parts = array_map('trim', explode(' - ', $ticketName, 2));
 
         if (count($parts) === 1) {

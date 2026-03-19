@@ -69,6 +69,17 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
             'holder_phone' => '01055555552',
         ]);
 
+        OrderItem::create([
+            'order_id' => $order->id,
+            'ticket_name' => 'Backstage Access',
+            'ticket_price' => 50,
+            'quantity' => 2,
+            'line_total' => 100,
+            'holder_name' => 'Legacy Holder',
+            'holder_email' => 'legacy-holder@example.com',
+            'holder_phone' => '01055555553',
+        ]);
+
         $request = Request::create('/dashboard/reports', 'GET', [
             'range' => 'last30',
         ]);
@@ -77,9 +88,9 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
         $view = app(ReportController::class)->index($request);
         $data = $view->getData();
 
-        $this->assertSame(4, $data['totalTickets']);
+        $this->assertSame(6, $data['totalTickets']);
         $this->assertCount(1, $data['eventReports']);
         $this->assertSame('Mega Event - Friday Edition', $data['eventReports']->first()['event_name']);
-        $this->assertSame(4, $data['eventReports']->first()['tickets_sold']);
+        $this->assertSame(6, $data['eventReports']->first()['tickets_sold']);
     }
 }
