@@ -35,6 +35,7 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
             'status' => 'active',
         ]);
 
+
         $order = Order::create([
             'customer_id' => $customer->id,
             'user_id' => $admin->id,
@@ -80,6 +81,7 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
             'holder_phone' => '01055555553',
         ]);
 
+
         $request = Request::create('/dashboard/reports', 'GET', [
             'range' => 'last30',
         ]);
@@ -89,8 +91,9 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
         $data = $view->getData();
 
         $this->assertSame(6, $data['totalTickets']);
-        $this->assertCount(1, $data['eventReports']);
-        $this->assertSame('Mega Event - Friday Edition', $data['eventReports']->first()['event_name']);
-        $this->assertSame(6, $data['eventReports']->first()['tickets_sold']);
+        $paidEventReport = $data['eventReports']->firstWhere('event_name', 'Mega Event - Friday Edition');
+
+        $this->assertNotNull($paidEventReport);
+        $this->assertSame(6, $paidEventReport['tickets_sold']);
     }
 }

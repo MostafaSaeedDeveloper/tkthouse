@@ -152,7 +152,7 @@ class ReportController extends Controller
             ->map(fn (Collection $tickets) => $tickets->count());
 
         $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent);
-        $eventReports = $this->syncSingleEventTicketsSold($eventReports, $items);
+        $eventReports = $this->syncSingleResolvedEventTicketsSold($eventReports, $items, $eventNames, $selectedEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -249,16 +249,27 @@ class ReportController extends Controller
     }
 
 
-    private function syncSingleEventTicketsSold(Collection $eventReports, Collection $items): Collection
+    private function syncSingleResolvedEventTicketsSold(Collection $eventReports, Collection $items, Collection $eventNames, string $selectedEvent = ''): Collection
     {
-        if ($eventReports->count() !== 1) {
+        $resolvedEventName = $selectedEvent !== ''
+            ? $selectedEvent
+            : ($eventNames->count() === 1 ? (string) $eventNames->first() : '');
+
+        if ($resolvedEventName === '') {
             return $eventReports;
         }
 
-        $report = $eventReports->first();
-        $report['tickets_sold'] = (int) $items->sum('quantity');
+        $ticketsSold = (int) $items->sum('quantity');
 
-        return collect([$report]);
+        return $eventReports
+            ->map(function (array $report) use ($resolvedEventName, $ticketsSold) {
+                if ($report['event_name'] === $resolvedEventName) {
+                    $report['tickets_sold'] = $ticketsSold;
+                }
+
+                return $report;
+            })
+            ->values();
     }
 
     private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
