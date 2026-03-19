@@ -124,10 +124,10 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
         $view = app(ReportController::class)->index($request);
         $data = $view->getData();
 
-        $this->assertSame(8, $data['totalTickets']);
+        $this->assertSame(6, $data['totalTickets']);
         $paidEventReport = $data['eventReports']->firstWhere('event_name', 'Mega Event - Friday Edition');
 
         $this->assertNotNull($paidEventReport);
-        $this->assertSame(8, $paidEventReport['tickets_sold']);
+        $this->assertSame(6, $paidEventReport['tickets_sold']);
     }
 }
