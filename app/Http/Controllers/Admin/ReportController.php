@@ -37,6 +37,8 @@ class ReportController extends Controller
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
 
+        $selectedEvent = $forcedEvent?->name ?? trim((string) $request->input('event', ''));
+
         $itemsQuery = OrderItem::query()
             ->with(['order:id,created_at,status,total_amount,paid_at,exclude_from_statistics'])
             ->whereHas('order', function ($query) use ($startAt, $endAt) {
@@ -53,6 +55,13 @@ class ReportController extends Controller
                 }
             });
 
+        if ($selectedEvent !== '') {
+            $itemsQuery->where(function ($query) use ($selectedEvent) {
+                $query->where('ticket_name', 'like', $selectedEvent.' - %')
+                    ->orWhere('ticket_name', $selectedEvent);
+            });
+        }
+
         $items = $itemsQuery
             ->get([
                 'order_id',
@@ -62,15 +71,13 @@ class ReportController extends Controller
                 'holder_gender',
             ]);
 
-        $normalizedItems = $this->normalizeItems($items);
+        $normalizedItems = $this->normalizeItems($items, $selectedEvent !== '' ? $selectedEvent : null);
         $eventOptions = $normalizedItems
             ->pluck('event_name')
             ->filter()
             ->unique()
             ->sort()
             ->values();
-
-        $selectedEvent = $forcedEvent?->name ?? trim((string) $request->input('event', ''));
 
         if ($forcedEvent === null && $selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
             $selectedEvent = '';
@@ -208,15 +215,16 @@ class ReportController extends Controller
         return [$start, $end, 'Custom Range'];
     }
 
-    private function normalizeItems(Collection $items): Collection
+    private function normalizeItems(Collection $items, ?string $selectedEvent = null): Collection
     {
         $orderLineTotals = $items
             ->groupBy('order_id')
             ->map(fn (Collection $orderItems) => (float) $orderItems->sum('line_total'));
 
         return $items
-            ->map(function (OrderItem $item) use ($orderLineTotals) {
+            ->map(function (OrderItem $item) use ($orderLineTotals, $selectedEvent) {
                 [$eventName, $ticketType] = $this->extractEventAndTicketType((string) $item->ticket_name);
+                $eventName = $selectedEvent ?: $eventName;
 
                 $orderLineTotal = (float) ($orderLineTotals[$item->order_id] ?? 0);
                 $orderTotalAmount = (float) ($item->order?->total_amount ?? 0);
