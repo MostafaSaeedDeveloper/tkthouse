@@ -150,6 +150,92 @@ class AdminHiddenOrdersTest extends TestCase
             });
     }
 
+
+    public function test_report_gender_distribution_counts_each_paid_order_once(): void
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+
+        $admin = User::factory()->create();
+        Permission::findOrCreate('reports.view', 'web');
+        $admin->givePermissionTo(['reports.view']);
+
+        $customer = Customer::create([
+            'first_name' => 'Gender',
+            'last_name' => 'Split',
+            'email' => 'gender-split@example.com',
+            'phone' => '01000000066',
+        ]);
+
+        $maleOrder = Order::create([
+            'customer_id' => $customer->id,
+            'user_id' => $admin->id,
+            'order_number' => '900005',
+            'status' => 'paid',
+            'payment_method' => 'cash',
+            'total_amount' => 100,
+            'exclude_from_statistics' => false,
+            'paid_at' => now(),
+        ]);
+
+        $mixedOrder = Order::create([
+            'customer_id' => $customer->id,
+            'user_id' => $admin->id,
+            'order_number' => '900006',
+            'status' => 'paid',
+            'payment_method' => 'cash',
+            'total_amount' => 200,
+            'exclude_from_statistics' => false,
+            'paid_at' => now(),
+        ]);
+
+        OrderItem::create([
+            'order_id' => $maleOrder->id,
+            'ticket_name' => 'Split Event - VIP',
+            'ticket_price' => 100,
+            'quantity' => 1,
+            'line_total' => 100,
+            'holder_name' => 'Male Holder',
+            'holder_email' => 'male-holder@example.com',
+            'holder_phone' => '01010000004',
+            'holder_gender' => 'male',
+        ]);
+
+        OrderItem::create([
+            'order_id' => $mixedOrder->id,
+            'ticket_name' => 'Split Event - Couple Male',
+            'ticket_price' => 100,
+            'quantity' => 1,
+            'line_total' => 100,
+            'holder_name' => 'Mixed Male',
+            'holder_email' => 'mixed-male@example.com',
+            'holder_phone' => '01010000005',
+            'holder_gender' => 'male',
+        ]);
+
+        OrderItem::create([
+            'order_id' => $mixedOrder->id,
+            'ticket_name' => 'Split Event - Couple Female',
+            'ticket_price' => 100,
+            'quantity' => 1,
+            'line_total' => 100,
+            'holder_name' => 'Mixed Female',
+            'holder_email' => 'mixed-female@example.com',
+            'holder_phone' => '01010000006',
+            'holder_gender' => 'female',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.reports.index'))
+            ->assertOk()
+            ->assertViewHas('eventReports', function ($reports) {
+                $report = $reports->firstWhere('event_name', 'Split Event');
+
+                return $report
+                    && $report['tickets_sold'] === 2
+                    && ($report['male_tickets'] + $report['female_tickets']) === 2;
+            });
+    }
+
     public function test_hidden_order_requires_showing_orders_permission_to_access_directly(): void
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
