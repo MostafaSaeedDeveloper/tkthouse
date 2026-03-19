@@ -73,7 +73,8 @@ class ReportController extends Controller
                 'holder_gender',
             ]);
 
-        $paidTicketsSoldByEvent = $this->paidTicketsSoldByEvent($items, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
+        $soldItems = $this->paidSoldOrderItems($startAt, $endAt, $selectedEvent);
+        $paidTicketsSoldByEvent = $this->paidTicketsSoldByEvent($soldItems, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
         $normalizedItems = $this->normalizeItems($items, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
         $eventOptions = $normalizedItems
             ->pluck('event_name')
@@ -218,6 +219,34 @@ class ReportController extends Controller
         return [$start, $end, 'Custom Range'];
     }
 
+
+
+    private function paidSoldOrderItems(?Carbon $startAt, ?Carbon $endAt, string $selectedEvent = ''): Collection
+    {
+        $query = OrderItem::query()
+            ->whereHas('order', function ($query) use ($startAt, $endAt) {
+                $query->where('status', 'paid');
+
+                if ($startAt && $endAt) {
+                    $query->where(function ($inner) use ($startAt, $endAt) {
+                        $inner->whereBetween('paid_at', [$startAt, $endAt])
+                            ->orWhere(function ($fallback) use ($startAt, $endAt) {
+                                $fallback->whereNull('paid_at')
+                                    ->whereBetween('created_at', [$startAt, $endAt]);
+                            });
+                    });
+                }
+            });
+
+        if ($selectedEvent !== '') {
+            $query->where(function ($inner) use ($selectedEvent) {
+                $inner->where('ticket_name', 'like', $selectedEvent.' - %')
+                    ->orWhere('ticket_name', $selectedEvent);
+            });
+        }
+
+        return $query->get(['ticket_name', 'quantity']);
+    }
 
     private function paidTicketsSoldByEvent(Collection $items, Collection $eventNames, ?string $selectedEvent = null): Collection
     {

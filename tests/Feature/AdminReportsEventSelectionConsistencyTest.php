@@ -83,6 +83,31 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
 
 
 
+
+        $excludedPaidOrder = Order::create([
+            'customer_id' => $customer->id,
+            'user_id' => $admin->id,
+            'order_number' => '710002',
+            'status' => 'paid',
+            'requires_approval' => false,
+            'payment_method' => 'visa',
+            'payment_status' => 'paid',
+            'total_amount' => 200,
+            'paid_at' => now(),
+            'exclude_from_statistics' => true,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $excludedPaidOrder->id,
+            'ticket_name' => 'Mega Event - Friday Edition - Hidden Batch',
+            'ticket_price' => 100,
+            'quantity' => 2,
+            'line_total' => 200,
+            'holder_name' => 'Hidden Holder',
+            'holder_email' => 'hidden-holder@example.com',
+            'holder_phone' => '01055555555',
+        ]);
+
         \App\Models\Ticket::create([
             'name' => 'Mega Event - Friday Edition - Detached Ticket',
             'status' => 'checked_in',
@@ -99,10 +124,10 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
         $view = app(ReportController::class)->index($request);
         $data = $view->getData();
 
-        $this->assertSame(6, $data['totalTickets']);
+        $this->assertSame(8, $data['totalTickets']);
         $paidEventReport = $data['eventReports']->firstWhere('event_name', 'Mega Event - Friday Edition');
 
         $this->assertNotNull($paidEventReport);
-        $this->assertSame(6, $paidEventReport['tickets_sold']);
+        $this->assertSame(8, $paidEventReport['tickets_sold']);
     }
 }
