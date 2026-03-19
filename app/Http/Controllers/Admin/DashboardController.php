@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\ScanLog;
 use App\Models\Ticket;
 use Carbon\Carbon;
