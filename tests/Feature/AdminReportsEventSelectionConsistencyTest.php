@@ -16,7 +16,7 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_selected_event_report_counts_hyphenated_event_ticket_names(): void
+    public function test_reports_count_hyphenated_event_ticket_names_from_paid_order_items(): void
     {
         $admin = User::factory()->create();
         $customer = Customer::create([
@@ -26,7 +26,7 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
             'phone' => '01012345678',
         ]);
 
-        $event = Event::create([
+        Event::create([
             'name' => 'Mega Event - Friday Edition',
             'event_date' => now()->toDateString(),
             'event_time' => '21:00:00',
@@ -69,17 +69,17 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
             'holder_phone' => '01055555552',
         ]);
 
-        $request = Request::create('/dashboard/events/'.$event->id.'/report', 'GET', [
+        $request = Request::create('/dashboard/reports', 'GET', [
             'range' => 'last30',
         ]);
         $request->setUserResolver(fn () => $admin);
 
-        $view = app(ReportController::class)->index($request, $event);
+        $view = app(ReportController::class)->index($request);
         $data = $view->getData();
 
         $this->assertSame(4, $data['totalTickets']);
         $this->assertCount(1, $data['eventReports']);
-        $this->assertSame($event->name, $data['eventReports']->first()['event_name']);
+        $this->assertSame('Mega Event - Friday Edition', $data['eventReports']->first()['event_name']);
         $this->assertSame(4, $data['eventReports']->first()['tickets_sold']);
     }
 }
