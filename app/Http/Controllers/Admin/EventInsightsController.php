@@ -55,7 +55,7 @@ class EventInsightsController extends Controller
         });
 
         $ordersCount = (int) $paidItems->pluck('order_id')->unique()->count();
-        $ticketsSold = $ordersCount;
+        $ticketsSold = (int) $paidItems->sum('quantity');
 
         $guestTicketsQuery = Ticket::query()
             ->where('source', 'guest_list')

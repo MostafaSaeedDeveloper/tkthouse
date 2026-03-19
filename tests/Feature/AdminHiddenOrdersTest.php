@@ -91,7 +91,7 @@ class AdminHiddenOrdersTest extends TestCase
 
 
 
-    public function test_tickets_sold_metrics_use_paid_order_count_not_item_quantity(): void
+    public function test_tickets_sold_metrics_use_paid_order_item_quantities_only(): void
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
@@ -133,25 +133,25 @@ class AdminHiddenOrdersTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertViewHas('ticketsSold', 1)
+            ->assertViewHas('ticketsSold', 3)
             ->assertViewHas('totalPaidOrders', 1);
 
         $this->actingAs($admin)
             ->get(route('admin.reports.index'))
             ->assertOk()
-            ->assertViewHas('totalTickets', 1)
+            ->assertViewHas('totalTickets', 3)
             ->assertViewHas('eventReports', function ($reports) {
                 $report = $reports->firstWhere('event_name', 'Metrics Event');
 
                 return $report
-                    && $report['tickets_sold'] === 1
-                    && $report['male_tickets'] === 1
+                    && $report['tickets_sold'] === 3
+                    && $report['male_tickets'] === 3
                     && $report['female_tickets'] === 0;
             });
     }
 
 
-    public function test_report_gender_distribution_counts_each_paid_order_once(): void
+    public function test_report_gender_distribution_matches_paid_ticket_quantities(): void
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
@@ -231,8 +231,10 @@ class AdminHiddenOrdersTest extends TestCase
                 $report = $reports->firstWhere('event_name', 'Split Event');
 
                 return $report
-                    && $report['tickets_sold'] === 2
-                    && ($report['male_tickets'] + $report['female_tickets']) === 2;
+                    && $report['tickets_sold'] === 3
+                    && $report['male_tickets'] === 2
+                    && $report['female_tickets'] === 1
+                    && ($report['male_tickets'] + $report['female_tickets']) === 3;
             });
     }
 

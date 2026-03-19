@@ -53,7 +53,22 @@ class DashboardController extends Controller
         $grossRevenue = (float) (clone $paidOrdersQuery)->sum('total_amount');
         $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'pending_approval', 'pending_payment'])->count();
 
-        $ticketsSold = (clone $paidOrdersQuery)->count();
+        $ticketsSoldQuery = OrderItem::query();
+        $ticketsSoldQuery->whereHas('order', function ($query) use ($startAt, $endAt) {
+            $query->where('status', 'paid')
+                ->includedInStatistics();
+
+            if ($startAt && $endAt) {
+                $query->where(function ($inner) use ($startAt, $endAt) {
+                    $inner->whereBetween('paid_at', [$startAt, $endAt])
+                        ->orWhere(function ($fallback) use ($startAt, $endAt) {
+                            $fallback->whereNull('paid_at')
+                                ->whereBetween('created_at', [$startAt, $endAt]);
+                        });
+                });
+            }
+        });
+        $ticketsSold = (int) $ticketsSoldQuery->sum('quantity');
 
         $totalCustomers = (clone $customersQuery)->count();
         $totalEvents = Event::where('status', 'active')->count();

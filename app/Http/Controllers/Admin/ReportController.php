@@ -243,8 +243,13 @@ class ReportController extends Controller
         $reports = $items
             ->groupBy('event_name')
             ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent) {
-                $ticketsSold = $eventItems->pluck('order_id')->filter()->unique()->count();
-                [$maleTickets, $femaleTickets] = $this->resolveOrderGenderDistribution($eventItems);
+                $ticketsSold = (int) $eventItems->sum('quantity');
+                $maleTickets = (int) $eventItems
+                    ->filter(fn (array $item) => $item['holder_gender'] === 'male')
+                    ->sum('quantity');
+                $femaleTickets = (int) $eventItems
+                    ->filter(fn (array $item) => $item['holder_gender'] === 'female')
+                    ->sum('quantity');
 
                 $guestStats = $guestStatsByEvent->get($eventName, [
                     'guest_invitations' => 0,
@@ -296,30 +301,6 @@ class ReportController extends Controller
             ->values();
     }
 
-    private function resolveOrderGenderDistribution(Collection $eventItems): array
-    {
-        $distribution = $eventItems
-            ->filter(fn (array $item) => ! empty($item['order_id']))
-            ->groupBy('order_id')
-            ->reduce(function (array $carry, Collection $orderItems) {
-                $maleCount = $orderItems
-                    ->filter(fn (array $item) => $item['holder_gender'] === 'male')
-                    ->sum('quantity');
-                $femaleCount = $orderItems
-                    ->filter(fn (array $item) => $item['holder_gender'] === 'female')
-                    ->sum('quantity');
-
-                if ($femaleCount > $maleCount) {
-                    $carry['female']++;
-                } else {
-                    $carry['male']++;
-                }
-
-                return $carry;
-            }, ['male' => 0, 'female' => 0]);
-
-        return [(int) $distribution['male'], (int) $distribution['female']];
-    }
 
     private function extractEventAndTicketType(string $ticketName): array
     {
