@@ -153,7 +153,8 @@ class ReportController extends Controller
             ->groupBy('event_name')
             ->map(fn (Collection $tickets) => $tickets->count());
 
-        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent, $paidTicketsSoldByEvent);
+        $paidOrderReports = $this->buildPaidOrderReports($filteredItems, $paidTicketsSoldByEvent);
+        $eventReports = $this->mergeSupplementalReportStats($paidOrderReports, $guestStatsByEvent, $paidCheckedInByEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -296,33 +297,20 @@ class ReportController extends Controller
     }
 
 
-    private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent, Collection $paidTicketsSoldByEvent): Collection
+    private function buildPaidOrderReports(Collection $items, Collection $paidTicketsSoldByEvent): Collection
     {
-        $reports = $items
+        return $items
             ->groupBy('event_name')
-            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent, $paidTicketsSoldByEvent) {
-                $ticketsSold = (int) ($paidTicketsSoldByEvent->get($eventName, 0));
-                $maleTickets = $eventItems
-                    ->filter(fn (array $item) => $item['holder_gender'] === 'male')
-                    ->sum('quantity');
-                $femaleTickets = $eventItems
-                    ->filter(fn (array $item) => $item['holder_gender'] === 'female')
-                    ->sum('quantity');
-
-                $guestStats = $guestStatsByEvent->get($eventName, [
-                    'guest_invitations' => 0,
-                    'guest_checked_in' => 0,
-                ]);
-
+            ->map(function (Collection $eventItems, string $eventName) use ($paidTicketsSoldByEvent) {
                 return [
                     'event_name' => $eventName,
-                    'tickets_sold' => $ticketsSold,
-                    'male_tickets' => $maleTickets,
-                    'female_tickets' => $femaleTickets,
-                    'guest_invitations' => $guestStats['guest_invitations'],
-                    'guest_checked_in' => $guestStats['guest_checked_in'],
-                    'paid_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)),
-                    'total_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) $guestStats['guest_checked_in'],
+                    'tickets_sold' => (int) ($paidTicketsSoldByEvent->get($eventName, 0)),
+                    'male_tickets' => (int) $eventItems
+                        ->filter(fn (array $item) => $item['holder_gender'] === 'male')
+                        ->sum('quantity'),
+                    'female_tickets' => (int) $eventItems
+                        ->filter(fn (array $item) => $item['holder_gender'] === 'female')
+                        ->sum('quantity'),
                     'gross_revenue' => round((float) $eventItems->sum('gross_contribution'), 2),
                     'ticket_types' => $eventItems
                         ->groupBy('ticket_type')
@@ -334,6 +322,24 @@ class ReportController extends Controller
                         ->values(),
                 ];
             });
+    }
+
+    private function mergeSupplementalReportStats(Collection $paidOrderReports, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
+    {
+        $reports = $paidOrderReports->map(function (array $report) use ($guestStatsByEvent, $paidCheckedInByEvent) {
+            $eventName = $report['event_name'];
+            $guestStats = $guestStatsByEvent->get($eventName, [
+                'guest_invitations' => 0,
+                'guest_checked_in' => 0,
+            ]);
+
+            $report['guest_invitations'] = (int) $guestStats['guest_invitations'];
+            $report['guest_checked_in'] = (int) $guestStats['guest_checked_in'];
+            $report['paid_checked_in'] = (int) ($paidCheckedInByEvent->get($eventName, 0));
+            $report['total_checked_in'] = (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) $guestStats['guest_checked_in'];
+
+            return $report;
+        });
 
         foreach ($guestStatsByEvent as $eventName => $guestStats) {
             if ($reports->has($eventName)) {
@@ -345,8 +351,8 @@ class ReportController extends Controller
                 'tickets_sold' => 0,
                 'male_tickets' => 0,
                 'female_tickets' => 0,
-                'guest_invitations' => $guestStats['guest_invitations'] ?? 0,
-                'guest_checked_in' => $guestStats['guest_checked_in'] ?? 0,
+                'guest_invitations' => (int) ($guestStats['guest_invitations'] ?? 0),
+                'guest_checked_in' => (int) ($guestStats['guest_checked_in'] ?? 0),
                 'paid_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)),
                 'total_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) ($guestStats['guest_checked_in'] ?? 0),
                 'gross_revenue' => 0,

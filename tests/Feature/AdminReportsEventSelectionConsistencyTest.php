@@ -129,5 +129,6 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
 
         $this->assertNotNull($paidEventReport);
         $this->assertSame(6, $paidEventReport['tickets_sold']);
+        $this->assertSame(2, collect($paidEventReport['ticket_types'])->firstWhere('name', 'Backstage Access')['count']);
     }
 }
