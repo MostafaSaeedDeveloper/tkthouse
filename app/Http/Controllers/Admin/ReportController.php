@@ -243,11 +243,11 @@ class ReportController extends Controller
         $reports = $items
             ->groupBy('event_name')
             ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent) {
-                $ticketsSold = $eventItems->sum('quantity');
-                $maleTickets = $eventItems
+                $ticketsSold = (int) $eventItems->sum('quantity');
+                $maleTickets = (int) $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'male')
                     ->sum('quantity');
-                $femaleTickets = $eventItems
+                $femaleTickets = (int) $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'female')
                     ->sum('quantity');
 
@@ -300,6 +300,7 @@ class ReportController extends Controller
             ->sortByDesc(fn (array $report) => $report['tickets_sold'] + $report['guest_invitations'])
             ->values();
     }
+
 
     private function extractEventAndTicketType(string $ticketName): array
     {

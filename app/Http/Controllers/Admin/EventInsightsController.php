@@ -54,8 +54,8 @@ class EventInsightsController extends Controller
             return ((float) $item->line_total / $orderLineTotal) * $orderAmount;
         });
 
-        $ticketsSold = (int) $paidItems->sum('quantity');
         $ordersCount = (int) $paidItems->pluck('order_id')->unique()->count();
+        $ticketsSold = (int) $paidItems->sum('quantity');
 
         $guestTicketsQuery = Ticket::query()
             ->where('source', 'guest_list')
