@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\ScanLog;
 use App\Models\Ticket;
 use Carbon\Carbon;
@@ -53,20 +52,7 @@ class DashboardController extends Controller
         $grossRevenue = (float) (clone $paidOrdersQuery)->sum('total_amount');
         $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'pending_approval', 'pending_payment'])->count();
 
-        $ticketsSoldQuery = OrderItem::query();
-        $ticketsSoldQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
-            $q->where('status', 'paid');
-            if ($startAt && $endAt) {
-                $q->where(function ($query) use ($startAt, $endAt) {
-                    $query->whereBetween('paid_at', [$startAt, $endAt])
-                        ->orWhere(function ($fallback) use ($startAt, $endAt) {
-                            $fallback->whereNull('paid_at')
-                                ->whereBetween('created_at', [$startAt, $endAt]);
-                        });
-                });
-            }
-        });
-        $ticketsSold = (int) $ticketsSoldQuery->sum('quantity');
+        $ticketsSold = (clone $paidOrdersQuery)->count();
 
         $totalCustomers = (clone $customersQuery)->count();
         $totalEvents = Event::where('status', 'active')->count();
@@ -95,8 +81,17 @@ class DashboardController extends Controller
 
         $topEventsQuery = OrderItem::query()->select(['ticket_name', 'line_total']);
         $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
+            $q->where('status', 'paid')
+                ->includedInStatistics();
+
             if ($startAt && $endAt) {
-                $q->whereBetween('created_at', [$startAt, $endAt]);
+                $q->where(function ($query) use ($startAt, $endAt) {
+                    $query->whereBetween('paid_at', [$startAt, $endAt])
+                        ->orWhere(function ($fallback) use ($startAt, $endAt) {
+                            $fallback->whereNull('paid_at')
+                                ->whereBetween('created_at', [$startAt, $endAt]);
+                        });
+                });
             }
         });
 

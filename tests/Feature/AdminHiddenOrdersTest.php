@@ -89,6 +89,67 @@ class AdminHiddenOrdersTest extends TestCase
             ->assertViewHas('totalRevenue', 100.0);
     }
 
+
+
+    public function test_tickets_sold_metrics_use_paid_order_count_not_item_quantity(): void
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+
+        $admin = User::factory()->create();
+        Permission::findOrCreate('dashboard.view', 'web');
+        Permission::findOrCreate('reports.view', 'web');
+        $admin->givePermissionTo(['dashboard.view', 'reports.view']);
+
+        $customer = Customer::create([
+            'first_name' => 'Metric',
+            'last_name' => 'Check',
+            'email' => 'metric-check@example.com',
+            'phone' => '01000000077',
+        ]);
+
+        $paidOrder = Order::create([
+            'customer_id' => $customer->id,
+            'user_id' => $admin->id,
+            'order_number' => '900004',
+            'status' => 'paid',
+            'payment_method' => 'cash',
+            'total_amount' => 300,
+            'exclude_from_statistics' => false,
+            'paid_at' => now(),
+        ]);
+
+        OrderItem::create([
+            'order_id' => $paidOrder->id,
+            'ticket_name' => 'Metrics Event - VIP',
+            'ticket_price' => 100,
+            'quantity' => 3,
+            'line_total' => 300,
+            'holder_name' => 'Metric Holder',
+            'holder_email' => 'metric-holder@example.com',
+            'holder_phone' => '01010000003',
+            'holder_gender' => 'male',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('ticketsSold', 1)
+            ->assertViewHas('totalPaidOrders', 1);
+
+        $this->actingAs($admin)
+            ->get(route('admin.reports.index'))
+            ->assertOk()
+            ->assertViewHas('totalTickets', 1)
+            ->assertViewHas('eventReports', function ($reports) {
+                $report = $reports->firstWhere('event_name', 'Metrics Event');
+
+                return $report
+                    && $report['tickets_sold'] === 1
+                    && $report['male_tickets'] === 1
+                    && $report['female_tickets'] === 0;
+            });
+    }
+
     public function test_hidden_order_requires_showing_orders_permission_to_access_directly(): void
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);

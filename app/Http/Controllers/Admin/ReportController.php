@@ -243,13 +243,19 @@ class ReportController extends Controller
         $reports = $items
             ->groupBy('event_name')
             ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent) {
-                $ticketsSold = $eventItems->sum('quantity');
+                $ticketsSold = $eventItems->pluck('order_id')->filter()->unique()->count();
                 $maleTickets = $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'male')
-                    ->sum('quantity');
+                    ->pluck('order_id')
+                    ->filter()
+                    ->unique()
+                    ->count();
                 $femaleTickets = $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'female')
-                    ->sum('quantity');
+                    ->pluck('order_id')
+                    ->filter()
+                    ->unique()
+                    ->count();
 
                 $guestStats = $guestStatsByEvent->get($eventName, [
                     'guest_invitations' => 0,
