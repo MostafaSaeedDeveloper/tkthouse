@@ -9,6 +9,7 @@ use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ReportController extends Controller
 {
@@ -37,6 +38,9 @@ class ReportController extends Controller
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
 
+        $selectedEvent = $forcedEvent?->name ?? trim((string) $request->input('event', ''));
+        $eventNames = $this->reportEventNames($forcedEvent, $selectedEvent);
+
         $itemsQuery = OrderItem::query()
             ->with(['order:id,created_at,status,total_amount,paid_at,exclude_from_statistics'])
             ->whereHas('order', function ($query) use ($startAt, $endAt) {
@@ -53,6 +57,13 @@ class ReportController extends Controller
                 }
             });
 
+        if ($selectedEvent !== '') {
+            $itemsQuery->where(function ($query) use ($selectedEvent) {
+                $query->where('ticket_name', 'like', $selectedEvent.' - %')
+                    ->orWhere('ticket_name', $selectedEvent);
+            });
+        }
+
         $items = $itemsQuery
             ->get([
                 'order_id',
@@ -62,15 +73,15 @@ class ReportController extends Controller
                 'holder_gender',
             ]);
 
-        $normalizedItems = $this->normalizeItems($items);
+        $soldItems = $this->paidSoldOrderItems($startAt, $endAt, $selectedEvent);
+        $paidTicketsSoldByEvent = $this->paidTicketsSoldByEvent($soldItems, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
+        $normalizedItems = $this->normalizeItems($items, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
         $eventOptions = $normalizedItems
             ->pluck('event_name')
             ->filter()
             ->unique()
             ->sort()
             ->values();
-
-        $selectedEvent = $forcedEvent?->name ?? trim((string) $request->input('event', ''));
 
         if ($forcedEvent === null && $selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
             $selectedEvent = '';
@@ -94,8 +105,8 @@ class ReportController extends Controller
 
         $guestStatsByEvent = $guestTicketsQuery
             ->get(['name', 'status', 'holder_gender'])
-            ->map(function (Ticket $ticket) {
-                [$eventName] = $this->extractEventAndTicketType((string) ($ticket->name ?? ''));
+            ->map(function (Ticket $ticket) use ($eventNames, $selectedEvent) {
+                [$eventName] = $this->resolveEventAndTicketType((string) ($ticket->name ?? ''), $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
 
                 return [
                     'event_name' => $eventName,
@@ -131,8 +142,8 @@ class ReportController extends Controller
 
         $paidCheckedInByEvent = $paidCheckedInTicketsQuery
             ->get(['name'])
-            ->map(function (Ticket $ticket) {
-                [$eventName] = $this->extractEventAndTicketType((string) ($ticket->name ?? ''));
+            ->map(function (Ticket $ticket) use ($eventNames, $selectedEvent) {
+                [$eventName] = $this->resolveEventAndTicketType((string) ($ticket->name ?? ''), $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
 
                 return [
                     'event_name' => $eventName,
@@ -142,7 +153,8 @@ class ReportController extends Controller
             ->groupBy('event_name')
             ->map(fn (Collection $tickets) => $tickets->count());
 
-        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent);
+        $paidOrderReports = $this->buildPaidOrderReports($filteredItems, $paidTicketsSoldByEvent);
+        $eventReports = $this->mergeSupplementalReportStats($paidOrderReports, $guestStatsByEvent, $paidCheckedInByEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -208,15 +220,61 @@ class ReportController extends Controller
         return [$start, $end, 'Custom Range'];
     }
 
-    private function normalizeItems(Collection $items): Collection
+
+
+    private function paidSoldOrderItems(?Carbon $startAt, ?Carbon $endAt, string $selectedEvent = ''): Collection
+    {
+        $query = OrderItem::query()
+            ->whereHas('order', function ($query) use ($startAt, $endAt) {
+                $query->where('status', 'paid')
+                    ->includedInStatistics();
+
+                if ($startAt && $endAt) {
+                    $query->where(function ($inner) use ($startAt, $endAt) {
+                        $inner->whereBetween('paid_at', [$startAt, $endAt])
+                            ->orWhere(function ($fallback) use ($startAt, $endAt) {
+                                $fallback->whereNull('paid_at')
+                                    ->whereBetween('created_at', [$startAt, $endAt]);
+                            });
+                    });
+                }
+            });
+
+        if ($selectedEvent !== '') {
+            $query->where(function ($inner) use ($selectedEvent) {
+                $inner->where('ticket_name', 'like', $selectedEvent.' - %')
+                    ->orWhere('ticket_name', $selectedEvent);
+            });
+        }
+
+        return $query->get(['ticket_name', 'quantity']);
+    }
+
+    private function paidTicketsSoldByEvent(Collection $items, Collection $eventNames, ?string $selectedEvent = null): Collection
+    {
+        return $items
+            ->map(function (OrderItem $item) use ($eventNames, $selectedEvent) {
+                [$eventName] = $this->resolveEventAndTicketType((string) $item->ticket_name, $eventNames, $selectedEvent);
+
+                return [
+                    'event_name' => $eventName,
+                    'quantity' => (int) $item->quantity,
+                ];
+            })
+            ->filter(fn (array $item) => $item['event_name'] !== '')
+            ->groupBy('event_name')
+            ->map(fn (Collection $eventItems) => (int) $eventItems->sum('quantity'));
+    }
+
+    private function normalizeItems(Collection $items, Collection $eventNames, ?string $selectedEvent = null): Collection
     {
         $orderLineTotals = $items
             ->groupBy('order_id')
             ->map(fn (Collection $orderItems) => (float) $orderItems->sum('line_total'));
 
         return $items
-            ->map(function (OrderItem $item) use ($orderLineTotals) {
-                [$eventName, $ticketType] = $this->extractEventAndTicketType((string) $item->ticket_name);
+            ->map(function (OrderItem $item) use ($orderLineTotals, $eventNames, $selectedEvent) {
+                [$eventName, $ticketType] = $this->resolveEventAndTicketType((string) $item->ticket_name, $eventNames, $selectedEvent);
 
                 $orderLineTotal = (float) ($orderLineTotals[$item->order_id] ?? 0);
                 $orderTotalAmount = (float) ($item->order?->total_amount ?? 0);
@@ -238,33 +296,21 @@ class ReportController extends Controller
             ->values();
     }
 
-    private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
+
+    private function buildPaidOrderReports(Collection $items, Collection $paidTicketsSoldByEvent): Collection
     {
-        $reports = $items
+        return $items
             ->groupBy('event_name')
-            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent) {
-                $ticketsSold = $eventItems->sum('quantity');
-                $maleTickets = $eventItems
-                    ->filter(fn (array $item) => $item['holder_gender'] === 'male')
-                    ->sum('quantity');
-                $femaleTickets = $eventItems
-                    ->filter(fn (array $item) => $item['holder_gender'] === 'female')
-                    ->sum('quantity');
-
-                $guestStats = $guestStatsByEvent->get($eventName, [
-                    'guest_invitations' => 0,
-                    'guest_checked_in' => 0,
-                ]);
-
+            ->map(function (Collection $eventItems, string $eventName) use ($paidTicketsSoldByEvent) {
                 return [
                     'event_name' => $eventName,
-                    'tickets_sold' => $ticketsSold,
-                    'male_tickets' => $maleTickets,
-                    'female_tickets' => $femaleTickets,
-                    'guest_invitations' => $guestStats['guest_invitations'],
-                    'guest_checked_in' => $guestStats['guest_checked_in'],
-                    'paid_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)),
-                    'total_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) $guestStats['guest_checked_in'],
+                    'tickets_sold' => (int) ($paidTicketsSoldByEvent->get($eventName, 0)),
+                    'male_tickets' => (int) $eventItems
+                        ->filter(fn (array $item) => $item['holder_gender'] === 'male')
+                        ->sum('quantity'),
+                    'female_tickets' => (int) $eventItems
+                        ->filter(fn (array $item) => $item['holder_gender'] === 'female')
+                        ->sum('quantity'),
                     'gross_revenue' => round((float) $eventItems->sum('gross_contribution'), 2),
                     'ticket_types' => $eventItems
                         ->groupBy('ticket_type')
@@ -276,6 +322,24 @@ class ReportController extends Controller
                         ->values(),
                 ];
             });
+    }
+
+    private function mergeSupplementalReportStats(Collection $paidOrderReports, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
+    {
+        $reports = $paidOrderReports->map(function (array $report) use ($guestStatsByEvent, $paidCheckedInByEvent) {
+            $eventName = $report['event_name'];
+            $guestStats = $guestStatsByEvent->get($eventName, [
+                'guest_invitations' => 0,
+                'guest_checked_in' => 0,
+            ]);
+
+            $report['guest_invitations'] = (int) $guestStats['guest_invitations'];
+            $report['guest_checked_in'] = (int) $guestStats['guest_checked_in'];
+            $report['paid_checked_in'] = (int) ($paidCheckedInByEvent->get($eventName, 0));
+            $report['total_checked_in'] = (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) $guestStats['guest_checked_in'];
+
+            return $report;
+        });
 
         foreach ($guestStatsByEvent as $eventName => $guestStats) {
             if ($reports->has($eventName)) {
@@ -287,8 +351,8 @@ class ReportController extends Controller
                 'tickets_sold' => 0,
                 'male_tickets' => 0,
                 'female_tickets' => 0,
-                'guest_invitations' => $guestStats['guest_invitations'] ?? 0,
-                'guest_checked_in' => $guestStats['guest_checked_in'] ?? 0,
+                'guest_invitations' => (int) ($guestStats['guest_invitations'] ?? 0),
+                'guest_checked_in' => (int) ($guestStats['guest_checked_in'] ?? 0),
                 'paid_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)),
                 'total_checked_in' => (int) ($paidCheckedInByEvent->get($eventName, 0)) + (int) ($guestStats['guest_checked_in'] ?? 0),
                 'gross_revenue' => 0,
@@ -301,8 +365,42 @@ class ReportController extends Controller
             ->values();
     }
 
-    private function extractEventAndTicketType(string $ticketName): array
+    private function reportEventNames(?Event $forcedEvent = null, string $selectedEvent = ''): Collection
     {
+        if ($forcedEvent) {
+            return collect([$forcedEvent->name]);
+        }
+
+        if ($selectedEvent !== '') {
+            return collect([$selectedEvent]);
+        }
+
+        return Event::query()
+            ->pluck('name')
+            ->filter(fn (?string $name) => filled($name))
+            ->unique()
+            ->sortByDesc(fn (string $name) => mb_strlen($name))
+            ->values();
+    }
+
+    private function resolveEventAndTicketType(string $ticketName, Collection $eventNames, ?string $selectedEvent = null): array
+    {
+        if ($selectedEvent !== null && $selectedEvent !== '') {
+            return [$selectedEvent, $this->ticketTypeFromEventName($ticketName, $selectedEvent)];
+        }
+
+        foreach ($eventNames as $eventName) {
+            if ($ticketName === $eventName || Str::startsWith($ticketName, $eventName.' - ')) {
+                return [$eventName, $this->ticketTypeFromEventName($ticketName, $eventName)];
+            }
+        }
+
+        if ($eventNames->count() === 1) {
+            $eventName = (string) $eventNames->first();
+
+            return [$eventName, $ticketName !== '' ? $ticketName : 'General'];
+        }
+
         $parts = array_map('trim', explode(' - ', $ticketName, 2));
 
         if (count($parts) === 1) {
@@ -310,5 +408,14 @@ class ReportController extends Controller
         }
 
         return [$parts[0], $parts[1] ?: 'General'];
+    }
+
+    private function ticketTypeFromEventName(string $ticketName, string $eventName): string
+    {
+        if ($ticketName === $eventName) {
+            return 'General';
+        }
+
+        return trim((string) Str::after($ticketName, $eventName.' - ')) ?: 'General';
     }
 }
