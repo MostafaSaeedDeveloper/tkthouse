@@ -152,6 +152,7 @@ class ReportController extends Controller
             ->map(fn (Collection $tickets) => $tickets->count());
 
         $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent);
+        $eventReports = $this->syncSingleEventTicketsSold($eventReports, $items);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -245,6 +246,19 @@ class ReportController extends Controller
             })
             ->filter(fn (array $item) => $item['event_name'] !== '')
             ->values();
+    }
+
+
+    private function syncSingleEventTicketsSold(Collection $eventReports, Collection $items): Collection
+    {
+        if ($eventReports->count() !== 1) {
+            return $eventReports;
+        }
+
+        $report = $eventReports->first();
+        $report['tickets_sold'] = (int) $items->sum('quantity');
+
+        return collect([$report]);
     }
 
     private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
