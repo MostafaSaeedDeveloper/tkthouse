@@ -82,6 +82,15 @@ class AdminReportsEventSelectionConsistencyTest extends TestCase
         ]);
 
 
+
+        \App\Models\Ticket::create([
+            'name' => 'Mega Event - Friday Edition - Detached Ticket',
+            'status' => 'checked_in',
+            'holder_name' => 'Detached Ticket Holder',
+            'holder_email' => 'detached-ticket@example.com',
+            'holder_phone' => '01055555554',
+        ]);
+
         $request = Request::create('/dashboard/reports', 'GET', [
             'range' => 'last30',
         ]);

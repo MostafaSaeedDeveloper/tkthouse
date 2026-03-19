@@ -73,6 +73,7 @@ class ReportController extends Controller
                 'holder_gender',
             ]);
 
+        $paidTicketsSoldByEvent = $this->paidTicketsSoldByEvent($items, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
         $normalizedItems = $this->normalizeItems($items, $eventNames, $selectedEvent !== '' ? $selectedEvent : null);
         $eventOptions = $normalizedItems
             ->pluck('event_name')
@@ -151,8 +152,7 @@ class ReportController extends Controller
             ->groupBy('event_name')
             ->map(fn (Collection $tickets) => $tickets->count());
 
-        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent);
-        $eventReports = $this->syncSingleResolvedEventTicketsSold($eventReports, $items, $eventNames, $selectedEvent);
+        $eventReports = $this->buildEventReports($filteredItems, $guestStatsByEvent, $paidCheckedInByEvent, $paidTicketsSoldByEvent);
 
         return view('admin.reports.index', [
             'eventReports' => $eventReports,
@@ -218,6 +218,23 @@ class ReportController extends Controller
         return [$start, $end, 'Custom Range'];
     }
 
+
+    private function paidTicketsSoldByEvent(Collection $items, Collection $eventNames, ?string $selectedEvent = null): Collection
+    {
+        return $items
+            ->map(function (OrderItem $item) use ($eventNames, $selectedEvent) {
+                [$eventName] = $this->resolveEventAndTicketType((string) $item->ticket_name, $eventNames, $selectedEvent);
+
+                return [
+                    'event_name' => $eventName,
+                    'quantity' => (int) $item->quantity,
+                ];
+            })
+            ->filter(fn (array $item) => $item['event_name'] !== '')
+            ->groupBy('event_name')
+            ->map(fn (Collection $eventItems) => (int) $eventItems->sum('quantity'));
+    }
+
     private function normalizeItems(Collection $items, Collection $eventNames, ?string $selectedEvent = null): Collection
     {
         $orderLineTotals = $items
@@ -249,35 +266,12 @@ class ReportController extends Controller
     }
 
 
-    private function syncSingleResolvedEventTicketsSold(Collection $eventReports, Collection $items, Collection $eventNames, string $selectedEvent = ''): Collection
-    {
-        $resolvedEventName = $selectedEvent !== ''
-            ? $selectedEvent
-            : ($eventNames->count() === 1 ? (string) $eventNames->first() : '');
-
-        if ($resolvedEventName === '') {
-            return $eventReports;
-        }
-
-        $ticketsSold = (int) $items->sum('quantity');
-
-        return $eventReports
-            ->map(function (array $report) use ($resolvedEventName, $ticketsSold) {
-                if ($report['event_name'] === $resolvedEventName) {
-                    $report['tickets_sold'] = $ticketsSold;
-                }
-
-                return $report;
-            })
-            ->values();
-    }
-
-    private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent): Collection
+    private function buildEventReports(Collection $items, Collection $guestStatsByEvent, Collection $paidCheckedInByEvent, Collection $paidTicketsSoldByEvent): Collection
     {
         $reports = $items
             ->groupBy('event_name')
-            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent) {
-                $ticketsSold = $eventItems->sum('quantity');
+            ->map(function (Collection $eventItems, string $eventName) use ($guestStatsByEvent, $paidCheckedInByEvent, $paidTicketsSoldByEvent) {
+                $ticketsSold = (int) ($paidTicketsSoldByEvent->get($eventName, 0));
                 $maleTickets = $eventItems
                     ->filter(fn (array $item) => $item['holder_gender'] === 'male')
                     ->sum('quantity');
