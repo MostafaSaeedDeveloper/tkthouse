@@ -46,6 +46,7 @@ a.db-filter-btn.active:focus,
 a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--gold); border-color:var(--gold); font-weight:700; }
 .db-filter-form { display:flex; gap:8px; align-items:center; }
 .db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
+.db-filter-select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; min-width: 220px; }
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
 
 
@@ -154,11 +155,34 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
 
     <div class="db-filters fade-up">
         @foreach($rangeOptions as $key => $label)
-            <a href="{{ route('admin.dashboard', ['range' => $key]) }}" class="db-filter-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
+            <a
+                href="{{ route('admin.dashboard', array_filter(['range' => $key, 'event_id' => $selectedEventId ?: null])) }}"
+                class="db-filter-btn {{ $selectedRange === $key ? 'active' : '' }}"
+            >
+                {{ $label }}
+            </a>
         @endforeach
 
         <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
+            <input type="hidden" name="range" value="{{ $selectedRange }}">
+            @if($selectedRange === 'custom')
+                <input type="hidden" name="from" value="{{ optional($startAt)->format('Y-m-d') }}">
+                <input type="hidden" name="to" value="{{ optional($endAt)->format('Y-m-d') }}">
+            @endif
+            <select name="event_id" class="db-filter-select">
+                <option value="">All Events</option>
+                @foreach($eventOptions as $eventOption)
+                    <option value="{{ $eventOption->id }}" @selected((int) $selectedEventId === (int) $eventOption->id)>{{ $eventOption->name }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="db-filter-apply">Apply Event</button>
+        </form>
+
+        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
             <input type="hidden" name="range" value="custom">
+            @if($selectedEventId)
+                <input type="hidden" name="event_id" value="{{ $selectedEventId }}">
+            @endif
             <input type="text" name="from" class="db-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
             <input type="text" name="to" class="db-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
             <button type="submit" class="db-filter-apply">Apply</button>
@@ -198,7 +222,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
                 <div class="db-stat-icon">🧾</div>
             </div>
             <div class="db-stat-val">{{ number_format($totalOrders) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
+            <div class="db-stat-sub">Within {{ $rangeLabel }}{{ $selectedEvent ? ' • '.$selectedEvent->name : '' }}</div>
         </div>
 
         <div class="db-stat green fade-up delay-2">

@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\ScanLog;
 use App\Models\Ticket;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -27,9 +28,18 @@ class DashboardController extends Controller
         }
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
+        $eventOptions = Event::query()
+            ->orderBy('event_date')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        $selectedEventId = (int) $request->integer('event_id');
+        $selectedEvent = $selectedEventId > 0
+            ? $eventOptions->firstWhere('id', $selectedEventId)
+            : null;
 
         $ordersQuery = Order::query()->includedInStatistics();
         $customersQuery = Customer::query();
+        $this->applyEventScopeToOrdersQuery($ordersQuery, $selectedEvent);
 
         if ($startAt && $endAt) {
             $ordersQuery->whereBetween('created_at', [$startAt, $endAt]);
@@ -38,6 +48,7 @@ class DashboardController extends Controller
 
         $totalOrders = (clone $ordersQuery)->count();
         $paidOrdersQuery = Order::query()->includedInStatistics()->where('status', 'paid');
+        $this->applyEventScopeToOrdersQuery($paidOrdersQuery, $selectedEvent);
         if ($startAt && $endAt) {
             $paidOrdersQuery->where(function ($query) use ($startAt, $endAt) {
                 $query->whereBetween('paid_at', [$startAt, $endAt])
@@ -54,6 +65,7 @@ class DashboardController extends Controller
         $pendingOrders = (clone $ordersQuery)->whereIn('status', ['pending', 'pending_approval', 'pending_payment'])->count();
 
         $ticketsSoldQuery = OrderItem::query();
+        $this->applyEventScopeToOrderItemsQuery($ticketsSoldQuery, $selectedEvent);
         $ticketsSoldQuery->whereHas('order', function ($query) use ($startAt, $endAt) {
             $query->where('status', 'paid')
                 ->includedInStatistics();
@@ -71,10 +83,13 @@ class DashboardController extends Controller
         $ticketsSold = (int) $ticketsSoldQuery->sum('quantity');
 
         $totalCustomers = (clone $customersQuery)->count();
-        $totalEvents = Event::where('status', 'active')->count();
+        $totalEvents = $selectedEvent
+            ? Event::query()->whereKey($selectedEvent->id)->where('status', 'active')->count()
+            : Event::where('status', 'active')->count();
 
 
         $guestInvitationsQuery = Ticket::query()->where('source', 'guest_list');
+        $this->applyEventScopeToTicketsQuery($guestInvitationsQuery, $selectedEvent);
         if ($startAt && $endAt) {
             $guestInvitationsQuery->whereBetween('created_at', [$startAt, $endAt]);
         }
@@ -82,6 +97,7 @@ class DashboardController extends Controller
         $guestInvitations = (clone $guestInvitationsQuery)->count();
 
         $scanLogsQuery = ScanLog::query();
+        $this->applyEventScopeToScanLogsQuery($scanLogsQuery, $selectedEvent);
         if ($startAt && $endAt) {
             $scanLogsQuery->whereBetween('scanned_at', [$startAt, $endAt]);
         }
@@ -96,6 +112,7 @@ class DashboardController extends Controller
             ->get();
 
         $topEventsQuery = OrderItem::query()->select(['ticket_name', 'line_total']);
+        $this->applyEventScopeToOrderItemsQuery($topEventsQuery, $selectedEvent);
         $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
             $q->where('status', 'paid')
                 ->includedInStatistics();
@@ -128,7 +145,7 @@ class DashboardController extends Controller
             ->take(4)
             ->values();
 
-        [$labels, $ordersData, $revenueData] = $this->buildChartSeries($startAt, $endAt, $selectedRange);
+        [$labels, $ordersData, $revenueData] = $this->buildChartSeries($startAt, $endAt, $selectedRange, $selectedEvent);
 
         $rangeOptions = [
             'today' => 'Today',
@@ -160,6 +177,9 @@ class DashboardController extends Controller
             'selectedRange',
             'rangeLabel',
             'rangeOptions',
+            'eventOptions',
+            'selectedEvent',
+            'selectedEventId',
             'startAt',
             'endAt'
         ));
@@ -203,22 +223,24 @@ class DashboardController extends Controller
         return [$start, $end, 'Custom Range'];
     }
 
-    private function buildChartSeries(?Carbon $startAt, ?Carbon $endAt, string $selectedRange): array
+    private function buildChartSeries(?Carbon $startAt, ?Carbon $endAt, string $selectedRange, ?Event $selectedEvent): array
     {
         if (! $startAt || ! $endAt) {
             $startAt = now()->startOfMonth()->subMonths(6);
             $endAt = now()->endOfDay();
         }
 
-        $ordersWindow = Order::query()
+        $ordersWindowQuery = Order::query()
             ->includedInStatistics()
-            ->whereBetween('created_at', [$startAt, $endAt])
-            ->get(['created_at']);
+            ->whereBetween('created_at', [$startAt, $endAt]);
+        $this->applyEventScopeToOrdersQuery($ordersWindowQuery, $selectedEvent);
+        $ordersWindow = $ordersWindowQuery->get(['created_at']);
 
-        $revenueWindow = Order::query()
+        $revenueWindowQuery = Order::query()
             ->includedInStatistics()
-            ->whereBetween('created_at', [$startAt, $endAt])
-            ->get(['created_at', 'total_amount']);
+            ->whereBetween('created_at', [$startAt, $endAt]);
+        $this->applyEventScopeToOrdersQuery($revenueWindowQuery, $selectedEvent);
+        $revenueWindow = $revenueWindowQuery->get(['created_at', 'total_amount']);
 
         $labels = [];
         $ordersData = [];
@@ -266,6 +288,61 @@ class DashboardController extends Controller
         }
 
         return [$labels, $ordersData, $revenueData];
+    }
+
+    private function applyEventScopeToOrdersQuery(Builder $query, ?Event $event): void
+    {
+        if (! $event) {
+            return;
+        }
+
+        $query->whereHas('items', function (Builder $itemsQuery) use ($event) {
+            $this->applyEventScopeByTicketName($itemsQuery, $event);
+        });
+    }
+
+    private function applyEventScopeToOrderItemsQuery(Builder $query, ?Event $event): void
+    {
+        if (! $event) {
+            return;
+        }
+
+        $this->applyEventScopeByTicketName($query, $event);
+    }
+
+    private function applyEventScopeToTicketsQuery(Builder $query, ?Event $event): void
+    {
+        if (! $event) {
+            return;
+        }
+
+        $query->where(function (Builder $ticketQuery) use ($event) {
+            $ticketQuery->where('name', 'like', $event->name.' - %')
+                ->orWhere('name', $event->name);
+        });
+    }
+
+    private function applyEventScopeToScanLogsQuery(Builder $query, ?Event $event): void
+    {
+        if (! $event) {
+            return;
+        }
+
+        $query->where(function (Builder $scanQuery) use ($event) {
+            $scanQuery->where('event_name', $event->name)
+                ->orWhereHas('ticket', function (Builder $ticketQuery) use ($event) {
+                    $ticketQuery->where('name', 'like', $event->name.' - %')
+                        ->orWhere('name', $event->name);
+                });
+        });
+    }
+
+    private function applyEventScopeByTicketName(Builder $query, Event $event): void
+    {
+        $query->where(function (Builder $ticketQuery) use ($event) {
+            $ticketQuery->where('ticket_name', 'like', $event->name.' - %')
+                ->orWhere('ticket_name', $event->name);
+        });
     }
 
 }
