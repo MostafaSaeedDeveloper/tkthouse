@@ -203,7 +203,7 @@
     background: rgba(245,184,0,.08);
     color: #ffe08a;
     font-family: var(--fh);
-    font-size: 11px;
+    font-size: 18px;
     letter-spacing: .4px;
 }
 
