@@ -89,7 +89,7 @@ class Order extends Model
         $timeout = max(1, (int) ($timeoutMinutes ?? \App\Support\SystemSettings::pendingPaymentTimeoutMinutes()));
         $startAt = $this->payment_timeout_started_at;
 
-        if (! $startAt && ! $this->requires_approval) {
+        if (! $startAt) {
             $startAt = $this->created_at;
         }
 

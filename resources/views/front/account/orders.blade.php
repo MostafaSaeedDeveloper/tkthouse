@@ -26,7 +26,7 @@
                 <div class="acc-card-title">Order History</div>
             </div>
             <div class="acc-orders-note">
-                Payment timer يظهر فقط للطلبات اللي دخلت مرحلة الدفع المباشر. الطلبات التي تحتاج مراجعة/اعتماد إداري يبدأ لها الدفع بعد موافقة الإدارة.
+                أي طلب حالته <strong>Pending Payment</strong> يظهر له وقت متبقي للدفع هنا بشكل مباشر.
             </div>
             <div style="overflow-x:auto;">
                 <table class="acc-table acc-orders-table">
@@ -65,8 +65,6 @@
                                             {{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}
                                         </span>
                                         <small class="acc-deadline-sub">Until: {{ $deadlineAt?->format('d M Y, h:i A') }}</small>
-                                    @elseif($order->status === 'pending_payment' && $order->requires_approval)
-                                        <span class="acc-badge acc-badge-default">Starts after approval</span>
                                     @else
                                         <span style="color:var(--muted);font-size:11px;">—</span>
                                     @endif
