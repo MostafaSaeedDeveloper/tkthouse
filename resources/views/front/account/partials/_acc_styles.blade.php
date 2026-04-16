@@ -166,26 +166,35 @@
 @media(max-width:768px){ .acc-tables-grid { grid-template-columns:1fr; } }
 
 /* ── Orders table polish ── */
-.acc-orders-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.acc-orders-table { border-collapse: separate; border-spacing: 0 10px; width: 100%; padding: 0 12px 12px; }
 .acc-orders-table thead th {
-    background: linear-gradient(180deg, rgba(245,184,0,.06) 0%, rgba(255,255,255,0) 100%);
-    border-bottom: 1px solid rgba(255,255,255,.12);
+    background: transparent;
+    border-bottom: none;
     font-size: 10px;
     letter-spacing: 1.8px;
+    color: #8a8ca2;
+    padding-bottom: 2px;
 }
 .acc-orders-table tbody tr {
-    box-shadow: inset 0 -1px 0 rgba(255,255,255,.06);
-    transition: background .2s ease, box-shadow .2s ease;
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.06);
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
 }
 .acc-orders-table tbody tr:hover {
-    background: linear-gradient(90deg, rgba(245,184,0,.06), rgba(245,184,0,.01));
-    box-shadow: inset 0 -1px 0 rgba(245,184,0,.25);
+    transform: translateY(-1px);
+    background: linear-gradient(90deg, rgba(245,184,0,.07), rgba(255,255,255,.02));
+    box-shadow: 0 10px 22px rgba(0,0,0,.3), inset 0 0 0 1px rgba(245,184,0,.25);
 }
 .acc-orders-table tbody tr td {
     border-bottom: none;
-    padding-top: 16px;
-    padding-bottom: 16px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    border-top: none;
+    border-right: none;
+    border-left: none;
 }
+.acc-orders-table tbody tr td:first-child { border-radius: 12px 0 0 12px; }
+.acc-orders-table tbody tr td:last-child { border-radius: 0 12px 12px 0; }
 
 .acc-orders-note {
     margin: 14px 18px 0;
@@ -220,22 +229,8 @@
     font-size: 11px;
 }
 
-.acc-total {
-    font-family: var(--fh);
-    font-size: 25px;
-    color: #fff;
-    letter-spacing: -0.4px;
-    margin-bottom: 18px;
-}
-
-.acc-total span {
-    color: var(--muted);
-    font-size: 13px;
-    margin-left: 6px;
-}
-
 @media (max-width: 992px) {
     .acc-orders-table th, .acc-orders-table td { padding-left: 14px; padding-right: 14px; }
-    .acc-total { font-size: 21px; }
+    .acc-orders-table { border-spacing: 0 8px; padding: 0 8px 10px; }
 }
 </style>

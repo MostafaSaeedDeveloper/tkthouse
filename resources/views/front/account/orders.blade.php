@@ -24,9 +24,6 @@
         <div class="acc-card">
             <div class="acc-card-head">
                 <div class="acc-card-title">Order History</div>
-                <div class="acc-total">
-                    {{ number_format($orders->sum('total_amount'), 2) }}<span>EGP (this page)</span>
-                </div>
             </div>
             <div class="acc-orders-note">
                 <i class="fa fa-clock-o"></i>
