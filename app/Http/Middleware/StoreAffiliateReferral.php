@@ -17,12 +17,8 @@ class StoreAffiliateReferral
             $affiliate = User::query()->where('affiliate_code', $refCode)->first();
 
             if ($affiliate) {
-                $isSelfReferral = $request->user() && (int) $request->user()->id === (int) $affiliate->id;
-
-                if (! $isSelfReferral) {
-                    $request->session()->put('affiliate.referrer_id', $affiliate->id);
-                    $request->session()->put('affiliate.referrer_code', $affiliate->affiliate_code);
-                }
+                $request->session()->put('affiliate.referrer_id', $affiliate->id);
+                $request->session()->put('affiliate.referrer_code', $affiliate->affiliate_code);
             }
         }
 
