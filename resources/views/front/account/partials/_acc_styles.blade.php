@@ -166,37 +166,32 @@
 @media(max-width:768px){ .acc-tables-grid { grid-template-columns:1fr; } }
 
 /* ── Orders table polish ── */
-.acc-orders-table { border-collapse: separate; border-spacing: 0 10px; width: 100%; padding: 0 12px 12px; }
+.acc-orders-table { width: 100%; border-collapse: collapse; border-spacing: 0; }
 .acc-orders-table thead th {
-    background: transparent;
-    border-bottom: none;
+    background: rgba(255,255,255,.015);
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
     font-size: 10px;
-    letter-spacing: 1.8px;
+    letter-spacing: 1.4px;
     color: #8a8ca2;
-    padding-bottom: 2px;
-    border-right: none;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    border-right: none !important;
 }
 .acc-orders-table tbody tr {
-    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-    box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.04);
-    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    background: transparent;
+    transition: background .2s ease;
 }
 .acc-orders-table tbody tr:hover {
-    transform: translateY(-1px);
-    background: linear-gradient(90deg, rgba(245,184,0,.07), rgba(255,255,255,.02));
-    box-shadow: 0 10px 22px rgba(0,0,0,.3), inset 0 0 0 1px rgba(245,184,0,.25);
+    background: rgba(245,184,0,.035);
 }
 .acc-orders-table tbody tr td {
-    border-bottom: none;
+    border-bottom: 1px solid rgba(255,255,255,.06);
     padding-top: 15px;
     padding-bottom: 15px;
-    border-top: none;
-    border-right: none;
-    border-left: none;
-    border-bottom: none;
+    border-right: none !important;
+    border-left: none !important;
 }
-.acc-orders-table tbody tr td:first-child { border-radius: 12px 0 0 12px; }
-.acc-orders-table tbody tr td:last-child { border-radius: 0 12px 12px 0; }
+.acc-orders-table tbody tr:last-child td { border-bottom: none; }
 
 .acc-deadline-chip {
     display: inline-flex;
@@ -221,6 +216,5 @@
 
 @media (max-width: 992px) {
     .acc-orders-table th, .acc-orders-table td { padding-left: 14px; padding-right: 14px; }
-    .acc-orders-table { border-spacing: 0 8px; padding: 0 8px 10px; }
 }
 </style>
