@@ -26,6 +26,7 @@ class SystemSettingController extends Controller
             'logo_dark' => ['nullable', 'image', 'max:2048'],
             'logo_footer' => ['nullable', 'image', 'max:2048'],
             'whatsapp_ticket_sending_enabled' => ['nullable', 'boolean'],
+            'pending_payment_timeout_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
         ]);
 
         foreach (['site_name', 'primary_color', 'secondary_color'] as $key) {
@@ -33,6 +34,7 @@ class SystemSettingController extends Controller
         }
 
         SystemSettings::set('whatsapp_ticket_sending_enabled', $request->boolean('whatsapp_ticket_sending_enabled'));
+        SystemSettings::set('pending_payment_timeout_minutes', (int) ($validated['pending_payment_timeout_minutes'] ?? (60 * 24 * 2)));
 
         foreach (['logo_light' => 'site_logo_light', 'logo_dark' => 'site_logo_dark', 'logo_footer' => 'site_logo_footer'] as $fileKey => $settingKey) {
             if (! $request->hasFile($fileKey)) {

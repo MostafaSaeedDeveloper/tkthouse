@@ -39,6 +39,11 @@ class SystemSettings
         return PaymentMethod::activeCodes();
     }
 
+    public static function pendingPaymentTimeoutMinutes(): int
+    {
+        return max(1, (int) static::get('pending_payment_timeout_minutes', 60 * 24 * 2));
+    }
+
     private static function encode(mixed $value): ?string
     {
         if ($value === null) {

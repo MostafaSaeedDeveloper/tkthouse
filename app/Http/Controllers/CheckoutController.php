@@ -10,8 +10,10 @@ use App\Models\PaymentMethod;
 use App\Models\PromoCode;
 use App\Models\Ticket;
 use App\Services\FawaterakService;
+use App\Services\PendingPaymentExpiryService;
 use App\Services\PaymobService;
 use App\Services\TicketIssuanceService;
+use App\Support\SystemSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -95,6 +97,10 @@ class CheckoutController extends Controller
 
     public function paymentPage(Request $request, Order $order, string $token)
     {
+        if ($this->expirePendingPaymentOrderIfNeeded($order)) {
+            return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
+        }
+
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'pending_payment', 404);
@@ -120,6 +126,10 @@ class CheckoutController extends Controller
 
     public function gatewayRedirect(Request $request, Order $order, string $token, PaymobService $paymobService, FawaterakService $fawaterakService)
     {
+        if ($this->expirePendingPaymentOrderIfNeeded($order)) {
+            return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
+        }
+
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'pending_payment', 404);
@@ -204,7 +214,7 @@ class CheckoutController extends Controller
         $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
         $transactionLink = (string) data_get($payload, 'obj.data.redirect_to', data_get($payload, 'obj.redirect_to', ''));
 
-        if ($isSuccess && $order->status !== 'paid') {
+        if ($isSuccess && $order->status === 'pending_payment') {
             $oldStatus = $order->status;
             $order->update([
                 'status' => 'paid',
@@ -249,6 +259,10 @@ class CheckoutController extends Controller
 
     public function confirmPayment(Request $request, Order $order, string $token)
     {
+        if ($this->expirePendingPaymentOrderIfNeeded($order)) {
+            return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
+        }
+
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
         abort_unless($order->status === 'pending_payment', 404);
@@ -299,7 +313,7 @@ class CheckoutController extends Controller
             ?: $request->query('redirect_to')
             ?: $request->query('url')));
 
-        if ($isSuccess && $order->status !== 'paid') {
+        if ($isSuccess && $order->status === 'pending_payment') {
             $oldStatus = $order->status;
             $order->update([
                 'status' => 'paid',
@@ -408,7 +422,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
-                'affiliate_user_id' => $request->user()->referred_by_user_id,
+                'affiliate_user_id' => $this->resolveAffiliateUserId($request),
                 'promo_code_id' => $promoData['promo_code']?->id,
                 'promo_code' => $promoData['promo_code']?->code,
                 'discount_amount' => $promoData['discount_amount'],
@@ -418,6 +432,7 @@ class CheckoutController extends Controller
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
                 'payment_link_token' => $requiresApproval ? null : Str::random(40),
+                'payment_timeout_started_at' => $requiresApproval ? null : now(),
                 'total_amount' => 0,
             ]);
 
@@ -459,8 +474,9 @@ class CheckoutController extends Controller
 
         session()->forget('checkout.event_selection');
 
-        if ($order->status === 'pending_payment' && $order->payment_link_token) {
-            return $this->redirectToImmediatePayment($order);
+        if ($order->status === 'pending_payment') {
+            return redirect()->route('front.account.orders')
+                ->with('success', 'Order created successfully. Please complete payment before the deadline shown in your orders page.');
         }
 
         return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
@@ -547,7 +563,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'customer_id' => $customer->id,
                 'user_id' => $request->user()->id,
-                'affiliate_user_id' => $request->user()->referred_by_user_id,
+                'affiliate_user_id' => $this->resolveAffiliateUserId($request),
                 'promo_code_id' => $promoData['promo_code']?->id,
                 'promo_code' => $promoData['promo_code']?->code,
                 'discount_amount' => $promoData['discount_amount'],
@@ -557,6 +573,7 @@ class CheckoutController extends Controller
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
                 'payment_link_token' => $requiresApproval ? null : Str::random(40),
+                'payment_timeout_started_at' => $requiresApproval ? null : now(),
                 'total_amount' => 0,
             ]);
 
@@ -612,8 +629,9 @@ class CheckoutController extends Controller
             return $order;
         });
 
-        if ($order->status === 'pending_payment' && $order->payment_link_token) {
-            return $this->redirectToImmediatePayment($order);
+        if ($order->status === 'pending_payment') {
+            return redirect()->route('front.account.orders')
+                ->with('success', 'Order created successfully. Please complete payment before the deadline shown in your orders page.');
         }
 
         return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
@@ -659,22 +677,30 @@ class CheckoutController extends Controller
         return ['promo_code' => $promoCode, 'discount_amount' => $discountAmount];
     }
 
-    private function redirectToImmediatePayment(Order $order)
+    private function resolveAffiliateUserId(Request $request): ?int
     {
-        $method = PaymentMethod::query()
-            ->where('is_active', true)
-            ->where('code', $order->payment_method)
-            ->first(['code', 'provider']);
+        $affiliateFromSession = (int) $request->session()->get('affiliate.referrer_id', 0);
+        $userId = (int) $request->user()->id;
 
-        if ($method && in_array($method->provider, ['paymob', 'fawaterak'], true)) {
-            return redirect()->route('front.orders.payment.gateway', [
-                'order' => $order,
-                'token' => $order->payment_link_token,
-                'method' => $method->code,
-            ]);
+        if ($affiliateFromSession > 0 && $affiliateFromSession !== $userId) {
+            return $affiliateFromSession;
         }
 
-        return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+        $fallback = (int) ($request->user()->referred_by_user_id ?? 0);
+
+        return $fallback > 0 && $fallback !== $userId ? $fallback : null;
+    }
+
+    private function expirePendingPaymentOrderIfNeeded(Order $order): bool
+    {
+        if ($order->status !== 'pending_payment') {
+            return false;
+        }
+
+        $order->loadMissing('customer');
+
+        return app(PendingPaymentExpiryService::class)
+            ->expireOrderIfNeeded($order, SystemSettings::pendingPaymentTimeoutMinutes());
     }
 
 

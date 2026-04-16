@@ -57,6 +57,18 @@
                         <div class="form-text">Disable this to stop WhatsApp sending from admin and post-payment flows.</div>
                     </div>
                 </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Pending Payment Timeout (minutes)</label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="10080"
+                        class="form-control"
+                        name="pending_payment_timeout_minutes"
+                        value="{{ old('pending_payment_timeout_minutes', data_get($settings, 'pending_payment_timeout_minutes', 2880)) }}"
+                    >
+                    <div class="form-text">Default is 2880 minutes (2 days). Orders still pending payment after this period are auto-canceled.</div>
+                </div>
             </div>
         </div>
         <div class="block-content block-content-full text-end bg-body-light">
