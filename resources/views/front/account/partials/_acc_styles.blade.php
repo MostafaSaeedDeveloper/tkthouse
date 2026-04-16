@@ -94,8 +94,8 @@
 
 /* ── Table ── */
 .acc-table { width:100%; border-collapse:collapse; }
-.acc-table th { font-family:var(--fh); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:12px 22px; text-align:left; border-bottom:1px solid var(--border); }
-.acc-table td { padding:14px 22px; font-size:13.5px; color:#bcc2d8; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+.acc-table th { font-family:var(--fh); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:12px 22px; text-align:left; border:none; border-bottom:1px solid var(--border); }
+.acc-table td { padding:14px 22px; font-size:13.5px; color:#bcc2d8; border:none; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
 .acc-table tr:last-child td { border-bottom:none; }
 .acc-table tbody tr { transition:background .15s; }
 .acc-table tbody tr:hover { background:rgba(255,255,255,.02); }
@@ -165,56 +165,53 @@
 .acc-tables-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 @media(max-width:768px){ .acc-tables-grid { grid-template-columns:1fr; } }
 
-/* ── Orders table polish ── */
-.acc-orders-table { width: 100%; border-collapse: collapse !important; border-spacing: 0 !important; table-layout: fixed; }
+/* ── Orders table ── */
+.acc-orders-table { width: 100%; border-collapse: collapse; }
+.acc-orders-table thead tr { border-bottom: 1px solid var(--border); }
 .acc-orders-table thead th {
-    background: rgba(255,255,255,.015);
-    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+    font-family: var(--fh);
     font-size: 10px;
-    letter-spacing: 1.4px;
-    color: #8a8ca2;
-    padding-top: 14px;
-    padding-bottom: 14px;
-    border-right: none !important;
-    border-left: none !important;
-    border-top: none !important;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 22px;
+    text-align: left;
+    border: none;
+    white-space: nowrap;
 }
 .acc-orders-table tbody tr {
-    background: transparent;
-    transition: background .2s ease;
+    transition: background .15s;
+    border-bottom: 1px solid rgba(255,255,255,.04);
 }
-.acc-orders-table tbody tr:hover {
-    background: rgba(245,184,0,.035);
-}
+.acc-orders-table tbody tr:last-child { border-bottom: none; }
+.acc-orders-table tbody tr:hover { background: rgba(245,184,0,.03); }
 .acc-orders-table tbody tr td {
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    padding-top: 15px;
-    padding-bottom: 15px;
-    border-right: none !important;
-    border-left: none !important;
-    border-top: none !important;
+    padding: 16px 22px;
+    font-size: 13px;
+    color: #bcc2d8;
+    border: none;
+    vertical-align: middle;
 }
-.acc-orders-table tbody tr:last-child td { border-bottom: none; }
 
 .acc-deadline-chip {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 10px;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
     border: 1px solid rgba(245,184,0,.25);
     background: rgba(245,184,0,.08);
     color: #ffe08a;
-    font-family: var(--fh);
-    font-size: 18px !important;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: .4px;
+    font-family: var(--fb);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .3px;
 }
 
 .acc-deadline-sub {
     display: block;
-    margin-top: 6px;
+    margin-top: 5px;
     color: var(--muted);
     font-size: 11px;
 }
