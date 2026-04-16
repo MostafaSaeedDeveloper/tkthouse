@@ -25,6 +25,9 @@
             <div class="acc-card-head">
                 <div class="acc-card-title">Order History</div>
             </div>
+            <div class="acc-orders-note">
+                Payment timer يظهر فقط للطلبات اللي دخلت مرحلة الدفع المباشر. الطلبات التي تحتاج مراجعة/اعتماد إداري يبدأ لها الدفع بعد موافقة الإدارة.
+            </div>
             <div style="overflow-x:auto;">
                 <table class="acc-table acc-orders-table">
                     <thead>
@@ -51,15 +54,19 @@
                                 $methodCode = (string) ($order->payment_method ?? '');
                                 $methodLabel = $paymentMethodLabels[$methodCode] ?? ucwords(str_replace('_', ' ', $methodCode ?: 'N/A'));
                                 $secondsLeft = $order->paymentSecondsRemaining();
+                                $deadlineAt = $order->paymentDeadlineAt();
                             @endphp
                             <tr>
                                 <td class="acc-mono">{{ $order->order_number }}</td>
                                 <td><span class="acc-badge {{ $sc }}">{{ ucwords(str_replace('_',' ',$order->status)) }}</span></td>
                                 <td>
                                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
-                                        <span class="acc-badge acc-badge-pending js-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">
+                                        <span class="acc-deadline-chip js-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">
                                             {{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}
                                         </span>
+                                        <small class="acc-deadline-sub">Until: {{ $deadlineAt?->format('d M Y, h:i A') }}</small>
+                                    @elseif($order->status === 'pending_payment' && $order->requires_approval)
+                                        <span class="acc-badge acc-badge-default">Starts after approval</span>
                                     @else
                                         <span style="color:var(--muted);font-size:11px;">—</span>
                                     @endif

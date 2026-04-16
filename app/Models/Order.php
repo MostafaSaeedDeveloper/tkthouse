@@ -82,13 +82,18 @@ class Order extends Model
 
     public function paymentDeadlineAt(?int $timeoutMinutes = null): ?\Illuminate\Support\Carbon
     {
-        if ($this->status !== 'pending_payment' || ! $this->payment_timeout_started_at) {
+        if ($this->status !== 'pending_payment') {
             return null;
         }
 
         $timeout = max(1, (int) ($timeoutMinutes ?? \App\Support\SystemSettings::pendingPaymentTimeoutMinutes()));
+        $startAt = $this->payment_timeout_started_at;
 
-        return $this->payment_timeout_started_at?->copy()->addMinutes($timeout);
+        if (! $startAt && ! $this->requires_approval) {
+            $startAt = $this->created_at;
+        }
+
+        return $startAt?->copy()->addMinutes($timeout);
     }
 
     public function paymentSecondsRemaining(?int $timeoutMinutes = null): ?int

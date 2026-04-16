@@ -175,5 +175,35 @@
 .acc-orders-table tbody tr td { border-bottom: 1px solid rgba(255,255,255,.035); }
 .acc-orders-table tbody tr:last-child td { border-bottom: none; }
 .acc-orders-table tbody tr:hover { background: rgba(245,184,0,.03); }
-</style>
 
+.acc-orders-note {
+    margin: 14px 18px 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(245,184,0,.2);
+    border-radius: 10px;
+    background: rgba(245,184,0,.06);
+    color: #d9c583;
+    font-size: 12px;
+}
+
+.acc-deadline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(245,184,0,.25);
+    background: rgba(245,184,0,.08);
+    color: #ffe08a;
+    font-family: var(--fh);
+    font-size: 11px;
+    letter-spacing: .4px;
+}
+
+.acc-deadline-sub {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 11px;
+}
+</style>
