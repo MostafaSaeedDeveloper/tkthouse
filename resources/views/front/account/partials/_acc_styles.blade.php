@@ -166,7 +166,7 @@
 @media(max-width:768px){ .acc-tables-grid { grid-template-columns:1fr; } }
 
 /* ── Orders table polish ── */
-.acc-orders-table { width: 100%; border-collapse: collapse; border-spacing: 0; }
+.acc-orders-table { width: 100%; border-collapse: collapse !important; border-spacing: 0 !important; table-layout: fixed; }
 .acc-orders-table thead th {
     background: rgba(255,255,255,.015);
     border-bottom: 1px solid rgba(255,255,255,.08) !important;
@@ -176,6 +176,8 @@
     padding-top: 14px;
     padding-bottom: 14px;
     border-right: none !important;
+    border-left: none !important;
+    border-top: none !important;
 }
 .acc-orders-table tbody tr {
     background: transparent;
@@ -190,6 +192,7 @@
     padding-bottom: 15px;
     border-right: none !important;
     border-left: none !important;
+    border-top: none !important;
 }
 .acc-orders-table tbody tr:last-child td { border-bottom: none; }
 
@@ -203,7 +206,9 @@
     background: rgba(245,184,0,.08);
     color: #ffe08a;
     font-family: var(--fh);
-    font-size: 18px;
+    font-size: 18px !important;
+    font-weight: 800;
+    line-height: 1;
     letter-spacing: .4px;
 }
 
