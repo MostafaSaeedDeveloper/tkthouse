@@ -12,6 +12,8 @@ use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
+use App\Services\PendingPaymentExpiryService;
+use App\Support\SystemSettings;
 use App\Services\TicketIssuanceService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -40,6 +42,8 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
+        app(PendingPaymentExpiryService::class)->expireDueOrders(SystemSettings::pendingPaymentTimeoutMinutes());
+
         $managedEvent = $request->user()?->managedEvent;
 
         $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);

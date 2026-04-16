@@ -77,4 +77,25 @@ class Order extends Model
     {
         return $query->where('exclude_from_statistics', false);
     }
+
+    public function paymentDeadlineAt(?int $timeoutMinutes = null): ?\Illuminate\Support\Carbon
+    {
+        if ($this->status !== 'pending_payment') {
+            return null;
+        }
+
+        $timeout = max(1, (int) ($timeoutMinutes ?? \App\Support\SystemSettings::pendingPaymentTimeoutMinutes()));
+
+        return $this->created_at?->copy()->addMinutes($timeout);
+    }
+
+    public function paymentSecondsRemaining(?int $timeoutMinutes = null): ?int
+    {
+        $deadline = $this->paymentDeadlineAt($timeoutMinutes);
+        if (! $deadline) {
+            return null;
+        }
+
+        return now()->diffInSeconds($deadline, false);
+    }
 }

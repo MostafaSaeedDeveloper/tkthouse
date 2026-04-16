@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Services\PendingPaymentExpiryService;
+use App\Support\SystemSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -19,6 +21,7 @@ class CustomerDashboardController extends Controller
     public function orders(Request $request)
     {
         $user = $request->user();
+        app(PendingPaymentExpiryService::class)->expireDueOrders(SystemSettings::pendingPaymentTimeoutMinutes());
 
         $orders = $this->ordersQuery($user)
             ->with(['items', 'customer', 'issuedTickets'])

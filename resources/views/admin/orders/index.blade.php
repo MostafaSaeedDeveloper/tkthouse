@@ -60,7 +60,7 @@
                 <table class="table table-hover table-vcenter mb-0">
                     <thead>
                         <tr>
-                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th class="text-end">Action</th>
+                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment Deadline</th><th class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -102,6 +102,16 @@
                                     };
                                 @endphp
                                 <td><span class="badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
+                            <td>
+                                @php $secondsLeft = $order->paymentSecondsRemaining(); @endphp
+                                @if($order->status === 'pending_payment' && $secondsLeft !== null)
+                                    <span class="badge bg-warning text-dark js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">
+                                        {{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
                             <td class="text-end" style="white-space: nowrap; min-width: 170px;">
                                 <div class="d-inline-flex flex-nowrap align-items-center gap-1">
                                 @can('orders.update')
@@ -129,7 +139,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="8" class="text-center py-4 text-muted">No orders found.</td></tr>
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No orders found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -139,4 +149,36 @@
 
     <div class="mt-3">{{ $orders->links() }}</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const timers = document.querySelectorAll('.js-admin-order-timer');
+    if (!timers.length) return;
+
+    const render = (el, seconds) => {
+        if (seconds <= 0) {
+            el.textContent = 'Expired';
+            el.classList.remove('bg-warning', 'text-dark');
+            el.classList.add('bg-danger');
+            return;
+        }
+
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        const dd = days > 0 ? `${days}d ` : '';
+        el.textContent = `${dd}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    };
+
+    timers.forEach((el) => {
+        let remaining = parseInt(el.dataset.secondsLeft || '0', 10);
+        render(el, remaining);
+        setInterval(() => {
+            remaining -= 1;
+            render(el, remaining);
+        }, 1000);
+    });
+});
+</script>
 @endsection
