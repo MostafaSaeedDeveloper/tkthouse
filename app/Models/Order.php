@@ -23,6 +23,7 @@ class Order extends Model
         'requires_approval',
         'payment_method',
         'payment_link_token',
+        'payment_timeout_started_at',
         'paid_at',
         'approved_at',
         'tickets_generated_at',
@@ -38,6 +39,7 @@ class Order extends Model
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',
             'tickets_generated_at' => 'datetime',
+            'payment_timeout_started_at' => 'datetime',
             'discount_amount' => 'decimal:2',
             'subtotal_amount' => 'decimal:2',
         ];
@@ -80,13 +82,13 @@ class Order extends Model
 
     public function paymentDeadlineAt(?int $timeoutMinutes = null): ?\Illuminate\Support\Carbon
     {
-        if ($this->status !== 'pending_payment') {
+        if ($this->status !== 'pending_payment' || ! $this->payment_timeout_started_at) {
             return null;
         }
 
         $timeout = max(1, (int) ($timeoutMinutes ?? \App\Support\SystemSettings::pendingPaymentTimeoutMinutes()));
 
-        return $this->created_at?->copy()->addMinutes($timeout);
+        return $this->payment_timeout_started_at?->copy()->addMinutes($timeout);
     }
 
     public function paymentSecondsRemaining(?int $timeoutMinutes = null): ?int

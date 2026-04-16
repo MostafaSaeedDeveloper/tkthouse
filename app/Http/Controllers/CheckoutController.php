@@ -432,6 +432,7 @@ class CheckoutController extends Controller
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
                 'payment_link_token' => $requiresApproval ? null : Str::random(40),
+                'payment_timeout_started_at' => $requiresApproval ? null : now(),
                 'total_amount' => 0,
             ]);
 
@@ -572,6 +573,7 @@ class CheckoutController extends Controller
                 'requires_approval' => $requiresApproval,
                 'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
                 'payment_link_token' => $requiresApproval ? null : Str::random(40),
+                'payment_timeout_started_at' => $requiresApproval ? null : now(),
                 'total_amount' => 0,
             ]);
 

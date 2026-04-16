@@ -6,6 +6,7 @@ use App\Mail\OrderStatusChangedMail;
 use App\Models\Order;
 use App\Support\SystemSettings;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class PendingPaymentExpiryService
@@ -17,7 +18,8 @@ class PendingPaymentExpiryService
 
         $orders = Order::query()
             ->where('status', 'pending_payment')
-            ->where('created_at', '<=', $cutoff)
+            ->whereNotNull('payment_timeout_started_at')
+            ->where('payment_timeout_started_at', '<=', $cutoff)
             ->with(['customer'])
             ->get();
 
@@ -39,10 +41,7 @@ class PendingPaymentExpiryService
                 ])
                 ->log('Order auto-canceled after payment deadline expired');
 
-            if (filled($order->customer?->email)) {
-                Mail::to($order->customer->email)
-                    ->send(new OrderStatusChangedMail($order, $oldStatus, 'canceled'));
-            }
+            $this->sendCanceledEmailSafely($order, $oldStatus);
 
             $expired->push($order);
         }
@@ -57,7 +56,11 @@ class PendingPaymentExpiryService
         }
 
         $timeout = max(1, (int) ($timeoutMinutes ?? SystemSettings::pendingPaymentTimeoutMinutes()));
-        $deadline = $order->created_at?->copy()->addMinutes($timeout);
+        if (! $order->payment_timeout_started_at) {
+            return false;
+        }
+
+        $deadline = $order->payment_timeout_started_at->copy()->addMinutes($timeout);
 
         if (! $deadline || now()->lt($deadline)) {
             return false;
@@ -78,11 +81,26 @@ class PendingPaymentExpiryService
             ])
             ->log('Order auto-canceled after payment deadline expired');
 
-        if (filled($order->customer?->email)) {
-            Mail::to($order->customer->email)
-                ->send(new OrderStatusChangedMail($order, $oldStatus, 'canceled'));
-        }
+        $this->sendCanceledEmailSafely($order, $oldStatus);
 
         return true;
+    }
+
+    private function sendCanceledEmailSafely(Order $order, string $oldStatus): void
+    {
+        if (! filled($order->customer?->email)) {
+            return;
+        }
+
+        try {
+            Mail::to($order->customer->email)
+                ->send(new OrderStatusChangedMail($order, $oldStatus, 'canceled'));
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send order canceled email after timeout.', [
+                'order_id' => $order->id,
+                'email' => $order->customer?->email,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }
