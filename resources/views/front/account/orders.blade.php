@@ -24,9 +24,13 @@
         <div class="acc-card">
             <div class="acc-card-head">
                 <div class="acc-card-title">Order History</div>
+                <div class="acc-total">
+                    {{ number_format($orders->sum('total_amount'), 2) }}<span>EGP (this page)</span>
+                </div>
             </div>
             <div class="acc-orders-note">
-                أي طلب حالته <strong>Pending Payment</strong> يظهر له وقت متبقي للدفع هنا بشكل مباشر.
+                <i class="fa fa-clock-o"></i>
+                أي طلب حالته <strong>Pending Payment</strong> يظهر له عدّاد الدفع تلقائيًا مع وقت الانتهاء.
             </div>
             <div style="overflow-x:auto;">
                 <table class="acc-table acc-orders-table">
