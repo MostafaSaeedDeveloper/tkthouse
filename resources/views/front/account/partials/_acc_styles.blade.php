@@ -95,7 +95,7 @@
 /* ── Table ── */
 .acc-table { width:100%; border-collapse:collapse; }
 .acc-table th { font-family:var(--fh); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); padding:12px 22px; text-align:left; border-bottom:1px solid var(--border); }
-.acc-table td { padding:14px 22px; font-size:13.5px; color:var(--text); border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+.acc-table td { padding:14px 22px; font-size:13.5px; color:#bcc2d8; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
 .acc-table tr:last-child td { border-bottom:none; }
 .acc-table tbody tr { transition:background .15s; }
 .acc-table tbody tr:hover { background:rgba(255,255,255,.02); }
@@ -174,10 +174,11 @@
     letter-spacing: 1.8px;
     color: #8a8ca2;
     padding-bottom: 2px;
+    border-right: none;
 }
 .acc-orders-table tbody tr {
     background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-    box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.06);
+    box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.04);
     transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
 }
 .acc-orders-table tbody tr:hover {
@@ -192,21 +193,10 @@
     border-top: none;
     border-right: none;
     border-left: none;
+    border-bottom: none;
 }
 .acc-orders-table tbody tr td:first-child { border-radius: 12px 0 0 12px; }
 .acc-orders-table tbody tr td:last-child { border-radius: 0 12px 12px 0; }
-
-.acc-orders-note {
-    margin: 14px 18px 0;
-    padding: 11px 14px;
-    border: 1px solid rgba(56,189,248,.22);
-    border-radius: 10px;
-    background: rgba(14,116,144,.14);
-    color: #c8eafe;
-    font-size: 12px;
-    line-height: 1.5;
-}
-.acc-orders-note i { margin-inline-end: 8px; color: #7dd3fc; }
 
 .acc-deadline-chip {
     display: inline-flex;

@@ -25,10 +25,6 @@
             <div class="acc-card-head">
                 <div class="acc-card-title">Order History</div>
             </div>
-            <div class="acc-orders-note">
-                <i class="fa fa-clock-o"></i>
-                أي طلب حالته <strong>Pending Payment</strong> يظهر له عدّاد الدفع تلقائيًا مع وقت الانتهاء.
-            </div>
             <div style="overflow-x:auto;">
                 <table class="acc-table acc-orders-table">
                     <thead>
@@ -56,14 +52,26 @@
                                 $methodLabel = $paymentMethodLabels[$methodCode] ?? ucwords(str_replace('_', ' ', $methodCode ?: 'N/A'));
                                 $secondsLeft = $order->paymentSecondsRemaining();
                                 $deadlineAt = $order->paymentDeadlineAt();
+                                $safeSecondsLeft = $secondsLeft !== null ? max(0, (int) $secondsLeft) : null;
+                                $initialTimerLabel = 'Expired';
+                                if ($safeSecondsLeft !== null && $safeSecondsLeft > 0) {
+                                    $days = intdiv($safeSecondsLeft, 86400);
+                                    $hours = intdiv($safeSecondsLeft % 86400, 3600);
+                                    $mins = intdiv($safeSecondsLeft % 3600, 60);
+                                    $secs = $safeSecondsLeft % 60;
+                                    $initialTimerLabel = ($days > 0 ? $days.'d ' : '')
+                                        .str_pad((string) $hours, 2, '0', STR_PAD_LEFT).':'
+                                        .str_pad((string) $mins, 2, '0', STR_PAD_LEFT).':'
+                                        .str_pad((string) $secs, 2, '0', STR_PAD_LEFT);
+                                }
                             @endphp
                             <tr>
                                 <td class="acc-mono">{{ $order->order_number }}</td>
                                 <td><span class="acc-badge {{ $sc }}">{{ ucwords(str_replace('_',' ',$order->status)) }}</span></td>
                                 <td>
                                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
-                                        <span class="acc-deadline-chip js-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">
-                                            {{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}
+                                        <span class="acc-deadline-chip js-order-timer" data-seconds-left="{{ $safeSecondsLeft }}">
+                                            {{ $initialTimerLabel }}
                                         </span>
                                         <small class="acc-deadline-sub">Until: {{ $deadlineAt?->format('d M Y, h:i A') }}</small>
                                     @else
