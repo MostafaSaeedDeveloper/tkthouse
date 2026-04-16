@@ -680,15 +680,14 @@ class CheckoutController extends Controller
     private function resolveAffiliateUserId(Request $request): ?int
     {
         $affiliateFromSession = (int) $request->session()->get('affiliate.referrer_id', 0);
-        $userId = (int) $request->user()->id;
 
-        if ($affiliateFromSession > 0 && $affiliateFromSession !== $userId) {
+        if ($affiliateFromSession > 0) {
             return $affiliateFromSession;
         }
 
         $fallback = (int) ($request->user()->referred_by_user_id ?? 0);
 
-        return $fallback > 0 && $fallback !== $userId ? $fallback : null;
+        return $fallback > 0 ? $fallback : null;
     }
 
     private function expirePendingPaymentOrderIfNeeded(Order $order): bool
