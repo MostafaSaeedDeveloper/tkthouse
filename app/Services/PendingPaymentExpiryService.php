@@ -18,8 +18,15 @@ class PendingPaymentExpiryService
 
         $orders = Order::query()
             ->where('status', 'pending_payment')
-            ->whereNotNull('payment_timeout_started_at')
-            ->where('payment_timeout_started_at', '<=', $cutoff)
+            ->where(function ($query) use ($cutoff) {
+                $query
+                    ->where('payment_timeout_started_at', '<=', $cutoff)
+                    ->orWhere(function ($fallbackQuery) use ($cutoff) {
+                        $fallbackQuery
+                            ->whereNull('payment_timeout_started_at')
+                            ->where('created_at', '<=', $cutoff);
+                    });
+            })
             ->with(['customer'])
             ->get();
 
@@ -56,11 +63,12 @@ class PendingPaymentExpiryService
         }
 
         $timeout = max(1, (int) ($timeoutMinutes ?? SystemSettings::pendingPaymentTimeoutMinutes()));
-        if (! $order->payment_timeout_started_at) {
+        $startAt = $order->payment_timeout_started_at ?: $order->created_at;
+        if (! $startAt) {
             return false;
         }
 
-        $deadline = $order->payment_timeout_started_at->copy()->addMinutes($timeout);
+        $deadline = $startAt->copy()->addMinutes($timeout);
 
         if (! $deadline || now()->lt($deadline)) {
             return false;
