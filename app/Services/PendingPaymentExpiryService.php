@@ -13,44 +13,17 @@ class PendingPaymentExpiryService
 {
     public function expireDueOrders(?int $timeoutMinutes = null): Collection
     {
-        $timeout = max(1, (int) ($timeoutMinutes ?? SystemSettings::pendingPaymentTimeoutMinutes()));
-        $cutoff = now()->subMinutes($timeout);
-
         $orders = Order::query()
             ->where('status', 'pending_payment')
-            ->where(function ($query) use ($cutoff) {
-                $query
-                    ->where('payment_timeout_started_at', '<=', $cutoff)
-                    ->orWhere(function ($fallbackQuery) use ($cutoff) {
-                        $fallbackQuery
-                            ->whereNull('payment_timeout_started_at')
-                            ->where('created_at', '<=', $cutoff);
-                    });
-            })
             ->with(['customer'])
             ->get();
 
         $expired = collect();
 
         foreach ($orders as $order) {
-            $oldStatus = (string) $order->status;
-
-            $order->update([
-                'status' => 'canceled',
-            ]);
-
-            activity('orders')
-                ->performedOn($order)
-                ->withProperties([
-                    'from_status' => $oldStatus,
-                    'to_status' => 'canceled',
-                    'reason' => 'payment_deadline_expired',
-                ])
-                ->log('Order auto-canceled after payment deadline expired');
-
-            $this->sendCanceledEmailSafely($order, $oldStatus);
-
-            $expired->push($order);
+            if ($this->expireOrderIfNeeded($order, $timeoutMinutes)) {
+                $expired->push($order->fresh());
+            }
         }
 
         return $expired;
@@ -62,7 +35,7 @@ class PendingPaymentExpiryService
             return false;
         }
 
-        $timeout = max(1, (int) ($timeoutMinutes ?? SystemSettings::pendingPaymentTimeoutMinutes()));
+        $timeout = max(1, (int) ($timeoutMinutes ?? $order->payment_timeout_minutes ?? SystemSettings::pendingPaymentTimeoutMinutes()));
         $startAt = $order->payment_timeout_started_at ?: $order->created_at;
         if (! $startAt) {
             return false;

@@ -24,6 +24,7 @@ class Order extends Model
         'payment_method',
         'payment_link_token',
         'payment_timeout_started_at',
+        'payment_timeout_minutes',
         'paid_at',
         'approved_at',
         'tickets_generated_at',
@@ -40,6 +41,7 @@ class Order extends Model
             'paid_at' => 'datetime',
             'tickets_generated_at' => 'datetime',
             'payment_timeout_started_at' => 'datetime',
+            'payment_timeout_minutes' => 'integer',
             'discount_amount' => 'decimal:2',
             'subtotal_amount' => 'decimal:2',
         ];
@@ -86,7 +88,7 @@ class Order extends Model
             return null;
         }
 
-        $timeout = max(1, (int) ($timeoutMinutes ?? \App\Support\SystemSettings::pendingPaymentTimeoutMinutes()));
+        $timeout = max(1, (int) ($timeoutMinutes ?? $this->payment_timeout_minutes ?? \App\Support\SystemSettings::pendingPaymentTimeoutMinutes()));
         $startAt = $this->payment_timeout_started_at;
 
         if (! $startAt) {

@@ -171,6 +171,7 @@ class AdminOrderUpdateTest extends TestCase
         $this->assertSame('pending_payment', $order->status);
         $this->assertNotNull($order->payment_timeout_started_at);
         $this->assertTrue($order->payment_timeout_started_at->gt($oldTimeoutStart));
+        $this->assertNotNull($order->payment_timeout_minutes);
     }
 
 }

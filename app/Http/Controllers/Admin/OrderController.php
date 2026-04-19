@@ -14,6 +14,7 @@ use App\Models\PaymentMethod;
 use App\Models\PromoCode;
 use App\Services\PendingPaymentExpiryService;
 use App\Services\TicketIssuanceService;
+use App\Support\SystemSettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -253,10 +254,14 @@ class OrderController extends Controller
         }
 
         $paymentTimeoutStartedAt = null;
+        $paymentTimeoutMinutes = null;
         if ($validated['status'] === 'pending_payment') {
             $paymentTimeoutStartedAt = $oldStatus === 'pending_payment'
                 ? ($order->payment_timeout_started_at ?? now())
                 : now();
+            $paymentTimeoutMinutes = $oldStatus === 'pending_payment'
+                ? ($order->payment_timeout_minutes ?: SystemSettings::pendingPaymentTimeoutMinutes())
+                : SystemSettings::pendingPaymentTimeoutMinutes();
         }
 
         $order->update([
@@ -269,6 +274,7 @@ class OrderController extends Controller
             'approved_at' => $validated['status'] === 'pending_payment' ? ($order->approved_at ?? now()) : null,
             'payment_link_token' => $validated['status'] === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
             'payment_timeout_started_at' => $paymentTimeoutStartedAt,
+            'payment_timeout_minutes' => $paymentTimeoutMinutes,
             'exclude_from_statistics' => ($request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false)
                 ? (bool) ($validated['exclude_from_statistics'] ?? false)
                 : (bool) $order->exclude_from_statistics,
@@ -453,6 +459,7 @@ class OrderController extends Controller
             'approved_at' => now(),
             'payment_link_token' => Str::random(40),
             'payment_timeout_started_at' => now(),
+            'payment_timeout_minutes' => SystemSettings::pendingPaymentTimeoutMinutes(),
         ]);
 
         activity('orders')
@@ -523,10 +530,14 @@ class OrderController extends Controller
         }
 
         $paymentTimeoutStartedAt = null;
+        $paymentTimeoutMinutes = null;
         if ($newStatus === 'pending_payment') {
             $paymentTimeoutStartedAt = $oldStatus === 'pending_payment'
                 ? ($order->payment_timeout_started_at ?? now())
                 : now();
+            $paymentTimeoutMinutes = $oldStatus === 'pending_payment'
+                ? ($order->payment_timeout_minutes ?: SystemSettings::pendingPaymentTimeoutMinutes())
+                : SystemSettings::pendingPaymentTimeoutMinutes();
         }
 
         $order->update([
@@ -535,6 +546,7 @@ class OrderController extends Controller
             'approved_at' => $newStatus === 'pending_payment' ? ($order->approved_at ?? now()) : null,
             'payment_link_token' => $newStatus === 'pending_payment' ? ($order->payment_link_token ?: Str::random(40)) : $order->payment_link_token,
             'payment_timeout_started_at' => $paymentTimeoutStartedAt,
+            'payment_timeout_minutes' => $paymentTimeoutMinutes,
         ]);
 
         activity('orders')
