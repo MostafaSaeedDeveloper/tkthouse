@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Services\PendingPaymentExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -18,6 +19,8 @@ class CustomerDashboardController extends Controller
 
     public function orders(Request $request)
     {
+        app(PendingPaymentExpiryService::class)->expireDueOrders();
+
         $user = $request->user();
 
         $orders = $this->ordersQuery($user)
