@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -134,6 +135,43 @@ class AdminOrderUpdateTest extends TestCase
         });
 
         Mail::assertNotSent(OrderStatusChangedMail::class);
+    }
+
+    public function test_update_status_to_pending_payment_restarts_payment_timeout_counter(): void
+    {
+        $admin = User::factory()->create();
+        $customer = Customer::create([
+            'first_name' => 'Timeout',
+            'last_name' => 'Reset',
+            'email' => 'timeout-reset@example.com',
+            'phone' => '01000000000',
+        ]);
+
+        $oldTimeoutStart = Carbon::now()->subHours(3);
+
+        $order = Order::create([
+            'customer_id' => $customer->id,
+            'user_id' => $admin->id,
+            'order_number' => '700006',
+            'status' => 'canceled',
+            'requires_approval' => false,
+            'payment_method' => 'cash',
+            'total_amount' => 300,
+            'payment_timeout_started_at' => $oldTimeoutStart,
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.orders.update', $order), [
+            'status' => 'pending_payment',
+            'payment_method' => 'cash',
+            'requires_approval' => 0,
+        ])->assertRedirect(route('admin.orders.show', $order));
+
+        $order->refresh();
+
+        $this->assertSame('pending_payment', $order->status);
+        $this->assertNotNull($order->payment_timeout_started_at);
+        $this->assertTrue($order->payment_timeout_started_at->gt($oldTimeoutStart));
+        $this->assertNotNull($order->payment_timeout_minutes);
     }
 
 }
