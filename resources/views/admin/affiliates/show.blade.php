@@ -23,7 +23,14 @@
         </div>
         <div class="block-content">
             @if($affiliateLink)
-                <a href="{{ $affiliateLink }}" target="_blank">{{ $affiliateLink }}</a>
+                <div class="mb-2">
+                    <div class="small text-muted">Full Affiliate Link</div>
+                    <a href="{{ $affiliateLink }}" target="_blank">{{ $affiliateLink }}</a>
+                </div>
+                <div class="mb-2">
+                    <div class="small text-muted">Short Affiliate Link</div>
+                    <a href="{{ $shortAffiliateLink }}" target="_blank">{{ $shortAffiliateLink }}</a>
+                </div>
                 <div class="text-muted mt-2">Target: <code>{{ $affiliate->affiliate_target_url ?: '/account/register' }}</code></div>
             @else
                 <p class="text-muted mb-0">No affiliate link generated yet.</p>

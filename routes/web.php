@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PromoCodeController;
+use App\Http\Controllers\AffiliateRedirectController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
@@ -48,6 +49,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/account/register/request-otp', [CustomerAuthController::class, 'requestRegisterOtp'])->name('front.customer.register.request-otp');
     Route::post('/account/register/verify-otp', [CustomerAuthController::class, 'verifyRegisterOtp'])->name('front.customer.register.verify-otp');
 });
+
+Route::get('/a/{affiliateCode}', AffiliateRedirectController::class)->name('front.affiliate.redirect');
 
 Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
 
