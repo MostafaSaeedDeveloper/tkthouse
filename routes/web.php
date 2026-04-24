@@ -50,7 +50,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/account/register/verify-otp', [CustomerAuthController::class, 'verifyRegisterOtp'])->name('front.customer.register.verify-otp');
 });
 
-Route::get('/a/{affiliateCode}', AffiliateRedirectController::class)->name('front.affiliate.redirect');
+Route::get('/ref/{affiliateCode}', AffiliateRedirectController::class)->name('front.affiliate.redirect');
 
 Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
 
