@@ -35,7 +35,10 @@
                                     <div class="text-muted small">{{ $affiliate->email }}</div>
                                 </td>
                                 <td>
-                                    <a href="{{ $affiliate->generated_affiliate_link }}" target="_blank" class="small">{{ $affiliate->generated_affiliate_link }}</a>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="{{ $affiliate->generated_short_affiliate_link }}" target="_blank" class="small">{{ $affiliate->generated_short_affiliate_link }}</a>
+                                        <button type="button" class="btn btn-sm btn-alt-secondary js-copy-link" data-copy-text="{{ $affiliate->generated_short_affiliate_link }}">Copy</button>
+                                    </div>
                                 </td>
                                 <td>{{ $affiliate->referred_users_count }}</td>
                                 <td>{{ $affiliate->affiliate_orders_count }}</td>
@@ -58,3 +61,36 @@
     </div>
 </div>
 @endsection
+
+
+@push('scripts')
+<script>
+(() => {
+  const copyButtons = document.querySelectorAll('.js-copy-link');
+
+  copyButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const originalText = button.textContent;
+      const textToCopy = button.dataset.copyText || '';
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        button.textContent = 'Copied!';
+      } catch (error) {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        button.textContent = 'Copied!';
+      }
+
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1200);
+    });
+  });
+})();
+</script>
+@endpush

@@ -25,6 +25,7 @@ class AffiliateController extends Controller
             ->paginate(20)
             ->through(function (User $affiliate) {
                 $affiliate->generated_affiliate_link = $this->buildAffiliateLink($affiliate);
+                $affiliate->generated_short_affiliate_link = $this->buildShortAffiliateLink($affiliate);
 
                 return $affiliate;
             });
@@ -96,7 +97,17 @@ class AffiliateController extends Controller
             'referredUsers' => $referredUsers,
             'stats' => $stats,
             'affiliateLink' => $this->buildAffiliateLink($affiliate),
+            'shortAffiliateLink' => $this->buildShortAffiliateLink($affiliate),
         ]);
+    }
+
+    private function buildShortAffiliateLink(User $affiliate): ?string
+    {
+        if (! $affiliate->affiliate_code) {
+            return null;
+        }
+
+        return route('front.affiliate.redirect', ['affiliateCode' => $affiliate->affiliate_code]);
     }
 
     private function buildAffiliateLink(User $affiliate): ?string

@@ -23,7 +23,20 @@
         </div>
         <div class="block-content">
             @if($affiliateLink)
-                <a href="{{ $affiliateLink }}" target="_blank">{{ $affiliateLink }}</a>
+                <div class="mb-2">
+                    <div class="small text-muted">Full Affiliate Link</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ $affiliateLink }}" target="_blank">{{ $affiliateLink }}</a>
+                        <button type="button" class="btn btn-sm btn-alt-secondary js-copy-link" data-copy-text="{{ $affiliateLink }}">Copy</button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="small text-muted">Short Affiliate Link</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ $shortAffiliateLink }}" target="_blank">{{ $shortAffiliateLink }}</a>
+                        <button type="button" class="btn btn-sm btn-alt-secondary js-copy-link" data-copy-text="{{ $shortAffiliateLink }}">Copy</button>
+                    </div>
+                </div>
                 <div class="text-muted mt-2">Target: <code>{{ $affiliate->affiliate_target_url ?: '/account/register' }}</code></div>
             @else
                 <p class="text-muted mb-0">No affiliate link generated yet.</p>
@@ -88,3 +101,36 @@
     </div>
 </div>
 @endsection
+
+
+@push('scripts')
+<script>
+(() => {
+  const copyButtons = document.querySelectorAll('.js-copy-link');
+
+  copyButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const originalText = button.textContent;
+      const textToCopy = button.dataset.copyText || '';
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        button.textContent = 'Copied!';
+      } catch (error) {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        button.textContent = 'Copied!';
+      }
+
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1200);
+    });
+  });
+})();
+</script>
+@endpush
