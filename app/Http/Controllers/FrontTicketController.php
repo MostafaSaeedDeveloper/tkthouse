@@ -7,7 +7,6 @@ use App\Models\IssuedTicket;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -25,7 +24,7 @@ class FrontTicketController extends Controller
         $this->authorizeTicket($request, $ticket);
 
         $event = $this->resolveEvent($ticket->ticket_name ?? '');
-        $qrDataUri = $this->qrDataUri((string) $ticket->ticket_number);
+        $qrDataUri = $ticket->qrUrl();
 
         $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
 
@@ -49,28 +48,13 @@ class FrontTicketController extends Controller
 
         $ticket = Ticket::query()->where('ticket_number', $ticketNumber)->firstOrFail();
         $event = $this->resolveEvent($ticket->name ?? '');
-        $qrDataUri = $this->qrDataUri((string) ($ticket->qr_payload ?: $ticket->ticket_number));
+        $qrDataUri = $ticket->qr_payload
+            ? 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->qr_payload)
+            : 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->ticket_number);
 
         $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
 
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
-    }
-
-    private function qrDataUri(string $payload): string
-    {
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode($payload);
-
-        try {
-            $response = Http::timeout(15)->get($url);
-
-            if ($response->successful()) {
-                return 'data:image/png;base64,'.base64_encode($response->body());
-            }
-        } catch (\Throwable) {
-            // Ignore and fallback to URL.
-        }
-
-        return $url;
     }
 
     private function authorizeTicket(Request $request, IssuedTicket $ticket): void

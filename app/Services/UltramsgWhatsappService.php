@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Support\SystemSettings;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Support\SystemSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -156,17 +156,12 @@ class UltramsgWhatsappService
     private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): void
     {
         $filename = $this->ticketFilename($ticketNumber);
-        $attempts = [
-            ['type' => 'signed_url', 'document' => $this->signedPdfDownloadLink($ticketNumber)],
-            ['type' => 'short_url', 'document' => $this->shortDownloadLink($ticketNumber)],
-        ];
+        $attempts = [];
 
         try {
             $pdfBinary = $this->fetchPdfBinary($ticketNumber);
-            $pdfBase64 = base64_encode($pdfBinary);
 
-            $attempts[] = ['type' => 'base64_data_uri', 'document' => 'data:application/pdf;base64,'.$pdfBase64];
-            $attempts[] = ['type' => 'base64_raw', 'document' => $pdfBase64];
+            $attempts[] = ['type' => 'base64_raw', 'document' => base64_encode($pdfBinary)];
         } catch (Throwable $exception) {
             Log::warning('UltraMsg PDF prefetch failed.', [
                 ...$context,
@@ -174,6 +169,9 @@ class UltramsgWhatsappService
                 'error' => $exception->getMessage(),
             ]);
         }
+
+        $attempts[] = ['type' => 'signed_url', 'document' => $this->signedPdfDownloadLink($ticketNumber)];
+        $attempts[] = ['type' => 'short_url', 'document' => $this->shortDownloadLink($ticketNumber)];
 
         foreach ($attempts as $index => $attempt) {
             try {
