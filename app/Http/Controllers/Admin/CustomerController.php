@@ -36,10 +36,7 @@ class CustomerController extends Controller
         if ($managedEvent) {
             $hasVisibleOrder = $customer->orders()
                 ->whereHas('items', function (Builder $itemsQuery) use ($managedEvent) {
-                    $itemsQuery->where(function (Builder $ticketQuery) use ($managedEvent) {
-                        $ticketQuery->where('ticket_name', 'like', $managedEvent->name.' - %')
-                            ->orWhere('ticket_name', $managedEvent->name);
-                    });
+                    $itemsQuery->where('event_id', $managedEvent->id);
                 })
                 ->exists();
 
@@ -61,10 +58,7 @@ class CustomerController extends Controller
         }
 
         $query->whereHas('items', function (Builder $itemsQuery) use ($event) {
-            $itemsQuery->where(function (Builder $ticketQuery) use ($event) {
-                $ticketQuery->where('ticket_name', 'like', $event->name.' - %')
-                    ->orWhere('ticket_name', $event->name);
-            });
+            $itemsQuery->where('event_id', $event->id);
         });
     }
 }

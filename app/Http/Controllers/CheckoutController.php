@@ -415,7 +415,7 @@ class CheckoutController extends Controller
         $feeSummary = $this->calculateEventFeeSummary($event, $subtotal);
         $feeTotal = (float) $feeSummary['total'];
 
-        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval, $subtotal, $feeTotal) {
+        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval, $subtotal, $feeTotal, $event) {
             $promoData = $this->resolvePromoCodeForCheckout((string) $request->input('promo_code', ''), $subtotal);
             $customer = $this->upsertCustomer($baseValidated);
 
@@ -445,6 +445,7 @@ class CheckoutController extends Controller
                 $total += $lineTotal;
 
                 $order->items()->create([
+                    'event_id' => $event->id,
                     'ticket_id' => null,
                     'ticket_name' => $unit['event_name'].' - '.$unit['ticket_name'],
                     'ticket_price' => $unit['ticket_price'],
@@ -604,6 +605,7 @@ class CheckoutController extends Controller
                 $total += $lineTotal;
 
                 $order->items()->create([
+                    'event_id' => $item['ticket_type'] === 'event' ? ($eventTickets->get($item['ticket_ref_id'])?->event_id) : null,
                     'ticket_id' => $orderTicketId,
                     'ticket_name' => $ticketName,
                     'ticket_price' => $ticketPrice,

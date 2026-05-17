@@ -297,7 +297,7 @@ class DashboardController extends Controller
         }
 
         $query->whereHas('items', function (Builder $itemsQuery) use ($event) {
-            $this->applyEventScopeByTicketName($itemsQuery, $event);
+            $itemsQuery->where('event_id', $event->id);
         });
     }
 
@@ -307,7 +307,7 @@ class DashboardController extends Controller
             return;
         }
 
-        $this->applyEventScopeByTicketName($query, $event);
+        $query->where('event_id', $event->id);
     }
 
     private function applyEventScopeToTicketsQuery(Builder $query, ?Event $event): void
@@ -316,10 +316,7 @@ class DashboardController extends Controller
             return;
         }
 
-        $query->where(function (Builder $ticketQuery) use ($event) {
-            $ticketQuery->where('name', 'like', $event->name.' - %')
-                ->orWhere('name', $event->name);
-        });
+        $query->where('event_id', $event->id);
     }
 
     private function applyEventScopeToScanLogsQuery(Builder $query, ?Event $event): void
@@ -328,21 +325,7 @@ class DashboardController extends Controller
             return;
         }
 
-        $query->where(function (Builder $scanQuery) use ($event) {
-            $scanQuery->where('event_name', $event->name)
-                ->orWhereHas('ticket', function (Builder $ticketQuery) use ($event) {
-                    $ticketQuery->where('name', 'like', $event->name.' - %')
-                        ->orWhere('name', $event->name);
-                });
-        });
-    }
-
-    private function applyEventScopeByTicketName(Builder $query, Event $event): void
-    {
-        $query->where(function (Builder $ticketQuery) use ($event) {
-            $ticketQuery->where('ticket_name', 'like', $event->name.' - %')
-                ->orWhere('ticket_name', $event->name);
-        });
+        $query->where('event_id', $event->id);
     }
 
 }

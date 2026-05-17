@@ -11,6 +11,7 @@ class ScanLog extends Model
 
     protected $fillable = [
         'ticket_id',
+        'event_id',
         'event_name',
         'ticket_number',
         'scanned_by_user_id',
@@ -31,6 +32,11 @@ class ScanLog extends Model
     public function ticket()
     {
         return $this->belongsTo(Ticket::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function scannerUser()

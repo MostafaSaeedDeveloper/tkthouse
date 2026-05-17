@@ -59,10 +59,7 @@ class EventInsightsController extends Controller
 
         $guestTicketsQuery = Ticket::query()
             ->where('source', 'guest_list')
-            ->where(function ($query) use ($event) {
-                $query->where('name', 'like', $event->name.' - %')
-                    ->orWhere('name', $event->name);
-            });
+            ->where('event_id', $event->id);
 
         if ($startAt && $endAt) {
             $guestTicketsQuery->whereBetween('created_at', [$startAt, $endAt]);
@@ -77,10 +74,7 @@ class EventInsightsController extends Controller
             ->where(function ($query) {
                 $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
             })
-            ->where(function ($query) use ($event) {
-                $query->where('name', 'like', $event->name.' - %')
-                    ->orWhere('name', $event->name);
-            });
+            ->where('event_id', $event->id);
 
         if (! $startAt || ! $endAt) {
             $paidCheckInsQuery = Ticket::query()
@@ -88,15 +82,12 @@ class EventInsightsController extends Controller
                 ->where(function ($query) {
                     $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
                 })
-                ->where(function ($query) use ($event) {
-                    $query->where('name', 'like', $event->name.' - %')
-                        ->orWhere('name', $event->name);
-                });
+                ->where('event_id', $event->id);
         }
 
         $paidCheckedIn = (clone $paidCheckInsQuery)->count();
 
-        $scanLogsQuery = ScanLog::query()->where('event_name', $event->name);
+        $scanLogsQuery = ScanLog::query()->where('event_id', $event->id);
         if ($startAt && $endAt) {
             $scanLogsQuery->whereBetween('scanned_at', [$startAt, $endAt]);
         }
@@ -138,10 +129,7 @@ class EventInsightsController extends Controller
     private function eventOrderItemsQuery(Event $event, ?Carbon $startAt, ?Carbon $endAt)
     {
         return OrderItem::query()
-            ->where(function ($query) use ($event) {
-                $query->where('ticket_name', 'like', $event->name.' - %')
-                    ->orWhere('ticket_name', $event->name);
-            })
+            ->where('event_id', $event->id)
             ->whereHas('order', function ($query) use ($startAt, $endAt) {
                 $query->where('status', 'paid')
                     ->includedInStatistics();

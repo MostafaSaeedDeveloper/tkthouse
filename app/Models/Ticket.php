@@ -12,6 +12,7 @@ class Ticket extends Model
     protected $fillable = [
         'order_id',
         'order_item_id',
+        'event_id',
         'name',
         'source',
         'guest_type',
@@ -36,6 +37,11 @@ class Ticket extends Model
             'checked_in_at' => 'datetime',
             'canceled_at' => 'datetime',
         ];
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function orderItems()
