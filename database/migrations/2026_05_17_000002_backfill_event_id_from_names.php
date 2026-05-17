@@ -10,17 +10,25 @@ return new class extends Migration
         // Build name → event_id map from current event names
         $nameToEventId = DB::table('events')->pluck('id', 'name')->toArray();
 
+        // Index of existing event IDs to validate historical references
+        $existingEventIds = array_flip(DB::table('events')->pluck('id')->toArray());
+
         // Extend map with historical names stored in the activity_log
+        // Only include entries whose subject_id still exists in the events table
         DB::table('activity_log')
             ->where('subject_type', 'App\\Models\\Event')
             ->whereNotNull('subject_id')
             ->orderBy('id')
             ->get(['subject_id', 'properties'])
-            ->each(function ($log) use (&$nameToEventId) {
+            ->each(function ($log) use (&$nameToEventId, $existingEventIds) {
+                $eventId = (int) $log->subject_id;
+                if (! isset($existingEventIds[$eventId])) {
+                    return;
+                }
                 $props = json_decode((string) $log->properties, true);
                 $oldName = $props['old']['name'] ?? null;
                 if ($oldName && ! isset($nameToEventId[$oldName])) {
-                    $nameToEventId[$oldName] = (int) $log->subject_id;
+                    $nameToEventId[$oldName] = $eventId;
                 }
             });
 
