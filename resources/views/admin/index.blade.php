@@ -46,7 +46,7 @@ a.db-filter-btn.active:focus,
 a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--gold); border-color:var(--gold); font-weight:700; }
 .db-filter-form { display:flex; gap:8px; align-items:center; }
 .db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
-.db-filter-select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; min-width: 220px; }
+.db-filter-select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; min-width: 280px; max-width: 340px; width: auto; }
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
 
 
