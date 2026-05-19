@@ -12,18 +12,28 @@ use Illuminate\Support\Str;
 
 class AffiliateController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $filterEventId  = $request->integer('event_id') ?: null;
+        $filterDateFrom = $request->input('date_from');
+        $filterDateTo   = $request->input('date_to');
+
+        $applyFilters = fn (Builder $q) => $q
+            ->when($filterEventId,  fn (Builder $q) => $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $filterEventId)))
+            ->when($filterDateFrom, fn (Builder $q) => $q->whereDate('created_at', '>=', $filterDateFrom))
+            ->when($filterDateTo,   fn (Builder $q) => $q->whereDate('created_at', '<=', $filterDateTo));
+
         $affiliates = User::query()
             ->whereNotNull('affiliate_code')
             ->withCount('referredUsers')
-            ->withCount('affiliateOrders')
+            ->withCount(['affiliateOrders' => $applyFilters])
             ->withSum([
-                'affiliateOrders as affiliate_paid_revenue' => fn (Builder $query) => $query->where('status', 'paid'),
+                'affiliateOrders as affiliate_paid_revenue' => fn (Builder $query) => $applyFilters($query)->where('status', 'paid'),
             ], 'total_amount')
             ->orderByDesc('affiliate_paid_revenue')
             ->orderByDesc('affiliate_orders_count')
             ->paginate(20)
+            ->withQueryString()
             ->through(function (User $affiliate) {
                 $affiliate->generated_affiliate_link = $this->buildAffiliateLink($affiliate);
                 $affiliate->generated_short_affiliate_link = $this->buildShortAffiliateLink($affiliate);
@@ -31,8 +41,16 @@ class AffiliateController extends Controller
                 return $affiliate;
             });
 
+        $events = Event::query()->orderBy('name')->get(['id', 'name']);
+
         return view('admin.affiliates.index', [
             'affiliates' => $affiliates,
+            'events'     => $events,
+            'filters'    => [
+                'event_id'  => $filterEventId,
+                'date_from' => $filterDateFrom,
+                'date_to'   => $filterDateTo,
+            ],
         ]);
     }
 

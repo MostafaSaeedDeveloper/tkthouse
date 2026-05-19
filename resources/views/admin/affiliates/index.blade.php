@@ -12,6 +12,30 @@
             </div>
         </div>
         <div class="block-content">
+            <form method="GET" action="{{ route('admin.affiliates.index') }}" class="row g-2 mb-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label mb-1 small">Event</label>
+                    <select name="event_id" class="form-select form-select-sm">
+                        <option value="">All Events</option>
+                        @foreach($events as $event)
+                            <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">From</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ $filters['date_from'] }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">To</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ $filters['date_to'] }}">
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-alt-primary">Filter</button>
+                    <a href="{{ route('admin.affiliates.index') }}" class="btn btn-sm btn-alt-secondary">Reset</a>
+                </div>
+            </form>
+
             <div class="table-responsive">
                 <table class="table table-bordered table-striped align-middle">
                     <thead>
