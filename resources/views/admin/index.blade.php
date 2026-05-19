@@ -169,13 +169,14 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
                 <input type="hidden" name="from" value="{{ optional($startAt)->format('Y-m-d') }}">
                 <input type="hidden" name="to" value="{{ optional($endAt)->format('Y-m-d') }}">
             @endif
-            <select name="event_id" class="db-filter-select">
+            <select name="event_id" class="db-filter-select" onchange="this.form.submit()">
                 <option value="">All Events</option>
                 @foreach($eventOptions as $eventOption)
-                    <option value="{{ $eventOption->id }}" @selected((int) $selectedEventId === (int) $eventOption->id)>{{ $eventOption->name }}</option>
+                    <option value="{{ $eventOption->id }}" @selected((int) $selectedEventId === (int) $eventOption->id)>
+                        {{ $eventOption->name }}{{ $eventOption->status === 'sold_out' ? ' (Sold Out)' : '' }}
+                    </option>
                 @endforeach
             </select>
-            <button type="submit" class="db-filter-apply">Apply Event</button>
         </form>
 
         <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
