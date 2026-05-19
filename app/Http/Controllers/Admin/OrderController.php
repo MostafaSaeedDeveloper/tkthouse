@@ -573,10 +573,7 @@ class OrderController extends Controller
         }
 
         $query->whereHas('items', function (Builder $itemsQuery) use ($event) {
-            $itemsQuery->where(function (Builder $ticketQuery) use ($event) {
-                $ticketQuery->where('ticket_name', 'like', $event->name.' - %')
-                    ->orWhere('ticket_name', $event->name);
-            });
+            $itemsQuery->where('event_id', $event->id);
         });
     }
 
@@ -588,10 +585,7 @@ class OrderController extends Controller
         }
 
         $belongs = $order->items()
-            ->where(function (Builder $query) use ($event) {
-                $query->where('ticket_name', 'like', $event->name.' - %')
-                    ->orWhere('ticket_name', $event->name);
-            })
+            ->where('event_id', $event->id)
             ->exists();
 
         abort_unless($belongs, 403);

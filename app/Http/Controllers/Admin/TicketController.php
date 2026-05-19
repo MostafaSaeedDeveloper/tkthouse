@@ -323,6 +323,7 @@ class TicketController extends Controller
 
         ScanLog::create([
             'ticket_id' => $ticket->id,
+            'event_id' => $ticket->event_id,
             'event_name' => $ticket->eventLabel(),
             'ticket_number' => $ticket->ticket_number,
             'action' => 'lookup_success',
@@ -367,6 +368,7 @@ class TicketController extends Controller
 
         ScanLog::create([
             'ticket_id' => $ticket->id,
+            'event_id' => $ticket->event_id,
             'event_name' => $ticket->eventLabel(),
             'ticket_number' => $ticket->ticket_number,
             'action' => 'status_update',

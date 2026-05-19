@@ -253,8 +253,10 @@ class GuestListController extends Controller
         string $description,
     ): void {
         $ticketNumber = $this->generateTicketNumber();
+        $event = \App\Models\Event::where('name', $eventName)->first();
 
         $ticket = Ticket::create([
+            'event_id' => $event?->id,
             'name' => $eventName.' - '.$guestType,
             'source' => 'guest_list',
             'guest_type' => $guestType,
