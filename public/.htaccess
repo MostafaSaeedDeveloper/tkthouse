@@ -5,6 +5,13 @@
 
     RewriteEngine On
 
+    # ── Maintenance Mode ──────────────────────────────────────────────────────
+    # To activate: uncomment the two lines below.
+    # To deactivate: comment them out again.
+    # RewriteRule ^$ index_maintenance.html [L]
+    # RewriteRule ^(?!index_maintenance\.html).*$ index_maintenance.html [L]
+    # ─────────────────────────────────────────────────────────────────────────
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
