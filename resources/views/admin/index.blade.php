@@ -48,6 +48,8 @@ a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--g
 .db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
 .db-filter-select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 14px; font-size:14px; min-width: 500px; width: 500px; }
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
+.db-custom-range-form { display:none; margin-bottom:12px; }
+.db-custom-range-form.is-open { display:flex; }
 
 
 /* ── Stat cards ── */
@@ -163,8 +165,13 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             </a>
         @endforeach
 
+        {{-- Custom range toggle button --}}
+        <a href="#" class="db-filter-btn {{ $selectedRange === 'custom' ? 'active' : '' }}" id="customRangeToggle">
+            📅 Custom
+        </a>
+
         <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
-            <input type="hidden" name="range" value="{{ $selectedRange }}">
+            <input type="hidden" name="range" value="{{ $selectedRange === 'custom' ? 'custom' : $selectedRange }}">
             @if($selectedRange === 'custom')
                 <input type="hidden" name="from" value="{{ optional($startAt)->format('Y-m-d') }}">
                 <input type="hidden" name="to" value="{{ optional($endAt)->format('Y-m-d') }}">
@@ -178,16 +185,18 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
                 @endforeach
             </select>
         </form>
+    </div>
 
-        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
-            <input type="hidden" name="range" value="custom">
-            @if($selectedEventId)
-                <input type="hidden" name="event_id" value="{{ $selectedEventId }}">
-            @endif
-            <input type="text" name="from" class="db-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
-            <input type="text" name="to" class="db-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
-            <button type="submit" class="db-filter-apply">Apply</button>
-        </form>
+    {{-- Custom date range form — hidden unless Custom is active --}}
+    <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form db-custom-range-form {{ $selectedRange === 'custom' ? 'is-open' : '' }}" id="customRangeForm">
+        <input type="hidden" name="range" value="custom">
+        @if($selectedEventId)
+            <input type="hidden" name="event_id" value="{{ $selectedEventId }}">
+        @endif
+        <input type="text" name="from" class="db-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
+        <input type="text" name="to" class="db-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
+        <button type="submit" class="db-filter-apply">Apply</button>
+    </form>
     </div>
 
     {{-- ╔══════════════════════════════════════╗
@@ -485,6 +494,15 @@ window.addEventListener('load', function () {
         Dashmix.helpersOnLoad(['js-flatpickr']);
     } else if (typeof flatpickr !== 'undefined') {
         flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y' });
+    }
+
+    var toggleBtn = document.getElementById('customRangeToggle');
+    var customForm = document.getElementById('customRangeForm');
+    if (toggleBtn && customForm) {
+        toggleBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            customForm.classList.toggle('is-open');
+        });
     }
 });
 </script>
