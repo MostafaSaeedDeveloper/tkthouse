@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
 class PagesController extends Controller
@@ -150,7 +151,94 @@ class PagesController extends Controller
             'images',
         ]);
 
-        return view('front.events.show', compact('event'));
+        $mapEmbedUrl  = $this->resolveMapEmbedUrl($event->map_url, $event->location);
+        $mapDirectUrl = $this->resolveMapDirectUrl($event->map_url, $event->location);
+
+        return view('front.events.show', compact('event', 'mapEmbedUrl', 'mapDirectUrl'));
+    }
+
+    private function resolveMapEmbedUrl(?string $mapUrl, ?string $fallbackLocation): ?string
+    {
+        $fallback = $fallbackLocation
+            ? 'https://www.google.com/maps?q=' . urlencode($fallbackLocation) . '&output=embed'
+            : null;
+
+        if (empty($mapUrl)) {
+            return $fallback;
+        }
+
+        $rawMapUrl = trim($mapUrl);
+
+        if (! filter_var($rawMapUrl, FILTER_VALIDATE_URL)) {
+            return 'https://www.google.com/maps?q=' . urlencode($rawMapUrl) . '&output=embed';
+        }
+
+        $parsed  = parse_url($rawMapUrl);
+        $host    = strtolower($parsed['host'] ?? '');
+        $path    = $parsed['path'] ?? '';
+        parse_str($parsed['query'] ?? '', $query);
+
+        // Resolve Google short links to the full URL first.
+        if (in_array($host, ['maps.app.goo.gl', 'goo.gl'], true)) {
+            try {
+                $response    = Http::timeout(6)->get($rawMapUrl);
+                $resolvedUrl = (string) $response->effectiveUri();
+
+                if ($resolvedUrl !== '' && $resolvedUrl !== $rawMapUrl) {
+                    $rawMapUrl = $resolvedUrl;
+                    $parsed    = parse_url($rawMapUrl);
+                    $host      = strtolower($parsed['host'] ?? '');
+                    $path      = $parsed['path'] ?? '';
+                    parse_str($parsed['query'] ?? '', $query);
+                } else {
+                    // Could not resolve — fall back to location text.
+                    return $fallback;
+                }
+            } catch (\Throwable) {
+                return $fallback;
+            }
+        }
+
+        if (str_contains($path, '/maps/embed')) {
+            return $rawMapUrl;
+        }
+
+        if (isset($query['q']) && $query['q'] !== '') {
+            return 'https://www.google.com/maps?q=' . urlencode($query['q']) . '&output=embed';
+        }
+
+        if (isset($query['query']) && $query['query'] !== '') {
+            return 'https://www.google.com/maps?q=' . urlencode($query['query']) . '&output=embed';
+        }
+
+        if (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $rawMapUrl, $coords)) {
+            return 'https://www.google.com/maps?q=' . urlencode($coords[1] . ',' . $coords[2]) . '&output=embed';
+        }
+
+        if (str_contains($path, '/place/')) {
+            $place = trim(urldecode(substr($path, strpos($path, '/place/') + 7)), '/');
+            return 'https://www.google.com/maps?q=' . urlencode(str_replace('+', ' ', $place)) . '&output=embed';
+        }
+
+        // For any other Google Maps URL we can't parse, prefer the text location.
+        if (str_contains($host, 'google.')) {
+            return $fallback ?? 'https://www.google.com/maps?q=' . urlencode($rawMapUrl) . '&output=embed';
+        }
+
+        return 'https://www.google.com/maps?q=' . urlencode($rawMapUrl) . '&output=embed';
+    }
+
+    private function resolveMapDirectUrl(?string $mapUrl, ?string $fallbackLocation): ?string
+    {
+        if (! empty($mapUrl)) {
+            return trim($mapUrl);
+        }
+
+        if (! empty($fallbackLocation)) {
+            return 'https://www.google.com/maps/search/' . urlencode($fallbackLocation);
+        }
+
+        return null;
     }
 
     public function contact()

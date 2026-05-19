@@ -580,6 +580,25 @@
         min-height: 320px;
         border: 0;
     }
+    .tkt-open-maps-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 10px 20px;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 6px;
+        color: #fff;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background 0.2s, border-color 0.2s;
+    }
+    .tkt-open-maps-btn:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.6);
+        color: #fff;
+    }
 
     @media (max-width: 767px) {
         .tkt-house-rules-desktop { display: none; }
@@ -631,66 +650,25 @@
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
-                @php
-                    $mapEmbedUrl = null;
-
-                    if (! empty($event->map_url)) {
-                        $rawMapUrl = trim($event->map_url);
-
-                        if (filter_var($rawMapUrl, FILTER_VALIDATE_URL)) {
-                            $parsedMapUrl = parse_url($rawMapUrl);
-                            $mapHost = strtolower($parsedMapUrl['host'] ?? '');
-                            $mapPath = $parsedMapUrl['path'] ?? '';
-                            parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
-
-                            if (in_array($mapHost, ['maps.app.goo.gl', 'goo.gl'], true)) {
-                                try {
-                                    $resolvedResponse = \Illuminate\Support\Facades\Http::timeout(6)->get($rawMapUrl);
-                                    $resolvedUrl = (string) $resolvedResponse->effectiveUri();
-
-                                    if ($resolvedUrl !== '') {
-                                        $rawMapUrl = $resolvedUrl;
-                                        $parsedMapUrl = parse_url($rawMapUrl);
-                                        $mapHost = strtolower($parsedMapUrl['host'] ?? '');
-                                        $mapPath = $parsedMapUrl['path'] ?? '';
-                                        parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
-                                    }
-                                } catch (\Throwable $exception) {
-                                    // Fallback handled by generic query embedding below.
-                                }
-                            }
-
-                            if (str_contains($mapPath, '/maps/embed')) {
-                                $mapEmbedUrl = $rawMapUrl;
-                            } elseif (isset($mapQuery['q']) && $mapQuery['q'] !== '') {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['q']).'&output=embed';
-                            } elseif (isset($mapQuery['query']) && $mapQuery['query'] !== '') {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['query']).'&output=embed';
-                            } elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $rawMapUrl, $coords)) {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($coords[1].','.$coords[2]).'&output=embed';
-                            } elseif (str_contains($mapPath, '/place/')) {
-                                $place = trim(urldecode(substr($mapPath, strpos($mapPath, '/place/') + 7)), '/');
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode(str_replace('+', ' ', $place)).'&output=embed';
-                            } elseif (str_contains($mapHost, 'google.')) {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                            } else {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                            }
-                        } else {
-                            $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                        }
-                    }
-                @endphp
-
-                @if($mapEmbedUrl)
+                @if($mapEmbedUrl || $mapDirectUrl)
                     <div class="tkt-event-map">
                         <h4>EVENT LOCATION MAP</h4>
-                        <iframe
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            src="{{ $mapEmbedUrl }}"
-                            allowfullscreen>
-                        </iframe>
+                        @if($mapEmbedUrl)
+                            <iframe
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="{{ $mapEmbedUrl }}"
+                                allowfullscreen>
+                            </iframe>
+                        @endif
+                        @if($mapDirectUrl)
+                            <a href="{{ $mapDirectUrl }}" target="_blank" rel="noopener noreferrer" class="tkt-open-maps-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                                </svg>
+                                Open in Maps
+                            </a>
+                        @endif
                     </div>
                 @endif
 
