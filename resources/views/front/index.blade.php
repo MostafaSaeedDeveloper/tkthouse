@@ -406,7 +406,7 @@
                 display: flex; flex-direction: column; flex: 1;
             }
             .ev-home-card-title {
-                font-family: var(--ev-font-b);
+                font-family: var(--ev-font-h);
                 font-size: 18px; font-weight: 800;
                 color: #fff; margin: 0 0 12px;
                 letter-spacing: -0.2px; line-height: 1.3;
