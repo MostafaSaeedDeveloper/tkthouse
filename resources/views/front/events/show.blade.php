@@ -743,6 +743,7 @@
 <br>
 
 <!-- Organizer (mobile only — appears before Buy Tickets) -->
+@if($event->id === 27)
 <div class="container tkt-organizer-mobile">
     <div class="tkt-organizer-box" style="margin-bottom:0;">
         <p class="org-label">Organizer</p>
@@ -758,6 +759,7 @@
     </div>
 </div>
 <br class="tkt-organizer-mobile">
+@endif
 
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!--  TICKET BOOKING SECTION                                      -->
@@ -876,6 +878,7 @@
             <div class="col-md-4 col-sm-12">
 
                 <!-- Organizer (desktop only) -->
+                @if($event->id === 27)
                 <div class="tkt-organizer-box tkt-organizer-desktop">
                     <p class="org-label">Organizer</p>
                     <div class="org-body">
@@ -888,6 +891,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 <div class="tkt-summary-box" id="orderSummary">
                     <div class="summary-header">
