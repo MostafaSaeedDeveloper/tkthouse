@@ -51,6 +51,10 @@
         <label class="form-label">Map URL (Optional)</label>
         <input name="map_url" class="form-control" value="{{ old('map_url', $event->map_url ?? '') }}">
     </div>
+    <div class="col-12 mb-3">
+        <label class="form-label">Map Embed Code (Optional)</label>
+        <textarea name="map_embed" class="form-control" rows="4" placeholder='<iframe src="https://www.google.com/maps/embed?pb=..." ...></iframe>'>{{ old('map_embed', $event->map_embed ?? '') }}</textarea>
+    </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">Status</label>
         <select name="status" class="form-select">

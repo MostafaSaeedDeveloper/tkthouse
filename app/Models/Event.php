@@ -19,6 +19,7 @@ class Event extends Model
         'event_time',
         'location',
         'map_url',
+        'map_embed',
         'description',
         'house_rules',
         'cover_image',
