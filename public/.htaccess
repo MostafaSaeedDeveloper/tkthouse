@@ -6,10 +6,14 @@
     RewriteEngine On
 
     # ── Maintenance Mode ──────────────────────────────────────────────────────
-    # To activate: uncomment the two lines below.
+    # To activate: uncomment the five lines below (RewriteCond + RewriteRule).
     # To deactivate: comment them out again.
-    # RewriteRule ^$ index_maintenance.html [L]
-    # RewriteRule ^(?!index_maintenance\.html).*$ index_maintenance.html [L]
+    # Dashboard and login stay accessible; static assets are served normally.
+    # RewriteCond %{REQUEST_FILENAME} !-f
+    # RewriteCond %{REQUEST_FILENAME} !-d
+    # RewriteCond %{REQUEST_URI} !^/dashboard
+    # RewriteCond %{REQUEST_URI} !^/login
+    # RewriteRule ^ index_maintenance.html [L]
     # ─────────────────────────────────────────────────────────────────────────
 
     # Handle Authorization Header
