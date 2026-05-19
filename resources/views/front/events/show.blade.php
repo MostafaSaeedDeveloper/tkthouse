@@ -566,6 +566,59 @@
     }
     .tkt-venue-map-mobile { display: none; }
 
+    /* ── ORGANIZER BOX ───────────────────────────────────────── */
+    .tkt-organizer-box {
+        background: #111;
+        border: 1px solid rgba(255,255,255,0.07);
+        padding: 24px;
+        margin-top: 20px;
+    }
+    .tkt-organizer-box .org-label {
+        font-family: 'Barlow', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.3);
+        margin-bottom: 16px;
+    }
+    .tkt-organizer-box .org-body {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .tkt-organizer-box .org-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 2px solid rgba(244,196,48,0.4);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    .tkt-organizer-box .org-info .org-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 20px;
+        letter-spacing: 3px;
+        color: #fff;
+        display: block;
+        margin-bottom: 8px;
+        line-height: 1;
+    }
+    .tkt-organizer-box .org-instagram {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: 'Barlow', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.5);
+        text-decoration: none;
+        letter-spacing: 0.5px;
+        transition: color 0.2s;
+    }
+    .tkt-organizer-box .org-instagram:hover { color: #f4c430; text-decoration: none; }
+    .tkt-organizer-box .org-instagram i { font-size: 16px; }
+
     .tkt-event-map {
         margin: 28px 0 12px;
     }
@@ -829,6 +882,20 @@
                         <p class="summary-note">
                             <i class="fa fa-lock"></i>{{ $isBookingClosed ? 'This event is sold out or already finished. Checkout disabled.' : 'Secure checkout · No hidden fees' }}
                         </p>
+                    </div>
+                </div>
+
+                <!-- Organizer -->
+                <div class="tkt-organizer-box">
+                    <p class="org-label">Organizer</p>
+                    <div class="org-body">
+                        <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
+                        <div class="org-info">
+                            <span class="org-name">FRACTURE COMPANY</span>
+                            <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
+                                <i class="fa fa-instagram"></i>fracture.sound
+                            </a>
+                        </div>
                     </div>
                 </div>
 
