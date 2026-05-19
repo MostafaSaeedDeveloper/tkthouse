@@ -580,6 +580,25 @@
         min-height: 320px;
         border: 0;
     }
+    .tkt-open-maps-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 10px 20px;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 6px;
+        color: #fff;
+        font-size: 14px;
+        text-decoration: none;
+        transition: background 0.2s, border-color 0.2s;
+    }
+    .tkt-open-maps-btn:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.6);
+        color: #fff;
+    }
 
     @media (max-width: 767px) {
         .tkt-house-rules-desktop { display: none; }
@@ -631,15 +650,25 @@
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
-                @if($mapEmbedUrl)
+                @if($mapEmbedUrl || $mapDirectUrl)
                     <div class="tkt-event-map">
                         <h4>EVENT LOCATION MAP</h4>
-                        <iframe
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            src="{{ $mapEmbedUrl }}"
-                            allowfullscreen>
-                        </iframe>
+                        @if($mapEmbedUrl)
+                            <iframe
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="{{ $mapEmbedUrl }}"
+                                allowfullscreen>
+                            </iframe>
+                        @endif
+                        @if($mapDirectUrl)
+                            <a href="{{ $mapDirectUrl }}" target="_blank" rel="noopener noreferrer" class="tkt-open-maps-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                                </svg>
+                                Open in Maps
+                            </a>
+                        @endif
                     </div>
                 @endif
 

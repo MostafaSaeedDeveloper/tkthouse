@@ -151,9 +151,10 @@ class PagesController extends Controller
             'images',
         ]);
 
-        $mapEmbedUrl = $this->resolveMapEmbedUrl($event->map_url, $event->location);
+        $mapEmbedUrl  = $this->resolveMapEmbedUrl($event->map_url, $event->location);
+        $mapDirectUrl = $this->resolveMapDirectUrl($event->map_url, $event->location);
 
-        return view('front.events.show', compact('event', 'mapEmbedUrl'));
+        return view('front.events.show', compact('event', 'mapEmbedUrl', 'mapDirectUrl'));
     }
 
     private function resolveMapEmbedUrl(?string $mapUrl, ?string $fallbackLocation): ?string
@@ -225,6 +226,19 @@ class PagesController extends Controller
         }
 
         return 'https://www.google.com/maps?q=' . urlencode($rawMapUrl) . '&output=embed';
+    }
+
+    private function resolveMapDirectUrl(?string $mapUrl, ?string $fallbackLocation): ?string
+    {
+        if (! empty($mapUrl)) {
+            return trim($mapUrl);
+        }
+
+        if (! empty($fallbackLocation)) {
+            return 'https://www.google.com/maps/search/' . urlencode($fallbackLocation);
+        }
+
+        return null;
     }
 
     public function contact()

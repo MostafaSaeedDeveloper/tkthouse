@@ -49,7 +49,13 @@
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Map URL (Optional)</label>
-        <input name="map_url" class="form-control" value="{{ old('map_url', $event->map_url ?? '') }}">
+        <input name="map_url" class="form-control" value="{{ old('map_url', $event->map_url ?? '') }}"
+               placeholder="https://www.google.com/maps/embed?pb=...">
+        <div class="form-text">
+            للحصول على أفضل نتيجة: افتح Google Maps → اضغط <strong>Share</strong> → <strong>Embed a map</strong> → انسخ الرابط من داخل الـ <code>src="..."</code>
+            <br>أو انسخ رابط الموقع من شريط العنوان في المتصفح مباشرة.
+            <br><span class="text-warning">⚠️ روابط maps.app.goo.gl المختصرة لا تعمل للعرض في الخريطة.</span>
+        </div>
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">Status</label>
