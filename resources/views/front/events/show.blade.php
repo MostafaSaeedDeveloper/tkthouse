@@ -573,6 +573,11 @@
         padding: 24px;
         margin-bottom: 20px;
     }
+    .tkt-organizer-mobile { display: none; }
+    @media (max-width: 767px) {
+        .tkt-organizer-mobile  { display: block; margin-bottom: 24px; }
+        .tkt-organizer-desktop { display: none; }
+    }
     .tkt-organizer-box .org-label {
         font-family: 'Barlow', sans-serif;
         font-size: 10px;
@@ -737,6 +742,23 @@
 </section>
 <br>
 
+<!-- Organizer (mobile only — appears before Buy Tickets) -->
+<div class="container tkt-organizer-mobile">
+    <div class="tkt-organizer-box" style="margin-bottom:0;">
+        <p class="org-label">Organizer</p>
+        <div class="org-body">
+            <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
+            <div class="org-info">
+                <span class="org-name">FRACTURE COMPANY</span>
+                <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-instagram"></i>fracture.sound
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<br class="tkt-organizer-mobile">
+
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!--  TICKET BOOKING SECTION                                      -->
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -853,8 +875,8 @@
             <!-- RIGHT: Order Summary -->
             <div class="col-md-4 col-sm-12">
 
-                <!-- Organizer -->
-                <div class="tkt-organizer-box">
+                <!-- Organizer (desktop only) -->
+                <div class="tkt-organizer-box tkt-organizer-desktop">
                     <p class="org-label">Organizer</p>
                     <div class="org-body">
                         <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
