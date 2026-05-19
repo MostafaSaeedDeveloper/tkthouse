@@ -49,6 +49,18 @@ a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--g
 .db-filter-select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; min-width: 220px; }
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
 
+/* ── Custom Event Dropdown ── */
+.db-custom-select { position:relative; min-width:200px; }
+.db-custom-select-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; user-select:none; white-space:nowrap; transition:border-color .2s; }
+.db-custom-select-btn:hover { border-color:rgba(245,184,0,0.4); }
+.db-custom-select.open .db-custom-select-btn { border-color:var(--gold); }
+.db-custom-select-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; min-width:100%; width:max-content; max-width:340px; background:#1a1a22; border:1px solid rgba(245,184,0,0.25); border-radius:10px; padding:6px; z-index:999; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
+.db-custom-select.open .db-custom-select-menu { display:block; }
+.db-custom-select-option { padding:9px 12px; border-radius:6px; font-size:13px; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; transition:background .15s; }
+.db-custom-select-option:hover { background:rgba(255,255,255,0.06); }
+.db-custom-select-option.selected { color:var(--gold); font-weight:600; }
+.db-sold-out-tag { font-size:10px; font-weight:700; color:#e8445a; background:rgba(232,68,90,0.12); border-radius:99px; padding:2px 7px; flex-shrink:0; }
+
 
 /* ── Stat cards ── */
 .db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -163,20 +175,38 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
             </a>
         @endforeach
 
-        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
+        {{-- Custom event dropdown --}}
+        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form" id="eventFilterForm">
             <input type="hidden" name="range" value="{{ $selectedRange }}">
             @if($selectedRange === 'custom')
                 <input type="hidden" name="from" value="{{ optional($startAt)->format('Y-m-d') }}">
                 <input type="hidden" name="to" value="{{ optional($endAt)->format('Y-m-d') }}">
             @endif
-            <select name="event_id" class="db-filter-select" onchange="this.form.submit()">
-                <option value="">All Events</option>
-                @foreach($eventOptions as $eventOption)
-                    <option value="{{ $eventOption->id }}" @selected((int) $selectedEventId === (int) $eventOption->id)>
-                        {{ $eventOption->name }}{{ $eventOption->status === 'sold_out' ? ' (Sold Out)' : '' }}
-                    </option>
-                @endforeach
-            </select>
+            <input type="hidden" name="event_id" id="eventIdInput" value="{{ $selectedEventId ?: '' }}">
+
+            <div class="db-custom-select" id="eventDropdown">
+                <div class="db-custom-select-btn" id="eventDropdownBtn">
+                    <span id="eventDropdownLabel">
+                        @if($selectedEvent)
+                            {{ $selectedEvent->name }}{{ $selectedEvent->status === 'sold_out' ? ' (Sold Out)' : '' }}
+                        @else
+                            All Events
+                        @endif
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="db-custom-select-menu" id="eventDropdownMenu">
+                    <div class="db-custom-select-option {{ !$selectedEventId ? 'selected' : '' }}" data-value="">All Events</div>
+                    @foreach($eventOptions as $eventOption)
+                        <div class="db-custom-select-option {{ (int)$selectedEventId === (int)$eventOption->id ? 'selected' : '' }}" data-value="{{ $eventOption->id }}">
+                            {{ $eventOption->name }}
+                            @if($eventOption->status === 'sold_out')
+                                <span class="db-sold-out-tag">Sold Out</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </form>
 
         <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
@@ -486,6 +516,39 @@ window.addEventListener('load', function () {
     } else if (typeof flatpickr !== 'undefined') {
         flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y' });
     }
+
+    var dropdown = document.getElementById('eventDropdown');
+    var btn      = document.getElementById('eventDropdownBtn');
+    var menu     = document.getElementById('eventDropdownMenu');
+    var input    = document.getElementById('eventIdInput');
+    var label    = document.getElementById('eventDropdownLabel');
+    var form     = document.getElementById('eventFilterForm');
+
+    if (!dropdown) return;
+
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+    });
+
+    menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
+        opt.addEventListener('click', function () {
+            var val = this.getAttribute('data-value');
+            input.value = val;
+            // update label text (strip the sold-out tag text)
+            var clone = this.cloneNode(true);
+            var tag = clone.querySelector('.db-sold-out-tag');
+            var tagText = tag ? ' (Sold Out)' : '';
+            if (tag) tag.remove();
+            label.textContent = clone.textContent.trim() + tagText;
+            dropdown.classList.remove('open');
+            form.submit();
+        });
+    });
+
+    document.addEventListener('click', function () {
+        dropdown.classList.remove('open');
+    });
 });
 </script>
 
