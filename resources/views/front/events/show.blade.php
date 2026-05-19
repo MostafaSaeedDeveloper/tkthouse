@@ -571,7 +571,7 @@
         background: #111;
         border: 1px solid rgba(255,255,255,0.07);
         padding: 24px;
-        margin-top: 20px;
+        margin-bottom: 20px;
     }
     .tkt-organizer-box .org-label {
         font-family: 'Barlow', sans-serif;
@@ -852,6 +852,21 @@
 
             <!-- RIGHT: Order Summary -->
             <div class="col-md-4 col-sm-12">
+
+                <!-- Organizer -->
+                <div class="tkt-organizer-box">
+                    <p class="org-label">Organizer</p>
+                    <div class="org-body">
+                        <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
+                        <div class="org-info">
+                            <span class="org-name">FRACTURE COMPANY</span>
+                            <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
+                                <i class="fa fa-instagram"></i>fracture.sound
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="tkt-summary-box" id="orderSummary">
                     <div class="summary-header">
                         <i class="fa fa-shopping-cart"></i>
@@ -882,20 +897,6 @@
                         <p class="summary-note">
                             <i class="fa fa-lock"></i>{{ $isBookingClosed ? 'This event is sold out or already finished. Checkout disabled.' : 'Secure checkout · No hidden fees' }}
                         </p>
-                    </div>
-                </div>
-
-                <!-- Organizer -->
-                <div class="tkt-organizer-box">
-                    <p class="org-label">Organizer</p>
-                    <div class="org-body">
-                        <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
-                        <div class="org-info">
-                            <span class="org-name">FRACTURE COMPANY</span>
-                            <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
-                                <i class="fa fa-instagram"></i>fracture.sound
-                            </a>
-                        </div>
                     </div>
                 </div>
 
