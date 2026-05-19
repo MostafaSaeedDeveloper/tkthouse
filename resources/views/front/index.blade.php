@@ -407,7 +407,7 @@
             }
             .ev-home-card-title {
                 font-family: var(--ev-font-b);
-                font-size: 15px; font-weight: 800;
+                font-size: 18px; font-weight: 800;
                 color: #fff; margin: 0 0 12px;
                 letter-spacing: -0.2px; line-height: 1.3;
                 transition: color 0.2s;
