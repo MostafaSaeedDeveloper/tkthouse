@@ -340,7 +340,7 @@
             /* Image */
             .ev-home-card-img {
                 position: relative;
-                aspect-ratio: 16/9;
+                aspect-ratio: 9/9;
                 overflow: hidden;
                 background: var(--ev-surface2);
             }
