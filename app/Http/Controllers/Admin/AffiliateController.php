@@ -41,7 +41,7 @@ class AffiliateController extends Controller
                 return $affiliate;
             });
 
-        $events = Event::query()->orderBy('name')->get(['id', 'name']);
+        $events = Event::query()->whereIn('status', ['active', 'sold_out'])->orderBy('name')->get(['id', 'name']);
 
         return view('admin.affiliates.index', [
             'affiliates' => $affiliates,
@@ -121,7 +121,7 @@ class AffiliateController extends Controller
             'referred_users' => (int) (clone $referredUsersBaseQuery)->count(),
         ];
 
-        $events = Event::query()->orderBy('name')->get(['id', 'name']);
+        $events = Event::query()->whereIn('status', ['active', 'sold_out'])->orderBy('name')->get(['id', 'name']);
 
         return view('admin.affiliates.show', [
             'affiliate'      => $affiliate,
