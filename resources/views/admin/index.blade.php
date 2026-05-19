@@ -56,8 +56,8 @@ a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--g
 .db-custom-select-btn svg { flex-shrink:0; }
 .db-custom-select-btn:hover { border-color:rgba(245,184,0,0.4); }
 .db-custom-select.open .db-custom-select-btn { border-color:var(--gold); }
-.db-custom-select-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; width:280px; background:#1a1a22; border:1px solid rgba(245,184,0,0.25); border-radius:10px; padding:6px; z-index:9999; box-shadow:0 12px 40px rgba(0,0,0,0.7); }
-.db-custom-select.open .db-custom-select-menu { display:block; }
+.db-custom-select-menu { display:none; position:fixed; width:280px; background:#1a1a22; border:1px solid rgba(245,184,0,0.25); border-radius:10px; padding:6px; z-index:99999; box-shadow:0 12px 40px rgba(0,0,0,0.7); }
+.db-custom-select-menu.is-open { display:block; }
 .db-custom-select-search { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:7px 10px; font-size:12px; outline:none; margin-bottom:6px; box-sizing:border-box; }
 .db-custom-select-search::placeholder { color:var(--muted); }
 .db-custom-select-search:focus { border-color:rgba(245,184,0,0.4); }
@@ -539,14 +539,33 @@ window.addEventListener('load', function () {
 
     if (!dropdown) return;
 
+    // Move menu to body so it's never clipped by overflow:hidden parents
+    document.body.appendChild(menu);
+
     var search = document.getElementById('eventDropdownSearch');
+    var isOpen = false;
+
+    function openMenu() {
+        var rect = btn.getBoundingClientRect();
+        menu.style.top  = (rect.bottom + window.scrollY + 6) + 'px';
+        menu.style.left = rect.left + 'px';
+        menu.classList.add('is-open');
+        btn.parentElement.classList.add('open');
+        isOpen = true;
+        setTimeout(function(){ search && search.focus(); }, 50);
+    }
+
+    function closeMenu() {
+        menu.classList.remove('is-open');
+        btn.parentElement.classList.remove('open');
+        isOpen = false;
+        if (search) { search.value = ''; }
+        menu.querySelectorAll('.db-custom-select-option').forEach(function(opt){ opt.classList.remove('hidden'); });
+    }
 
     btn.addEventListener('click', function (e) {
         e.stopPropagation();
-        dropdown.classList.toggle('open');
-        if (dropdown.classList.contains('open')) {
-            setTimeout(function(){ search && search.focus(); }, 50);
-        }
+        isOpen ? closeMenu() : openMenu();
     });
 
     if (search) {
@@ -554,32 +573,25 @@ window.addEventListener('load', function () {
             e.stopPropagation();
             var q = this.value.toLowerCase();
             menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
-                var text = opt.textContent.toLowerCase();
-                opt.classList.toggle('hidden', q.length > 0 && !text.includes(q));
+                opt.classList.toggle('hidden', q.length > 0 && !opt.textContent.toLowerCase().includes(q));
             });
         });
         search.addEventListener('click', function(e){ e.stopPropagation(); });
     }
 
     menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
-        opt.addEventListener('click', function () {
-            var val = this.getAttribute('data-value');
-            input.value = val;
+        opt.addEventListener('click', function (e) {
+            e.stopPropagation();
+            input.value = this.getAttribute('data-value');
             var nameEl = this.querySelector('span') || this;
             label.textContent = nameEl.textContent.trim();
-            if (this.querySelector('.db-sold-out-tag')) {
-                label.textContent += ' (Sold Out)';
-            }
-            dropdown.classList.remove('open');
+            if (this.querySelector('.db-sold-out-tag')) label.textContent += ' (Sold Out)';
+            closeMenu();
             form.submit();
         });
     });
 
-    document.addEventListener('click', function () {
-        dropdown.classList.remove('open');
-        if (search) search.value = '';
-        menu.querySelectorAll('.db-custom-select-option').forEach(function(opt){ opt.classList.remove('hidden'); });
-    });
+    document.addEventListener('click', function () { if (isOpen) closeMenu(); });
 });
 </script>
 
