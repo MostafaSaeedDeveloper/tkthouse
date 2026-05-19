@@ -29,9 +29,11 @@ class DashboardController extends Controller
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
         $eventOptions = Event::query()
+            ->whereIn('status', ['active', 'sold_out'])
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderBy('event_date')
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'status']);
         $selectedEventId = (int) $request->integer('event_id');
         $selectedEvent = $selectedEventId > 0
             ? $eventOptions->firstWhere('id', $selectedEventId)
