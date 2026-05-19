@@ -77,6 +77,39 @@
     <div class="block block-rounded">
         <div class="block-header block-header-default"><h3 class="block-title">Orders via Affiliate</h3></div>
         <div class="block-content">
+            <form method="GET" action="{{ route('admin.affiliates.show', $affiliate) }}" class="row g-2 mb-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label mb-1 small">Event</label>
+                    <select name="event_id" class="form-select form-select-sm">
+                        <option value="">All Events</option>
+                        @foreach($events as $event)
+                            <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">From</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ $filters['date_from'] }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">To</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ $filters['date_to'] }}">
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-alt-primary">Filter</button>
+                    <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="btn btn-sm btn-alt-secondary">Reset</a>
+                </div>
+            </form>
+
+            @if($filters['event_id'] || $filters['date_from'] || $filters['date_to'])
+                <div class="alert alert-info py-2 px-3 mb-3 small">
+                    Showing filtered results &mdash;
+                    <strong>{{ $stats['orders_total'] }}</strong> orders,
+                    <strong>{{ $stats['orders_paid'] }}</strong> paid,
+                    <strong>{{ number_format($stats['revenue_paid'], 2) }} EGP</strong> revenue.
+                </div>
+            @endif
+
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
                     <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment Method</th><th>Total</th><th class="text-end">View</th></tr></thead>
@@ -91,7 +124,7 @@
                                 <td class="text-end"><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-alt-primary"><i class="fa fa-eye"></i></a></td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="text-center py-3 text-muted">No orders tracked yet.</td></tr>
+                            <tr><td colspan="6" class="text-center py-3 text-muted">No orders found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

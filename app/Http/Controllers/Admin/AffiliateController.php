@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -64,17 +65,28 @@ class AffiliateController extends Controller
             ->with('success', 'Affiliate link has been generated successfully.');
     }
 
-    public function show(User $affiliate)
+    public function show(Request $request, User $affiliate)
     {
         abort_if(! $affiliate->affiliate_code, 404);
 
-        $ordersBaseQuery = $affiliate->affiliateOrders();
+        $filterEventId = $request->integer('event_id') ?: null;
+        $filterDateFrom = $request->input('date_from');
+        $filterDateTo   = $request->input('date_to');
+
+        $ordersBaseQuery = $affiliate->affiliateOrders()
+            ->when($filterEventId, fn (Builder $q) => $q->whereHas(
+                'items', fn (Builder $iq) => $iq->where('event_id', $filterEventId)
+            ))
+            ->when($filterDateFrom, fn (Builder $q) => $q->whereDate('created_at', '>=', $filterDateFrom))
+            ->when($filterDateTo,   fn (Builder $q) => $q->whereDate('created_at', '<=', $filterDateTo));
+
         $referredUsersBaseQuery = $affiliate->referredUsers();
 
         $orders = (clone $ordersBaseQuery)
             ->with(['customer', 'user'])
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         $referredUsers = (clone $referredUsersBaseQuery)
             ->latest()
@@ -91,13 +103,21 @@ class AffiliateController extends Controller
             'referred_users' => (int) (clone $referredUsersBaseQuery)->count(),
         ];
 
+        $events = Event::query()->orderBy('name')->get(['id', 'name']);
+
         return view('admin.affiliates.show', [
-            'affiliate' => $affiliate,
-            'orders' => $orders,
-            'referredUsers' => $referredUsers,
-            'stats' => $stats,
-            'affiliateLink' => $this->buildAffiliateLink($affiliate),
+            'affiliate'      => $affiliate,
+            'orders'         => $orders,
+            'referredUsers'  => $referredUsers,
+            'stats'          => $stats,
+            'affiliateLink'  => $this->buildAffiliateLink($affiliate),
             'shortAffiliateLink' => $this->buildShortAffiliateLink($affiliate),
+            'events'         => $events,
+            'filters'        => [
+                'event_id'  => $filterEventId,
+                'date_from' => $filterDateFrom,
+                'date_to'   => $filterDateTo,
+            ],
         ]);
     }
 
