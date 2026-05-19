@@ -50,15 +50,25 @@ a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--g
 .db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
 
 /* ── Custom Event Dropdown ── */
-.db-custom-select { position:relative; min-width:200px; }
-.db-custom-select-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; user-select:none; white-space:nowrap; transition:border-color .2s; }
+.db-custom-select { position:relative; min-width:180px; }
+.db-custom-select-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; user-select:none; white-space:nowrap; transition:border-color .2s; max-width:220px; overflow:hidden; }
+.db-custom-select-btn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.db-custom-select-btn svg { flex-shrink:0; }
 .db-custom-select-btn:hover { border-color:rgba(245,184,0,0.4); }
 .db-custom-select.open .db-custom-select-btn { border-color:var(--gold); }
-.db-custom-select-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; min-width:100%; width:max-content; max-width:340px; background:#1a1a22; border:1px solid rgba(245,184,0,0.25); border-radius:10px; padding:6px; z-index:999; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
+.db-custom-select-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; width:280px; background:#1a1a22; border:1px solid rgba(245,184,0,0.25); border-radius:10px; padding:6px; z-index:9999; box-shadow:0 12px 40px rgba(0,0,0,0.7); }
 .db-custom-select.open .db-custom-select-menu { display:block; }
-.db-custom-select-option { padding:9px 12px; border-radius:6px; font-size:13px; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:12px; transition:background .15s; }
+.db-custom-select-search { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:7px 10px; font-size:12px; outline:none; margin-bottom:6px; box-sizing:border-box; }
+.db-custom-select-search::placeholder { color:var(--muted); }
+.db-custom-select-search:focus { border-color:rgba(245,184,0,0.4); }
+.db-custom-select-list { max-height:220px; overflow-y:auto; }
+.db-custom-select-list::-webkit-scrollbar { width:4px; }
+.db-custom-select-list::-webkit-scrollbar-track { background:transparent; }
+.db-custom-select-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+.db-custom-select-option { padding:8px 10px; border-radius:6px; font-size:13px; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; transition:background .15s; }
 .db-custom-select-option:hover { background:rgba(255,255,255,0.06); }
 .db-custom-select-option.selected { color:var(--gold); font-weight:600; }
+.db-custom-select-option.hidden { display:none; }
 .db-sold-out-tag { font-size:10px; font-weight:700; color:#e8445a; background:rgba(232,68,90,0.12); border-radius:99px; padding:2px 7px; flex-shrink:0; }
 
 
@@ -196,15 +206,18 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div class="db-custom-select-menu" id="eventDropdownMenu">
-                    <div class="db-custom-select-option {{ !$selectedEventId ? 'selected' : '' }}" data-value="">All Events</div>
-                    @foreach($eventOptions as $eventOption)
-                        <div class="db-custom-select-option {{ (int)$selectedEventId === (int)$eventOption->id ? 'selected' : '' }}" data-value="{{ $eventOption->id }}">
-                            {{ $eventOption->name }}
-                            @if($eventOption->status === 'sold_out')
-                                <span class="db-sold-out-tag">Sold Out</span>
-                            @endif
-                        </div>
-                    @endforeach
+                    <input type="text" class="db-custom-select-search" id="eventDropdownSearch" placeholder="Search events...">
+                    <div class="db-custom-select-list" id="eventDropdownList">
+                        <div class="db-custom-select-option {{ !$selectedEventId ? 'selected' : '' }}" data-value="">All Events</div>
+                        @foreach($eventOptions as $eventOption)
+                            <div class="db-custom-select-option {{ (int)$selectedEventId === (int)$eventOption->id ? 'selected' : '' }}" data-value="{{ $eventOption->id }}">
+                                <span>{{ $eventOption->name }}</span>
+                                @if($eventOption->status === 'sold_out')
+                                    <span class="db-sold-out-tag">Sold Out</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </form>
@@ -526,21 +539,37 @@ window.addEventListener('load', function () {
 
     if (!dropdown) return;
 
+    var search = document.getElementById('eventDropdownSearch');
+
     btn.addEventListener('click', function (e) {
         e.stopPropagation();
         dropdown.classList.toggle('open');
+        if (dropdown.classList.contains('open')) {
+            setTimeout(function(){ search && search.focus(); }, 50);
+        }
     });
+
+    if (search) {
+        search.addEventListener('input', function (e) {
+            e.stopPropagation();
+            var q = this.value.toLowerCase();
+            menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
+                var text = opt.textContent.toLowerCase();
+                opt.classList.toggle('hidden', q.length > 0 && !text.includes(q));
+            });
+        });
+        search.addEventListener('click', function(e){ e.stopPropagation(); });
+    }
 
     menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
         opt.addEventListener('click', function () {
             var val = this.getAttribute('data-value');
             input.value = val;
-            // update label text (strip the sold-out tag text)
-            var clone = this.cloneNode(true);
-            var tag = clone.querySelector('.db-sold-out-tag');
-            var tagText = tag ? ' (Sold Out)' : '';
-            if (tag) tag.remove();
-            label.textContent = clone.textContent.trim() + tagText;
+            var nameEl = this.querySelector('span') || this;
+            label.textContent = nameEl.textContent.trim();
+            if (this.querySelector('.db-sold-out-tag')) {
+                label.textContent += ' (Sold Out)';
+            }
             dropdown.classList.remove('open');
             form.submit();
         });
@@ -548,6 +577,8 @@ window.addEventListener('load', function () {
 
     document.addEventListener('click', function () {
         dropdown.classList.remove('open');
+        if (search) search.value = '';
+        menu.querySelectorAll('.db-custom-select-option').forEach(function(opt){ opt.classList.remove('hidden'); });
     });
 });
 </script>
