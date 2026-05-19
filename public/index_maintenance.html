@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TKT House | قيد الصيانة</title>
+    <link rel="shortcut icon" href="images/favicon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="images/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --gold:       #f5b800;
+            --dark:       #060608;
+            --dark-card:  #0f0f12;
+            --border:     rgba(245, 184, 0, 0.18);
+            --text-muted: #8a8a9a;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background-color: var(--dark);
+            color: #ffffff;
+            font-family: 'Cairo', 'DM Sans', sans-serif;
+            overflow: hidden;
+        }
+
+        /* ── Star-field background ── */
+        .stars-bg {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,184,0,.07) 0%, transparent 70%),
+                var(--dark);
+            z-index: 0;
+        }
+
+        .star {
+            position: fixed;
+            border-radius: 50%;
+            background: #fff;
+            animation: twinkle var(--d, 3s) ease-in-out infinite alternate;
+            opacity: 0;
+        }
+
+        @keyframes twinkle {
+            from { opacity: 0; transform: scale(.8); }
+            to   { opacity: var(--op, .7); transform: scale(1.1); }
+        }
+
+        /* ── Layout ── */
+        .page-wrap {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        /* ── Logo ── */
+        .logo-wrap {
+            margin-bottom: 2.8rem;
+        }
+
+        .logo-wrap img {
+            max-width: 200px;
+            width: 55vw;
+            filter: drop-shadow(0 0 18px rgba(245,184,0,.35));
+        }
+
+        /* ── Gear icon ── */
+        .gear-wrap {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+        }
+
+        .gear-wrap svg {
+            width: 80px;
+            height: 80px;
+            animation: spin 8s linear infinite;
+            color: var(--gold);
+        }
+
+        .gear-wrap svg.inner {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin-rev 5s linear infinite;
+            color: #fff;
+            opacity: .15;
+        }
+
+        @keyframes spin     { to { transform: rotate(360deg); } }
+        @keyframes spin-rev { to { transform: translate(-50%,-50%) rotate(-360deg); } }
+
+        /* ── Headline ── */
+        h1 {
+            font-family: 'Syne', 'Cairo', sans-serif;
+            font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 800;
+            letter-spacing: .02em;
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: .6rem;
+        }
+
+        h1 span {
+            color: var(--gold);
+        }
+
+        .subtitle {
+            font-size: clamp(.95rem, 2.5vw, 1.15rem);
+            color: var(--text-muted);
+            max-width: 480px;
+            line-height: 1.7;
+            margin: 0 auto 2.5rem;
+        }
+
+        /* ── Divider ── */
+        .gold-line {
+            width: 64px;
+            height: 3px;
+            background: var(--gold);
+            border-radius: 2px;
+            margin: 0 auto 2.5rem;
+        }
+
+        /* ── Contact card ── */
+        .contact-card {
+            background: var(--dark-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.6rem 2.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .contact-card .icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(245,184,0,.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-card .icon svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--gold);
+        }
+
+        .contact-card .info {
+            text-align: right;
+        }
+
+        .contact-card .info small {
+            display: block;
+            color: var(--text-muted);
+            font-size: .78rem;
+            margin-bottom: .2rem;
+        }
+
+        .contact-card .info a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: color .2s;
+        }
+
+        .contact-card .info a:hover {
+            color: var(--gold);
+        }
+
+        /* ── Social ── */
+        .social-row {
+            display: flex;
+            gap: .8rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .social-row a {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: border-color .25s, color .25s, background .25s;
+        }
+
+        .social-row a:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(245,184,0,.08);
+        }
+
+        .social-row svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* ── Footer note ── */
+        .foot-note {
+            margin-top: 3rem;
+            font-size: .75rem;
+            color: rgba(255,255,255,.2);
+            letter-spacing: .05em;
+        }
+
+        /* ── Pulse ring behind gear ── */
+        .gear-wrap::before {
+            content: '';
+            position: absolute;
+            inset: -12px;
+            border-radius: 50%;
+            border: 2px solid rgba(245,184,0,.15);
+            animation: pulse-ring 3s ease-out infinite;
+        }
+
+        @keyframes pulse-ring {
+            0%   { transform: scale(.85); opacity: 1; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            .contact-card { flex-direction: column; text-align: center; }
+            .contact-card .info { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Stars -->
+    <div class="stars-bg" id="stars-bg"></div>
+
+    <div class="page-wrap">
+
+        <!-- Logo -->
+        <div class="logo-wrap">
+            <img src="images/logo-light.png" alt="TKT House" onerror="this.src='images/logo-dark.png'">
+        </div>
+
+        <!-- Animated Gear -->
+        <div class="gear-wrap" aria-hidden="true">
+            <!-- Outer gear -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+            </svg>
+        </div>
+
+        <!-- Headline -->
+        <h1>الموقع <span>تحت الصيانة</span></h1>
+
+        <div class="gold-line"></div>
+
+        <p class="subtitle">
+            نعمل على تحسين تجربتك&nbsp;✦<br>
+            سنعود قريباً بكل ما هو جديد وأفضل.
+        </p>
+
+        <!-- Contact -->
+        <div class="contact-card">
+            <div class="icon">
+                <!-- Instagram icon -->
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
+                </svg>
+            </div>
+            <div class="info">
+                <small>تابعنا على إنستقرام</small>
+                <a href="https://www.instagram.com/tkthouse.eg" target="_blank" rel="noopener">@tkthouse.eg</a>
+            </div>
+        </div>
+
+        <!-- Social Row -->
+        <div class="social-row" aria-label="Social media">
+            <a href="https://www.instagram.com/tkthouse.eg?igsh=MTd0MnJjcWJ4bG9yZA==" target="_blank" rel="noopener" aria-label="Instagram">
+                <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+            </a>
+        </div>
+
+        <p class="foot-note">© 2026 TKT House — ALL RIGHTS RESERVED</p>
+    </div>
+
+    <script>
+        // Generate random stars
+        (function () {
+            var bg = document.getElementById('stars-bg');
+            for (var i = 0; i < 120; i++) {
+                var s = document.createElement('div');
+                s.className = 'star';
+                var size = Math.random() * 2.5 + .5;
+                s.style.cssText = [
+                    'width:'  + size + 'px',
+                    'height:' + size + 'px',
+                    'top:'    + (Math.random() * 100) + '%',
+                    'left:'   + (Math.random() * 100) + '%',
+                    '--d:'    + (2 + Math.random() * 5) + 's',
+                    '--op:'   + (.3 + Math.random() * .7),
+                    'animation-delay:' + (Math.random() * 6) + 's'
+                ].join(';');
+                bg.appendChild(s);
+            }
+        })();
+    </script>
+</body>
+</html>
