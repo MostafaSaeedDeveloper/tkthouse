@@ -6,13 +6,17 @@
     RewriteEngine On
 
     # ── Maintenance Mode ──────────────────────────────────────────────────────
-    # To activate: uncomment the five lines below (RewriteCond + RewriteRule).
+    # To activate: uncomment all five lines below.
     # To deactivate: comment them out again.
-    # Dashboard and login stay accessible; static assets are served normally.
+    #
+    # Rule 1: admin/login paths → skip Rule 2 entirely (dashboard stays live).
+    # Rule 2: real static files/dirs pass through; everything else → maintenance.
+    # Note: ^/? makes the leading slash optional (handles all Apache URI formats).
+    #
+    # RewriteCond %{REQUEST_URI} ^/?(dashboard|login|password|admin) [NC]
+    # RewriteRule ^ - [S=1]
     # RewriteCond %{REQUEST_FILENAME} !-f
     # RewriteCond %{REQUEST_FILENAME} !-d
-    # RewriteCond %{REQUEST_URI} !^/dashboard
-    # RewriteCond %{REQUEST_URI} !^/login
     # RewriteRule ^ index_maintenance.html [L]
     # ─────────────────────────────────────────────────────────────────────────
 
