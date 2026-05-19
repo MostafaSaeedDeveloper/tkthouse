@@ -340,7 +340,7 @@
             /* Image */
             .ev-home-card-img {
                 position: relative;
-                aspect-ratio: 16/9;
+                aspect-ratio: 9/9;
                 overflow: hidden;
                 background: var(--ev-surface2);
             }
@@ -407,7 +407,7 @@
             }
             .ev-home-card-title {
                 font-family: var(--ev-font-h);
-                font-size: 15px; font-weight: 800;
+                font-size: 20px; font-weight: 600;
                 color: #fff; margin: 0 0 12px;
                 letter-spacing: -0.2px; line-height: 1.3;
                 transition: color 0.2s;
