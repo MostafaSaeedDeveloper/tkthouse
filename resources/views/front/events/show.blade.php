@@ -566,6 +566,64 @@
     }
     .tkt-venue-map-mobile { display: none; }
 
+    /* ── ORGANIZER BOX ───────────────────────────────────────── */
+    .tkt-organizer-box {
+        background: #111;
+        border: 1px solid rgba(255,255,255,0.07);
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+    .tkt-organizer-mobile { display: none; }
+    @media (max-width: 767px) {
+        .tkt-organizer-mobile  { display: block; margin-bottom: 24px; }
+        .tkt-organizer-desktop { display: none; }
+    }
+    .tkt-organizer-box .org-label {
+        font-family: 'Barlow', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.3);
+        margin-bottom: 16px;
+    }
+    .tkt-organizer-box .org-body {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .tkt-organizer-box .org-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 2px solid rgba(244,196,48,0.4);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    .tkt-organizer-box .org-info .org-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 20px;
+        letter-spacing: 3px;
+        color: #fff;
+        display: block;
+        margin-bottom: 8px;
+        line-height: 1;
+    }
+    .tkt-organizer-box .org-instagram {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: 'Barlow', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.5);
+        text-decoration: none;
+        letter-spacing: 0.5px;
+        transition: color 0.2s;
+    }
+    .tkt-organizer-box .org-instagram:hover { color: #f4c430; text-decoration: none; }
+    .tkt-organizer-box .org-instagram i { font-size: 16px; }
+
     .tkt-event-map {
         margin: 28px 0 12px;
     }
@@ -684,6 +742,25 @@
 </section>
 <br>
 
+<!-- Organizer (mobile only — appears before Buy Tickets) -->
+@if($event->id === 27)
+<div class="container tkt-organizer-mobile">
+    <div class="tkt-organizer-box" style="margin-bottom:0;">
+        <p class="org-label">Organizer</p>
+        <div class="org-body">
+            <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
+            <div class="org-info">
+                <span class="org-name">FRACTURE COMPANY</span>
+                <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-instagram"></i>fracture.sound
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<br class="tkt-organizer-mobile">
+@endif
+
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!--  TICKET BOOKING SECTION                                      -->
 <!-- ═══════════════════════════════════════════════════════════ -->
@@ -799,6 +876,23 @@
 
             <!-- RIGHT: Order Summary -->
             <div class="col-md-4 col-sm-12">
+
+                <!-- Organizer (desktop only) -->
+                @if($event->id === 27)
+                <div class="tkt-organizer-box tkt-organizer-desktop">
+                    <p class="org-label">Organizer</p>
+                    <div class="org-body">
+                        <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
+                        <div class="org-info">
+                            <span class="org-name">FRACTURE COMPANY</span>
+                            <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
+                                <i class="fa fa-instagram"></i>fracture.sound
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <div class="tkt-summary-box" id="orderSummary">
                     <div class="summary-header">
                         <i class="fa fa-shopping-cart"></i>
