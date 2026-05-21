@@ -43,6 +43,8 @@ return [
 
     'frontend_maintenance' => (bool) env('FRONTEND_MAINTENANCE', false),
 
+    'app_maintenance' => (bool) env('APP_MAINTENANCE', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

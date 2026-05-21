@@ -75,7 +75,7 @@ Route::middleware('auth')->group(function () {
 
 Auth::routes(['register' => false]);
 
-Route::middleware(['auth', 'admin.panel'])->prefix('dashboard')->name('admin.')->group(function () {
+Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::class])->prefix('dashboard')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
     Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware('permission:dashboard.view')->name('events.dashboard');
