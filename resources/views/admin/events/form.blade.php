@@ -252,6 +252,7 @@
             </div>
             <div class="col-lg-3 col-md-6">
                 <label class="form-label">Artist Image</label>
+                <input type="hidden" name="lineups[{{ $index }}][existing_image]" value="{{ $lineup['image'] ?? '' }}">
                 <input type="file" class="form-control lineup-image-input" name="lineup_images[{{ $index }}]" accept="image/*" data-preview-id="lineup-preview-{{ $index }}">
                 @if(!empty($lineup['_existing_image_url']))
                     <img id="lineup-preview-{{ $index }}" src="{{ $lineup['_existing_image_url'] }}" alt="Artist image" class="mt-2 rounded" style="max-height:60px; object-fit:cover;">

@@ -158,6 +158,7 @@ class EventController extends Controller
             'lineups.*.instagram' => ['nullable', 'string', 'max:255'],
             'lineups.*.performance_time' => ['nullable', 'string', 'max:100'],
             'lineups.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'lineups.*.existing_image' => ['nullable', 'string', 'max:500'],
             'lineup_images.*' => ['nullable', 'image', 'max:2048'],
         ]);
     }
@@ -204,16 +205,17 @@ class EventController extends Controller
                 continue;
             }
 
-            $imagePath = null;
             if (isset($uploadedImages[$index]) && $uploadedImages[$index] instanceof \Illuminate\Http\UploadedFile) {
                 $imagePath = $this->storePublicImage($uploadedImages[$index], 'uploads/events/lineup');
+            } else {
+                $imagePath = $lineup['existing_image'] ?? null;
             }
 
             $event->lineups()->create([
                 'artist_name' => $lineup['artist_name'],
                 'instagram' => $lineup['instagram'] ?? null,
                 'performance_time' => $lineup['performance_time'] ?? null,
-                'image' => $imagePath,
+                'image' => $imagePath ?: null,
                 'sort_order' => (int) ($lineup['sort_order'] ?? $index),
             ]);
         }
