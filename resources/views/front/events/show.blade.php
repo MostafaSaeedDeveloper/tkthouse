@@ -649,7 +649,7 @@
         }
     }
 
-    /* ── LINEUP SECTION ───────────────────────────────────────── */
+    /* ── LINEUP TABLE SECTION ─────────────────────────────────── */
     .tkt-lineup-section {
         background: #080808;
         padding: 70px 0 80px;
@@ -681,133 +681,174 @@
         font-size: 40px;
         letter-spacing: 4px;
         color: #fff;
-        margin: 0 0 50px;
+        margin: 0 0 36px;
         line-height: 1;
     }
     .tkt-lineup-section .section-title span { color: #f4c430; }
 
-    .lineup-grid {
+    /* Table wrapper */
+    .lineup-table-wrap {
+        border: 1px solid rgba(255,255,255,0.08);
+        overflow: hidden;
+    }
+
+    /* Header row */
+    .lineup-table-head {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 24px;
+        grid-template-columns: 70px 1fr 160px 180px;
+        background: rgba(244,196,48,0.08);
+        border-bottom: 1px solid rgba(244,196,48,0.25);
+        padding: 0 24px;
     }
-
-    .lineup-card {
-        position: relative;
-        background: #111;
-        border: 1px solid rgba(255,255,255,0.07);
-        overflow: hidden;
-        transition: border-color 0.3s, transform 0.3s;
-    }
-    .lineup-card:hover {
-        border-color: rgba(244,196,48,0.45);
-        transform: translateY(-4px);
-    }
-
-    .lineup-card .card-img-wrap {
-        position: relative;
-        width: 100%;
-        padding-top: 100%;
-        overflow: hidden;
-        background: #1a1a1a;
-    }
-    .lineup-card .card-img-wrap img {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.4s ease;
-    }
-    .lineup-card:hover .card-img-wrap img {
-        transform: scale(1.06);
-    }
-    .lineup-card .card-img-wrap .img-placeholder {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 48px;
-        color: rgba(244,196,48,0.2);
-    }
-
-    .lineup-card .card-body {
-        padding: 16px 18px 20px;
-    }
-
-    .lineup-card .artist-time {
+    .lineup-table-head .th {
         font-family: 'Barlow', sans-serif;
         font-size: 10px;
         font-weight: 700;
-        letter-spacing: 3px;
+        letter-spacing: 4px;
         text-transform: uppercase;
-        color: #f4c430;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
+        color: rgba(244,196,48,0.7);
+        padding: 14px 0;
     }
-    .lineup-card .artist-time i { font-size: 10px; }
 
-    .lineup-card .artist-name {
+    /* Data rows */
+    .lineup-table-row {
+        display: grid;
+        grid-template-columns: 70px 1fr 160px 180px;
+        align-items: center;
+        padding: 0 24px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        transition: background 0.2s;
+        position: relative;
+    }
+    .lineup-table-row:last-child { border-bottom: none; }
+    .lineup-table-row:hover { background: rgba(244,196,48,0.04); }
+
+    /* Gold left accent on hover */
+    .lineup-table-row::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: #f4c430;
+        transform: scaleY(0);
+        transition: transform 0.25s ease;
+    }
+    .lineup-table-row:hover::before { transform: scaleY(1); }
+
+    /* Index number */
+    .lineup-td-index {
         font-family: 'Bebas Neue', sans-serif;
         font-size: 22px;
         letter-spacing: 2px;
-        color: #fff;
-        line-height: 1.1;
-        margin-bottom: 10px;
+        color: rgba(244,196,48,0.25);
+        padding: 20px 0;
     }
 
-    .lineup-card .artist-instagram {
+    /* Artist cell */
+    .lineup-td-artist {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 16px 0;
+    }
+    .lineup-td-artist .artist-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(244,196,48,0.3);
+        flex-shrink: 0;
+        background: #1a1a1a;
+    }
+    .lineup-td-artist .avatar-placeholder {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: #1a1a1a;
+        color: rgba(244,196,48,0.3);
+        font-size: 20px;
+    }
+    .lineup-td-artist .artist-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 24px;
+        letter-spacing: 2px;
+        color: #fff;
+        line-height: 1;
+        transition: color 0.2s;
+    }
+    .lineup-table-row:hover .artist-name { color: #f4c430; }
+
+    /* Time cell */
+    .lineup-td-time {
+        font-family: 'Barlow', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        color: rgba(255,255,255,0.55);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .lineup-td-time i { color: #f4c430; font-size: 12px; }
+
+    /* Instagram cell */
+    .lineup-td-ig a {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
+        gap: 8px;
         font-family: 'Barlow', sans-serif;
         font-size: 12px;
         font-weight: 600;
-        color: rgba(255,255,255,0.4);
+        color: rgba(255,255,255,0.35);
         text-decoration: none;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.5px;
         transition: color 0.2s;
     }
-    .lineup-card .artist-instagram:hover {
-        color: #f4c430;
-        text-decoration: none;
-    }
-    .lineup-card .artist-instagram i { font-size: 14px; }
+    .lineup-td-ig a:hover { color: #f4c430; text-decoration: none; }
+    .lineup-td-ig a i { font-size: 15px; }
 
-    /* Gold accent bar at bottom */
-    .lineup-card::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #f4c430, transparent);
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.35s ease;
-    }
-    .lineup-card:hover::after {
-        transform: scaleX(1);
-    }
-
+    /* Responsive */
     @media (max-width: 767px) {
-        .lineup-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+        .tkt-lineup-section .section-title { font-size: 32px; margin-bottom: 24px; }
+
+        .lineup-table-head { display: none; }
+
+        .lineup-table-row {
+            grid-template-columns: 1fr auto;
+            grid-template-rows: auto auto;
+            padding: 14px 16px;
+            gap: 2px 12px;
         }
-        .tkt-lineup-section .section-title {
-            font-size: 32px;
-            margin-bottom: 32px;
+        .lineup-td-index { display: none; }
+        .lineup-td-artist {
+            grid-column: 1;
+            grid-row: 1;
+            gap: 12px;
+            padding: 0;
         }
-    }
-    @media (max-width: 400px) {
-        .lineup-grid {
-            grid-template-columns: 1fr;
+        .lineup-td-artist .artist-name { font-size: 20px; }
+        .lineup-td-artist .artist-avatar,
+        .lineup-td-artist .avatar-placeholder { width: 44px; height: 44px; }
+
+        .lineup-td-time {
+            grid-column: 2;
+            grid-row: 1;
+            font-size: 11px;
+            justify-content: flex-end;
         }
+        .lineup-td-ig {
+            grid-column: 1 / -1;
+            grid-row: 2;
+            padding-left: 56px;
+        }
+        .lineup-td-ig a { font-size: 11px; }
     }
 </style>
 
@@ -912,37 +953,51 @@
         <div class="section-label"><span>Who's Playing</span></div>
         <h2 class="section-title">THE <span>LINEUP</span></h2>
 
-        <div class="lineup-grid">
-            @foreach($event->lineups as $artist)
-            <div class="lineup-card">
-                <div class="card-img-wrap">
+        <div class="lineup-table-wrap">
+
+            <!-- Header -->
+            <div class="lineup-table-head">
+                <div class="th">#</div>
+                <div class="th">Artist</div>
+                <div class="th">Time</div>
+                <div class="th">Instagram</div>
+            </div>
+
+            <!-- Rows -->
+            @foreach($event->lineups as $i => $artist)
+            <div class="lineup-table-row">
+                <div class="lineup-td-index">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</div>
+
+                <div class="lineup-td-artist">
                     @if($artist->image_url)
-                        <img src="{{ $artist->image_url }}" alt="{{ $artist->artist_name }}" loading="lazy">
+                        <img class="artist-avatar" src="{{ $artist->image_url }}" alt="{{ $artist->artist_name }}" loading="lazy">
                     @else
-                        <div class="img-placeholder"><i class="fa fa-music"></i></div>
+                        <div class="avatar-placeholder"><i class="fa fa-music"></i></div>
+                    @endif
+                    <span class="artist-name">{{ strtoupper($artist->artist_name) }}</span>
+                </div>
+
+                <div class="lineup-td-time">
+                    @if($artist->performance_time)
+                        <i class="fa fa-clock-o"></i>{{ $artist->performance_time }}
+                    @else
+                        <span style="color:rgba(255,255,255,0.15);">—</span>
                     @endif
                 </div>
-                <div class="card-body">
-                    @if($artist->performance_time)
-                        <div class="artist-time">
-                            <i class="fa fa-clock-o"></i>{{ $artist->performance_time }}
-                        </div>
-                    @endif
-                    <div class="artist-name">{{ strtoupper($artist->artist_name) }}</div>
+
+                <div class="lineup-td-ig">
                     @if($artist->instagram)
-                        <a
-                            class="artist-instagram"
-                            href="https://www.instagram.com/{{ ltrim($artist->instagram, '@') }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
+                        <a href="https://www.instagram.com/{{ ltrim($artist->instagram, '@') }}" target="_blank" rel="noopener noreferrer">
                             <i class="fa fa-instagram"></i>{{ ltrim($artist->instagram, '@') }}
                         </a>
+                    @else
+                        <span style="color:rgba(255,255,255,0.15);">—</span>
                     @endif
                 </div>
             </div>
             @endforeach
-        </div>
+
+        </div><!-- /lineup-table-wrap -->
     </div>
 </div>
 @endif
