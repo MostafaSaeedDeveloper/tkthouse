@@ -648,6 +648,167 @@
             margin-top: 20px;
         }
     }
+
+    /* ── LINEUP SECTION ───────────────────────────────────────── */
+    .tkt-lineup-section {
+        background: #080808;
+        padding: 70px 0 80px;
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .tkt-lineup-section .section-label {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 10px;
+    }
+    .tkt-lineup-section .section-label span {
+        font-family: 'Barlow', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 6px;
+        text-transform: uppercase;
+        color: #f4c430;
+    }
+    .tkt-lineup-section .section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(244,196,48,0.2);
+    }
+    .tkt-lineup-section .section-title {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 40px;
+        letter-spacing: 4px;
+        color: #fff;
+        margin: 0 0 50px;
+        line-height: 1;
+    }
+    .tkt-lineup-section .section-title span { color: #f4c430; }
+
+    .lineup-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 24px;
+    }
+
+    .lineup-card {
+        position: relative;
+        background: #111;
+        border: 1px solid rgba(255,255,255,0.07);
+        overflow: hidden;
+        transition: border-color 0.3s, transform 0.3s;
+    }
+    .lineup-card:hover {
+        border-color: rgba(244,196,48,0.45);
+        transform: translateY(-4px);
+    }
+
+    .lineup-card .card-img-wrap {
+        position: relative;
+        width: 100%;
+        padding-top: 100%;
+        overflow: hidden;
+        background: #1a1a1a;
+    }
+    .lineup-card .card-img-wrap img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
+    }
+    .lineup-card:hover .card-img-wrap img {
+        transform: scale(1.06);
+    }
+    .lineup-card .card-img-wrap .img-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        color: rgba(244,196,48,0.2);
+    }
+
+    .lineup-card .card-body {
+        padding: 16px 18px 20px;
+    }
+
+    .lineup-card .artist-time {
+        font-family: 'Barlow', sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: #f4c430;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .lineup-card .artist-time i { font-size: 10px; }
+
+    .lineup-card .artist-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 22px;
+        letter-spacing: 2px;
+        color: #fff;
+        line-height: 1.1;
+        margin-bottom: 10px;
+    }
+
+    .lineup-card .artist-instagram {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: 'Barlow', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.4);
+        text-decoration: none;
+        letter-spacing: 0.3px;
+        transition: color 0.2s;
+    }
+    .lineup-card .artist-instagram:hover {
+        color: #f4c430;
+        text-decoration: none;
+    }
+    .lineup-card .artist-instagram i { font-size: 14px; }
+
+    /* Gold accent bar at bottom */
+    .lineup-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #f4c430, transparent);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.35s ease;
+    }
+    .lineup-card:hover::after {
+        transform: scaleX(1);
+    }
+
+    @media (max-width: 767px) {
+        .lineup-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .tkt-lineup-section .section-title {
+            font-size: 32px;
+            margin-bottom: 32px;
+        }
+    }
+    @media (max-width: 400px) {
+        .lineup-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <!-- Sub Banner -->
@@ -741,6 +902,50 @@
     </div>
 </section>
 <br>
+
+@if($event->lineups->count())
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  LINEUP SECTION                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="tkt-lineup-section">
+    <div class="container">
+        <div class="section-label"><span>Who's Playing</span></div>
+        <h2 class="section-title">THE <span>LINEUP</span></h2>
+
+        <div class="lineup-grid">
+            @foreach($event->lineups as $artist)
+            <div class="lineup-card">
+                <div class="card-img-wrap">
+                    @if($artist->image_url)
+                        <img src="{{ $artist->image_url }}" alt="{{ $artist->artist_name }}" loading="lazy">
+                    @else
+                        <div class="img-placeholder"><i class="fa fa-music"></i></div>
+                    @endif
+                </div>
+                <div class="card-body">
+                    @if($artist->performance_time)
+                        <div class="artist-time">
+                            <i class="fa fa-clock-o"></i>{{ $artist->performance_time }}
+                        </div>
+                    @endif
+                    <div class="artist-name">{{ strtoupper($artist->artist_name) }}</div>
+                    @if($artist->instagram)
+                        <a
+                            class="artist-instagram"
+                            href="https://www.instagram.com/{{ ltrim($artist->instagram, '@') }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <i class="fa fa-instagram"></i>{{ ltrim($artist->instagram, '@') }}
+                        </a>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
 
 <!-- Organizer (mobile only — appears before Buy Tickets) -->
 @if($event->id === 27)
