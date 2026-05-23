@@ -148,6 +148,7 @@ class PagesController extends Controller
         $event->load([
             'tickets' => fn ($query) => $query->whereIn('status', ['active', 'sold_out'])->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderBy('price'),
             'images',
+            'lineups',
         ]);
 
         return view('front.events.show', compact('event'));

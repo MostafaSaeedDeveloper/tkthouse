@@ -1,4 +1,14 @@
 @php
+    $lineupRows = old('lineups', isset($event) ? $event->lineups->map(fn($lineup) => [
+        'artist_name' => $lineup->artist_name,
+        'instagram' => $lineup->instagram,
+        'performance_time' => $lineup->performance_time,
+        'performance_date' => $lineup->performance_date?->format('Y-m-d'),
+        'image' => $lineup->image,
+        'sort_order' => $lineup->sort_order,
+        '_existing_image_url' => $lineup->image_url,
+    ])->toArray() : []);
+
     $ticketRows = old('tickets', isset($event) ? $event->tickets->map(fn($ticket) => [
         'name' => $ticket->name,
         'price' => $ticket->price,
@@ -215,6 +225,89 @@
     @endforeach
 </div>
 
+<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+    <h4 class="h5 mb-0">Lineup Artists</h4>
+    <button type="button" class="btn btn-sm btn-alt-primary" id="add-lineup-row">Add Artist</button>
+</div>
+<div id="lineup-rows" data-next-index="{{ count($lineupRows) }}">
+    @foreach($lineupRows as $index => $lineup)
+        <div class="row border rounded p-3 mb-2 lineup-row align-items-end g-2">
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Artist Name</label>
+                <input class="form-control" name="lineups[{{ $index }}][artist_name]" value="{{ $lineup['artist_name'] ?? '' }}" placeholder="DJ / Artist name">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Instagram Handle</label>
+                <div class="input-group">
+                    <span class="input-group-text">@</span>
+                    <input class="form-control" name="lineups[{{ $index }}][instagram]" value="{{ ltrim($lineup['instagram'] ?? '', '@') }}" placeholder="username">
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4">
+                <label class="form-label">Performance Time</label>
+                <input class="form-control" name="lineups[{{ $index }}][performance_time]" value="{{ $lineup['performance_time'] ?? '' }}" placeholder="e.g. 10:00 PM">
+            </div>
+            <div class="col-lg-2 col-md-4">
+                <label class="form-label">Performance Date</label>
+                <input type="text" class="form-control js-flatpickr" name="lineups[{{ $index }}][performance_date]" value="{{ $lineup['performance_date'] ?? '' }}" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
+            </div>
+            <div class="col-lg-1 col-md-2">
+                <label class="form-label">Order</label>
+                <input type="number" min="0" class="form-control" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Artist Image</label>
+                <input type="hidden" name="lineups[{{ $index }}][existing_image]" value="{{ $lineup['image'] ?? '' }}">
+                <input type="file" class="form-control lineup-image-input" name="lineup_images[{{ $index }}]" accept="image/*" data-preview-id="lineup-preview-{{ $index }}">
+                @if(!empty($lineup['_existing_image_url']))
+                    <img id="lineup-preview-{{ $index }}" src="{{ $lineup['_existing_image_url'] }}" alt="Artist image" class="mt-2 rounded" style="max-height:60px; object-fit:cover;">
+                @else
+                    <img id="lineup-preview-{{ $index }}" src="" alt="" class="mt-2 rounded d-none" style="max-height:60px; object-fit:cover;">
+                @endif
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+                <button type="button" class="btn btn-sm btn-alt-danger remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
+            </div>
+        </div>
+    @endforeach
+</div>
+
+<template id="lineup-row-template">
+    <div class="row border rounded p-3 mb-2 lineup-row align-items-end g-2">
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label">Artist Name</label>
+            <input class="form-control" name="__LINEUPNAME__[artist_name]" placeholder="DJ / Artist name">
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label">Instagram Handle</label>
+            <div class="input-group">
+                <span class="input-group-text">@</span>
+                <input class="form-control" name="__LINEUPNAME__[instagram]" placeholder="username">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label">Performance Time</label>
+            <input class="form-control" name="__LINEUPNAME__[performance_time]" placeholder="e.g. 10:00 PM">
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label">Performance Date</label>
+            <input type="text" class="form-control js-flatpickr" name="__LINEUPNAME__[performance_date]" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
+        </div>
+        <div class="col-lg-1 col-md-2">
+            <label class="form-label">Order</label>
+            <input type="number" min="0" class="form-control" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label">Artist Image</label>
+            <input type="file" class="form-control lineup-image-input" name="lineup_images[__LINEUPINDEX__]" accept="image/*" data-preview-id="lineup-preview-__LINEUPINDEX__">
+            <img id="lineup-preview-__LINEUPINDEX__" src="" alt="" class="mt-2 rounded d-none" style="max-height:60px; object-fit:cover;">
+        </div>
+        <div class="col-12 d-flex justify-content-end">
+            <button type="button" class="btn btn-sm btn-alt-danger remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
+        </div>
+    </div>
+</template>
+
 <template id="ticket-row-template">
     <div class="row border rounded p-3 mb-2 ticket-row align-items-end g-2">
         <div class="col-lg-3 col-md-6"><label class="form-label">Ticket Name</label><input class="form-control" name="__NAME__[name]"></div>
@@ -276,6 +369,38 @@
             }
 
             btn.closest('.ticket-row, .fee-row')?.remove();
+        });
+
+        document.getElementById('add-lineup-row')?.addEventListener('click', () => {
+            const container = document.getElementById('lineup-rows');
+            const template = document.getElementById('lineup-row-template');
+            if (!container || !template) return;
+
+            const nextIndex = Number(container.dataset.nextIndex || 0);
+            let html = template.innerHTML
+                .replaceAll('__LINEUPNAME__', `lineups[${nextIndex}]`)
+                .replaceAll('__LINEUPINDEX__', String(nextIndex));
+            container.insertAdjacentHTML('beforeend', html);
+            container.dataset.nextIndex = String(nextIndex + 1);
+        });
+
+        document.addEventListener('click', (event) => {
+            const btn = event.target.closest('.remove-lineup-row');
+            if (!btn) return;
+            btn.closest('.lineup-row')?.remove();
+        });
+
+        document.addEventListener('change', (event) => {
+            const input = event.target.closest('.lineup-image-input');
+            if (!input) return;
+            const previewId = input.dataset.previewId;
+            const preview = previewId ? document.getElementById(previewId) : null;
+            if (!preview) return;
+            const file = input.files?.[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('d-none');
+            }
         });
 
         const coverInput = document.getElementById('cover_image');

@@ -42,6 +42,7 @@ class EventController extends Controller
             $this->syncTickets($event, $validated['tickets'] ?? []);
             $this->syncFees($event, $validated['fees'] ?? []);
             $this->syncImages($event, $request);
+            $this->syncLineups($event, $validated['lineups'] ?? [], $request);
 
             activity('events')->performedOn($event)->causedBy(auth()->user())->log('Event created');
         });
@@ -51,14 +52,14 @@ class EventController extends Controller
 
     public function show(Event $event)
     {
-        $event->load(['tickets', 'fees', 'images']);
+        $event->load(['tickets', 'fees', 'images', 'lineups']);
 
         return view('admin.events.show', compact('event'));
     }
 
     public function edit(Event $event)
     {
-        $event->load(['tickets', 'fees', 'images']);
+        $event->load(['tickets', 'fees', 'images', 'lineups']);
 
         return view('admin.events.edit', compact('event'));
     }
@@ -83,6 +84,7 @@ class EventController extends Controller
             $event->update($validated);
             $this->syncTickets($event, $validated['tickets'] ?? [], true);
             $this->syncFees($event, $validated['fees'] ?? [], true);
+            $this->syncLineups($event, $validated['lineups'] ?? [], $request, true);
 
             if ($request->boolean('replace_gallery')) {
                 $event->images()->delete();
@@ -151,6 +153,14 @@ class EventController extends Controller
             'fees.*.fee_type' => ['required_with:fees', 'in:percentage,fixed'],
             'fees.*.value' => ['required_with:fees', 'numeric', 'min:0'],
             'fees.*.description' => ['nullable', 'string'],
+            'lineups' => ['nullable', 'array'],
+            'lineups.*.artist_name' => ['required_with:lineups', 'string', 'max:255'],
+            'lineups.*.instagram' => ['nullable', 'string', 'max:255'],
+            'lineups.*.performance_time' => ['nullable', 'string', 'max:100'],
+            'lineups.*.performance_date' => ['nullable', 'date'],
+            'lineups.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'lineups.*.existing_image' => ['nullable', 'string', 'max:500'],
+            'lineup_images.*' => ['nullable', 'image', 'max:2048'],
         ]);
     }
 
@@ -180,6 +190,36 @@ class EventController extends Controller
             if (! empty($fee['name'])) {
                 $event->fees()->create($fee);
             }
+        }
+    }
+
+    private function syncLineups(Event $event, array $lineups, Request $request, bool $replace = false): void
+    {
+        if ($replace) {
+            $event->lineups()->delete();
+        }
+
+        $uploadedImages = $request->file('lineup_images') ?? [];
+
+        foreach ($lineups as $index => $lineup) {
+            if (empty($lineup['artist_name'])) {
+                continue;
+            }
+
+            if (isset($uploadedImages[$index]) && $uploadedImages[$index] instanceof \Illuminate\Http\UploadedFile) {
+                $imagePath = $this->storePublicImage($uploadedImages[$index], 'uploads/events/lineup');
+            } else {
+                $imagePath = $lineup['existing_image'] ?? null;
+            }
+
+            $event->lineups()->create([
+                'artist_name' => $lineup['artist_name'],
+                'instagram' => $lineup['instagram'] ?? null,
+                'performance_time' => $lineup['performance_time'] ?? null,
+                'performance_date' => $lineup['performance_date'] ?? null,
+                'image' => $imagePath ?: null,
+                'sort_order' => (int) ($lineup['sort_order'] ?? $index),
+            ]);
         }
     }
 

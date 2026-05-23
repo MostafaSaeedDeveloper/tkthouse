@@ -84,6 +84,11 @@ class Event extends Model
         return $this->hasMany(EventImage::class);
     }
 
+    public function lineups()
+    {
+        return $this->hasMany(EventLineup::class)->orderBy('sort_order');
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
