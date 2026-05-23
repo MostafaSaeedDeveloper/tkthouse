@@ -157,6 +157,7 @@ class EventController extends Controller
             'lineups.*.artist_name' => ['required_with:lineups', 'string', 'max:255'],
             'lineups.*.instagram' => ['nullable', 'string', 'max:255'],
             'lineups.*.performance_time' => ['nullable', 'string', 'max:100'],
+            'lineups.*.performance_date' => ['nullable', 'date'],
             'lineups.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'lineups.*.existing_image' => ['nullable', 'string', 'max:500'],
             'lineup_images.*' => ['nullable', 'image', 'max:2048'],
@@ -215,6 +216,7 @@ class EventController extends Controller
                 'artist_name' => $lineup['artist_name'],
                 'instagram' => $lineup['instagram'] ?? null,
                 'performance_time' => $lineup['performance_time'] ?? null,
+                'performance_date' => $lineup['performance_date'] ?? null,
                 'image' => $imagePath ?: null,
                 'sort_order' => (int) ($lineup['sort_order'] ?? $index),
             ]);

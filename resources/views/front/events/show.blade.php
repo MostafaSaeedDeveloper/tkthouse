@@ -695,7 +695,7 @@
     /* Header row */
     .lineup-table-head {
         display: grid;
-        grid-template-columns: 70px 1fr 160px 180px;
+        grid-template-columns: 70px 1fr 150px 160px 180px;
         background: rgba(244,196,48,0.08);
         border-bottom: 1px solid rgba(244,196,48,0.25);
         padding: 0 24px;
@@ -713,7 +713,7 @@
     /* Data rows */
     .lineup-table-row {
         display: grid;
-        grid-template-columns: 70px 1fr 160px 180px;
+        grid-template-columns: 70px 1fr 150px 160px 180px;
         align-items: center;
         padding: 0 24px;
         border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -798,6 +798,19 @@
     }
     .lineup-td-time i { color: #f4c430; font-size: 12px; }
 
+    /* Date cell */
+    .lineup-td-date {
+        font-family: 'Barlow', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.55);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .lineup-td-date i { color: #f4c430; font-size: 12px; }
+
     /* Instagram cell */
     .lineup-td-ig a {
         display: inline-flex;
@@ -822,7 +835,7 @@
 
         .lineup-table-row {
             grid-template-columns: 1fr auto;
-            grid-template-rows: auto auto;
+            grid-template-rows: auto auto auto;
             padding: 14px 16px;
             gap: 2px 12px;
         }
@@ -843,9 +856,15 @@
             font-size: 11px;
             justify-content: flex-end;
         }
-        .lineup-td-ig {
+        .lineup-td-date {
             grid-column: 1 / -1;
             grid-row: 2;
+            padding-left: 56px;
+            font-size: 11px;
+        }
+        .lineup-td-ig {
+            grid-column: 1 / -1;
+            grid-row: 3;
             padding-left: 56px;
         }
         .lineup-td-ig a { font-size: 11px; }
@@ -959,6 +978,7 @@
             <div class="lineup-table-head">
                 <div class="th">#</div>
                 <div class="th">Artist</div>
+                <div class="th">Date</div>
                 <div class="th">Time</div>
                 <div class="th">Instagram</div>
             </div>
@@ -975,6 +995,14 @@
                         <div class="avatar-placeholder"><i class="fa fa-music"></i></div>
                     @endif
                     <span class="artist-name">{{ strtoupper($artist->artist_name) }}</span>
+                </div>
+
+                <div class="lineup-td-date">
+                    @if($artist->performance_date)
+                        <i class="fa fa-calendar"></i>{{ $artist->performance_date->format('d M Y') }}
+                    @else
+                        <span style="color:rgba(255,255,255,0.15);">—</span>
+                    @endif
                 </div>
 
                 <div class="lineup-td-time">

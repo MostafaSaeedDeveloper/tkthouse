@@ -15,9 +15,17 @@ class EventLineup extends Model
         'artist_name',
         'instagram',
         'performance_time',
+        'performance_date',
         'image',
         'sort_order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'performance_date' => 'date',
+        ];
+    }
 
     public function event()
     {

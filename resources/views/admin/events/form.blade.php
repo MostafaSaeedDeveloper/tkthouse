@@ -3,6 +3,7 @@
         'artist_name' => $lineup->artist_name,
         'instagram' => $lineup->instagram,
         'performance_time' => $lineup->performance_time,
+        'performance_date' => $lineup->performance_date?->format('Y-m-d'),
         'image' => $lineup->image,
         'sort_order' => $lineup->sort_order,
         '_existing_image_url' => $lineup->image_url,
@@ -246,6 +247,10 @@
                 <label class="form-label">Performance Time</label>
                 <input class="form-control" name="lineups[{{ $index }}][performance_time]" value="{{ $lineup['performance_time'] ?? '' }}" placeholder="e.g. 10:00 PM">
             </div>
+            <div class="col-lg-2 col-md-4">
+                <label class="form-label">Performance Date</label>
+                <input type="text" class="form-control js-flatpickr" name="lineups[{{ $index }}][performance_date]" value="{{ $lineup['performance_date'] ?? '' }}" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
+            </div>
             <div class="col-lg-1 col-md-2">
                 <label class="form-label">Order</label>
                 <input type="number" min="0" class="form-control" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
@@ -283,6 +288,10 @@
         <div class="col-lg-2 col-md-4">
             <label class="form-label">Performance Time</label>
             <input class="form-control" name="__LINEUPNAME__[performance_time]" placeholder="e.g. 10:00 PM">
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label">Performance Date</label>
+            <input type="text" class="form-control js-flatpickr" name="__LINEUPNAME__[performance_date]" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
         </div>
         <div class="col-lg-1 col-md-2">
             <label class="form-label">Order</label>
