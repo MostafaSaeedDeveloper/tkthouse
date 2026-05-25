@@ -167,7 +167,7 @@
                                     </div>
                                     <div class="contact-field">
                                         <label for="contact-phone">Phone Number *</label>
-                                        <input id="contact-phone" placeholder="+20 100 000 0000" name="phone" type="text" value="{{ old('phone') }}" required>
+                                        <input id="contact-phone" placeholder="+20 100 000 0000" name="phone" type="tel" data-phone-intl value="{{ old('phone') }}" required>
                                     </div>
                                     <div class="contact-field">
                                         <label for="contact-email">Email Address *</label>

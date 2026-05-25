@@ -315,7 +315,7 @@
                             </div>
                             <div class="auth-field" style="margin-top:14px;margin-bottom:0">
                                 <label>Phone Number</label>
-                                <input type="text" name="phone" placeholder="+1 234 567 890" value="{{ old('phone') }}" required>
+                                <input type="tel" name="phone" data-phone-intl placeholder="+1 234 567 890" value="{{ old('phone') }}" required>
                             </div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
                                 <div class="auth-field" style="margin-bottom:0">
@@ -463,6 +463,8 @@
 
         <!--Jquery Library-->
         <script src="{{ asset('js/jquery.js') }}"></script>
+        <!-- intl-tel-input -->
+        <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/intlTelInput.min.js"></script>
     	<!--Bootstrap core JavaScript-->
         <script src="{{ asset('js/bootstrap.js') }}"></script>
         <!--Slick Slider JavaScript-->
@@ -700,6 +702,64 @@
                     }
                 }, true);
             })();
+        </script>
+        <script>
+        (function () {
+            var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/utils.js';
+
+            function initPhoneInput(input) {
+                if (input._itiInstance || !window.intlTelInput) return;
+                var iti = window.intlTelInput(input, {
+                    separateDialCode: true,
+                    initialCountry: 'eg',
+                    preferredCountries: ['eg', 'sa', 'ae', 'us', 'gb'],
+                    utilsScript: ITI_UTILS
+                });
+                input._itiInstance = iti;
+                var form = input.closest('form');
+                if (form && !form._itiSubmitBound) {
+                    form._itiSubmitBound = true;
+                    form.addEventListener('submit', function () {
+                        form.querySelectorAll('[data-phone-intl]').forEach(function (inp) {
+                            if (inp._itiInstance) {
+                                var num = inp._itiInstance.getNumber();
+                                if (num) inp.value = num;
+                            }
+                        });
+                    });
+                }
+            }
+
+            function initAll(root) {
+                (root || document).querySelectorAll('[data-phone-intl]:not([data-iti-ready])').forEach(function (el) {
+                    el.setAttribute('data-iti-ready', '1');
+                    initPhoneInput(el);
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () { initAll(); });
+            } else {
+                initAll();
+            }
+
+            var obs = new MutationObserver(function (muts) {
+                muts.forEach(function (m) {
+                    m.addedNodes.forEach(function (n) {
+                        if (n.nodeType !== 1) return;
+                        if (n.matches && n.matches('[data-phone-intl]')) {
+                            n.setAttribute('data-iti-ready', '1');
+                            initPhoneInput(n);
+                        } else {
+                            initAll(n);
+                        }
+                    });
+                });
+            });
+            obs.observe(document.body, { childList: true, subtree: true });
+
+            window.initPhoneInputs = initAll;
+        })();
         </script>
   </body>
 

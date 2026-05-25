@@ -215,7 +215,7 @@
                             </div>
                             <div class="co-row cols-2">
                                 <div class="co-field"><label>Email</label> <input type="email" name="email" placeholder="you@example.com" value="{{ old('email',$buyer['email']) }}" required></div>
-                                <div class="co-field"><label>Phone</label> <input name="phone" placeholder="+1 234 567 890"   value="{{ old('phone',$buyer['phone']) }}"></div>
+                                <div class="co-field"><label>Phone</label> <input type="tel" name="phone" data-phone-intl placeholder="+1 234 567 890" value="{{ old('phone',$buyer['phone']) }}"></div>
                             </div>
                         </div>
 
@@ -247,7 +247,7 @@
                                     </div>
                                     <div class="co-row cols-2">
                                         <div class="co-field"><label>Name</label> <input type="text" name="attendees[{{ $index }}][name]"  value="{{ old('attendees.'.$index.'.name') }}"  required></div>
-                                        <div class="co-field"><label>Phone</label><input type="text" name="attendees[{{ $index }}][phone]" value="{{ old('attendees.'.$index.'.phone') }}" required></div>
+                                        <div class="co-field"><label>Phone</label><input type="tel" name="attendees[{{ $index }}][phone]" data-phone-intl value="{{ old('attendees.'.$index.'.phone') }}" required></div>
                                     </div>
                                     <div class="co-row cols-2">
                                         <div class="co-field"><label>Email</label><input type="email" name="attendees[{{ $index }}][email]" value="{{ old('attendees.'.$index.'.email') }}" required></div>
@@ -549,7 +549,7 @@
                                             <div class="co-field"><label>Holder Name</label> <input type="text"  name="items[{{ $i }}][holder_name]"  value="{{ $item['holder_name']??''  }}" required></div>
                                             <div class="co-field"><label>Holder Email</label><input type="email" name="items[{{ $i }}][holder_email]" value="{{ $item['holder_email']??'' }}" required></div>
                                         </div>
-                                        <div class="co-field" style="max-width:280px;"><label>Holder Phone</label><input type="text" name="items[{{ $i }}][holder_phone]" value="{{ $item['holder_phone']??'' }}"></div>
+                                        <div class="co-field" style="max-width:280px;"><label>Holder Phone</label><input type="tel" name="items[{{ $i }}][holder_phone]" data-phone-intl value="{{ $item['holder_phone']??'' }}"></div>
                                     </div>
                                 </div>
                             @endforeach
@@ -594,7 +594,7 @@
                             <div class="co-field"><label>Holder Name</label> <input type="text"  data-name="holder_name"  required></div>
                             <div class="co-field"><label>Holder Email</label><input type="email" data-name="holder_email" required></div>
                         </div>
-                        <div class="co-field" style="max-width:280px;"><label>Holder Phone</label><input type="text" data-name="holder_phone"></div>
+                        <div class="co-field" style="max-width:280px;"><label>Holder Phone</label><input type="tel" data-name="holder_phone" data-phone-intl></div>
                     </div>
                 </div>
             </template>

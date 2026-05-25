@@ -104,7 +104,7 @@
 
                             <div class="auth-field">
                                 <label>Phone Number</label>
-                                <input type="text" name="phone" value="{{ old('phone') }}"
+                                <input type="tel" name="phone" data-phone-intl value="{{ old('phone') }}"
                                     placeholder="01XXXXXXXXX"
                                     class="{{ $errors->has('phone') ? 'is-invalid' : '' }}" required>
                                 @error('phone')<div class="auth-error">{{ $message }}</div>@enderror

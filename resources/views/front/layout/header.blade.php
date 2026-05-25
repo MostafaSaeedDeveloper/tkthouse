@@ -79,6 +79,38 @@
 
         <!-- Responsive CSS -->
         <link href="{{ asset('css/responsive.css') }}" rel="stylesheet">
+
+        <!-- intl-tel-input -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
+        <style>
+        /* intl-tel-input dark theme */
+        .iti { display: block !important; width: 100%; }
+        .iti__selected-country { background: transparent !important; border-right: 1px solid rgba(255,255,255,0.1) !important; }
+        .iti__selected-country:hover { background: rgba(255,255,255,0.04) !important; }
+        .iti__selected-dial-code { color: #c8c8d8 !important; font-size: 13px !important; }
+        .iti__arrow { border-top-color: #6b6b7e !important; }
+        .iti--open .iti__arrow { border-bottom-color: #6b6b7e !important; }
+        .iti__country-list {
+            background: #1a1a24 !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+            border-radius: 8px !important;
+            z-index: 99999 !important;
+        }
+        .iti__search-input {
+            background: #111118 !important;
+            border: none !important;
+            border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+            color: #e8e8ef !important;
+            padding: 9px 12px !important;
+        }
+        .iti__search-input::placeholder { color: #4a4a5e !important; }
+        .iti__country { color: #c8c8d8 !important; }
+        .iti__country:hover, .iti__country.iti__highlight { background: rgba(245,184,0,0.1) !important; }
+        .iti__country-name { color: #c8c8d8 !important; }
+        .iti__dial-code { color: #6b6b7e !important; }
+        .iti__divider { border-color: rgba(255,255,255,0.07) !important; }
+        </style>
     </head>
 
     <body class="msl-black" data-authenticated="{{ auth()->check() ? "1" : "0" }}">
