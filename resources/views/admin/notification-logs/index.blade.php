@@ -166,6 +166,9 @@
                                         'blocked'       => 'ds-hard-fail',
                                         'spam'          => 'ds-spam',
                                         'unsubscribed'  => 'ds-unsub',
+                                        'wa_sent'       => 'ds-wa-sent',
+                                        'wa_delivered'  => 'ds-wa-delivered',
+                                        'wa_read'       => 'ds-wa-read',
                                         default         => 'ds-other',
                                     };
                                     $dsLabel = match($ds) {
@@ -179,11 +182,14 @@
                                         'spam'          => 'Spam',
                                         'unsubscribed'  => 'Unsubscribed',
                                         'queued'        => 'Queued',
+                                        'wa_sent'       => '✓ Sent',
+                                        'wa_delivered'  => '✓✓ Delivered',
+                                        'wa_read'       => '✓✓ Read',
                                         default         => ucfirst(str_replace('_', ' ', $ds)),
                                     };
                                 @endphp
                                 <span class="notif-ds-badge {{ $dsClass }}">{{ $dsLabel }}</span>
-                            @elseif($log->channel === 'email' && $log->status === 'sent')
+                            @elseif($log->status === 'sent' && $log->message_id)
                                 <span class="notif-ds-badge ds-pending">Pending…</span>
                             @else
                                 <span class="text-muted" style="font-size:12px">—</span>
@@ -329,6 +335,9 @@ input.notif-filter-input[type="text"] { flex: 1; min-width: 180px; }
 .ds-spam        { background: rgba(239,68,68,0.15);   color: #fca5a5; }
 .ds-unsub       { background: rgba(107,114,128,0.15); color: #9ca3af; }
 .ds-pending     { background: rgba(107,114,128,0.12); color: #6b7280; }
+.ds-wa-sent     { background: rgba(107,114,128,0.15); color: #9ca3af; }
+.ds-wa-delivered{ background: rgba(34,197,94,0.15);  color: #86efac; }
+.ds-wa-read     { background: rgba(59,130,246,0.20);  color: #93c5fd; }
 .ds-other       { background: rgba(107,114,128,0.12); color: #9ca3af; }
 
 /* Detail button */

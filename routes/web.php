@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\NotificationLogController;
 use App\Http\Controllers\BrevoWebhookController;
+use App\Http\Controllers\UltramsgWebhookController;
 use App\Http\Controllers\Admin\AffiliateController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -40,6 +41,7 @@ Route::middleware(\App\Http\Middleware\FrontendMaintenance::class)->group(functi
 });
 
 Route::post('/webhooks/brevo', [BrevoWebhookController::class, 'handle'])->name('webhooks.brevo');
+Route::post('/webhooks/ultramsg', [UltramsgWebhookController::class, 'handle'])->name('webhooks.ultramsg');
 
 Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
 

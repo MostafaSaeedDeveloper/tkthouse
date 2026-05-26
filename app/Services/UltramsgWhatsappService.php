@@ -69,7 +69,7 @@ class UltramsgWhatsappService
         $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
 
         try {
-            $this->sendDocumentWithFallbacks(
+            $msgId = $this->sendDocumentWithFallbacks(
                 phone: $phone,
                 ticketNumber: (string) $ticket->ticket_number,
                 caption: $caption,
@@ -85,6 +85,7 @@ class UltramsgWhatsappService
                 'ticket_id' => $ticket->id,
                 'subject' => $subject,
                 'status' => 'sent',
+                'message_id' => $msgId,
             ]);
         } catch (Throwable $exception) {
             NotificationLog::logWhatsapp([
@@ -161,7 +162,7 @@ class UltramsgWhatsappService
             $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
 
             try {
-                $this->sendDocumentWithFallbacks(
+                $msgId = $this->sendDocumentWithFallbacks(
                     phone: $phone,
                     ticketNumber: (string) $ticket->ticket_number,
                     caption: $caption,
@@ -177,6 +178,7 @@ class UltramsgWhatsappService
                     'order_id' => $order->id,
                     'subject' => 'Ticket #'.$ticket->ticket_number.' — '.$orderSubject,
                     'status' => 'sent',
+                    'message_id' => $msgId,
                 ]);
             } catch (Throwable $exception) {
                 Log::error('Order WhatsApp ticket send failed.', [
@@ -198,7 +200,7 @@ class UltramsgWhatsappService
         return true;
     }
 
-    private function sendTextMessage(string $phone, string $body): void
+    private function sendTextMessage(string $phone, string $body): ?string
     {
         $response = Http::asForm()
             ->timeout(20)
@@ -211,10 +213,10 @@ class UltramsgWhatsappService
 
         $response->throw();
 
-        $this->assertSent((array) $response->json(), $response->body());
+        return $this->assertSent((array) $response->json(), $response->body());
     }
 
-    private function sendDocumentMessage(string $phone, string $documentUrl, string $filename, string $caption): void
+    private function sendDocumentMessage(string $phone, string $documentUrl, string $filename, string $caption): ?string
     {
         $response = Http::asForm()
             ->timeout(30)
@@ -229,10 +231,10 @@ class UltramsgWhatsappService
 
         $response->throw();
 
-        $this->assertSent((array) $response->json(), $response->body());
+        return $this->assertSent((array) $response->json(), $response->body());
     }
 
-    private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): void
+    private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): ?string
     {
         $filename = $this->ticketFilename($ticketNumber);
         $attempts = [
@@ -256,14 +258,14 @@ class UltramsgWhatsappService
 
         foreach ($attempts as $index => $attempt) {
             try {
-                $this->sendDocumentMessage(
+                $msgId = $this->sendDocumentMessage(
                     phone: $phone,
                     documentUrl: (string) $attempt['document'],
                     filename: $filename,
                     caption: $caption,
                 );
 
-                return;
+                return $msgId;
             } catch (Throwable $exception) {
                 Log::warning('UltraMsg document attempt failed.', [
                     ...$context,
@@ -274,7 +276,7 @@ class UltramsgWhatsappService
             }
         }
 
-        $this->sendTextMessage($phone, $fallbackText);
+        return $this->sendTextMessage($phone, $fallbackText);
     }
 
     private function fetchPdfBinary(string $ticketNumber): string
@@ -285,13 +287,17 @@ class UltramsgWhatsappService
         return $response->body();
     }
 
-    private function assertSent(array $payload, string $rawBody): void
+    private function assertSent(array $payload, string $rawBody): ?string
     {
         $sent = data_get($payload, 'sent');
 
         if (! in_array($sent, [true, 'true', 1, '1'], true)) {
             throw new RuntimeException('UltraMsg accepted request but did not mark it as sent. Response: '.$rawBody);
         }
+
+        $id = (string) data_get($payload, 'id', '');
+
+        return $id !== '' ? $id : null;
     }
 
     private function apiBasePath(): string
