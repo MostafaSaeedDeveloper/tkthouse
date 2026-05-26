@@ -731,17 +731,20 @@
                     input.insertAdjacentElement('afterend', hidden);
 
                     function sync() {
+                        var num = '';
                         var country = iti.getSelectedCountryData();
                         if (window.intlTelInputUtils) {
-                            hidden.value = iti.getNumber() || '';
+                            // Explicitly request E.164 to avoid spaces/dashes
+                            num = iti.getNumber(window.intlTelInputUtils.numberFormat.E164) || '';
                         } else if (country && country.dialCode) {
-                            // Fallback before utils.js finishes loading:
-                            // strip leading zeros then prepend dial code
-                            var raw = input.value.trim().replace(/^0+/, '');
-                            hidden.value = raw ? ('+' + country.dialCode + raw) : '';
+                            // Fallback before utils.js loads: strip leading zeros
+                            var raw = input.value.trim().replace(/^0+/, '').replace(/\D/g, '');
+                            num = raw ? ('+' + country.dialCode + raw) : '';
                         } else {
-                            hidden.value = input.value;
+                            num = input.value;
                         }
+                        // Always strip formatting characters — keep only leading + and digits
+                        hidden.value = num.replace(/(?!^\+)\D/g, '');
                     }
 
                     input.addEventListener('input', sync);
