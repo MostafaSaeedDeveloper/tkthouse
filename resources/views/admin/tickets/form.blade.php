@@ -20,7 +20,7 @@
     </div>
     <div class="col-md-4">
         <label class="form-label">Holder Phone</label>
-        <input type="text" name="holder_phone" value="{{ old('holder_phone', $ticket->holder_phone ?? '') }}" class="form-control">
+        <input type="tel" name="holder_phone" data-phone-intl value="{{ old('holder_phone', $ticket->holder_phone ?? '') }}" class="form-control">
     </div>
 
     <div class="col-md-12">

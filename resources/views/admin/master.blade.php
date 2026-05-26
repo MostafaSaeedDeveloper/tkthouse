@@ -23,6 +23,30 @@
   <link rel="stylesheet" href="{{ asset('admin/assets/css/custom.css') }}">
   <link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
+  <style>
+  .iti { display: block !important; width: 100%; }
+  .iti__selected-country { background: transparent !important; border-right: 1px solid rgba(255,255,255,0.09) !important; padding: 0 8px !important; gap: 3px !important; display: flex !important; align-items: center !important; }
+  .iti__selected-country .iti__flag        { order: 1 !important; }
+  .iti__selected-country .iti__selected-dial-code { order: 2 !important; }
+  .iti__selected-country .iti__arrow       { order: 3 !important; margin-left: 3px !important; }
+  .iti__selected-country:hover { background: rgba(215,166,0,0.08) !important; }
+  .iti__selected-dial-code { color: #dbe4ff !important; font-size: 13px !important; font-weight: 500 !important; }
+  .iti__arrow { border-top-color: #7e849b !important; }
+  .iti--open .iti__arrow { border-bottom-color: #7e849b !important; }
+  .iti__flag-container   { background: transparent !important; }
+  .iti__dropdown-content { background: #181821 !important; border: 1px solid rgba(255,255,255,0.35) !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 16px 48px rgba(0,0,0,0.75) !important; z-index: 999999 !important; padding: 0 !important; }
+  .iti__country-list { background: #181821 !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; z-index: 999999 !important; max-height: 280px !important; overflow-y: auto !important; padding: 4px 0 !important; margin: 0 !important; }
+  .iti__country-list::-webkit-scrollbar { width: 4px; } .iti__country-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 99px; }
+  .iti__search-input-wrapper { background: #181821 !important; padding: 8px 10px 6px !important; }
+  .iti__search-input { display: block !important; width: 100% !important; height: 44px !important; background: #0f0f18 !important; border: 1px solid rgba(255,255,255,0.13) !important; border-radius: 10px !important; color: #dbe4ff !important; font-size: 13px !important; padding: 0 14px !important; outline: none !important; box-sizing: border-box !important; }
+  .iti__search-input::placeholder { color: #7e849b !important; }
+  .iti__divider { border-color: rgba(255,255,255,0.08) !important; margin: 2px 0 !important; }
+  .iti__country { display: flex !important; align-items: center !important; gap: 10px !important; padding: 0 14px !important; height: 46px !important; color: #dbe4ff !important; font-size: 13px !important; background: transparent !important; }
+  .iti__country:hover, .iti__country.iti__highlight { background: rgba(214,166,0,0.18) !important; }
+  .iti__country-name { color: #dbe4ff !important; flex: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+  .iti__dial-code { color: #7e849b !important; font-size: 12px !important; }
+  </style>
 
   <script src="{{ asset('admin/assets/js/setTheme.js') }}"></script>
   <style>:root{--brand-primary: {{ $primaryColor }};--brand-secondary: {{ $secondaryColor }};}</style>
@@ -207,6 +231,58 @@
 })();
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/intlTelInput.min.js"></script>
+<script>
+(function () {
+    var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/utils.js';
+    function initPhoneInput(input) {
+        if (input._itiInstance || !window.intlTelInput) return;
+        var iti = window.intlTelInput(input, {
+            separateDialCode: true, initialCountry: 'eg',
+            preferredCountries: ['eg', 'sa', 'ae', 'us', 'gb'],
+            utilsScript: ITI_UTILS
+        });
+        input._itiInstance = iti;
+        var fieldName = input.getAttribute('name');
+        if (fieldName) {
+            input.removeAttribute('name');
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden'; hidden.name = fieldName;
+            input.insertAdjacentElement('afterend', hidden);
+            function sync() {
+                var num = '', country = iti.getSelectedCountryData();
+                if (window.intlTelInputUtils) {
+                    num = iti.getNumber(window.intlTelInputUtils.numberFormat.E164) || '';
+                } else if (country && country.dialCode) {
+                    var raw = input.value.trim().replace(/^0+/, '').replace(/\D/g, '');
+                    num = raw ? ('+' + country.dialCode + raw) : '';
+                } else { num = input.value; }
+                hidden.value = num.replace(/(?!^\+)\D/g, '');
+            }
+            input.addEventListener('input', sync);
+            input.addEventListener('countrychange', sync);
+            if (iti.promise && typeof iti.promise.then === 'function') iti.promise.then(sync);
+            sync();
+        }
+    }
+    function initAll(root) {
+        (root || document).querySelectorAll('[data-phone-intl]:not([data-iti-ready])').forEach(function (el) {
+            el.setAttribute('data-iti-ready', '1'); initPhoneInput(el);
+        });
+    }
+    document.addEventListener('DOMContentLoaded', function () { initAll(); });
+    new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+            m.addedNodes.forEach(function (n) {
+                if (n.nodeType !== 1) return;
+                if (n.matches && n.matches('[data-phone-intl]')) { n.setAttribute('data-iti-ready','1'); initPhoneInput(n); }
+                else initAll(n);
+            });
+        });
+    }).observe(document.body, { childList: true, subtree: true });
+    window.initPhoneInputs = initAll;
+})();
+</script>
 @stack('scripts')
 
 </body>
