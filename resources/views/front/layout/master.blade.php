@@ -716,17 +716,41 @@
                     utilsScript: ITI_UTILS
                 });
                 input._itiInstance = iti;
-                var form = input.closest('form');
-                if (form && !form._itiSubmitBound) {
-                    form._itiSubmitBound = true;
-                    form.addEventListener('submit', function () {
-                        form.querySelectorAll('[data-phone-intl]').forEach(function (inp) {
-                            if (inp._itiInstance) {
-                                var num = inp._itiInstance.getNumber();
-                                if (num) inp.value = num;
-                            }
-                        });
-                    });
+
+                // Remove name from the visible input and create a hidden sibling
+                // that always holds the full E.164 number. This way the value is
+                // correct for both regular form submit, form.submit(), and AJAX
+                // handlers that call new FormData(form) — all of which bypass the
+                // submit event listener approach.
+                var fieldName = input.getAttribute('name');
+                if (fieldName) {
+                    input.removeAttribute('name');
+                    var hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = fieldName;
+                    input.insertAdjacentElement('afterend', hidden);
+
+                    function sync() {
+                        var country = iti.getSelectedCountryData();
+                        if (window.intlTelInputUtils) {
+                            hidden.value = iti.getNumber() || '';
+                        } else if (country && country.dialCode) {
+                            // Fallback before utils.js finishes loading:
+                            // strip leading zeros then prepend dial code
+                            var raw = input.value.trim().replace(/^0+/, '');
+                            hidden.value = raw ? ('+' + country.dialCode + raw) : '';
+                        } else {
+                            hidden.value = input.value;
+                        }
+                    }
+
+                    input.addEventListener('input', sync);
+                    input.addEventListener('countrychange', sync);
+                    sync(); // initial sync on page load
+                    // Re-sync with properly formatted E.164 once utils.js loads
+                    if (iti.promise && typeof iti.promise.then === 'function') {
+                        iti.promise.then(sync);
+                    }
                 }
             }
 
