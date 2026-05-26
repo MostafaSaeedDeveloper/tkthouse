@@ -34,7 +34,7 @@
   $canRoles = auth()->user()?->can('roles.view');
   $canPermissions = auth()->user()?->can('permissions.view');
   $canActivityLogs = auth()->user()?->can('activity-logs.view');
-  $canNotificationLogs = auth()->user()?->can('notification-logs.view');
+  $canNotificationLogs = auth()->user()?->can('activity-logs.view');
 
   $canSettings = auth()->user()?->can('settings.view');
   $canPaymentMethods = auth()->user()?->can('payment-methods.view');
