@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Mail\OrderStatusChangedMail;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Support\SystemSettings;
 use Illuminate\Support\Collection;
@@ -73,14 +74,32 @@ class PendingPaymentExpiryService
             return;
         }
 
+        $subject = 'Your order has been canceled #'.$order->order_number;
         try {
             Mail::to($order->customer->email)
                 ->send(new OrderStatusChangedMail($order, $oldStatus, 'canceled'));
+            NotificationLog::logEmail([
+                'type' => 'order_status_changed',
+                'recipient' => $order->customer->email,
+                'order_id' => $order->id,
+                'subject' => $subject,
+                'status' => 'sent',
+                'metadata' => ['from' => $oldStatus, 'to' => 'canceled', 'trigger' => 'payment_timeout'],
+            ]);
         } catch (\Throwable $exception) {
             Log::warning('Failed to send order canceled email after timeout.', [
                 'order_id' => $order->id,
                 'email' => $order->customer?->email,
                 'error' => $exception->getMessage(),
+            ]);
+            NotificationLog::logEmail([
+                'type' => 'order_status_changed',
+                'recipient' => $order->customer->email,
+                'order_id' => $order->id,
+                'subject' => $subject,
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+                'metadata' => ['from' => $oldStatus, 'to' => 'canceled', 'trigger' => 'payment_timeout'],
             ]);
         }
     }

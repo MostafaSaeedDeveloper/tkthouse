@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\GuestInvitationMail;
 use App\Models\Event;
+use App\Models\NotificationLog;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -294,10 +295,30 @@ class GuestListController extends Controller
             'event' => Event::query()->where('name', $ticket->eventLabel())->first(),
         ])->output();
 
-        Mail::to($ticket->holder_email)->send(new GuestInvitationMail(
-            ticket: $ticket,
-            pdfBinary: $pdf,
-        ));
+        $subject = 'Your invitation for '.$ticket->eventLabel();
+        try {
+            Mail::to($ticket->holder_email)->send(new GuestInvitationMail(
+                ticket: $ticket,
+                pdfBinary: $pdf,
+            ));
+            NotificationLog::logEmail([
+                'type' => 'guest_invitation',
+                'recipient' => $ticket->holder_email,
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'sent',
+            ]);
+        } catch (\Throwable $exception) {
+            NotificationLog::logEmail([
+                'type' => 'guest_invitation',
+                'recipient' => $ticket->holder_email,
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+            ]);
+            report($exception);
+        }
     }
 
 

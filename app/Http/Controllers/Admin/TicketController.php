@@ -6,6 +6,7 @@ use App\Mail\AdminTicketIssuedMail;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\IssuedTicket;
+use App\Models\NotificationLog;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ScanLog;
@@ -157,12 +158,35 @@ class TicketController extends Controller
             ? route('front.tickets.show', $issuedTicket)
             : route('front.account.tickets');
 
-        Mail::to($data['email'])->send(new AdminTicketIssuedMail(
-            ticket: $ticket,
-            showUrl: $showUrl,
-            recipientEmail: $data['email'],
-            pdfBinary: $pdf,
-        ));
+        $subject = 'Your Ticket #'.$ticket->ticket_number;
+
+        try {
+            Mail::to($data['email'])->send(new AdminTicketIssuedMail(
+                ticket: $ticket,
+                showUrl: $showUrl,
+                recipientEmail: $data['email'],
+                pdfBinary: $pdf,
+            ));
+            NotificationLog::logEmail([
+                'type' => 'admin_ticket_issued',
+                'recipient' => $data['email'],
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'sent',
+            ]);
+        } catch (Throwable $exception) {
+            NotificationLog::logEmail([
+                'type' => 'admin_ticket_issued',
+                'recipient' => $data['email'],
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+            ]);
+            report($exception);
+
+            return back()->with('error', 'Failed to send email: '.$exception->getMessage());
+        }
 
         return back()->with('success', 'Ticket sent by email successfully.');
     }

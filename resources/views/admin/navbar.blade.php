@@ -34,17 +34,19 @@
   $canRoles = auth()->user()?->can('roles.view');
   $canPermissions = auth()->user()?->can('permissions.view');
   $canActivityLogs = auth()->user()?->can('activity-logs.view');
+  $canNotificationLogs = auth()->user()?->can('notification-logs.view');
 
   $canSettings = auth()->user()?->can('settings.view');
   $canPaymentMethods = auth()->user()?->can('payment-methods.view');
 
   $showEventsSalesSection = $canReports || $canEvents || $canOrders || $canCustomers || $canAffiliates || $canPromoCodes || $canTickets;
-  $showSystemSection = $canUsers || $canRoles || $canPermissions || $canActivityLogs || $canSettings || $canPaymentMethods;
+  $showSystemSection = $canUsers || $canRoles || $canPermissions || $canActivityLogs || $canNotificationLogs || $canSettings || $canPaymentMethods;
 
   $usersMenuOpen = request()->routeIs('admin.users.*')
       || request()->routeIs('admin.roles.*')
       || request()->routeIs('admin.permissions.*')
-      || request()->routeIs('admin.activity-logs.*');
+      || request()->routeIs('admin.activity-logs.*')
+      || request()->routeIs('admin.notification-logs.*');
 
   $settingsMenuOpen = request()->routeIs('admin.settings.*')
       || request()->routeIs('admin.payment-methods.*');
@@ -209,6 +211,15 @@
                   <a class="nav-main-link {{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}"
                      href="{{ route('admin.activity-logs.index') }}">
                     <span class="nav-main-link-name">Activity Logs</span>
+                  </a>
+                </li>
+              @endif
+
+              @if($canNotificationLogs)
+                <li class="nav-main-item">
+                  <a class="nav-main-link {{ request()->routeIs('admin.notification-logs.*') ? 'active' : '' }}"
+                     href="{{ route('admin.notification-logs.index') }}">
+                    <span class="nav-main-link-name">Notification Logs</span>
                   </a>
                 </li>
               @endif
