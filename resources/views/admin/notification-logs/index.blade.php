@@ -289,6 +289,7 @@ input.notif-filter-input[type="text"] { flex: 1; min-width: 180px; }
 
 /* Modal */
 .notif-modal-backdrop {
+    display: none;
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999;
     align-items: center; justify-content: center;
 }
