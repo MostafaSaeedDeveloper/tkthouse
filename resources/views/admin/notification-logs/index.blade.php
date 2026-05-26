@@ -104,6 +104,7 @@
                         <th>Recipient</th>
                         <th>Subject / Summary</th>
                         <th style="width:90px">Status</th>
+                        <th style="width:110px">Delivery</th>
                         <th style="width:40px"></th>
                     </tr>
                 </thead>
@@ -149,6 +150,43 @@
                                 <span class="notif-badge notif-badge-failed">Failed</span>
                             @else
                                 <span class="notif-badge notif-badge-skipped">Skipped</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if($log->delivery_status)
+                                @php
+                                    $ds = $log->delivery_status;
+                                    $dsClass = match($ds) {
+                                        'delivered'     => 'ds-delivered',
+                                        'opened'        => 'ds-opened',
+                                        'clicked'       => 'ds-clicked',
+                                        'soft_bounce'   => 'ds-soft-bounce',
+                                        'hard_bounce',
+                                        'invalid_email',
+                                        'blocked'       => 'ds-hard-fail',
+                                        'spam'          => 'ds-spam',
+                                        'unsubscribed'  => 'ds-unsub',
+                                        default         => 'ds-other',
+                                    };
+                                    $dsLabel = match($ds) {
+                                        'delivered'     => 'Delivered',
+                                        'opened'        => 'Opened',
+                                        'clicked'       => 'Clicked',
+                                        'soft_bounce'   => 'Soft Bounce',
+                                        'hard_bounce'   => 'Hard Bounce',
+                                        'invalid_email' => 'Invalid Email',
+                                        'blocked'       => 'Blocked',
+                                        'spam'          => 'Spam',
+                                        'unsubscribed'  => 'Unsubscribed',
+                                        'queued'        => 'Queued',
+                                        default         => ucfirst(str_replace('_', ' ', $ds)),
+                                    };
+                                @endphp
+                                <span class="notif-ds-badge {{ $dsClass }}">{{ $dsLabel }}</span>
+                            @elseif($log->channel === 'email' && $log->status === 'sent')
+                                <span class="notif-ds-badge ds-pending">Pending…</span>
+                            @else
+                                <span class="text-muted" style="font-size:12px">—</span>
                             @endif
                         </td>
                         <td>
@@ -280,6 +318,18 @@ input.notif-filter-input[type="text"] { flex: 1; min-width: 180px; }
 .notif-badge-sent    { background: rgba(34,197,94,0.15);  color: #86efac; }
 .notif-badge-failed  { background: rgba(239,68,68,0.15);  color: #fca5a5; }
 .notif-badge-skipped { background: rgba(245,158,11,0.15); color: #fcd34d; }
+
+/* Delivery status badges */
+.notif-ds-badge { font-size: 11px; border-radius: 999px; padding: 3px 8px; font-weight: 600; white-space: nowrap; }
+.ds-delivered   { background: rgba(34,197,94,0.15);   color: #86efac; }
+.ds-opened      { background: rgba(99,102,241,0.15);  color: #a5b4fc; }
+.ds-clicked     { background: rgba(139,92,246,0.15);  color: #c4b5fd; }
+.ds-soft-bounce { background: rgba(245,158,11,0.15);  color: #fcd34d; }
+.ds-hard-fail   { background: rgba(239,68,68,0.15);   color: #fca5a5; }
+.ds-spam        { background: rgba(239,68,68,0.15);   color: #fca5a5; }
+.ds-unsub       { background: rgba(107,114,128,0.15); color: #9ca3af; }
+.ds-pending     { background: rgba(107,114,128,0.12); color: #6b7280; }
+.ds-other       { background: rgba(107,114,128,0.12); color: #9ca3af; }
 
 /* Detail button */
 .notif-detail-btn {

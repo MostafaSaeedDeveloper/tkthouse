@@ -8,12 +8,14 @@ class NotificationLog extends Model
 {
     protected $fillable = [
         'channel',
+        'message_id',
         'type',
         'recipient',
         'order_id',
         'ticket_id',
         'subject',
         'status',
+        'delivery_status',
         'error',
         'metadata',
     ];

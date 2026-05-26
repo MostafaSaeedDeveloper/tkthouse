@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\StoreAffiliateReferral::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/brevo',
+        ]);
+
         $middleware->alias([
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
             'customer.account' => \App\Http\Middleware\EnsureCustomerAccountAccess::class,
