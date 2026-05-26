@@ -90,13 +90,20 @@
         .iti__selected-country {
             background: transparent !important;
             border-right: 1px solid rgba(255,255,255,0.09) !important;
-            padding: 0 10px 0 12px !important;
-            gap: 6px !important;
+            padding: 0 8px 0 8px !important;
+            gap: 3px !important;
+            display: flex !important;
+            align-items: center !important;
         }
+        /* reorder: flag → dial code → arrow */
+        .iti__selected-country .iti__flag        { order: 1 !important; }
+        .iti__selected-country .iti__selected-dial-code { order: 2 !important; }
+        .iti__selected-country .iti__arrow       { order: 3 !important; margin-left: 3px !important; }
+
         .iti__selected-country:hover,
         .iti__selected-country[aria-expanded="true"] { background: rgba(215,166,0,0.08) !important; }
         .iti__selected-dial-code { color: #dbe4ff !important; font-size: 13px !important; font-weight: 500 !important; }
-        .iti__arrow { border-top-color: #7e849b !important; margin-left: 2px !important; }
+        .iti__arrow { border-top-color: #7e849b !important; }
         .iti--open .iti__arrow { border-bottom-color: #7e849b !important; }
 
         /* ── Nuke every possible white wrapper the library injects ── */
