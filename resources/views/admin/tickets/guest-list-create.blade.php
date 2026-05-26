@@ -94,7 +94,7 @@
         tr.innerHTML = `
             <td><input type="text" name="guests[${rowIndex}][name]" class="form-control" value="${name}" required></td>
             <td><input type="email" name="guests[${rowIndex}][email]" class="form-control" value="${email}"></td>
-            <td><input type="text" name="guests[${rowIndex}][phone]" class="form-control" value="${phone}"></td>
+            <td><input type="tel" name="guests[${rowIndex}][phone]" data-phone-intl class="form-control" value="${phone}"></td>
             <td>
                 <select name="guests[${rowIndex}][gender]" class="form-select">
                     <option value="" ${normalizedGender === '' ? 'selected' : ''}>-</option>

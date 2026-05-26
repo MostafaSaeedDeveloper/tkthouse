@@ -240,7 +240,7 @@
             @csrf
             <div style="margin-bottom:12px;">
               <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#5e5e72;margin-bottom:7px;">WhatsApp Number</label>
-              <input type="text" name="phone" class="tk-send-input" value="{{ old('phone', $ticket->holder_phone) }}" placeholder="2010xxxxxxx or +2010xxxxxxx" required>
+              <input type="tel" name="phone" data-phone-intl class="tk-send-input" value="{{ old('phone', $ticket->holder_phone) }}" placeholder="1003770730" required>
             </div>
             <button class="tk-btn tk-btn-green" type="submit"><i class="fa fa-brands fa-whatsapp"></i> Send WhatsApp</button>
           </form>

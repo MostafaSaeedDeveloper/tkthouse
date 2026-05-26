@@ -315,7 +315,7 @@
                             </div>
                             <div class="auth-field" style="margin-top:14px;margin-bottom:0">
                                 <label>Phone Number</label>
-                                <input type="text" name="phone" placeholder="+1 234 567 890" value="{{ old('phone') }}" required>
+                                <input type="tel" name="phone" data-phone-intl placeholder="+1 234 567 890" value="{{ old('phone') }}" required>
                             </div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
                                 <div class="auth-field" style="margin-bottom:0">
@@ -463,6 +463,8 @@
 
         <!--Jquery Library-->
         <script src="{{ asset('js/jquery.js') }}"></script>
+        <!-- intl-tel-input -->
+        <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/intlTelInput.min.js"></script>
     	<!--Bootstrap core JavaScript-->
         <script src="{{ asset('js/bootstrap.js') }}"></script>
         <!--Slick Slider JavaScript-->
@@ -700,6 +702,91 @@
                     }
                 }, true);
             })();
+        </script>
+        <script>
+        (function () {
+            var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/utils.js';
+
+            function initPhoneInput(input) {
+                if (input._itiInstance || !window.intlTelInput) return;
+                var iti = window.intlTelInput(input, {
+                    separateDialCode: true,
+                    initialCountry: 'eg',
+                    preferredCountries: ['eg', 'sa', 'ae', 'us', 'gb'],
+                    utilsScript: ITI_UTILS
+                });
+                input._itiInstance = iti;
+
+                // Remove name from the visible input and create a hidden sibling
+                // that always holds the full E.164 number. This way the value is
+                // correct for both regular form submit, form.submit(), and AJAX
+                // handlers that call new FormData(form) — all of which bypass the
+                // submit event listener approach.
+                var fieldName = input.getAttribute('name');
+                if (fieldName) {
+                    input.removeAttribute('name');
+                    var hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = fieldName;
+                    input.insertAdjacentElement('afterend', hidden);
+
+                    function sync() {
+                        var num = '';
+                        var country = iti.getSelectedCountryData();
+                        if (window.intlTelInputUtils) {
+                            // Explicitly request E.164 to avoid spaces/dashes
+                            num = iti.getNumber(window.intlTelInputUtils.numberFormat.E164) || '';
+                        } else if (country && country.dialCode) {
+                            // Fallback before utils.js loads: strip leading zeros
+                            var raw = input.value.trim().replace(/^0+/, '').replace(/\D/g, '');
+                            num = raw ? ('+' + country.dialCode + raw) : '';
+                        } else {
+                            num = input.value;
+                        }
+                        // Always strip formatting characters — keep only leading + and digits
+                        hidden.value = num.replace(/(?!^\+)\D/g, '');
+                    }
+
+                    input.addEventListener('input', sync);
+                    input.addEventListener('countrychange', sync);
+                    sync(); // initial sync on page load
+                    // Re-sync with properly formatted E.164 once utils.js loads
+                    if (iti.promise && typeof iti.promise.then === 'function') {
+                        iti.promise.then(sync);
+                    }
+                }
+            }
+
+            function initAll(root) {
+                (root || document).querySelectorAll('[data-phone-intl]:not([data-iti-ready])').forEach(function (el) {
+                    el.setAttribute('data-iti-ready', '1');
+                    initPhoneInput(el);
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () { initAll(); });
+            } else {
+                initAll();
+            }
+
+            var obs = new MutationObserver(function (muts) {
+                muts.forEach(function (m) {
+                    m.addedNodes.forEach(function (n) {
+                        if (n.nodeType !== 1) return;
+                        if (n.matches && n.matches('[data-phone-intl]')) {
+                            n.setAttribute('data-iti-ready', '1');
+                            initPhoneInput(n);
+                        } else {
+                            initAll(n);
+                        }
+                    });
+                });
+            });
+            obs.observe(document.body, { childList: true, subtree: true });
+
+            window.initPhoneInputs = initAll;
+        })();
         </script>
   </body>
 

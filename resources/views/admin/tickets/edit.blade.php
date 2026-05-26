@@ -103,9 +103,9 @@
               </div>
               <div class="te-field">
                 <label class="te-label">Phone</label>
-                <input class="te-input" type="text" name="holder_phone"
+                <input class="te-input" type="tel" name="holder_phone" data-phone-intl
                   value="{{ old('holder_phone', $ticket->holder_phone) }}"
-                  placeholder="+20…">
+                  placeholder="1003770730">
               </div>
             </div>
           </div>
