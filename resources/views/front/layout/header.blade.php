@@ -99,30 +99,48 @@
         .iti__arrow { border-top-color: #7e849b !important; margin-left: 2px !important; }
         .iti--open .iti__arrow { border-bottom-color: #7e849b !important; }
 
-        /* Dropdown container */
-        .iti__country-list {
-            background: #1b1b26 !important;
-            border: 1px solid rgba(255,255,255,0.13) !important;
+        /* ── Nuke every possible white wrapper the library injects ── */
+        .iti__flag-container   { background: transparent !important; }
+
+        /* v22 wraps search+list in iti__dropdown-content */
+        .iti__dropdown-content {
+            background: #181821 !important;
+            border: 1px solid rgba(255,255,255,0.35) !important;
             border-radius: 10px !important;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(215,166,0,0.06) !important;
+            overflow: hidden !important;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.75) !important;
+            z-index: 999999 !important;
+            padding: 0 !important;
+        }
+
+        /* The <ul> itself — no extra border, parent handles it */
+        .iti__country-list {
+            background: #181821 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
             z-index: 999999 !important;
             max-height: 280px !important;
             overflow-y: auto !important;
-            padding: 6px 0 !important;
-            min-width: 280px !important;
+            overflow-x: hidden !important;
+            padding: 4px 0 !important;
+            margin: 0 !important;
+            /* fallback border when iti__dropdown-content absent */
+            outline: 1px solid rgba(255,255,255,0.35) !important;
+            outline-offset: -1px !important;
         }
-        .iti__country-list::-webkit-scrollbar { width: 5px; }
+        .iti__country-list::-webkit-scrollbar { width: 4px; }
         .iti__country-list::-webkit-scrollbar-track { background: transparent; }
-        .iti__country-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+        .iti__country-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 99px; }
 
         /* Search input */
+        .iti__search-input-wrapper { background: #181821 !important; padding: 8px 10px 6px !important; }
         .iti__search-input {
             display: block !important;
-            width: calc(100% - 24px) !important;
-            margin: 8px 12px !important;
+            width: 100% !important;
             height: 44px !important;
-            background: #12121c !important;
-            border: 1px solid rgba(255,255,255,0.11) !important;
+            background: #0f0f18 !important;
+            border: 1px solid rgba(255,255,255,0.13) !important;
             border-radius: 10px !important;
             color: #dbe4ff !important;
             font-size: 13px !important;
@@ -130,15 +148,13 @@
             outline: none !important;
             box-sizing: border-box !important;
             transition: border-color .18s !important;
+            margin: 0 !important;
         }
-        .iti__search-input:focus { border-color: rgba(215,166,0,0.45) !important; }
+        .iti__search-input:focus { border-color: rgba(215,166,0,0.5) !important; }
         .iti__search-input::placeholder { color: #7e849b !important; }
 
-        /* Divider between preferred & all countries */
-        .iti__divider {
-            border-color: rgba(255,255,255,0.07) !important;
-            margin: 4px 12px !important;
-        }
+        /* Divider */
+        .iti__divider { border-color: rgba(255,255,255,0.08) !important; margin: 2px 0 !important; }
 
         /* Country rows */
         .iti__country {
@@ -149,14 +165,21 @@
             height: 46px !important;
             color: #dbe4ff !important;
             font-size: 13px !important;
-            transition: background .12s !important;
+            background: transparent !important;
+            transition: background .1s !important;
         }
-        .iti__country:hover { background: rgba(215,166,0,0.09) !important; }
-        .iti__country.iti__highlight { background: rgba(215,166,0,0.14) !important; }
-        .iti__country.iti__active { background: rgba(215,166,0,0.07) !important; }
+        .iti__country:hover    { background: rgba(214,166,0,0.18) !important; }
+        .iti__country.iti__highlight { background: rgba(214,166,0,0.18) !important; }
+        .iti__country.iti__active    { background: rgba(214,166,0,0.10) !important; }
 
-        .iti__flag-box { flex-shrink: 0 !important; }
-        .iti__country-name { color: #dbe4ff !important; flex: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+        .iti__flag-box   { flex-shrink: 0 !important; }
+        .iti__country-name {
+            color: #dbe4ff !important;
+            flex: 1 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
         .iti__dial-code { color: #7e849b !important; font-size: 12px !important; flex-shrink: 0 !important; }
         </style>
     </head>
