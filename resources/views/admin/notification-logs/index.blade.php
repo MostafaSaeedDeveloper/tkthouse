@@ -183,7 +183,7 @@
 </div>
 
 {{-- Detail modal --}}
-<div id="notifDetailModal" class="notif-modal-backdrop" onclick="closeNotifDetail()" style="display:none">
+<div id="notifDetailModal" class="notif-modal-backdrop" onclick="closeNotifDetail()">
     <div class="notif-modal" onclick="event.stopPropagation()">
         <div class="notif-modal-header">
             <h6 class="mb-0">Details</h6>
@@ -290,7 +290,10 @@ input.notif-filter-input[type="text"] { flex: 1; min-width: 180px; }
 /* Modal */
 .notif-modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999;
-    display: flex !important; align-items: center; justify-content: center;
+    align-items: center; justify-content: center;
+}
+.notif-modal-backdrop.is-open {
+    display: flex;
 }
 .notif-modal {
     background: var(--surface2, #1a1a24);
@@ -341,11 +344,11 @@ function showNotifDetail(btn) {
         metaEl.style.display = 'none';
     }
 
-    document.getElementById('notifDetailModal').style.display = '';
+    document.getElementById('notifDetailModal').classList.add('is-open');
 }
 
 function closeNotifDetail() {
-    document.getElementById('notifDetailModal').style.display = 'none';
+    document.getElementById('notifDetailModal').classList.remove('is-open');
 }
 
 document.addEventListener('keydown', function(e) {
