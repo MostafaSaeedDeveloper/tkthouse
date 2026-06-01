@@ -52,79 +52,60 @@
     }
 
     /* ── TICKET CARDS ─────────────────────────────────────── */
-    .tkt-ticket-cards { display: flex; flex-direction: column; gap: 14px; }
+    .tkt-ticket-cards { display: flex; flex-direction: column; gap: 8px; }
 
     .tkt-ticket-card {
-        background: #111;
-        border: 1px solid rgba(255,255,255,0.07);
+        background: #0e0e0e;
+        border: 1px solid rgba(255,255,255,0.06);
         padding: 0;
         display: flex;
         align-items: stretch;
         position: relative;
         overflow: hidden;
-        transition: border-color 0.25s, transform 0.2s;
+        transition: border-color 0.2s, background 0.2s;
         cursor: pointer;
     }
     .tkt-ticket-card:hover,
     .tkt-ticket-card.selected {
-        border-color: rgba(244,196,48,0.5);
-        transform: translateX(4px);
+        border-color: rgba(244,196,48,0.35);
     }
     .tkt-ticket-card.selected {
-        background: rgba(244,196,48,0.04);
-    }
-
-    /* Perforation line on the left */
-    .tkt-ticket-card::before {
-        content: '';
-        position: absolute;
-        left: 78px;
-        top: -8px;
-        bottom: -8px;
-        width: 1px;
-        background: repeating-linear-gradient(
-            to bottom,
-            rgba(255,255,255,0.12) 0px,
-            rgba(255,255,255,0.12) 6px,
-            transparent 6px,
-            transparent 12px
-        );
-        z-index: 1;
+        background: rgba(244,196,48,0.03);
     }
 
     /* Gold left stripe */
     .tkt-ticket-card .card-stripe {
-        width: 4px;
+        width: 3px;
         background: #f4c430;
         flex-shrink: 0;
-        transition: width 0.25s;
+        transition: width 0.2s;
     }
     .tkt-ticket-card.selected .card-stripe,
-    .tkt-ticket-card:hover .card-stripe { width: 6px; }
+    .tkt-ticket-card:hover .card-stripe { width: 4px; }
 
     /* Category badge */
     .tkt-ticket-card .card-badge {
-        width: 74px;
+        width: 56px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 20px 10px;
+        padding: 12px 8px;
         flex-shrink: 0;
-        background: rgba(0,0,0,0.3);
+        background: rgba(0,0,0,0.25);
         position: relative;
         z-index: 2;
     }
     .tkt-ticket-card .card-badge .badge-icon {
-        font-size: 20px;
+        font-size: 15px;
         color: #f4c430;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
     .tkt-ticket-card .card-badge .badge-label {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 11px;
-        letter-spacing: 2px;
-        color: rgba(255,255,255,0.5);
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        color: rgba(255,255,255,0.4);
         text-align: center;
         line-height: 1.2;
     }
@@ -132,47 +113,47 @@
     /* Main info */
     .tkt-ticket-card .card-info {
         flex: 1;
-        padding: 22px 24px;
+        padding: 12px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
+        gap: 12px;
         position: relative;
         z-index: 2;
     }
 
     .tkt-ticket-card .card-info .ticket-name {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        letter-spacing: 2px;
+        font-size: 17px;
+        letter-spacing: 1.5px;
         color: #fff;
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
     }
     .tkt-ticket-card .card-info .ticket-desc {
         font-family: 'Barlow', sans-serif;
-        font-size: 12px;
-        color: rgba(255,255,255,0.35);
-        letter-spacing: 0.3px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.3);
+        letter-spacing: 0.2px;
     }
 
     /* Availability badge */
     .tkt-avail-badge {
         font-family: 'Barlow', sans-serif;
-        font-size: 10px;
+        font-size: 9px;
         font-weight: 600;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         text-transform: uppercase;
-        padding: 3px 9px;
+        padding: 2px 7px;
         border-radius: 0;
         display: inline-block;
-        margin-top: 6px;
+        margin-top: 4px;
     }
-    .tkt-avail-badge.available   { background: rgba(39,174,96,0.15);  color: #27ae60; border: 1px solid rgba(39,174,96,0.3); }
-    .tkt-avail-badge.limited     { background: rgba(231,76,60,0.12);   color: #e74c3c; border: 1px solid rgba(231,76,60,0.25); }
-    .tkt-avail-badge.selling     { background: rgba(243,156,18,0.12);  color: #f39c12; border: 1px solid rgba(243,156,18,0.25); }
-    .tkt-avail-badge.sold-out    { background: rgba(231,76,60,0.16); color: #ff6b6b; border: 1px solid rgba(231,76,60,0.4); }
-    .tkt-avail-badge.couples-only { background: rgba(142,68,173,0.16); color: #d7a8ff; border: 1px solid rgba(142,68,173,0.45); }
+    .tkt-avail-badge.available   { background: rgba(39,174,96,0.12);  color: #27ae60; border: 1px solid rgba(39,174,96,0.25); }
+    .tkt-avail-badge.limited     { background: rgba(231,76,60,0.10);   color: #e74c3c; border: 1px solid rgba(231,76,60,0.2); }
+    .tkt-avail-badge.selling     { background: rgba(243,156,18,0.10);  color: #f39c12; border: 1px solid rgba(243,156,18,0.2); }
+    .tkt-avail-badge.sold-out    { background: rgba(231,76,60,0.12); color: #ff6b6b; border: 1px solid rgba(231,76,60,0.3); }
+    .tkt-avail-badge.couples-only { background: rgba(142,68,173,0.12); color: #d7a8ff; border: 1px solid rgba(142,68,173,0.35); }
 
     /* Price block */
     .tkt-ticket-card .card-price {
@@ -181,18 +162,18 @@
     }
     .tkt-ticket-card .card-price .price-amount {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 32px;
+        font-size: 22px;
         color: #f4c430;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         display: block;
         line-height: 1;
     }
     .tkt-ticket-card .card-price .price-label {
         font-family: 'Barlow', sans-serif;
-        font-size: 10px;
-        color: rgba(255,255,255,0.3);
+        font-size: 9px;
+        color: rgba(255,255,255,0.25);
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
     }
 
     /* Qty counter */
@@ -200,16 +181,16 @@
         display: flex;
         align-items: center;
         gap: 0;
-        border: 1px solid rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.1);
         flex-shrink: 0;
     }
     .tkt-qty-counter button {
-        width: 36px;
-        height: 36px;
-        background: rgba(255,255,255,0.05);
+        width: 28px;
+        height: 28px;
+        background: rgba(255,255,255,0.04);
         border: none;
         color: #fff;
-        font-size: 16px;
+        font-size: 13px;
         line-height: 1;
         cursor: pointer;
         transition: background 0.2s, color 0.2s;
@@ -217,15 +198,15 @@
     }
     .tkt-qty-counter button:hover { background: #f4c430; color: #000; }
     .tkt-qty-counter .qty-val {
-        width: 42px;
-        height: 36px;
+        width: 34px;
+        height: 28px;
         background: transparent;
         border: none;
-        border-left: 1px solid rgba(255,255,255,0.08);
-        border-right: 1px solid rgba(255,255,255,0.08);
+        border-left: 1px solid rgba(255,255,255,0.07);
+        border-right: 1px solid rgba(255,255,255,0.07);
         color: #fff;
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 18px;
+        font-size: 15px;
         letter-spacing: 1px;
         text-align: center;
         -moz-appearance: textfield;
@@ -236,28 +217,28 @@
     /* Add to cart btn */
     .tkt-add-btn {
         font-family: 'Bebas Neue', sans-serif;
-        font-size: 14px;
-        letter-spacing: 2px;
+        font-size: 13px;
+        letter-spacing: 1.5px;
         background: #f4c430;
         color: #000;
         border: none;
-        padding: 0 22px;
-        height: 36px;
+        padding: 0 16px;
+        height: 28px;
         cursor: pointer;
-        transition: background 0.2s, transform 0.15s;
+        transition: background 0.2s, opacity 0.15s;
         flex-shrink: 0;
         white-space: nowrap;
     }
-    .tkt-add-btn:hover { background: #e0b020; transform: scale(1.02); }
-    .tkt-add-btn:active { transform: scale(0.98); }
-    .tkt-add-btn.is-disabled, .tkt-add-btn:disabled { opacity: 0.45; cursor: not-allowed; background: rgba(244,196,48,0.2); color: rgba(255,255,255,0.6); }
-    .tkt-qty-counter.is-disabled { opacity: 0.45; }
+    .tkt-add-btn:hover { background: #e0b020; }
+    .tkt-add-btn:active { opacity: 0.85; }
+    .tkt-add-btn.is-disabled, .tkt-add-btn:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(244,196,48,0.15); color: rgba(255,255,255,0.5); }
+    .tkt-qty-counter.is-disabled { opacity: 0.4; }
     .tkt-qty-counter.is-disabled button { pointer-events: none; }
 
     .tkt-card-actions {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         margin-left: auto;
         flex-shrink: 0;
     }
@@ -284,31 +265,29 @@
     }
 
     @media (max-width: 575px) {
-        .tkt-ticket-card::before { display: none; }
-
         .tkt-ticket-card .card-badge {
-            width: 64px;
-            padding: 16px 8px;
+            width: 48px;
+            padding: 10px 6px;
         }
 
         .tkt-ticket-card .card-info {
-            padding: 18px 14px;
-            gap: 12px;
+            padding: 10px 12px;
+            gap: 10px;
         }
 
-        .tkt-ticket-card .card-info .ticket-name { font-size: 18px; }
-        .tkt-ticket-card .card-price .price-amount { font-size: 26px; }
+        .tkt-ticket-card .card-info .ticket-name { font-size: 15px; }
+        .tkt-ticket-card .card-price .price-amount { font-size: 19px; }
 
-        .tkt-card-actions { gap: 10px; }
+        .tkt-card-actions { gap: 8px; }
 
         .tkt-qty-counter {
             flex: 1;
-            max-width: 130px;
+            max-width: 110px;
         }
 
         .tkt-add-btn {
             flex: 1;
-            padding: 0 12px;
+            padding: 0 10px;
         }
     }
 
