@@ -1059,8 +1059,7 @@
                         <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}" data-is-couple="{{ $isCoupleTicket ? 1 : 0 }}">
                             <div class="card-stripe"></div>
                             <div class="card-badge">
-                                <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
-                                <span class="badge-label">{{ strtoupper(substr($ticket->label ?: $ticket->name, 0, 6)) }}</span>
+                                <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:#f4c430;"></i>
                             </div>
                             <div class="card-info">
                                 <div class="card-meta">
@@ -1097,8 +1096,7 @@
                         <div class="tkt-ticket-empty">
                             <div class="card-stripe"></div>
                             <div class="card-badge">
-                                <i class="fa fa-exclamation-circle card-badge-icon" style="font-size:20px;color:#f4c430;margin-bottom:6px;"></i>
-                                <span class="badge-label">INFO</span>
+                                <i class="fa fa-exclamation-circle card-badge-icon" style="font-size:20px;color:#f4c430;"></i>
                             </div>
                             <div class="card-info">
                                 <div class="card-meta">
