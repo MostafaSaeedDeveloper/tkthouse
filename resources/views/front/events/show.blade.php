@@ -1057,7 +1057,7 @@
                             $maxQuantity = $isCoupleTicket ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
                         @endphp
                         <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}" data-is-couple="{{ $isCoupleTicket ? 1 : 0 }}">
-                            <div class="card-stripe"></div>
+                            <div class="card-stripe" style="background:{{ $badgeType === 'sold-out' ? '#e74c3c' : ($badgeType === 'available' ? '#27ae60' : '#f4c430') }};"></div>
                             <div class="card-badge">
                                 <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:{{ $badgeType === 'sold-out' ? '#e74c3c' : ($badgeType === 'available' ? '#27ae60' : '#f4c430') }};"></i>
                             </div>
