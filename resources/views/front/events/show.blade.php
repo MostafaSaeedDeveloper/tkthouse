@@ -889,53 +889,6 @@
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
-                @if(! empty($event->map_embed))
-                    <div class="tkt-event-map">
-                        <h4>EVENT LOCATION MAP</h4>
-                        {!! $event->map_embed !!}
-                    </div>
-                @elseif(! empty($event->map_url))
-                    @php
-                        $mapEmbedUrl = null;
-                        $rawMapUrl = trim($event->map_url);
-
-                        if (filter_var($rawMapUrl, FILTER_VALIDATE_URL)) {
-                            $parsedMapUrl = parse_url($rawMapUrl);
-                            $mapHost = strtolower($parsedMapUrl['host'] ?? '');
-                            $mapPath = $parsedMapUrl['path'] ?? '';
-                            parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
-
-                            if (str_contains($mapPath, '/maps/embed')) {
-                                $mapEmbedUrl = $rawMapUrl;
-                            } elseif (isset($mapQuery['q']) && $mapQuery['q'] !== '') {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['q']).'&output=embed';
-                            } elseif (isset($mapQuery['query']) && $mapQuery['query'] !== '') {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['query']).'&output=embed';
-                            } elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $rawMapUrl, $coords)) {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($coords[1].','.$coords[2]).'&output=embed';
-                            } elseif (str_contains($mapPath ?? '', '/place/')) {
-                                $place = trim(urldecode(substr($mapPath, strpos($mapPath, '/place/') + 7)), '/');
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode(str_replace('+', ' ', $place)).'&output=embed';
-                            } else {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                            }
-                        } else {
-                            $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                        }
-                    @endphp
-                    @if($mapEmbedUrl)
-                        <div class="tkt-event-map">
-                            <h4>EVENT LOCATION MAP</h4>
-                            <iframe
-                                loading="lazy"
-                                referrerpolicy="no-referrer-when-downgrade"
-                                src="{{ $mapEmbedUrl }}"
-                                allowfullscreen>
-                            </iframe>
-                        </div>
-                    @endif
-                @endif
-
             </div>
         </div>
     </div>
@@ -1222,6 +1175,53 @@
         </div><!-- /row -->
     </div><!-- /container -->
 </div>
+
+@if(! empty($event->map_embed))
+    <div class="tkt-event-map">
+        <h4>EVENT LOCATION MAP</h4>
+        {!! $event->map_embed !!}
+    </div>
+@elseif(! empty($event->map_url))
+    @php
+        $mapEmbedUrl = null;
+        $rawMapUrl = trim($event->map_url);
+
+        if (filter_var($rawMapUrl, FILTER_VALIDATE_URL)) {
+            $parsedMapUrl = parse_url($rawMapUrl);
+            $mapHost = strtolower($parsedMapUrl['host'] ?? '');
+            $mapPath = $parsedMapUrl['path'] ?? '';
+            parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
+
+            if (str_contains($mapPath, '/maps/embed')) {
+                $mapEmbedUrl = $rawMapUrl;
+            } elseif (isset($mapQuery['q']) && $mapQuery['q'] !== '') {
+                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['q']).'&output=embed';
+            } elseif (isset($mapQuery['query']) && $mapQuery['query'] !== '') {
+                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['query']).'&output=embed';
+            } elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $rawMapUrl, $coords)) {
+                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($coords[1].','.$coords[2]).'&output=embed';
+            } elseif (str_contains($mapPath ?? '', '/place/')) {
+                $place = trim(urldecode(substr($mapPath, strpos($mapPath, '/place/') + 7)), '/');
+                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode(str_replace('+', ' ', $place)).'&output=embed';
+            } else {
+                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
+            }
+        } else {
+            $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
+        }
+    @endphp
+    @if($mapEmbedUrl)
+        <div class="tkt-event-map">
+            <h4>EVENT LOCATION MAP</h4>
+            <iframe
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                src="{{ $mapEmbedUrl }}"
+                allowfullscreen>
+            </iframe>
+        </div>
+    @endif
+@endif
 
 <!-- Toast -->
 <div class="tkt-toast" id="tktToast">
