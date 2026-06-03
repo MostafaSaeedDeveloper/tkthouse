@@ -1000,7 +1000,7 @@
             <!-- LEFT: Ticket Cards -->
             <div class="col-md-8 col-sm-12">
                 <div class="tkt-ticket-cards">
-                    @forelse($event->tickets as $ticket)
+                    @forelse($event->tickets->filter(fn($t) => $t->status !== 'hidden') as $ticket)
                         @php
                             $isTicketSoldOut = $ticket->status === 'sold_out';
                             $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
