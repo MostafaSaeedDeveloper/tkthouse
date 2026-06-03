@@ -608,6 +608,7 @@
         border: 1px solid rgba(255,255,255,0.06);
         padding: 24px;
         margin-top: 28px;
+        overflow: hidden;
     }
     .tkt-event-map h4 {
         font-family: 'Bebas Neue', sans-serif;
@@ -616,18 +617,14 @@
         color: #fff;
         margin: 0 0 16px;
     }
-    .tkt-event-map iframe {
+    .tkt-event-map iframe,
+    .tkt-event-map * iframe {
         width: 100% !important;
-        min-height: 320px;
         max-width: 100% !important;
-        border: 0;
+        min-height: 360px;
+        height: 360px !important;
+        border: 0 !important;
         display: block;
-    }
-    .tkt-event-map > iframe,
-    .tkt-event-map p > iframe,
-    .tkt-event-map div > iframe {
-        width: 100% !important;
-        max-width: 100% !important;
     }
 
     @media (max-width: 767px) {
