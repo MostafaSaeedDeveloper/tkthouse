@@ -192,7 +192,7 @@
         <div class="row border rounded p-3 mb-2 ticket-row align-items-end g-2">
             <div class="col-lg-3 col-md-6"><label class="form-label">Ticket Name</label><input class="form-control" name="tickets[{{ $index }}][name]" value="{{ $ticket['name'] ?? '' }}"></div>
             <div class="col-lg-2 col-md-3"><label class="form-label">Price</label><input type="number" step="0.01" class="form-control" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
-            <div class="col-lg-2 col-md-3"><label class="form-label">Status</label><select class="form-select" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option></select></div>
+            <div class="col-lg-2 col-md-3"><label class="form-label">Status</label><select class="form-select" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
             <div class="col-lg-1 col-md-3"><label class="form-label">Color</label><input type="color" class="form-control form-control-color w-100" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
             <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
             <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
@@ -312,7 +312,7 @@
     <div class="row border rounded p-3 mb-2 ticket-row align-items-end g-2">
         <div class="col-lg-3 col-md-6"><label class="form-label">Ticket Name</label><input class="form-control" name="__NAME__[name]"></div>
         <div class="col-lg-2 col-md-3"><label class="form-label">Price</label><input type="number" step="0.01" class="form-control" name="__NAME__[price]"></div>
-        <div class="col-lg-2 col-md-3"><label class="form-label">Status</label><select class="form-select" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option></select></div>
+        <div class="col-lg-2 col-md-3"><label class="form-label">Status</label><select class="form-select" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
         <div class="col-lg-1 col-md-3"><label class="form-label">Color</label><input type="color" class="form-control form-control-color w-100" name="__NAME__[color]" value="#0d6efd"></div>
         <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="__NAME__[label]"></div>
         <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>

@@ -604,18 +604,27 @@
     .tkt-organizer-box .org-instagram i { font-size: 16px; }
 
     .tkt-event-map {
-        margin: 28px 0 12px;
+        background: #0d0d0d;
+        border: 1px solid rgba(255,255,255,0.06);
+        padding: 24px;
+        margin-top: 28px;
+        overflow: hidden;
     }
     .tkt-event-map h4 {
         font-family: 'Bebas Neue', sans-serif;
-        letter-spacing: 2px;
+        font-size: 22px;
+        letter-spacing: 3px;
         color: #fff;
-        margin-bottom: 14px;
+        margin: 0 0 16px;
     }
-    .tkt-event-map iframe {
-        width: 100%;
-        min-height: 320px;
-        border: 0;
+    .tkt-event-map iframe,
+    .tkt-event-map * iframe {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 360px;
+        height: 360px !important;
+        border: 0 !important;
+        display: block;
     }
 
     @media (max-width: 767px) {
@@ -889,56 +898,9 @@
                     <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
                 </div>
 
-                @if(! empty($event->map_embed))
-                    <div class="tkt-event-map">
-                        <h4>EVENT LOCATION MAP</h4>
-                        {!! $event->map_embed !!}
-                    </div>
-                @elseif(! empty($event->map_url))
-                    @php
-                        $mapEmbedUrl = null;
-                        $rawMapUrl = trim($event->map_url);
-
-                        if (filter_var($rawMapUrl, FILTER_VALIDATE_URL)) {
-                            $parsedMapUrl = parse_url($rawMapUrl);
-                            $mapHost = strtolower($parsedMapUrl['host'] ?? '');
-                            $mapPath = $parsedMapUrl['path'] ?? '';
-                            parse_str($parsedMapUrl['query'] ?? '', $mapQuery);
-
-                            if (str_contains($mapPath, '/maps/embed')) {
-                                $mapEmbedUrl = $rawMapUrl;
-                            } elseif (isset($mapQuery['q']) && $mapQuery['q'] !== '') {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['q']).'&output=embed';
-                            } elseif (isset($mapQuery['query']) && $mapQuery['query'] !== '') {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($mapQuery['query']).'&output=embed';
-                            } elseif (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $rawMapUrl, $coords)) {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($coords[1].','.$coords[2]).'&output=embed';
-                            } elseif (str_contains($mapPath ?? '', '/place/')) {
-                                $place = trim(urldecode(substr($mapPath, strpos($mapPath, '/place/') + 7)), '/');
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode(str_replace('+', ' ', $place)).'&output=embed';
-                            } else {
-                                $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                            }
-                        } else {
-                            $mapEmbedUrl = 'https://www.google.com/maps?q='.urlencode($rawMapUrl).'&output=embed';
-                        }
-                    @endphp
-                    @if($mapEmbedUrl)
-                        <div class="tkt-event-map">
-                            <h4>EVENT LOCATION MAP</h4>
-                            <iframe
-                                loading="lazy"
-                                referrerpolicy="no-referrer-when-downgrade"
-                                src="{{ $mapEmbedUrl }}"
-                                allowfullscreen>
-                            </iframe>
-                        </div>
-                    @endif
-                @endif
-
-            </div>
-        </div>
-    </div>
+            </div><!-- /col-md-12 -->
+        </div><!-- /row -->
+    </div><!-- /container -->
 </section>
 <br>
 
@@ -1047,7 +1009,7 @@
             <!-- LEFT: Ticket Cards -->
             <div class="col-md-8 col-sm-12">
                 <div class="tkt-ticket-cards">
-                    @forelse($event->tickets as $ticket)
+                    @forelse($event->tickets->filter(fn($t) => $t->status !== 'hidden') as $ticket)
                         @php
                             $isTicketSoldOut = $ticket->status === 'sold_out';
                             $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
@@ -1108,6 +1070,13 @@
                     @endforelse
 
                 </div><!-- /tkt-ticket-cards -->
+
+                @if(! empty($event->map_embed))
+                    <div class="tkt-event-map tkt-venue-map-desktop">
+                        <h4>EVENT LOCATION MAP</h4>
+                        {!! $event->map_embed !!}
+                    </div>
+                @endif
 
                 @if($event->venue_map_url)
                     <div class="tkt-venue-map-box tkt-venue-map-desktop">
@@ -1190,6 +1159,13 @@
                         </p>
                     </div>
                 </div>
+
+                @if(! empty($event->map_embed))
+                    <div class="tkt-event-map tkt-venue-map-mobile">
+                        <h4>EVENT LOCATION MAP</h4>
+                        {!! $event->map_embed !!}
+                    </div>
+                @endif
 
                 @if($event->venue_map_url)
                     <div class="tkt-venue-map-box tkt-venue-map-mobile">

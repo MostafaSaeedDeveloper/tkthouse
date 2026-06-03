@@ -142,7 +142,7 @@ class EventController extends Controller
             'tickets' => ['nullable', 'array'],
             'tickets.*.name' => ['required_with:tickets', 'string', 'max:255'],
             'tickets.*.price' => ['required_with:tickets', 'numeric', 'min:0'],
-            'tickets.*.status' => ['required_with:tickets', 'in:active,inactive,sold_out'],
+            'tickets.*.status' => ['required_with:tickets', 'in:active,inactive,sold_out,hidden'],
             'tickets.*.color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'tickets.*.label' => ['nullable', 'string', 'max:255'],
             'tickets.*.description' => ['nullable', 'string'],
