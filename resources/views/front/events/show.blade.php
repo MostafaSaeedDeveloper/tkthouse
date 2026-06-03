@@ -617,9 +617,17 @@
         margin: 0 0 16px;
     }
     .tkt-event-map iframe {
-        width: 100%;
+        width: 100% !important;
         min-height: 320px;
+        max-width: 100% !important;
         border: 0;
+        display: block;
+    }
+    .tkt-event-map > iframe,
+    .tkt-event-map p > iframe,
+    .tkt-event-map div > iframe {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 
     @media (max-width: 767px) {
