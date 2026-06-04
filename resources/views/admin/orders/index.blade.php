@@ -63,6 +63,11 @@
                         Deleted Orders <span class="badge bg-dark ms-1">{{ $deletedOrdersCount ?? 0 }}</span>
                     </a>
                 @endcan
+                @can('orders.view')
+                    <button type="button" class="btn btn-sm btn-alt-success" data-bs-toggle="modal" data-bs-target="#exportOrdersModal">
+                        <i class="fa fa-download me-1"></i> Export CSV
+                    </button>
+                @endcan
                 <span class="badge bg-primary">{{ $orders->total() }} Total</span>
             </div>
         </div>
@@ -190,6 +195,106 @@ document.addEventListener('DOMContentLoaded', () => {
             render(el, remaining);
         }, 1000);
     });
+});
+</script>
+
+{{-- Export Orders Modal --}}
+<div class="modal fade" id="exportOrdersModal" tabindex="-1" aria-labelledby="exportOrdersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="GET" action="{{ route('admin.orders.export') }}" id="exportOrdersForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exportOrdersModalLabel"><i class="fa fa-download me-2"></i>Export Orders to CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+
+                    {{-- Filters --}}
+                    <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Filters</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Search (Order # / Customer)</label>
+                            <input type="text" name="search" class="form-control" placeholder="Order # / customer name / email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $s)
+                                    <option value="{{ $s }}">{{ str($s)->headline() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Method</label>
+                            <select name="payment_method" class="form-select">
+                                <option value="">All Payment Methods</option>
+                                @foreach($paymentMethods as $method)
+                                    <option value="{{ $method->code }}">{{ $method->checkout_label ?: $method->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @if($canFilterByEvent)
+                        <div class="col-md-6">
+                            <label class="form-label">Event</label>
+                            <select name="event_id" class="form-select">
+                                <option value="">All Events</option>
+                                @foreach($events as $event)
+                                    <option value="{{ $event->id }}">{{ $event->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @endif
+                    </div>
+
+                    {{-- Columns --}}
+                    <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Columns to Export</h6>
+                    <div class="row g-2">
+                        @php
+                            $exportColumns = [
+                                'order_number'   => 'Order #',
+                                'customer_name'  => 'Customer Name',
+                                'customer_email' => 'Customer Email',
+                                'customer_phone' => 'Customer Phone',
+                                'event'          => 'Event',
+                                'ticket_types'   => 'Ticket Types',
+                                'items_count'    => 'Items Count',
+                                'total'          => 'Total Amount',
+                                'status'         => 'Status',
+                                'payment_method' => 'Payment Method',
+                                'created_at'     => 'Created At',
+                                'paid_at'        => 'Paid At',
+                            ];
+                        @endphp
+                        @foreach($exportColumns as $colKey => $colLabel)
+                        <div class="col-6 col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input export-col-check" type="checkbox" name="columns[]" value="{{ $colKey }}" id="col_{{ $colKey }}" checked>
+                                <label class="form-check-label" for="col_{{ $colKey }}">{{ $colLabel }}</label>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-2 d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-alt-secondary" id="selectAllCols">Select All</button>
+                        <button type="button" class="btn btn-sm btn-alt-secondary" id="deselectAllCols">Deselect All</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-alt-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fa fa-download me-1"></i> Download CSV</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('selectAllCols')?.addEventListener('click', () => {
+    document.querySelectorAll('.export-col-check').forEach(c => c.checked = true);
+});
+document.getElementById('deselectAllCols')?.addEventListener('click', () => {
+    document.querySelectorAll('.export-col-check').forEach(c => c.checked = false);
 });
 </script>
 @endsection
