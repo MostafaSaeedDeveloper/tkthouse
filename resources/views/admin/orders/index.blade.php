@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" class="form-select js-modal-select2">
                                 <option value="">All Statuses</option>
                                 @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $s)
                                     <option value="{{ $s }}">{{ str($s)->headline() }}</option>
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Payment Method</label>
-                            <select name="payment_method" class="form-select">
+                            <select name="payment_method" class="form-select js-modal-select2">
                                 <option value="">All Payment Methods</option>
                                 @foreach($paymentMethods as $method)
                                     <option value="{{ $method->code }}">{{ $method->checkout_label ?: $method->name }}</option>
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         @if($canFilterByEvent)
                         <div class="col-md-6">
                             <label class="form-label">Event</label>
-                            <select name="event_id" class="form-select">
+                            <select name="event_id" class="form-select js-modal-select2">
                                 <option value="">All Events</option>
                                 @foreach($events as $event)
                                     <option value="{{ $event->id }}">{{ $event->name }}</option>
@@ -296,5 +296,17 @@ document.getElementById('selectAllCols')?.addEventListener('click', () => {
 document.getElementById('deselectAllCols')?.addEventListener('click', () => {
     document.querySelectorAll('.export-col-check').forEach(c => c.checked = false);
 });
+
+// Init select2 inside modal with correct dropdownParent
+const exportModal = document.getElementById('exportOrdersModal');
+if (exportModal && typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+    exportModal.addEventListener('shown.bs.modal', function () {
+        jQuery(this).find('.js-modal-select2').each(function () {
+            if (!jQuery(this).data('select2')) {
+                jQuery(this).select2({ dropdownParent: jQuery(exportModal), width: '100%' });
+            }
+        });
+    });
+}
 </script>
 @endsection
