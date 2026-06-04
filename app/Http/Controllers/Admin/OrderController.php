@@ -12,6 +12,7 @@ use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
+use App\Models\User;
 use App\Services\PendingPaymentExpiryService;
 use App\Services\TicketIssuanceService;
 use App\Support\SystemSettings;
@@ -104,7 +105,9 @@ class OrderController extends Controller
             ? Event::query()->orderBy('name')->get(['id', 'name'])
             : collect();
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent'));
+        $canExport = $this->isSuperAdmin($request->user());
+
+        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
@@ -593,7 +596,7 @@ class OrderController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        abort_unless($request->user()?->can('orders.view'), 403);
+        abort_unless($this->isSuperAdmin($request->user()), 403);
 
         $managedEvent = $request->user()?->managedEvent;
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
@@ -695,6 +698,20 @@ class OrderController extends Controller
 
             fclose($handle);
         }, 'orders-export.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    private function isSuperAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        $normalized = strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $user->username)));
+        if ($normalized === 'superadmin') {
+            return true;
+        }
+        return $user->roles->contains(fn ($role) =>
+            strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $role->name))) === 'superadmin'
+        );
     }
 
     private function applyEventScopeToOrdersQuery(Builder $query, ?Event $event): void

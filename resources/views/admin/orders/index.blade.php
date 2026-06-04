@@ -63,11 +63,11 @@
                         Deleted Orders <span class="badge bg-dark ms-1">{{ $deletedOrdersCount ?? 0 }}</span>
                     </a>
                 @endcan
-                @can('orders.view')
+                @if($canExport)
                     <button type="button" class="btn btn-sm btn-alt-success" data-bs-toggle="modal" data-bs-target="#exportOrdersModal">
                         <i class="fa fa-download me-1"></i> Export CSV
                     </button>
-                @endcan
+                @endif
                 <span class="badge bg-primary">{{ $orders->total() }} Total</span>
             </div>
         </div>
