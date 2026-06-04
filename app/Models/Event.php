@@ -16,6 +16,7 @@ class Event extends Model
         'name',
         'slug',
         'event_date',
+        'end_date',
         'event_time',
         'location',
         'map_url',
@@ -33,6 +34,7 @@ class Event extends Model
     {
         return [
             'event_date' => 'date',
+            'end_date' => 'date',
             'requires_booking_approval' => 'boolean',
         ];
     }
@@ -62,6 +64,17 @@ class Event extends Model
         }
 
         return $slug;
+    }
+
+    public function getFormattedDateRangeAttribute(): string
+    {
+        if ($this->end_date && $this->end_date->ne($this->event_date)) {
+            if ($this->event_date->format('F Y') === $this->end_date->format('F Y')) {
+                return $this->event_date->format('j') . ' - ' . $this->end_date->format('j F Y');
+            }
+            return $this->event_date->format('j F Y') . ' - ' . $this->end_date->format('j F Y');
+        }
+        return $this->event_date->format('j, F Y');
     }
 
     public function getRouteKeyName(): string
