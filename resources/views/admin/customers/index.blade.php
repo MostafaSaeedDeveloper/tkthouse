@@ -56,7 +56,11 @@
                     <tbody>
                         @forelse($customers as $customer)
                         <tr>
-                            <td>{{ $customer->full_name }}</td>
+                            <td>
+                                <a href="{{ route('admin.customers.show', $customer) }}" class="fw-semibold text-body-emphasis text-decoration-none">
+                                    {{ $customer->full_name }}
+                                </a>
+                            </td>
                             <td>{{ $customer->email }}</td>
                             <td>{{ $customer->phone }}</td>
                             <td>{{ $customer->orders_count }}</td>
