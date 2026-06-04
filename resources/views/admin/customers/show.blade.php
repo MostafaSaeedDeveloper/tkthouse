@@ -95,7 +95,7 @@
                         @endphp
                         <tr>
                             <td class="fw-semibold">
-                                <a href="{{ route('admin.orders.show', $order) }}" class="text-body-emphasis text-decoration-none">
+                                <a href="{{ route('admin.orders.show', $order) }}" class="text-warning text-decoration-none">
                                     {{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}
                                 </a>
                             </td>
