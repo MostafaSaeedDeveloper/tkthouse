@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select no-select2" id="exportStatusSelect">
+                            <select name="status" class="form-select" id="exportStatusSelect">
                                 <option value="">All Statuses</option>
                                 @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $s)
                                     <option value="{{ $s }}">{{ str($s)->headline() }}</option>
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Payment Method</label>
-                            <select name="payment_method" class="form-select no-select2" id="exportPaymentSelect">
+                            <select name="payment_method" class="form-select" id="exportPaymentSelect">
                                 <option value="">All Payment Methods</option>
                                 @foreach($paymentMethods as $method)
                                     <option value="{{ $method->code }}">{{ $method->checkout_label ?: $method->name }}</option>
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         @if($canFilterByEvent)
                         <div class="col-md-6">
                             <label class="form-label">Event</label>
-                            <select name="event_id" class="form-select no-select2" id="exportEventSelect">
+                            <select name="event_id" class="form-select" id="exportEventSelect">
                                 <option value="">All Events</option>
                                 @foreach($events as $event)
                                     <option value="{{ $event->id }}">{{ $event->name }}</option>
@@ -297,14 +297,15 @@ document.getElementById('deselectAllCols')?.addEventListener('click', () => {
     document.querySelectorAll('.export-col-check').forEach(c => c.checked = false);
 });
 
-// Init select2 inside export modal with dropdownParent so dropdowns appear correctly
+// Init select2 inside export modal with dropdownParent
 if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
     jQuery('#exportOrdersModal').on('shown.bs.modal', function () {
         const $modal = jQuery(this);
-        $modal.find('select.no-select2').each(function () {
-            if (!jQuery(this).data('select2')) {
-                jQuery(this).select2({ dropdownParent: $modal, width: '100%' });
+        $modal.find('select').each(function () {
+            if (jQuery(this).data('select2')) {
+                jQuery(this).select2('destroy');
             }
+            jQuery(this).select2({ dropdownParent: $modal, width: '100%' });
         });
     });
 }
