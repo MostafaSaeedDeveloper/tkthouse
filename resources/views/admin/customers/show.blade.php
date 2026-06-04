@@ -95,7 +95,9 @@
                         @endphp
                         <tr>
                             <td class="fw-semibold">
-                                {{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}
+                                <a href="{{ route('admin.orders.show', $order) }}" class="text-body-emphasis text-decoration-none">
+                                    {{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}
+                                </a>
                             </td>
                             <td>{{ $order->items_count }}</td>
                             <td class="fw-semibold text-warning">{{ number_format($order->total_amount, 2) }} EGP</td>
