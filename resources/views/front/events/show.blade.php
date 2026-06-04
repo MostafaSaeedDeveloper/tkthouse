@@ -863,7 +863,6 @@
 <div class="sub-banner">
     <div class="container">
         <h6>{{ $event->name }}</h6>
-        <p>Secure your spot — limited tickets available</p>
     </div>
 </div>
 
@@ -982,6 +981,15 @@
                 <span class="org-name">FRACTURE COMPANY</span>
                 <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
                     <i class="fa fa-instagram"></i>fracture.sound
+                </a>
+            </div>
+        </div>
+        <div class="org-body" style="margin-top:16px;">
+            <img class="org-logo" src="https://i.ibb.co/Kj49Q6cL/0da52100-622e-498d-a417-f0aebebc4a5f.jpg" alt="Vavuraa Logo">
+            <div class="org-info">
+                <span class="org-name">VAVURAA</span>
+                <a class="org-instagram" href="https://www.instagram.com/vavuraa" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-instagram"></i>vavuraa
                 </a>
             </div>
         </div>
@@ -1121,6 +1129,15 @@
                             <span class="org-name">FRACTURE COMPANY</span>
                             <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
                                 <i class="fa fa-instagram"></i>fracture.sound
+                            </a>
+                        </div>
+                    </div>
+                    <div class="org-body" style="margin-top:16px;">
+                        <img class="org-logo" src="https://i.ibb.co/Kj49Q6cL/0da52100-622e-498d-a417-f0aebebc4a5f.jpg" alt="Vavuraa Logo">
+                        <div class="org-info">
+                            <span class="org-name">VAVURAA</span>
+                            <a class="org-instagram" href="https://www.instagram.com/vavuraa" target="_blank" rel="noopener noreferrer">
+                                <i class="fa fa-instagram"></i>vavuraa
                             </a>
                         </div>
                     </div>
