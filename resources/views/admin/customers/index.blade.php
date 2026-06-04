@@ -22,10 +22,21 @@
     <div class="block block-rounded mb-3">
         <div class="block-content py-3">
             <form method="GET" class="row g-2 align-items-end">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label">Search</label>
                     <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Name / phone">
                 </div>
+                @if($canFilterByEvent)
+                <div class="col-md-4">
+                    <label class="form-label">Event</label>
+                    <select name="event_id" class="form-select js-select2">
+                        <option value="">All Events</option>
+                        @foreach($events as $event)
+                            <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
                 <div class="col-md-3 d-flex gap-2">
                     <button class="btn btn-primary" type="submit">Filter</button>
                     <a class="btn btn-alt-secondary" href="{{ route('admin.customers.index') }}">Reset</a>
