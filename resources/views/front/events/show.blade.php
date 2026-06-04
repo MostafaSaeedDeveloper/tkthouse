@@ -889,7 +889,7 @@
                 <div class="kode_event_conter_capstion">
                     <div class="counter-meta">
                         <ul class="info-event">
-                            <li><i class="fa fa-calendar"></i><a href="#"><span>Date: {{ $event->event_date->format('d F Y') }}</span></a></li>
+                            <li><i class="fa fa-calendar"></i><a href="#"><span>Date: {{ $event->formatted_date_range }}</span></a></li>
                             <li><i class="fa fa-map-marker"></i><a href="#"><span>Location: {{ $event->location }}</span></a></li>
                             <li><i class="fa fa-clock-o"></i><a href="#"><span>Time: {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}</span></a></li>
                         </ul>

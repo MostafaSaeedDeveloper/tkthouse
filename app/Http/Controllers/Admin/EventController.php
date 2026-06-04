@@ -127,6 +127,7 @@ class EventController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('events', 'slug')->ignore($event?->id)],
             'event_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:event_date'],
             'event_time' => ['required'],
             'location' => ['required', 'string', 'max:255'],
             'map_url' => ['nullable', 'url'],

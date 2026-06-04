@@ -42,8 +42,12 @@
         <input name="name" id="event_name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
     </div>
     <div class="col-md-3 mb-3">
-        <label class="form-label">Date</label>
+        <label class="form-label">Start Date</label>
         <input type="text" name="event_date" class="form-control js-flatpickr" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d" required>
+    </div>
+    <div class="col-md-3 mb-3">
+        <label class="form-label">End Date <small class="text-muted">(optional, for multi-day events)</small></label>
+        <input type="text" name="end_date" class="form-control js-flatpickr" value="{{ old('end_date', isset($event) ? $event->end_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d">
     </div>
     <div class="col-md-3 mb-3">
         <label class="form-label">Time</label>
