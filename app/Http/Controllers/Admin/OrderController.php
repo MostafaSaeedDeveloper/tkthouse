@@ -50,12 +50,20 @@ class OrderController extends Controller
         $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
 
 
+        $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
+
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
         }
 
         if ($request->filled('payment_method')) {
             $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $ordersQuery->whereHas('items', function ($query) use ($request) {
+                $query->where('event_id', $request->integer('event_id'));
+            });
         }
 
         if ($request->filled('search')) {
@@ -91,7 +99,11 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['code', 'name', 'checkout_label']);
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount'));
+        $events = $canFilterByEvent
+            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent'));
     }
 
     public function deleted(Request $request)
@@ -105,12 +117,20 @@ class OrderController extends Controller
             ->with(['customer']);
         $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
 
+        $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
+
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
         }
 
         if ($request->filled('payment_method')) {
             $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $ordersQuery->whereHas('items', function ($query) use ($request) {
+                $query->where('event_id', $request->integer('event_id'));
+            });
         }
 
         if ($request->filled('search')) {
@@ -136,7 +156,11 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['code', 'name', 'checkout_label']);
 
-        return view('admin.orders.deleted', compact('orders', 'paymentMethods'));
+        $events = $canFilterByEvent
+            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('admin.orders.deleted', compact('orders', 'paymentMethods', 'events', 'canFilterByEvent'));
     }
 
     public function show(Request $request, Order $order)

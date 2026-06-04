@@ -41,6 +41,17 @@
                         @endforeach
                     </select>
                 </div>
+                @if($canFilterByEvent)
+                <div class="col-md-3">
+                    <label class="form-label">Event</label>
+                    <select name="event_id" class="form-select js-select2">
+                        <option value="">All Events</option>
+                        @foreach($events as $event)
+                            <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
                 <div class="col-md-2 d-flex gap-2">
                     <button class="btn btn-primary" type="submit">Filter</button>
                     <a class="btn btn-alt-secondary" href="{{ route('admin.orders.deleted') }}">Reset</a>
