@@ -9,7 +9,7 @@
             <h1 class="h3 mb-1">Customers</h1>
             <p class="text-muted mb-0">Customers list.</p>
         </div>
-        @if(auth()->user()?->hasRole(['admin', 'super_admin']) || preg_replace('/[^a-z0-9]/i', '', strtolower(auth()->user()?->username ?? '')) === 'superadmin')
+        @if(preg_replace('/[^a-z0-9]/i', '', strtolower(auth()->user()?->username ?? '')) === 'superadmin' || auth()->user()?->roles->contains(fn($r) => strtolower(preg_replace('/[^a-z0-9]/i', '', $r->name)) === 'superadmin'))
         <div>
             <a class="btn btn-sm btn-alt-success"
                href="{{ route('admin.customers.export', request()->only(['search', 'event_id'])) }}">
