@@ -53,7 +53,7 @@ class CustomerController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        abort_unless($this->isSuperAdminOrAdmin($request->user()), 403);
+        abort_unless($this->isSuperAdmin($request->user()), 403);
 
         $managedEvent = $request->user()?->managedEvent;
         $canFilterByEvent = $request->user()?->can('showing_orders') ?? false;
@@ -132,6 +132,22 @@ class CustomerController extends Controller
         $query->whereHas('items', function (Builder $itemsQuery) use ($event) {
             $itemsQuery->where('event_id', $event->id);
         });
+    }
+
+    private function isSuperAdmin(?\App\Models\User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        $normalize = fn ($val) => strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $val)));
+
+        if ($normalize($user->username) === 'superadmin') {
+            return true;
+        }
+
+        return $user->roles->contains(fn ($role) =>
+            $normalize($role->name) === 'superadmin'
+        );
     }
 
     private function isSuperAdminOrAdmin(?\App\Models\User $user): bool
