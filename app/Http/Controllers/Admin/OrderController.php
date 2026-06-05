@@ -697,7 +697,7 @@ class OrderController extends Controller
             }
 
             fclose($handle);
-        }, 'orders-export.csv', ['Content-Type' => 'text/csv']);
+        }, 'orders-export-' . now()->format('Y-m-d_H-i') . '.csv', ['Content-Type' => 'text/csv']);
     }
 
     private function isSuperAdmin(?User $user): bool
