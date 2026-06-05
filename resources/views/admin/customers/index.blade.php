@@ -9,14 +9,14 @@
             <h1 class="h3 mb-1">Customers</h1>
             <p class="text-muted mb-0">Customers list.</p>
         </div>
-        @can('attendees.export')
+        @if(auth()->user()?->hasRole(['admin', 'super_admin']) || preg_replace('/[^a-z0-9]/i', '', strtolower(auth()->user()?->username ?? '')) === 'superadmin')
         <div>
             <a class="btn btn-sm btn-alt-success"
                href="{{ route('admin.customers.export', request()->only(['search', 'event_id'])) }}">
                 <i class="fa fa-download me-1"></i> Export CSV
             </a>
         </div>
-        @endcan
+        @endif
     </div>
 
     <div class="block block-rounded mb-3">
