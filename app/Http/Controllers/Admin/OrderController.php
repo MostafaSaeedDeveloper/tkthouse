@@ -12,6 +12,7 @@ use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
+use App\Models\User;
 use App\Services\PendingPaymentExpiryService;
 use App\Services\TicketIssuanceService;
 use App\Support\SystemSettings;
@@ -20,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderController extends Controller
 {
@@ -50,12 +52,20 @@ class OrderController extends Controller
         $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
 
 
+        $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
+
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
         }
 
         if ($request->filled('payment_method')) {
             $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $ordersQuery->whereHas('items', function ($query) use ($request) {
+                $query->where('event_id', $request->integer('event_id'));
+            });
         }
 
         if ($request->filled('search')) {
@@ -91,7 +101,13 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['code', 'name', 'checkout_label']);
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount'));
+        $events = $canFilterByEvent
+            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        $canExport = $this->isSuperAdmin($request->user());
+
+        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
@@ -105,12 +121,20 @@ class OrderController extends Controller
             ->with(['customer']);
         $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
 
+        $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
+
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
         }
 
         if ($request->filled('payment_method')) {
             $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $ordersQuery->whereHas('items', function ($query) use ($request) {
+                $query->where('event_id', $request->integer('event_id'));
+            });
         }
 
         if ($request->filled('search')) {
@@ -136,7 +160,11 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['code', 'name', 'checkout_label']);
 
-        return view('admin.orders.deleted', compact('orders', 'paymentMethods'));
+        $events = $canFilterByEvent
+            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('admin.orders.deleted', compact('orders', 'paymentMethods', 'events', 'canFilterByEvent'));
     }
 
     public function show(Request $request, Order $order)
@@ -565,6 +593,126 @@ class OrderController extends Controller
     }
 
 
+
+    public function export(Request $request): StreamedResponse
+    {
+        abort_unless($this->isSuperAdmin($request->user()), 403);
+
+        $managedEvent = $request->user()?->managedEvent;
+        $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
+
+        $ordersQuery = Order::query()->with(['customer', 'items.event']);
+        $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+
+        if ($request->filled('status')) {
+            $ordersQuery->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('payment_method')) {
+            $ordersQuery->where('payment_method', $request->string('payment_method'));
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $ordersQuery->whereHas('items', function ($query) use ($request) {
+                $query->where('event_id', $request->integer('event_id'));
+            });
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $ordersQuery->where(function ($query) use ($search) {
+                $query->where('order_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('email', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $ordersQuery->orderByDesc('id')->get();
+
+        $availableColumns = [
+            'order_number'   => 'Order #',
+            'customer_name'  => 'Customer Name',
+            'customer_email' => 'Customer Email',
+            'customer_phone' => 'Customer Phone',
+            'event'          => 'Event',
+            'ticket_types'   => 'Ticket Types',
+            'items_count'    => 'Items',
+            'total'          => 'Total Amount',
+            'status'         => 'Status',
+            'payment_method' => 'Payment Method',
+            'created_at'     => 'Created At',
+            'paid_at'        => 'Paid At',
+        ];
+
+        $selected = collect($request->input('columns', array_keys($availableColumns)))
+            ->filter(fn ($col) => array_key_exists($col, $availableColumns))
+            ->values()
+            ->all();
+
+        if (empty($selected)) {
+            $selected = array_keys($availableColumns);
+        }
+
+        return response()->streamDownload(function () use ($orders, $selected, $availableColumns) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, array_map(fn ($col) => $availableColumns[$col], $selected));
+
+            foreach ($orders as $order) {
+                $eventNames = $order->items
+                    ->map(fn ($item) => str_contains((string) $item->ticket_name, ' - ')
+                        ? trim((string) str($item->ticket_name)->before(' - '))
+                        : null)
+                    ->filter()
+                    ->unique()
+                    ->implode(', ');
+
+                $ticketTypes = $order->items
+                    ->pluck('ticket_name')
+                    ->unique()
+                    ->implode(', ');
+
+                $row = [];
+                foreach ($selected as $col) {
+                    $row[] = match ($col) {
+                        'order_number'   => preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number,
+                        'customer_name'  => $order->customer?->full_name ?? '',
+                        'customer_email' => $order->customer?->email ?? '',
+                        'customer_phone' => $order->customer?->phone ?? '',
+                        'event'          => $eventNames,
+                        'ticket_types'   => $ticketTypes,
+                        'items_count'    => $order->items->count(),
+                        'total'          => number_format((float) $order->total_amount, 2),
+                        'status'         => $order->status,
+                        'payment_method' => $order->payment_method,
+                        'created_at'     => optional($order->created_at)->format('Y-m-d H:i'),
+                        'paid_at'        => optional($order->paid_at)->format('Y-m-d H:i') ?? '',
+                        default          => '',
+                    };
+                }
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        }, 'orders-export-' . now()->format('Y-m-d_H-i') . '.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    private function isSuperAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        $normalized = strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $user->username)));
+        if ($normalized === 'superadmin') {
+            return true;
+        }
+        return $user->roles->contains(fn ($role) =>
+            strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $role->name))) === 'superadmin'
+        );
+    }
 
     private function applyEventScopeToOrdersQuery(Builder $query, ?Event $event): void
     {

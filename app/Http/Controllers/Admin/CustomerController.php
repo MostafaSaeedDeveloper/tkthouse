@@ -7,14 +7,16 @@ use App\Models\Event;
 use App\Models\Customer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomerController extends Controller
 {
     public function index(Request $request)
     {
         $managedEvent = $request->user()?->managedEvent;
+        $canFilterByEvent = $request->user()?->can('showing_orders') ?? false;
 
-        $customers = Customer::query()
+        $customersQuery = Customer::query()
             ->when($managedEvent, function (Builder $query) use ($managedEvent) {
                 $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEvent) {
                     $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
@@ -22,11 +24,79 @@ class CustomerController extends Controller
             })
             ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvent) {
                 $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
-            }])
-            ->latest()
-            ->paginate(15);
+            }]);
 
-        return view('admin.customers.index', compact('customers'));
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $customersQuery->where(function (Builder $q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $eventId = $request->integer('event_id');
+            $customersQuery->whereHas('orders', function (Builder $q) use ($eventId) {
+                $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
+            });
+        }
+
+        $customers = $customersQuery->latest()->paginate(15)->withQueryString();
+
+        $events = $canFilterByEvent
+            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent'));
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $managedEvent = $request->user()?->managedEvent;
+        $canFilterByEvent = $request->user()?->can('showing_orders') ?? false;
+
+        $customersQuery = Customer::query()
+            ->when($managedEvent, function (Builder $query) use ($managedEvent) {
+                $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEvent) {
+                    $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+                });
+            })
+            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvent) {
+                $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+            }]);
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $customersQuery->where(function (Builder $q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $eventId = $request->integer('event_id');
+            $customersQuery->whereHas('orders', function (Builder $q) use ($eventId) {
+                $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
+            });
+        }
+
+        $customers = $customersQuery->latest()->get();
+
+        return response()->streamDownload(function () use ($customers) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Name', 'Email', 'Phone', 'Orders Count']);
+            foreach ($customers as $customer) {
+                fputcsv($handle, [
+                    $customer->full_name,
+                    $customer->email,
+                    $customer->phone,
+                    $customer->orders_count,
+                ]);
+            }
+            fclose($handle);
+        }, 'customers-export.csv', ['Content-Type' => 'text/csv']);
     }
 
     public function show(Request $request, Customer $customer)
