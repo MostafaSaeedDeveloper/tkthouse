@@ -345,8 +345,6 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
 
     </div>
 
-    </div>
-
 
 
     {{-- ╔══════════════════════════════════════╗
@@ -467,6 +465,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
         </div>
     </div>
 
+</div>
 </div>
 </div>
 
