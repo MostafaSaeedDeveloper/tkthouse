@@ -42,15 +42,6 @@
         <article class="report-card"><small>Scanner Activity</small><h3>{{ number_format($totalScans) }}</h3></article>
     </div>
 
-    <div class="block block-rounded">
-        <div class="block-header block-header-default">
-            <h3 class="block-title">Event Analytics</h3>
-            <div class="block-options text-muted fs-sm"></div>
-        </div>
-        <div class="block-content">
-            <canvas id="eventAnalyticsChart" height="120"></canvas>
-        </div>
-    </div>
 </div>
 
 
@@ -70,51 +61,12 @@
 </style>
 
 
-<script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (window.flatpickr) {
             flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y', allowInput: true });
         }
-
-        const chartCanvas = document.getElementById('eventAnalyticsChart');
-        if (!chartCanvas || !window.Chart) {
-            return;
-        }
-
-        new Chart(chartCanvas, {
-            type: 'line',
-            data: {
-                labels: @json($labels),
-                datasets: [
-                    {
-                        label: 'Orders',
-                        data: @json($ordersData),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59,130,246,0.2)',
-                        tension: 0.3,
-                        yAxisID: 'yOrders',
-                    },
-                    {
-                        label: 'Revenue',
-                        data: @json($revenueData),
-                        borderColor: '#f5b800',
-                        backgroundColor: 'rgba(245,184,0,0.2)',
-                        tension: 0.3,
-                        yAxisID: 'yRevenue',
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                scales: {
-                    yOrders: { type: 'linear', position: 'left', beginAtZero: true },
-                    yRevenue: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
-                }
-            }
-        });
     });
 </script>
 @endsection
