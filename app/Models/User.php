@@ -31,7 +31,6 @@ class User extends Authenticatable
         'password',
         'last_login_at',
         'last_login_ip',
-        'managed_event_id',
     ];
 
     protected $hidden = [
@@ -72,9 +71,19 @@ class User extends Authenticatable
     }
 
 
-    public function managedEvent()
+    public function managedEvents(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsTo(Event::class, 'managed_event_id');
+        return $this->belongsToMany(Event::class, 'user_managed_events');
+    }
+
+    public function getManagedEventAttribute(): ?Event
+    {
+        return $this->managedEvents->first();
+    }
+
+    public function getManagedEventIdsAttribute(): array
+    {
+        return $this->managedEvents->pluck('id')->all();
     }
 
     public function referredBy()

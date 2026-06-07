@@ -46,10 +46,10 @@ class OrderController extends Controller
     {
         app(PendingPaymentExpiryService::class)->expireDueOrders();
 
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
 
         $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
-        $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+        $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
 
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
@@ -85,7 +85,7 @@ class OrderController extends Controller
         $deletedOrdersCount = 0;
         if ($canViewDeletedOrders) {
             $deletedQuery = Order::onlyTrashed();
-            $this->applyEventScopeToOrdersQuery($deletedQuery, $managedEvent);
+            $this->applyManagedEventsScope($deletedQuery, $managedEvents);
             $deletedOrdersCount = $deletedQuery->count();
         }
 
@@ -114,12 +114,12 @@ class OrderController extends Controller
     {
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
 
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
 
         $ordersQuery = Order::onlyTrashed()
             ->withCount('items')
             ->with(['customer']);
-        $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+        $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
 
@@ -598,11 +598,11 @@ class OrderController extends Controller
     {
         abort_unless($this->isSuperAdmin($request->user()), 403);
 
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
 
         $ordersQuery = Order::query()->with(['customer', 'items.event']);
-        $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+        $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
         if ($request->filled('status')) {
             $ordersQuery->where('status', $request->string('status'));
@@ -725,16 +725,27 @@ class OrderController extends Controller
         });
     }
 
-    private function abortIfOrderOutsideManagedEvent(Request $request, Order $order): void
+    private function applyManagedEventsScope(Builder $query, \Illuminate\Support\Collection $managedEvents): void
     {
-        $event = $request->user()?->managedEvent;
-        if (! $event) {
+        if ($managedEvents->isEmpty()) {
             return;
         }
 
-        $belongs = $order->items()
-            ->where('event_id', $event->id)
-            ->exists();
+        $ids = $managedEvents->pluck('id')->all();
+        $query->whereHas('items', function (Builder $itemsQuery) use ($ids) {
+            $itemsQuery->whereIn('event_id', $ids);
+        });
+    }
+
+    private function abortIfOrderOutsideManagedEvent(Request $request, Order $order): void
+    {
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        if ($managedEvents->isEmpty()) {
+            return;
+        }
+
+        $ids = $managedEvents->pluck('id')->all();
+        $belongs = $order->items()->whereIn('event_id', $ids)->exists();
 
         abort_unless($belongs, 403);
     }

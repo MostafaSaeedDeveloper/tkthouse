@@ -260,25 +260,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
          ╚══════════════════════════════════════╝ --}}
     <div class="db-stats">
 
-        <div class="db-stat fade-up delay-1">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Total Orders</div>
-                <div class="db-stat-icon">🧾</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalOrders) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}{{ $selectedEvent ? ' • '.$selectedEvent->name : '' }}</div>
-        </div>
-
-        <div class="db-stat green fade-up delay-2">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Revenue</div>
-                <div class="db-stat-icon">💰</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalRevenue, 0) }} EGP</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
-        </div>
-
-        <div class="db-stat green fade-up delay-3">
+        <div class="db-stat green fade-up delay-1">
             <div class="db-stat-top">
                 <div class="db-stat-label">Gross Revenue</div>
                 <div class="db-stat-icon">💵</div>
@@ -363,34 +345,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
 
     </div>
 
-    </div>
 
-
-    {{-- ╔══════════════════════════════════════╗
-         ║              CHARTS                  ║
-         ╚══════════════════════════════════════╝ --}}
-    <div class="db-charts fade-up delay-2">
-
-        <div class="db-card">
-            <div class="db-card-head">
-                <div class="db-card-title">Revenue Trend ({{ $rangeLabel }})</div>
-                <a href="{{ route('admin.orders.index') }}" class="db-card-action">View Orders →</a>
-            </div>
-            <div class="db-card-body">
-                <div class="chart-container"><canvas id="revenueChart"></canvas></div>
-            </div>
-        </div>
-
-        <div class="db-card">
-            <div class="db-card-head">
-                <div class="db-card-title">Orders Trend ({{ $rangeLabel }})</div>
-            </div>
-            <div class="db-card-body">
-                <div class="chart-container"><canvas id="ordersChart"></canvas></div>
-            </div>
-        </div>
-
-    </div>
 
     {{-- ╔══════════════════════════════════════╗
          ║    RECENT ORDERS  +  RIGHT COLUMN    ║
@@ -452,44 +407,6 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
         {{-- ── Right column ── --}}
         <div style="display:flex;flex-direction:column;gap:16px;">
 
-            {{-- Top Events ──────────────────────────────────
-                 WIRE: replace rows with:
-                   @foreach($topEvents as $i => $event)
-                     <div class="db-event-row">
-                       <div class="db-event-rank">{{ $i + 1 }}</div>
-                       <div class="db-event-info">
-                         <div class="db-event-name">{{ $event->name }}</div>
-                         <div class="db-event-meta">{{ $event->orders_count }} orders</div>
-                       </div>
-                       <div class="db-event-revenue">{{ number_format($event->revenue, 0) }}</div>
-                     </div>
-                   @endforeach
-            ── --}}
-            <div class="db-card">
-                <div class="db-card-head">
-                    <div class="db-card-title">Top Events ({{ $rangeLabel }})</div>
-                    <a href="{{ route('admin.events.index') }}" class="db-card-action">All →</a>
-                </div>
-                <div class="db-card-body" style="padding:4px 22px 16px;">
-
-                    @forelse($topEvents as $i => $event)
-                    <div class="db-event-row">
-                        <div class="db-event-rank">{{ $i + 1 }}</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">{{ $event['name'] }}</div>
-                            <div class="db-event-meta">{{ $event['orders_count'] }} orders</div>
-                        </div>
-                        <div class="db-event-revenue">{{ number_format($event['revenue'], 0) }} EGP</div>
-                    </div>
-                    @empty
-                    <div class="db-event-row">
-                        <div class="db-event-info"><div class="db-event-name">No data yet</div></div>
-                    </div>
-                    @endforelse
-
-                </div>
-            </div>
-
             {{-- Quick Access --}}
             <div class="db-card">
                 <div class="db-card-head">
@@ -510,6 +427,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
         </div>
     </div>
 
+</div>
 </div>
 </div>
 
@@ -595,79 +513,5 @@ window.addEventListener('load', function () {
 });
 </script>
 
-<script>
-window.addEventListener('load', function () {
-    if (typeof Chart === 'undefined') {
-        console.warn('Chart.js is not loaded');
-        return;
-    }
-
-    const revenueCanvas = document.getElementById('revenueChart');
-    const ordersCanvas = document.getElementById('ordersChart');
-    if (!revenueCanvas || !ordersCanvas) {
-        return;
-    }
-
-
-    const gold    = '#f5b800';
-    const goldDim = 'rgba(245,184,0,0.15)';
-    const gridCol = 'rgba(255,255,255,0.05)';
-    const muted   = '#6b6b7e';
-
-    const sharedOpts = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: '#16161d',
-                borderColor: 'rgba(245,184,0,0.3)',
-                borderWidth: 1,
-                titleColor: '#f5b800',
-                bodyColor: '#e8e8ef',
-                padding: 10,
-            }
-        },
-        scales: {
-            x: { grid: { color: gridCol }, ticks: { color: muted, font: { family: 'DM Sans', size: 11 } } },
-            y: { grid: { color: gridCol }, ticks: { color: muted, font: { family: 'DM Sans', size: 11 } } },
-        }
-    };
-
-    new Chart(revenueCanvas, {
-        type: 'line',
-        data: {
-            labels  : @json($labels),
-            datasets: [{
-                data                : @json($revenueData),
-                borderColor         : gold,
-                backgroundColor     : goldDim,
-                borderWidth         : 2,
-                pointBackgroundColor: gold,
-                pointRadius         : 4,
-                pointHoverRadius    : 6,
-                fill                : true,
-                tension             : 0.4,
-            }]
-        },
-        options: { ...sharedOpts }
-    });
-
-    new Chart(ordersCanvas, {
-        type: 'bar',
-        data: {
-            labels  : @json($labels),
-            datasets: [{
-                data           : @json($ordersData),
-                backgroundColor: 'rgba(245,184,0,0.22)',
-                borderColor    : gold,
-                borderWidth    : 1.5,
-                borderRadius   : 5,
-            }]
-        },
-        options: { ...sharedOpts }
-    });
-});
-</script>
 
 @endsection
