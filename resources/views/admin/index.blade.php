@@ -407,44 +407,6 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
         {{-- ── Right column ── --}}
         <div style="display:flex;flex-direction:column;gap:16px;">
 
-            {{-- Top Events ──────────────────────────────────
-                 WIRE: replace rows with:
-                   @foreach($topEvents as $i => $event)
-                     <div class="db-event-row">
-                       <div class="db-event-rank">{{ $i + 1 }}</div>
-                       <div class="db-event-info">
-                         <div class="db-event-name">{{ $event->name }}</div>
-                         <div class="db-event-meta">{{ $event->orders_count }} orders</div>
-                       </div>
-                       <div class="db-event-revenue">{{ number_format($event->revenue, 0) }}</div>
-                     </div>
-                   @endforeach
-            ── --}}
-            <div class="db-card">
-                <div class="db-card-head">
-                    <div class="db-card-title">Top Events ({{ $rangeLabel }})</div>
-                    <a href="{{ route('admin.events.index') }}" class="db-card-action">All →</a>
-                </div>
-                <div class="db-card-body" style="padding:4px 22px 16px;">
-
-                    @forelse($topEvents as $i => $event)
-                    <div class="db-event-row">
-                        <div class="db-event-rank">{{ $i + 1 }}</div>
-                        <div class="db-event-info">
-                            <div class="db-event-name">{{ $event['name'] }}</div>
-                            <div class="db-event-meta">{{ $event['orders_count'] }} orders</div>
-                        </div>
-                        <div class="db-event-revenue">{{ number_format($event['revenue'], 0) }} EGP</div>
-                    </div>
-                    @empty
-                    <div class="db-event-row">
-                        <div class="db-event-info"><div class="db-event-name">No data yet</div></div>
-                    </div>
-                    @endforelse
-
-                </div>
-            </div>
-
             {{-- Quick Access --}}
             <div class="db-card">
                 <div class="db-card-head">
