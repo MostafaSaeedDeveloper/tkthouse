@@ -28,7 +28,7 @@ class UserController extends Controller
         }
 
         $users = User::query()
-            ->with(['roles', 'permissions', 'managedEvent:id,name'])
+            ->with(['roles', 'permissions', 'managedEvents:id,name'])
             ->when(! $isSuperAdmin, function ($query) {
                 $query
                     ->whereRaw("LOWER(username) != ?", ['superadmin'])
@@ -105,17 +105,18 @@ class UserController extends Controller
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
-            'managed_event_id' => ['nullable', 'exists:events,id'],
+            'managed_event_ids' => ['nullable', 'array'],
+            'managed_event_ids.*' => ['exists:events,id'],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'],
-            'managed_event_id' => $validated['managed_event_id'] ?? null,
             'password' => Hash::make($validated['password']),
         ]);
 
+        $user->managedEvents()->sync($validated['managed_event_ids'] ?? []);
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -172,14 +173,14 @@ class UserController extends Controller
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
-            'managed_event_id' => ['nullable', 'exists:events,id'],
+            'managed_event_ids' => ['nullable', 'array'],
+            'managed_event_ids.*' => ['exists:events,id'],
         ]);
 
         $data = [
             'name' => $validated['name'],
             'username' => $validated['username'],
             'email' => $validated['email'],
-            'managed_event_id' => $validated['managed_event_id'] ?? null,
         ];
 
         if (filled($validated['password'] ?? null)) {
@@ -188,6 +189,7 @@ class UserController extends Controller
 
         $user->update($data);
 
+        $user->managedEvents()->sync($validated['managed_event_ids'] ?? []);
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();

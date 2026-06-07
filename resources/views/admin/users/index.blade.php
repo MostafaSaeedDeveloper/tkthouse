@@ -75,7 +75,13 @@
                                 -
                             @endforelse
                         </td>
-                        <td>{{ $user->managedEvent?->name ?: 'All Events' }}</td>
+                        <td>
+                            @forelse($user->managedEvents as $me)
+                                <span class="badge bg-secondary me-1">{{ $me->name }}</span>
+                            @empty
+                                All Events
+                            @endforelse
+                        </td>
                         <td>{{ $user->last_login_at?->format('Y-m-d H:i') ?: '-' }}</td>
                         <td>{{ $user->last_login_ip ?: '-' }}</td>
                         <td class="text-end">

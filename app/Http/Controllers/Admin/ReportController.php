@@ -14,9 +14,9 @@ class ReportController extends Controller
 {
     public function event(Request $request, Event $event)
     {
-        $managedEvent = $request->user()?->managedEvent;
-        if ($managedEvent) {
-            abort_unless((int) $managedEvent->id === (int) $event->id, 403);
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        if ($managedEvents->isNotEmpty()) {
+            abort_unless($managedEvents->pluck('id')->contains($event->id), 403);
         }
 
         return $this->index($request, $event);
@@ -24,9 +24,9 @@ class ReportController extends Controller
 
     public function index(Request $request, ?Event $forcedEvent = null)
     {
-        $managedEvent = $request->user()?->managedEvent;
-        if ($managedEvent && $forcedEvent === null) {
-            $forcedEvent = $managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        if ($managedEvents->count() === 1 && $forcedEvent === null) {
+            $forcedEvent = $managedEvents->first();
         }
 
         $selectedRange = (string) $request->input('range', 'last30');

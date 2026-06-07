@@ -18,10 +18,10 @@ class GuestListController extends Controller
 {
     public function index(Request $request)
     {
-        $managedEventName = $request->user()?->managedEvent?->name;
+        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
 
         $ticketsQuery = Ticket::query()->with('order')->where('source', 'guest_list');
-        $this->applyManagedEventScopeToGuestTicketsQuery($ticketsQuery, $managedEventName);
+        $this->applyManagedEventScopeToGuestTicketsQuery($ticketsQuery, $managedEventNames);
 
         if ($request->filled('event_name')) {
             $eventName = trim((string) $request->input('event_name'));
@@ -47,12 +47,12 @@ class GuestListController extends Controller
         $tickets = $ticketsQuery->latest()->paginate(15)->withQueryString();
 
         $eventNames = Event::query()
-            ->when(filled($managedEventName), fn (Builder $query) => $query->where('name', $managedEventName))
+            ->when(! empty($managedEventNames), fn (Builder $query) => $query->whereIn('name', $managedEventNames))
             ->orderBy('name')
             ->pluck('name');
 
         $guestTypesQuery = Ticket::query()->where('source', 'guest_list')->whereNotNull('guest_type');
-        $this->applyManagedEventScopeToGuestTicketsQuery($guestTypesQuery, $managedEventName);
+        $this->applyManagedEventScopeToGuestTicketsQuery($guestTypesQuery, $managedEventNames);
         $guestTypes = $guestTypesQuery->distinct()->orderBy('guest_type')->pluck('guest_type');
 
         return view('admin.tickets.guest-list', compact('tickets', 'eventNames', 'guestTypes'));
@@ -60,17 +60,17 @@ class GuestListController extends Controller
 
     public function create(Request $request)
     {
-        $managedEventName = $request->user()?->managedEvent?->name;
+        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
         $data = $request->validate([
             'event_name' => ['required', 'string', 'max:255'],
             'guest_type' => ['required', 'string', 'max:255'],
             'count' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
-        $this->abortIfManagedEventMismatch($managedEventName, $data['event_name']);
+        $this->abortIfManagedEventMismatch($managedEventNames, $data['event_name']);
 
         $eventNames = Event::query()
-            ->when(filled($managedEventName), fn (Builder $query) => $query->where('name', $managedEventName))
+            ->when(! empty($managedEventNames), fn (Builder $query) => $query->whereIn('name', $managedEventNames))
             ->orderBy('name')
             ->pluck('name');
 
@@ -84,7 +84,7 @@ class GuestListController extends Controller
 
     public function store(Request $request)
     {
-        $managedEventName = $request->user()?->managedEvent?->name;
+        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
         $data = $request->validate([
             'event_name' => ['required', 'string', 'max:255'],
             'guest_type' => ['required', 'string', 'max:255'],
@@ -96,7 +96,7 @@ class GuestListController extends Controller
             'status' => ['nullable', 'in:not_checked_in,checked_in,canceled'],
         ]);
 
-        $this->abortIfManagedEventMismatch($managedEventName, $data['event_name']);
+        $this->abortIfManagedEventMismatch($managedEventNames, $data['event_name']);
 
         $status = $data['status'] ?? 'not_checked_in';
         $guestType = $this->normalizeGuestType($data['guest_type']);
@@ -129,13 +129,13 @@ class GuestListController extends Controller
 
     public function import(Request $request)
     {
-        $managedEventName = $request->user()?->managedEvent?->name;
+        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
         $data = $request->validate([
             'event_name' => ['required', 'string', 'max:255'],
             'file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        $this->abortIfManagedEventMismatch($managedEventName, $data['event_name']);
+        $this->abortIfManagedEventMismatch($managedEventNames, $data['event_name']);
 
         $rows = collect(array_map('str_getcsv', file($data['file']->getRealPath())));
 
@@ -192,10 +192,10 @@ class GuestListController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $managedEventName = $request->user()?->managedEvent?->name;
+        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
 
         $ticketsQuery = Ticket::query()->where('source', 'guest_list');
-        $this->applyManagedEventScopeToGuestTicketsQuery($ticketsQuery, $managedEventName);
+        $this->applyManagedEventScopeToGuestTicketsQuery($ticketsQuery, $managedEventNames);
 
         $tickets = $ticketsQuery->latest()->get();
 
@@ -221,25 +221,28 @@ class GuestListController extends Controller
     }
 
 
-    private function applyManagedEventScopeToGuestTicketsQuery(Builder $query, ?string $eventName): void
+    private function applyManagedEventScopeToGuestTicketsQuery(Builder $query, array $eventNames): void
     {
-        if (! filled($eventName)) {
+        if (empty($eventNames)) {
             return;
         }
 
-        $query->where(function (Builder $ticketQuery) use ($eventName) {
-            $ticketQuery->where('name', 'like', $eventName.' - %')
-                ->orWhere('name', $eventName);
+        $query->where(function (Builder $ticketQuery) use ($eventNames) {
+            foreach ($eventNames as $name) {
+                $ticketQuery->orWhere('name', 'like', $name.' - %')
+                    ->orWhere('name', $name);
+            }
         });
     }
 
-    private function abortIfManagedEventMismatch(?string $managedEventName, string $requestedEventName): void
+    private function abortIfManagedEventMismatch(array $managedEventNames, string $requestedEventName): void
     {
-        if (! filled($managedEventName)) {
+        if (empty($managedEventNames)) {
             return;
         }
 
-        abort_unless(trim($managedEventName) === trim($requestedEventName), 403);
+        $normalized = array_map('trim', $managedEventNames);
+        abort_unless(in_array(trim($requestedEventName), $normalized, true), 403);
     }
 
     private function createGuestTicket(

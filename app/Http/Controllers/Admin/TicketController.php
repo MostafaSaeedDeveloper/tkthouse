@@ -23,14 +23,15 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        $managedEventNames = $managedEvents->pluck('name')->all();
 
         $ticketsQuery = Ticket::query()->with('order')
             ->where(function ($query) {
                 $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
             });
 
-        $this->applyManagedEventScopeToTicketsQuery($ticketsQuery, $managedEvent?->name);
+        $this->applyManagedEventScopeToTicketsQuery($ticketsQuery, $managedEventNames);
 
         if ($request->filled('status')) {
             $ticketsQuery->where('status', $request->string('status'));
@@ -56,7 +57,7 @@ class TicketController extends Controller
         $tickets = $ticketsQuery->latest()->paginate(15)->withQueryString();
 
         $eventNames = Event::query()
-            ->when($managedEvent, fn (Builder $query) => $query->whereKey($managedEvent->id))
+            ->when(! empty($managedEventNames), fn (Builder $query) => $query->whereIn('name', $managedEventNames))
             ->orderBy('name')
             ->pluck('name');
 
@@ -386,27 +387,31 @@ class TicketController extends Controller
     }
 
 
-    private function applyManagedEventScopeToTicketsQuery(Builder $query, ?string $eventName): void
+    private function applyManagedEventScopeToTicketsQuery(Builder $query, array $eventNames): void
     {
-        if (! filled($eventName)) {
+        if (empty($eventNames)) {
             return;
         }
 
-        $query->where(function (Builder $ticketQuery) use ($eventName) {
-            $ticketQuery->where('name', 'like', $eventName.' - %')
-                ->orWhere('name', $eventName);
+        $query->where(function (Builder $ticketQuery) use ($eventNames) {
+            foreach ($eventNames as $name) {
+                $ticketQuery->orWhere('name', 'like', $name.' - %')
+                    ->orWhere('name', $name);
+            }
         });
     }
 
     private function abortIfTicketOutsideManagedEvent(Request $request, Ticket $ticket): void
     {
-        $eventName = $request->user()?->managedEvent?->name;
-        if (! filled($eventName)) {
+        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
+        if (empty($managedEventNames)) {
             return;
         }
 
         $ticketName = (string) ($ticket->name ?? '');
-        $matches = $ticketName === $eventName || str_starts_with($ticketName, $eventName.' - ');
+        $matches = collect($managedEventNames)->contains(
+            fn ($name) => $ticketName === $name || str_starts_with($ticketName, $name.' - ')
+        );
 
         abort_unless($matches, 403);
     }

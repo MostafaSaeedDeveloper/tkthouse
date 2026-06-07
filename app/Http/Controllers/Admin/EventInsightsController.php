@@ -16,9 +16,9 @@ class EventInsightsController extends Controller
 {
     public function dashboard(Request $request, Event $event)
     {
-        $managedEvent = $request->user()?->managedEvent;
-        if ($managedEvent) {
-            abort_unless((int) $managedEvent->id === (int) $event->id, 403);
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        if ($managedEvents->isNotEmpty()) {
+            abort_unless($managedEvents->pluck('id')->contains($event->id), 403);
         }
 
         $selectedRange = (string) $request->input('range', 'last30');

@@ -13,17 +13,20 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        $managedEventIds = $managedEvents->pluck('id')->all();
         $canFilterByEvent = $request->user()?->can('showing_orders') ?? false;
 
         $customersQuery = Customer::query()
-            ->when($managedEvent, function (Builder $query) use ($managedEvent) {
-                $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEvent) {
-                    $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+            ->when($managedEvents->isNotEmpty(), function (Builder $query) use ($managedEventIds) {
+                $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEventIds) {
+                    $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
                 });
             })
-            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvent) {
-                $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvents, $managedEventIds) {
+                if ($managedEvents->isNotEmpty()) {
+                    $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
+                }
             }]);
 
         if ($request->filled('search')) {
@@ -55,17 +58,20 @@ class CustomerController extends Controller
     {
         abort_unless($this->isSuperAdmin($request->user()), 403);
 
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        $managedEventIds = $managedEvents->pluck('id')->all();
         $canFilterByEvent = $request->user()?->can('showing_orders') ?? false;
 
         $customersQuery = Customer::query()
-            ->when($managedEvent, function (Builder $query) use ($managedEvent) {
-                $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEvent) {
-                    $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+            ->when($managedEvents->isNotEmpty(), function (Builder $query) use ($managedEventIds) {
+                $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEventIds) {
+                    $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
                 });
             })
-            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvent) {
-                $this->applyEventScopeToOrdersQuery($ordersQuery, $managedEvent);
+            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvents, $managedEventIds) {
+                if ($managedEvents->isNotEmpty()) {
+                    $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
+                }
             }]);
 
         if ($request->filled('search')) {
@@ -103,20 +109,23 @@ class CustomerController extends Controller
 
     public function show(Request $request, Customer $customer)
     {
-        $managedEvent = $request->user()?->managedEvent;
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+        $managedEventIds = $managedEvents->pluck('id')->all();
 
-        if ($managedEvent) {
+        if ($managedEvents->isNotEmpty()) {
             $hasVisibleOrder = $customer->orders()
-                ->whereHas('items', function (Builder $itemsQuery) use ($managedEvent) {
-                    $itemsQuery->where('event_id', $managedEvent->id);
+                ->whereHas('items', function (Builder $itemsQuery) use ($managedEventIds) {
+                    $itemsQuery->whereIn('event_id', $managedEventIds);
                 })
                 ->exists();
 
             abort_unless($hasVisibleOrder, 403);
         }
 
-        $customer->load(['orders' => function ($query) use ($managedEvent) {
-            $this->applyEventScopeToOrdersQuery($query, $managedEvent);
+        $customer->load(['orders' => function ($query) use ($managedEvents, $managedEventIds) {
+            if ($managedEvents->isNotEmpty()) {
+                $query->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
+            }
             $query->latest()->withCount('items');
         }]);
 

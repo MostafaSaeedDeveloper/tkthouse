@@ -27,11 +27,13 @@
 
 <div class="mb-3">
     <label class="form-label">Managed Event Scope</label>
-    <select name="managed_event_id" class="form-select">
-        <option value="">-- All Events (No Restriction) --</option>
+    @php
+        $selectedEventIds = old('managed_event_ids', isset($user) ? $user->managedEvents->pluck('id')->map(fn($id) => (string) $id)->all() : []);
+    @endphp
+    <select name="managed_event_ids[]" class="form-select" multiple size="6">
         @foreach(($events ?? collect()) as $event)
-            <option value="{{ $event->id }}" @selected((string) old('managed_event_id', $user->managed_event_id ?? '') === (string) $event->id)>{{ $event->name }}</option>
+            <option value="{{ $event->id }}" @selected(in_array((string) $event->id, $selectedEventIds))>{{ $event->name }}</option>
         @endforeach
     </select>
-    <div class="form-text">If set, this user will only see dashboard/reports/orders for the selected event.</div>
+    <div class="form-text">Hold Ctrl/Cmd to select multiple events. Leave empty for no restriction (all events).</div>
 </div>
