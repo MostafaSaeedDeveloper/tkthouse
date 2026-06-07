@@ -50,10 +50,6 @@
 
                 <div class="report-metrics">
                     <div>
-                        <small>Gross Revenue</small>
-                        <strong>{{ number_format($report['gross_revenue'], 2) }} EGP</strong>
-                    </div>
-                    <div>
                         <small>Male Tickets</small>
                         <strong>{{ number_format($report['male_tickets']) }}</strong>
                     </div>

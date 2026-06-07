@@ -38,7 +38,6 @@
         <article class="report-card"><small>Tickets Sold</small><h3>{{ number_format($ticketsSold) }}</h3></article>
         <article class="report-card"><small>Invitations Sent</small><h3>{{ number_format($guestInvitations) }}</h3></article>
         <article class="report-card"><small>Guest List Check-ins</small><h3>{{ number_format($guestCheckedIn) }}</h3></article>
-        <article class="report-card"><small>Revenue</small><h3>{{ number_format($grossRevenue, 2) }} EGP</h3></article>
         <article class="report-card"><small>Paid Check-ins</small><h3>{{ number_format($paidCheckedIn) }}</h3></article>
         <article class="report-card"><small>Scanner Activity</small><h3>{{ number_format($totalScans) }}</h3></article>
     </div>
@@ -46,7 +45,7 @@
     <div class="block block-rounded">
         <div class="block-header block-header-default">
             <h3 class="block-title">Event Analytics</h3>
-            <div class="block-options text-muted fs-sm">{{ number_format($ordersCount) }} paid orders</div>
+            <div class="block-options text-muted fs-sm"></div>
         </div>
         <div class="block-content">
             <canvas id="eventAnalyticsChart" height="120"></canvas>

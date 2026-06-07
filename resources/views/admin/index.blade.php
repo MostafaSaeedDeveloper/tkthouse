@@ -260,25 +260,7 @@ a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !
          ╚══════════════════════════════════════╝ --}}
     <div class="db-stats">
 
-        <div class="db-stat fade-up delay-1">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Total Orders</div>
-                <div class="db-stat-icon">🧾</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalOrders) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}{{ $selectedEvent ? ' • '.$selectedEvent->name : '' }}</div>
-        </div>
-
-        <div class="db-stat green fade-up delay-2">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Revenue</div>
-                <div class="db-stat-icon">💰</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalRevenue, 0) }} EGP</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
-        </div>
-
-        <div class="db-stat green fade-up delay-3">
+        <div class="db-stat green fade-up delay-1">
             <div class="db-stat-top">
                 <div class="db-stat-label">Gross Revenue</div>
                 <div class="db-stat-icon">💵</div>
