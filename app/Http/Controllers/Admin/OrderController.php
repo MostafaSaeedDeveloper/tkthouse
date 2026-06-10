@@ -549,7 +549,7 @@ class OrderController extends Controller
         $newStatus = (string) $validated['status'];
 
         if ($oldStatus === $newStatus) {
-            return back()->with('success', 'Order status is already set to the selected value.');
+            return redirect()->route('admin.orders.show', $order)->with('success', 'Order status is already set to the selected value.');
         }
 
         $paidAt = $order->paid_at;
@@ -589,7 +589,7 @@ class OrderController extends Controller
         $this->sendOrderStatusChangedMail($order, $oldStatus, $newStatus);
         app(TicketIssuanceService::class)->issueIfPaid($order);
 
-        return back()->with('success', 'Order status updated successfully.');
+        return redirect()->route('admin.orders.show', $order)->with('success', 'Order status updated successfully.');
     }
 
 
