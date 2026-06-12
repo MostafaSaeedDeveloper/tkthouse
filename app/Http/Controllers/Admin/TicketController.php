@@ -458,7 +458,7 @@ class TicketController extends Controller
                     ->orWhere('ticket_number', $payload);
             });
 
-        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventName);
+        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventName ? [$managedEventName] : []);
 
         return $ticketQuery->first();
     }
