@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\RegisterOtpMail;
+use App\Models\NotificationLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -86,7 +87,24 @@ class CustomerAuthController extends Controller
             'expires_at' => now()->addMinutes(10)->timestamp,
         ]);
 
-        Mail::to($validated['email'])->send(new RegisterOtpMail($otpCode));
+        try {
+            Mail::to($validated['email'])->send(new RegisterOtpMail($otpCode));
+            NotificationLog::logEmail([
+                'type' => 'otp',
+                'recipient' => $validated['email'],
+                'subject' => 'Your TKT House verification code',
+                'status' => 'sent',
+            ]);
+        } catch (\Throwable $exception) {
+            NotificationLog::logEmail([
+                'type' => 'otp',
+                'recipient' => $validated['email'],
+                'subject' => 'Your TKT House verification code',
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+            ]);
+            throw $exception;
+        }
 
         return response()->json([
             'message' => 'OTP has been sent to your email. Enter it to complete registration.',

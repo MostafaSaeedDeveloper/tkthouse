@@ -9,6 +9,7 @@ use App\Mail\OrderRejectedMail;
 use App\Mail\OrderStatusChangedMail;
 use App\Models\Event;
 use App\Models\EventTicket;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
@@ -464,7 +465,27 @@ class OrderController extends Controller
             ->log('Order note added');
 
         if ($sendToCustomer && filled($order->customer?->email)) {
-            Mail::to($order->customer->email)->send(new OrderNoteToCustomerMail($order, $validated['body']));
+            $subject = 'Update on your order #'.$order->order_number;
+            try {
+                Mail::to($order->customer->email)->send(new OrderNoteToCustomerMail($order, $validated['body']));
+                NotificationLog::logEmail([
+                    'type' => 'order_note',
+                    'recipient' => $order->customer->email,
+                    'order_id' => $order->id,
+                    'subject' => $subject,
+                    'status' => 'sent',
+                ]);
+            } catch (\Throwable $exception) {
+                NotificationLog::logEmail([
+                    'type' => 'order_note',
+                    'recipient' => $order->customer->email,
+                    'order_id' => $order->id,
+                    'subject' => $subject,
+                    'status' => 'failed',
+                    'error' => $exception->getMessage(),
+                ]);
+                report($exception);
+            }
 
             return back()->with('success', 'Note added and emailed to customer successfully.');
         }
@@ -501,8 +522,27 @@ class OrderController extends Controller
 
         $paymentLink = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
 
-        Mail::to($order->customer->email)
-            ->send(new OrderApprovedMail($order, $paymentLink));
+        $approvedSubject = 'Order approved - payment required #'.$order->order_number;
+        try {
+            Mail::to($order->customer->email)->send(new OrderApprovedMail($order, $paymentLink));
+            NotificationLog::logEmail([
+                'type' => 'order_approved',
+                'recipient' => $order->customer->email,
+                'order_id' => $order->id,
+                'subject' => $approvedSubject,
+                'status' => 'sent',
+            ]);
+        } catch (\Throwable $exception) {
+            NotificationLog::logEmail([
+                'type' => 'order_approved',
+                'recipient' => $order->customer->email,
+                'order_id' => $order->id,
+                'subject' => $approvedSubject,
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+            ]);
+            report($exception);
+        }
 
         $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
 
@@ -757,14 +797,57 @@ class OrderController extends Controller
         }
 
         if ($newStatus === 'rejected') {
-            Mail::to($order->customer->email)
-                ->send(new OrderRejectedMail($order));
+            $subject = 'Order update - booking not approved #'.$order->order_number;
+            try {
+                Mail::to($order->customer->email)->send(new OrderRejectedMail($order));
+                NotificationLog::logEmail([
+                    'type' => 'order_rejected',
+                    'recipient' => $order->customer->email,
+                    'order_id' => $order->id,
+                    'subject' => $subject,
+                    'status' => 'sent',
+                ]);
+            } catch (\Throwable $exception) {
+                NotificationLog::logEmail([
+                    'type' => 'order_rejected',
+                    'recipient' => $order->customer->email,
+                    'order_id' => $order->id,
+                    'subject' => $subject,
+                    'status' => 'failed',
+                    'error' => $exception->getMessage(),
+                ]);
+                report($exception);
+            }
 
             return;
         }
 
-        Mail::to($order->customer->email)
-            ->send(new OrderStatusChangedMail($order, $oldStatus, $newStatus));
+        $subject = $newStatus === 'canceled'
+            ? 'Your order has been canceled #'.$order->order_number
+            : 'Order status updated #'.$order->order_number;
+
+        try {
+            Mail::to($order->customer->email)->send(new OrderStatusChangedMail($order, $oldStatus, $newStatus));
+            NotificationLog::logEmail([
+                'type' => 'order_status_changed',
+                'recipient' => $order->customer->email,
+                'order_id' => $order->id,
+                'subject' => $subject,
+                'status' => 'sent',
+                'metadata' => ['from' => $oldStatus, 'to' => $newStatus],
+            ]);
+        } catch (\Throwable $exception) {
+            NotificationLog::logEmail([
+                'type' => 'order_status_changed',
+                'recipient' => $order->customer->email,
+                'order_id' => $order->id,
+                'subject' => $subject,
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+                'metadata' => ['from' => $oldStatus, 'to' => $newStatus],
+            ]);
+            report($exception);
+        }
     }
 
 }

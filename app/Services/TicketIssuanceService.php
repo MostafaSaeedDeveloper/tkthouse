@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
-use App\Services\UltramsgWhatsappService;
 use App\Mail\HolderTicketsIssuedMail;
 use App\Mail\OrderInvoicePaidMail;
 use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\UltramsgWhatsappService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -85,21 +86,36 @@ class TicketIssuanceService
         foreach ($groupedByHolder as $holderEmail => $tickets) {
             $this->sendMailWithRetry(
                 fn () => Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail)),
-                ['order_id' => $order->id, 'recipient' => $holderEmail, 'mail_type' => 'holder_tickets_issued']
+                [
+                    'order_id' => $order->id,
+                    'recipient' => $holderEmail,
+                    'mail_type' => 'holder_tickets',
+                    'subject' => 'Your tickets are ready - Order #'.$order->order_number,
+                ]
             );
         }
 
         if (filled($order->customer?->email)) {
             $this->sendMailWithRetry(
                 fn () => Mail::to($order->customer->email)->send(new OrderTicketsIssuedMail($order)),
-                ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_tickets_issued']
+                [
+                    'order_id' => $order->id,
+                    'recipient' => $order->customer->email,
+                    'mail_type' => 'order_tickets',
+                    'subject' => 'Your tickets are ready - Order #'.$order->order_number,
+                ]
             );
         }
 
         if (filled($order->customer?->email)) {
             $this->sendMailWithRetry(
                 fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
-                ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
+                [
+                    'order_id' => $order->id,
+                    'recipient' => $order->customer->email,
+                    'mail_type' => 'order_invoice',
+                    'subject' => 'Payment invoice - Order #'.$order->order_number,
+                ]
             );
         }
         $this->sendOrderWhatsapp($order);
@@ -132,6 +148,14 @@ class TicketIssuanceService
             try {
                 $send();
 
+                NotificationLog::logEmail([
+                    'type' => $context['mail_type'] ?? 'unknown',
+                    'recipient' => $context['recipient'] ?? null,
+                    'order_id' => $context['order_id'] ?? null,
+                    'subject' => $context['subject'] ?? null,
+                    'status' => 'sent',
+                ]);
+
                 return;
             } catch (UnexpectedResponseException $exception) {
                 $isRateLimited = $exception->getCode() === 550
@@ -143,6 +167,15 @@ class TicketIssuanceService
                         'attempt' => $attempt,
                         'error' => $exception->getMessage(),
                     ]);
+                    NotificationLog::logEmail([
+                        'type' => $context['mail_type'] ?? 'unknown',
+                        'recipient' => $context['recipient'] ?? null,
+                        'order_id' => $context['order_id'] ?? null,
+                        'subject' => $context['subject'] ?? null,
+                        'status' => 'failed',
+                        'error' => $exception->getMessage(),
+                        'metadata' => ['attempt' => $attempt],
+                    ]);
 
                     return;
                 }
@@ -153,6 +186,15 @@ class TicketIssuanceService
                     ...$context,
                     'attempt' => $attempt,
                     'error' => $exception->getMessage(),
+                ]);
+                NotificationLog::logEmail([
+                    'type' => $context['mail_type'] ?? 'unknown',
+                    'recipient' => $context['recipient'] ?? null,
+                    'order_id' => $context['order_id'] ?? null,
+                    'subject' => $context['subject'] ?? null,
+                    'status' => 'failed',
+                    'error' => $exception->getMessage(),
+                    'metadata' => ['attempt' => $attempt],
                 ]);
 
                 return;

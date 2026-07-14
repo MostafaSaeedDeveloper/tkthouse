@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'brevo' => [
+        'webhook_secret' => env('BREVO_WEBHOOK_SECRET'),
+    ],
+
     'whatsapp' => [
         'webhook_url' => env('WHATSAPP_WEBHOOK_URL'),
         'token' => env('WHATSAPP_WEBHOOK_TOKEN'),

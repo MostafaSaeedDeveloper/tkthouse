@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Support\SystemSettings;
+use App\Models\NotificationLog;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Support\SystemSettings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -16,10 +17,20 @@ class UltramsgWhatsappService
 {
     public function sendTicket(Ticket $ticket, ?string $phoneOverride = null): bool
     {
+        $subject = 'Ticket #'.$ticket->ticket_number;
+
         if (! $this->isTicketWhatsappSendingEnabled()) {
             Log::info('Ticket WhatsApp skipped: disabled from system settings.', [
                 'ticket_id' => $ticket->id,
                 'ticket_number' => $ticket->ticket_number,
+            ]);
+            NotificationLog::logWhatsapp([
+                'type' => 'ticket_sent',
+                'recipient' => $phoneOverride ?? $ticket->holder_phone,
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'skipped',
+                'error' => 'WhatsApp sending disabled',
             ]);
 
             return false;
@@ -30,6 +41,14 @@ class UltramsgWhatsappService
             Log::warning('Ticket WhatsApp skipped: holder phone is missing or invalid.', [
                 'ticket_id' => $ticket->id,
                 'ticket_number' => $ticket->ticket_number,
+            ]);
+            NotificationLog::logWhatsapp([
+                'type' => 'ticket_sent',
+                'recipient' => $phoneOverride ?? $ticket->holder_phone,
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'skipped',
+                'error' => 'Phone missing or invalid',
             ]);
 
             return false;
@@ -49,26 +68,56 @@ class UltramsgWhatsappService
 
         $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
 
-        $this->sendDocumentWithFallbacks(
-            phone: $phone,
-            ticketNumber: (string) $ticket->ticket_number,
-            caption: $caption,
-            fallbackText: $caption."\nDownload Link: ".$shortLink,
-            context: [
+        try {
+            $msgId = $this->sendDocumentWithFallbacks(
+                phone: $phone,
+                ticketNumber: (string) $ticket->ticket_number,
+                caption: $caption,
+                fallbackText: $caption."\nDownload Link: ".$shortLink,
+                context: [
+                    'ticket_id' => $ticket->id,
+                    'ticket_number' => $ticket->ticket_number,
+                ],
+            );
+            NotificationLog::logWhatsapp([
+                'type' => 'ticket_sent',
+                'recipient' => $phone,
                 'ticket_id' => $ticket->id,
-                'ticket_number' => $ticket->ticket_number,
-            ],
-        );
+                'subject' => $subject,
+                'status' => 'sent',
+                'message_id' => $msgId,
+            ]);
+        } catch (Throwable $exception) {
+            NotificationLog::logWhatsapp([
+                'type' => 'ticket_sent',
+                'recipient' => $phone,
+                'ticket_id' => $ticket->id,
+                'subject' => $subject,
+                'status' => 'failed',
+                'error' => $exception->getMessage(),
+            ]);
+            throw $exception;
+        }
 
         return true;
     }
 
     public function sendOrderTickets(Order $order): bool
     {
+        $orderSubject = 'Order #'.$order->order_number;
+
         if (! $this->isTicketWhatsappSendingEnabled()) {
             Log::info('Order WhatsApp skipped: disabled from system settings.', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
+            ]);
+            NotificationLog::logWhatsapp([
+                'type' => 'order_tickets',
+                'recipient' => $order->customer->phone ?? null,
+                'order_id' => $order->id,
+                'subject' => $orderSubject,
+                'status' => 'skipped',
+                'error' => 'WhatsApp sending disabled',
             ]);
 
             return false;
@@ -81,6 +130,14 @@ class UltramsgWhatsappService
             Log::warning('Order WhatsApp skipped: customer phone is missing or invalid.', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
+            ]);
+            NotificationLog::logWhatsapp([
+                'type' => 'order_tickets',
+                'recipient' => $order->customer->phone ?? null,
+                'order_id' => $order->id,
+                'subject' => $orderSubject,
+                'status' => 'skipped',
+                'error' => 'Phone missing or invalid',
             ]);
 
             return false;
@@ -104,22 +161,46 @@ class UltramsgWhatsappService
 
             $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
 
-            $this->sendDocumentWithFallbacks(
-                phone: $phone,
-                ticketNumber: (string) $ticket->ticket_number,
-                caption: $caption,
-                fallbackText: $caption."\nDownload Link: ".$shortLink,
-                context: [
+            try {
+                $msgId = $this->sendDocumentWithFallbacks(
+                    phone: $phone,
+                    ticketNumber: (string) $ticket->ticket_number,
+                    caption: $caption,
+                    fallbackText: $caption."\nDownload Link: ".$shortLink,
+                    context: [
+                        'order_id' => $order->id,
+                        'ticket_number' => $ticket->ticket_number,
+                    ],
+                );
+                NotificationLog::logWhatsapp([
+                    'type' => 'order_tickets',
+                    'recipient' => $phone,
+                    'order_id' => $order->id,
+                    'subject' => 'Ticket #'.$ticket->ticket_number.' — '.$orderSubject,
+                    'status' => 'sent',
+                    'message_id' => $msgId,
+                ]);
+            } catch (Throwable $exception) {
+                Log::error('Order WhatsApp ticket send failed.', [
                     'order_id' => $order->id,
                     'ticket_number' => $ticket->ticket_number,
-                ],
-            );
+                    'error' => $exception->getMessage(),
+                ]);
+                NotificationLog::logWhatsapp([
+                    'type' => 'order_tickets',
+                    'recipient' => $phone,
+                    'order_id' => $order->id,
+                    'subject' => 'Ticket #'.$ticket->ticket_number.' — '.$orderSubject,
+                    'status' => 'failed',
+                    'error' => $exception->getMessage(),
+                ]);
+            }
         }
 
         return true;
     }
 
-    private function sendTextMessage(string $phone, string $body): void
+    private function sendTextMessage(string $phone, string $body): ?string
     {
         $response = Http::asForm()
             ->timeout(20)
@@ -132,10 +213,10 @@ class UltramsgWhatsappService
 
         $response->throw();
 
-        $this->assertSent((array) $response->json(), $response->body());
+        return $this->assertSent((array) $response->json(), $response->body());
     }
 
-    private function sendDocumentMessage(string $phone, string $documentUrl, string $filename, string $caption): void
+    private function sendDocumentMessage(string $phone, string $documentUrl, string $filename, string $caption): ?string
     {
         $response = Http::asForm()
             ->timeout(30)
@@ -150,10 +231,10 @@ class UltramsgWhatsappService
 
         $response->throw();
 
-        $this->assertSent((array) $response->json(), $response->body());
+        return $this->assertSent((array) $response->json(), $response->body());
     }
 
-    private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): void
+    private function sendDocumentWithFallbacks(string $phone, string $ticketNumber, string $caption, string $fallbackText, array $context = []): ?string
     {
         $filename = $this->ticketFilename($ticketNumber);
         $attempts = [
@@ -177,14 +258,14 @@ class UltramsgWhatsappService
 
         foreach ($attempts as $index => $attempt) {
             try {
-                $this->sendDocumentMessage(
+                $msgId = $this->sendDocumentMessage(
                     phone: $phone,
                     documentUrl: (string) $attempt['document'],
                     filename: $filename,
                     caption: $caption,
                 );
 
-                return;
+                return $msgId;
             } catch (Throwable $exception) {
                 Log::warning('UltraMsg document attempt failed.', [
                     ...$context,
@@ -195,7 +276,7 @@ class UltramsgWhatsappService
             }
         }
 
-        $this->sendTextMessage($phone, $fallbackText);
+        return $this->sendTextMessage($phone, $fallbackText);
     }
 
     private function fetchPdfBinary(string $ticketNumber): string
@@ -206,13 +287,17 @@ class UltramsgWhatsappService
         return $response->body();
     }
 
-    private function assertSent(array $payload, string $rawBody): void
+    private function assertSent(array $payload, string $rawBody): ?string
     {
         $sent = data_get($payload, 'sent');
 
         if (! in_array($sent, [true, 'true', 1, '1'], true)) {
             throw new RuntimeException('UltraMsg accepted request but did not mark it as sent. Response: '.$rawBody);
         }
+
+        $id = (string) data_get($payload, 'id', '');
+
+        return $id !== '' ? $id : null;
     }
 
     private function apiBasePath(): string
