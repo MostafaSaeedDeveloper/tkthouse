@@ -11,6 +11,7 @@
                         return;
                     }
 
+                    box.classList.remove('is-success', 'is-error');
                     if (!message) {
                         box.style.display = 'none';
                         box.textContent = '';
@@ -22,6 +23,7 @@
 
                     box.style.display = 'block';
                     box.textContent = message;
+                    box.classList.add(kind === 'success' ? 'is-success' : 'is-error');
                     if (kind === 'success') {
                         box.style.background = 'rgba(34,197,94,.08)';
                         box.style.border = '1px solid rgba(34,197,94,.25)';
@@ -47,6 +49,7 @@
 
                     var div = document.createElement('div');
                     div.setAttribute('data-auth-inline-error', '1');
+                    div.className = 'tkt-field__error';
                     div.style.marginTop = '6px';
                     div.style.color = '#f0849a';
                     div.style.fontSize = '12px';

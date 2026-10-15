@@ -53,13 +53,19 @@ class SafeHtml
     private static function sanitizeChildren(DOMNode $parent): void
     {
         foreach (iterator_to_array($parent->childNodes) as $node) {
+            if ($node instanceof \DOMComment) {
+                $parent->removeChild($node);
+
+                continue;
+            }
+
             if (! $node instanceof DOMElement) {
                 continue;
             }
 
             $tag = strtolower($node->tagName);
 
-            if (in_array($tag, ['script', 'style', 'iframe', 'object', 'embed', 'form', 'svg', 'math'], true)) {
+            if (in_array($tag, ['script', 'style', 'iframe', 'object', 'embed', 'form', 'svg', 'math', 'template', 'noscript', 'base', 'meta', 'link', 'textarea', 'select', 'button', 'input'], true)) {
                 $parent->removeChild($node);
 
                 continue;
@@ -81,7 +87,7 @@ class SafeHtml
                 $name = strtolower($attribute->name);
                 $keep = $tag === 'a' && in_array($name, ['href', 'title'], true);
 
-                if ($keep && $name === 'href' && ! preg_match('#^(https?://|mailto:|tel:|/)#i', trim($attribute->value))) {
+                if ($keep && $name === 'href' && ! preg_match('#^(https?://|mailto:|tel:|/(?!/))#i', trim($attribute->value))) {
                     $keep = false;
                 }
 

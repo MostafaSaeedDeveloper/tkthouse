@@ -227,4 +227,108 @@ class FrontendV2Test extends TestCase
         $this->get('/events/urban-grooves')->assertOk();
         $this->get('/events/does-not-exist')->assertNotFound();
     }
+
+    public function test_static_pages_use_the_v2_layout_and_keep_their_content(): void
+    {
+        $expect = [
+            'front.about' => 'Who we are',
+            'front.contact' => 'Send us a message',
+            'front.terms' => 'Terms and Conditions',
+            'front.privacy' => 'Information We Collect',
+            'front.cookie' => 'Cookie Policy',
+        ];
+
+        foreach ($expect as $route => $text) {
+            $this->get(route($route))
+                ->assertOk()
+                ->assertSee('data-layout="v2"', false)
+                ->assertSee('tkt-header', false)
+                ->assertSee($text);
+        }
+    }
+
+    public function test_contact_form_still_validates_and_submits(): void
+    {
+        $this->post(route('front.contact.submit'), [])->assertSessionHasErrors(['author', 'phone', 'email', 'comment']);
+
+        $this->post(route('front.contact.submit'), [
+            'author' => 'Sara', 'phone' => '+201000000000', 'email' => 'sara@example.com', 'comment' => 'Hello',
+        ])->assertRedirect(route('front.contact'))->assertSessionHas('success');
+    }
+
+    public function test_auth_pages_use_the_v2_layout_and_keep_their_forms(): void
+    {
+        $this->get(route('front.customer.login'))
+            ->assertOk()
+            ->assertSee('data-layout="v2"', false)
+            ->assertSee('action="'.route('front.customer.login.store').'"', false)
+            ->assertSee('name="login"', false)
+            ->assertSee(route('password.request'), false);
+
+        $this->get(route('front.customer.register'))
+            ->assertOk()
+            ->assertSee('data-layout="v2"', false)
+            ->assertSee('data-otp-verify-url="'.route('front.customer.register.verify-otp').'"', false)
+            ->assertSee('data-otp-field-wrap', false)
+            ->assertSee('data-phone-intl', false);
+
+        $this->get(route('password.request'))
+            ->assertOk()
+            ->assertSee('action="'.route('password.email').'"', false);
+
+        $this->get(route('password.reset', ['token' => 'abc']))
+            ->assertOk()
+            ->assertSee('name="token" value="abc"', false)
+            ->assertSee('action="'.route('password.update').'"', false);
+    }
+
+    public function test_auth_modal_keeps_every_hook_used_by_the_auth_scripts(): void
+    {
+        $html = $this->get(route('front.home'))->assertOk()->getContent();
+
+        foreach ([
+            'id="login-register1"', 'data-auth-tab="login"', 'data-auth-tab="register"', 'data-auth-switch="forgot"',
+            'data-auth-message="login"', 'data-auth-message="register"', 'data-auth-message="forgot"',
+            'data-otp-field-wrap', 'data-redirect-target', 'data-auth-ajax-form',
+            'action="'.route('front.customer.login.store').'"', 'action="'.route('front.customer.register.request-otp').'"',
+            'data-otp-verify-url="'.route('front.customer.register.verify-otp').'"', 'action="'.route('password.email').'"',
+        ] as $hook) {
+            $this->assertStringContainsString($hook, $html, "Missing {$hook}");
+        }
+    }
+
+    public function test_untrusted_map_embeds_are_never_rendered(): void
+    {
+        $event = $this->makeEvent([
+            'map_embed' => '<script>alert(1)</script><iframe src="https://evil.example/x" onload="alert(2)"></iframe>',
+            'map_url' => 'javascript:alert(3)',
+        ]);
+
+        $this->get(route('front.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('alert(', false)
+            ->assertDontSee('evil.example', false)
+            ->assertDontSee('id="tab-venue"', false);
+    }
+
+    public function test_approved_map_embeds_are_rebuilt_as_a_sandboxed_iframe(): void
+    {
+        $event = $this->makeEvent([
+            'map_embed' => '<iframe src="https://www.google.com/maps/embed?pb=!1m18" width="600" onload="alert(1)"></iframe>',
+        ]);
+
+        $this->get(route('front.events.show', $event))
+            ->assertOk()
+            ->assertSee('id="tab-venue"', false)
+            ->assertSee('src="https://www.google.com/maps/embed?pb=!1m18"', false)
+            ->assertSee('sandbox=', false)
+            ->assertDontSee('onload', false);
+    }
+
+    public function test_flash_messages_are_shown_on_v2_pages(): void
+    {
+        $this->withSession(['error' => 'Booking is closed for this event.'])
+            ->get(route('front.home'))
+            ->assertSee('Booking is closed for this event.');
+    }
 }

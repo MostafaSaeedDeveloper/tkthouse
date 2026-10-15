@@ -170,7 +170,7 @@ class PagesController extends Controller
             'comment' => ['required', 'string', 'max:3000'],
         ]);
 
-        $subject = $data['subject'] ?: 'Website Contact Form Message';
+        $subject = ($data['subject'] ?? null) ?: 'Website Contact Form Message';
 
         Mail::raw(
             "New contact message from tkthouse.com\n\n"

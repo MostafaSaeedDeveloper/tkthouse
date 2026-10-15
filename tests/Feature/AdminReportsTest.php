@@ -15,7 +15,7 @@ class AdminReportsTest extends TestCase
 
     public function test_reports_page_groups_paid_completed_order_items_by_event(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Ahmad',
             'last_name' => 'Ali',
@@ -85,7 +85,8 @@ class AdminReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Halloween Event')
             ->assertSee('3 sold')
-            ->assertSee('450.00 EGP')
+            // Revenue figures were intentionally removed from event reports (commit 6dfc034).
+            ->assertDontSee('450.00 EGP')
             ->assertDontSee('Ignored Event');
     }
 }

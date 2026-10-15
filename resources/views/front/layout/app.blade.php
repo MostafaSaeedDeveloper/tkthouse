@@ -51,7 +51,7 @@
     @if($brandColor)
         <style>:root{--tkt-primary: {{ $brandColor }};}</style>
     @endif
-    @include('front.partials.iti-styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
     @stack('styles')
 </head>
 <body class="tkt-v2" data-layout="v2" data-authenticated="{{ auth()->check() ? '1' : '0' }}">
@@ -64,6 +64,13 @@
     @include('front.layout.partials.v2-header', ['siteName' => $siteName, 'logoLight' => $logoLight])
 
     <main id="tkt-main" class="tkt-page">
+        @if(session('success') || session('error') || session('status'))
+            <div class="tkt-container tkt-flash">
+                @if(session('success'))<div class="tkt-alert tkt-alert--success" role="status">{{ session('success') }}</div>@endif
+                @if(session('status'))<div class="tkt-alert tkt-alert--success" role="status">{{ session('status') }}</div>@endif
+                @if(session('error'))<div class="tkt-alert tkt-alert--danger" role="alert">{{ session('error') }}</div>@endif
+            </div>
+        @endif
         @yield('content')
     </main>
 
@@ -71,7 +78,7 @@
 
     <div class="tkt-toast" id="tktToast" role="status" aria-live="polite"></div>
 
-    @include('front.partials.auth-modal')
+    @include('front.partials.auth-modal-v2')
 
     <script src="{{ asset('js/jquery.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/intlTelInput.min.js"></script>

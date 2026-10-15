@@ -97,6 +97,16 @@
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeBox(); });
 
+    /* Loading state + double-submit guard for plain forms */
+    $$('form[data-tkt-submit]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var btn = $('button[type="submit"]', form);
+            if (!btn || btn.classList.contains('is-loading')) return;
+            // Defer so the browser still submits the button's own value/state.
+            setTimeout(function () { btn.classList.add('is-loading'); }, 0);
+        });
+    });
+
     /* Image fallback: show the branded placeholder when a cover fails to load */
     document.addEventListener('error', function (e) {
         var el = e.target;

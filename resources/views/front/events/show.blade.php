@@ -20,7 +20,9 @@
             'Please arrive early to complete the entry process smoothly.',
         ]);
     }
-    $hasVenue = ! empty($event->map_embed) || $event->venue_map_url || ! empty($event->map_url);
+    $mapEmbedHtml = \App\Support\SafeMapEmbed::render($event->map_embed);
+    $mapLink = filter_var((string) $event->map_url, FILTER_VALIDATE_URL) && preg_match('#^https?://#i', (string) $event->map_url) ? $event->map_url : null;
+    $hasVenue = $mapEmbedHtml !== '' || $event->venue_map_url || $mapLink;
     $fees = $event->fees->map(fn ($fee) => [
         'name' => (string) $fee->name,
         'type' => (string) $fee->fee_type,
@@ -118,8 +120,8 @@
                         <div>
                             <dt>Location</dt>
                             <dd>
-                                @if($event->map_url)
-                                    <a href="{{ $event->map_url }}" target="_blank" rel="noopener noreferrer">{{ $event->location }}</a>
+                                @if($mapLink)
+                                    <a href="{{ $mapLink }}" target="_blank" rel="noopener noreferrer">{{ $event->location }}</a>
                                 @else
                                     {{ $event->location }}
                                 @endif
@@ -180,11 +182,11 @@
 
             @if($hasVenue)
                 <div class="tkt-tabpanel" role="tabpanel" id="panel-venue" aria-labelledby="tab-venue">
-                    @if(! empty($event->map_embed))
-                        <div class="tkt-venue-block tkt-map">{!! $event->map_embed !!}</div>
+                    @if($mapEmbedHtml !== '')
+                        <div class="tkt-venue-block tkt-map">{!! $mapEmbedHtml !!}</div>
                     @endif
-                    @if($event->map_url)
-                        <p class="tkt-venue-block"><a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $event->map_url }}" target="_blank" rel="noopener noreferrer">Open in Maps</a></p>
+                    @if($mapLink)
+                        <p class="tkt-venue-block"><a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $mapLink }}" target="_blank" rel="noopener noreferrer">Open in Maps</a></p>
                     @endif
                     @if($event->venue_map_url)
                         <div class="tkt-venue-block">

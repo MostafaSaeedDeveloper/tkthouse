@@ -27,7 +27,11 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         if ($request->filled('event') && $request->filled('cart')) {
-            $event = Event::query()->where('status', 'active')->findOrFail((int) $request->input('event'));
+            $event = Event::query()->findOrFail((int) $request->input('event'));
+            if (! $this->isEventBookable($event)) {
+                return redirect()->route('front.events.show', $event)
+                    ->with('error', 'Booking is closed for this event.');
+            }
             $selection = $this->normalizeEventCart($event, (string) $request->input('cart'));
             session(['checkout.event_selection' => $selection]);
         }
@@ -403,6 +407,22 @@ class CheckoutController extends Controller
         }
 
         $event = Event::query()->with('fees')->findOrFail((int) ($selection['event_id'] ?? 0));
+
+        // The selection lives in the session; make sure it is still bookable when the order is placed.
+        if (! $this->isEventBookable($event)) {
+            throw ValidationException::withMessages(['tickets' => 'Booking is closed for this event.']);
+        }
+
+        $selectedTicketIds = $ticketUnits->pluck('ticket_id')->unique()->values();
+        $stillActive = EventTicket::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'active')
+            ->whereIn('id', $selectedTicketIds)
+            ->count();
+        if ($stillActive !== $selectedTicketIds->count()) {
+            throw ValidationException::withMessages(['tickets' => 'One of the selected tickets is no longer available. Please go back to the event page and select again.']);
+        }
+
         $requiresApproval = (bool) $event->requires_booking_approval;
 
         if (! $requiresApproval) {
@@ -806,9 +826,13 @@ class CheckoutController extends Controller
             throw ValidationException::withMessages(['cart' => 'Invalid cart format.']);
         }
 
+        // Merge repeated ticket rows so per-order limits cannot be bypassed by splitting a ticket across rows.
         $requested = collect($payload)
+            ->filter(fn ($row) => is_array($row))
             ->map(fn ($row) => ['ticket_id' => (int) ($row['ticket_id'] ?? 0), 'qty' => max(1, (int) ($row['qty'] ?? 1))])
             ->filter(fn ($row) => $row['ticket_id'] > 0)
+            ->groupBy('ticket_id')
+            ->map(fn ($rows, $ticketId) => ['ticket_id' => (int) $ticketId, 'qty' => (int) $rows->sum('qty')])
             ->values();
 
         if ($requested->isEmpty()) {
@@ -923,6 +947,14 @@ class CheckoutController extends Controller
             'breakdown' => $breakdown,
             'total' => array_reduce($breakdown, fn (float $carry, array $fee) => $carry + (float) $fee['amount'], 0.0),
         ];
+    }
+
+    /** Same rule the event page applies: active event that has not started yet. */
+    private function isEventBookable(Event $event): bool
+    {
+        return $event->status === 'active'
+            && $event->event_date !== null
+            && ! $event->event_date->lt(now()->startOfDay());
     }
 
     private function maxAllowedQuantityForTicket(EventTicket|Ticket|null $ticket): int

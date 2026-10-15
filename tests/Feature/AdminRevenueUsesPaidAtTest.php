@@ -22,7 +22,7 @@ class AdminRevenueUsesPaidAtTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-03-06 12:00:00'));
 
         try {
-            $admin = User::factory()->create();
+            $admin = $this->createAdmin();
             $customer = Customer::create([
                 'first_name' => 'PaidAt',
                 'last_name' => 'Customer',

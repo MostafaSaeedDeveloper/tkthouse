@@ -18,7 +18,7 @@ class AdminDashboardRevenueTest extends TestCase
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Revenue',
             'last_name' => 'Customer',

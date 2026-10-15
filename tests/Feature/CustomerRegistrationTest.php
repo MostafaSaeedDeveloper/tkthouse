@@ -12,7 +12,14 @@ class CustomerRegistrationTest extends TestCase
 
     public function test_customer_registration_requires_phone_and_saves_it(): void
     {
-        $response = $this->post(route('front.customer.register.store'), [
+        $this->postJson(route('front.customer.register.request-otp'), [
+            'name' => 'No Phone',
+            'email' => 'nophone@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertJsonValidationErrors('phone');
+
+        $response = $this->registerCustomerWithOtp([
             'name' => 'Test Customer',
             'email' => 'register@example.com',
             'phone' => '01012345678',
