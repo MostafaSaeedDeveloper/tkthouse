@@ -82,6 +82,20 @@ class Order extends Model
         return $query->where('exclude_from_statistics', false);
     }
 
+    /** Permission that unlocks orders flagged "exclude from statistics" in the admin panel. */
+    public const SHOW_HIDDEN_PERMISSION = 'showing_orders';
+
+    /** Back-office visibility: hidden (statistics-excluded) orders need the `showing_orders` permission. */
+    public function scopeVisibleTo($query, ?\App\Models\User $user)
+    {
+        return $user?->can(self::SHOW_HIDDEN_PERMISSION) ? $query : $query->includedInStatistics();
+    }
+
+    public function isVisibleTo(?\App\Models\User $user): bool
+    {
+        return ! $this->exclude_from_statistics || (bool) $user?->can(self::SHOW_HIDDEN_PERMISSION);
+    }
+
     public function paymentDeadlineAt(?int $timeoutMinutes = null): ?\Illuminate\Support\Carbon
     {
         if ($this->status !== 'pending_payment') {

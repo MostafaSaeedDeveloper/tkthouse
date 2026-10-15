@@ -8,7 +8,6 @@ use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
-use App\Models\Ticket;
 use App\Services\FawaterakService;
 use App\Services\PendingPaymentExpiryService;
 use App\Services\PaymobService;
@@ -26,51 +25,55 @@ class CheckoutController extends Controller
 {
     public function index(Request $request)
     {
-        if ($request->filled('event') && $request->filled('cart')) {
-            $event = Event::query()->findOrFail((int) $request->input('event'));
-            if (! $this->isEventBookable($event)) {
-                return redirect()->route('front.events.show', $event)
-                    ->with('error', 'Booking is closed for this event.');
+        // Checkout always belongs to one valid event: either a fresh cart from the event page or a still-valid session selection.
+        if ($request->filled('event') || $request->filled('cart')) {
+            if (! $request->filled('event') || ! $request->filled('cart')) {
+                return $this->backToEvents('Please choose an event and tickets first.');
             }
-            $selection = $this->normalizeEventCart($event, (string) $request->input('cart'));
+
+            $event = Event::query()->findOrFail((int) $request->input('event'));
+
+            try {
+                $selection = $this->normalizeEventCart($event, (string) $request->input('cart'));
+            } catch (ValidationException $e) {
+                return redirect()->route('front.events.show', $event)
+                    ->with('error', collect($e->errors())->flatten()->first() ?: 'Your ticket selection is not valid.');
+            }
+
             session(['checkout.event_selection' => $selection]);
+        } elseif ($stored = session('checkout.event_selection')) {
+            $event = Event::query()->find((int) ($stored['event_id'] ?? 0));
+
+            try {
+                abort_unless($event, 404);
+                $this->assertSelectionStillValid($event, collect($stored['units'] ?? []));
+            } catch (ValidationException|\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
+                session()->forget('checkout.event_selection');
+
+                return $event
+                    ? redirect()->route('front.events.show', $event)->with('error', 'Your ticket selection is no longer available. Please select again.')
+                    : $this->backToEvents('Please choose an event and tickets first.');
+            }
         }
 
         $eventSelection = $this->hydrateEventSelectionWithFees(session('checkout.event_selection'));
-        $buyer = $this->buyerDefaults($request);
 
-        if ($eventSelection) {
-            return view('front.checkout', [
-                'mode' => 'event_locked',
-                'eventSelection' => $eventSelection,
-                'buyer' => $buyer,
-                'promoCodesPreview' => $this->promoCodesPreview(),
-                'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
-            ]);
+        if (! $eventSelection) {
+            return $this->backToEvents('Please choose an event and tickets first.');
         }
 
-        $eventTickets = EventTicket::query()
-            ->with('event:id,name,status,event_date,requires_booking_approval')
-            ->where('status', 'active')
-            ->get()
-            ->filter(fn ($ticket) => $ticket->event && $ticket->event->status === 'active')
-            ->sortBy(fn ($ticket) => [$ticket->event->event_date?->format('Y-m-d') ?? '9999-12-31', $ticket->name])
-            ->values();
-
-        $legacyTickets = Ticket::query()
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get();
-
         return view('front.checkout', [
-            'mode' => 'open',
-            'eventTickets' => $eventTickets,
-            'legacyTickets' => $legacyTickets,
-            'eventSelection' => null,
-            'buyer' => $buyer,
+            'mode' => 'event_locked',
+            'eventSelection' => $eventSelection,
+            'buyer' => $this->buyerDefaults($request),
             'promoCodesPreview' => $this->promoCodesPreview(),
             'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
         ]);
+    }
+
+    private function backToEvents(string $message)
+    {
+        return redirect()->route('front.events')->with('error', $message);
     }
 
     public function store(Request $request)
@@ -83,12 +86,11 @@ class CheckoutController extends Controller
             'promo_code' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $eventSelection = session('checkout.event_selection');
-        if ($eventSelection) {
-            return $this->storeFromLockedEventSelection($request, $baseValidated, $eventSelection);
+        if (! session('checkout.event_selection')) {
+            return $this->backToEvents('Please choose an event and tickets first.');
         }
 
-        return $this->storeFromOpenSelection($request, $baseValidated);
+        return $this->storeFromLockedEventSelection($request, $baseValidated);
     }
 
     public function thankYou(Request $request)
@@ -408,20 +410,8 @@ class CheckoutController extends Controller
 
         $event = Event::query()->with('fees')->findOrFail((int) ($selection['event_id'] ?? 0));
 
-        // The selection lives in the session; make sure it is still bookable when the order is placed.
-        if (! $this->isEventBookable($event)) {
-            throw ValidationException::withMessages(['tickets' => 'Booking is closed for this event.']);
-        }
-
-        $selectedTicketIds = $ticketUnits->pluck('ticket_id')->unique()->values();
-        $stillActive = EventTicket::query()
-            ->where('event_id', $event->id)
-            ->where('status', 'active')
-            ->whereIn('id', $selectedTicketIds)
-            ->count();
-        if ($stillActive !== $selectedTicketIds->count()) {
-            throw ValidationException::withMessages(['tickets' => 'One of the selected tickets is no longer available. Please go back to the event page and select again.']);
-        }
+        // The selection lives in the session; re-run every booking rule against current data when the order is placed.
+        $this->assertSelectionStillValid($event, $ticketUnits);
 
         $requiresApproval = (bool) $event->requires_booking_approval;
 
@@ -504,165 +494,6 @@ class CheckoutController extends Controller
         return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
             ->with('success', 'Your order has been submitted successfully.');
     }
-
-    private function storeFromOpenSelection(Request $request, array $baseValidated)
-    {
-        $validated = $request->validate([
-            'items' => ['required', 'array'],
-            'items.*.ticket_key' => ['required', 'string'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.holder_name' => ['required', 'string', 'max:255'],
-            'items.*.holder_email' => ['required', 'email', 'max:255'],
-            'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $items = collect($validated['items'])->filter(fn ($item) => ! empty($item['ticket_key']))->values();
-
-        if ($items->isEmpty()) {
-            throw ValidationException::withMessages(['items' => 'Please add at least one ticket row.']);
-        }
-
-        $grouped = $items->map(function ($item) {
-            if (! preg_match('/^(event|legacy):(\d+)$/', $item['ticket_key'], $matches)) {
-                throw ValidationException::withMessages(['items' => 'Invalid ticket selection.']);
-            }
-
-            return $item + ['ticket_type' => $matches[1], 'ticket_ref_id' => (int) $matches[2]];
-        });
-
-        $eventTicketIds = $grouped->where('ticket_type', 'event')->pluck('ticket_ref_id')->all();
-        $legacyTicketIds = $grouped->where('ticket_type', 'legacy')->pluck('ticket_ref_id')->all();
-
-        $eventTickets = EventTicket::query()
-            ->with('event:id,name,status,requires_booking_approval')
-            ->whereIn('id', $eventTicketIds)
-            ->where('status', 'active')
-            ->get()
-            ->keyBy('id');
-
-        $legacyTickets = Ticket::query()
-            ->whereIn('id', $legacyTicketIds)
-            ->where('status', 'active')
-            ->get()
-            ->keyBy('id');
-
-        foreach ($grouped as $index => $item) {
-            $ticket = $item['ticket_type'] === 'event'
-                ? $eventTickets->get($item['ticket_ref_id'])
-                : $legacyTickets->get($item['ticket_ref_id']);
-
-            $ticketName = (string) ($ticket?->name ?? 'ticket');
-            $maxQuantity = $this->maxAllowedQuantityForTicket($ticket);
-            if ((int) $item['quantity'] > $maxQuantity) {
-                throw ValidationException::withMessages([
-                    "items.$index.quantity" => "Maximum allowed quantity for {$ticketName} is {$maxQuantity}.",
-                ]);
-            }
-        }
-
-        $requiresApproval = $grouped
-            ->where('ticket_type', 'event')
-            ->contains(fn ($item) => (bool) optional($eventTickets->get($item['ticket_ref_id']))->event?->requires_booking_approval);
-
-        if (! $requiresApproval) {
-            $request->validate([
-                'payment_method' => ['required', Rule::in($this->activePaymentMethodCodes())],
-            ]);
-        }
-
-        $subtotal = (float) $grouped->sum(function ($item) use ($eventTickets, $legacyTickets) {
-            $ticket = $item['ticket_type'] === 'event'
-                ? $eventTickets->get($item['ticket_ref_id'])
-                : $legacyTickets->get($item['ticket_ref_id']);
-
-            return (float) optional($ticket)->price * (int) $item['quantity'];
-        });
-
-        $order = DB::transaction(function () use ($request, $baseValidated, $grouped, $eventTickets, $legacyTickets, $requiresApproval, $subtotal) {
-            $promoData = $this->resolvePromoCodeForCheckout((string) $request->input('promo_code', ''), $subtotal);
-            $customer = $this->upsertCustomer($baseValidated);
-
-            $order = Order::create([
-                'customer_id' => $customer->id,
-                'user_id' => $request->user()->id,
-                'affiliate_user_id' => $this->resolveAffiliateUserId($request),
-                'promo_code_id' => $promoData['promo_code']?->id,
-                'promo_code' => $promoData['promo_code']?->code,
-                'discount_amount' => $promoData['discount_amount'],
-                'subtotal_amount' => $subtotal,
-                'order_number' => $this->generateNumericOrderNumber(),
-                'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
-                'requires_approval' => $requiresApproval,
-                'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
-                'payment_link_token' => $requiresApproval ? null : Str::random(40),
-                'payment_timeout_started_at' => $requiresApproval ? null : now(),
-                'payment_timeout_minutes' => $requiresApproval ? null : SystemSettings::pendingPaymentTimeoutMinutes(),
-                'total_amount' => 0,
-            ]);
-
-            $total = 0;
-
-            foreach ($grouped as $item) {
-                if ($item['ticket_type'] === 'event') {
-                    $ticket = $eventTickets->get($item['ticket_ref_id']);
-                    if (! $ticket || ! $ticket->event || $ticket->event->status !== 'active') {
-                        throw ValidationException::withMessages(['items' => 'Selected event ticket is no longer available.']);
-                    }
-                    $ticketName = ($ticket->event->name ? $ticket->event->name.' - ' : '').$ticket->name;
-                    $ticketPrice = $ticket->price;
-                    $orderTicketId = null;
-                } else {
-                    $ticket = $legacyTickets->get($item['ticket_ref_id']);
-                    if (! $ticket) {
-                        throw ValidationException::withMessages(['items' => 'Selected ticket is no longer available.']);
-                    }
-                    $ticketName = $ticket->name;
-                    $ticketPrice = $ticket->price;
-                    $orderTicketId = $ticket->id;
-                }
-
-                $lineTotal = $ticketPrice * $item['quantity'];
-                $total += $lineTotal;
-
-                $order->items()->create([
-                    'event_id' => $item['ticket_type'] === 'event' ? ($eventTickets->get($item['ticket_ref_id'])?->event_id) : null,
-                    'ticket_id' => $orderTicketId,
-                    'ticket_name' => $ticketName,
-                    'ticket_price' => $ticketPrice,
-                    'quantity' => $item['quantity'],
-                    'line_total' => $lineTotal,
-                    'holder_name' => $item['holder_name'],
-                    'holder_email' => $item['holder_email'],
-                    'holder_phone' => $item['holder_phone'] ?: null,
-                    'holder_gender' => null,
-                    'holder_social_profile' => null,
-                ]);
-            }
-
-            $order->update(['total_amount' => max(0, $total - $promoData['discount_amount'])]);
-
-            activity('orders')
-                ->performedOn($order)
-                ->causedBy($request->user())
-                ->withProperties([
-                    'to_status' => $order->status,
-                    'total_amount' => (float) $order->total_amount,
-                ])
-                ->log('Order submitted');
-
-            return $order;
-        });
-
-        if ($order->status === 'pending_payment') {
-            return redirect()->route('front.account.orders')
-                ->with('success', 'Order created successfully. Please complete payment before the deadline shown in your orders page.');
-        }
-
-        return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
-            ->with('success', 'Your order has been submitted successfully.');
-    }
-
-
 
     private function resolvePromoCodeForCheckout(string $rawPromoCode, float $subtotal): array
     {
@@ -835,6 +666,19 @@ class CheckoutController extends Controller
             ->map(fn ($rows, $ticketId) => ['ticket_id' => (int) $ticketId, 'qty' => (int) $rows->sum('qty')])
             ->values();
 
+        return $this->buildSelection($event, $requested);
+    }
+
+    /**
+     * Single source of truth for what may be booked: bookable event, active tickets of that event,
+     * couple tickets in pairs, per-ticket maximums. Fees are computed here, server side.
+     */
+    private function buildSelection(Event $event, \Illuminate\Support\Collection $requested): array
+    {
+        if (! $this->isEventBookable($event)) {
+            throw ValidationException::withMessages(['cart' => 'Booking is closed for this event.']);
+        }
+
         if ($requested->isEmpty()) {
             throw ValidationException::withMessages(['cart' => 'No tickets selected.']);
         }
@@ -850,7 +694,7 @@ class CheckoutController extends Controller
         foreach ($requested as $row) {
             $ticket = $tickets->get($row['ticket_id']);
             if (! $ticket) {
-                continue;
+                throw ValidationException::withMessages(['cart' => 'One of the selected tickets is no longer available.']);
             }
 
             $maxQuantity = $this->maxAllowedQuantityForTicket($ticket);
@@ -876,10 +720,6 @@ class CheckoutController extends Controller
             }
         }
 
-        if (empty($units)) {
-            throw ValidationException::withMessages(['cart' => 'Selected tickets are no longer available.']);
-        }
-
         $subtotal = collect($units)->sum('ticket_price');
         $feeSummary = $this->calculateEventFeeSummary($event->loadMissing('fees'), (float) $subtotal);
 
@@ -891,6 +731,22 @@ class CheckoutController extends Controller
             'fees' => $feeSummary['breakdown'],
             'fees_total' => $feeSummary['total'],
         ];
+    }
+
+    /** Re-validates a stored selection (list of per-person units) against the current event and tickets. */
+    private function assertSelectionStillValid(Event $event, \Illuminate\Support\Collection $units): void
+    {
+        $requested = $units
+            ->groupBy(fn ($unit) => (int) ($unit['ticket_id'] ?? 0))
+            ->map(fn ($rows, $ticketId) => ['ticket_id' => (int) $ticketId, 'qty' => $rows->count()])
+            ->filter(fn ($row) => $row['ticket_id'] > 0)
+            ->values();
+
+        try {
+            $this->buildSelection($event, $requested);
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages(['tickets' => collect($e->errors())->flatten()->first()]);
+        }
     }
 
     private function hydrateEventSelectionWithFees(?array $eventSelection): ?array
@@ -957,16 +813,8 @@ class CheckoutController extends Controller
             && ! $event->event_date->lt(now()->startOfDay());
     }
 
-    private function maxAllowedQuantityForTicket(EventTicket|Ticket|null $ticket): int
+    private function maxAllowedQuantityForTicket(EventTicket $ticket): int
     {
-        if ($ticket instanceof EventTicket) {
-            if ((bool) ($ticket->is_couple ?? false)) {
-                return 2;
-            }
-
-            return max(1, (int) ($ticket->max_per_order ?? 10));
-        }
-
-        return 10;
+        return (bool) ($ticket->is_couple ?? false) ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
     }
 }

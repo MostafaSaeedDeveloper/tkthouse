@@ -48,7 +48,7 @@ class OrderController extends Controller
 
         $managedEvents = $request->user()?->managedEvents ?? collect();
 
-        $ordersQuery = Order::query()->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
+        $ordersQuery = Order::query()->visibleTo($request->user())->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
 
@@ -84,7 +84,7 @@ class OrderController extends Controller
         $canViewDeletedOrders = $request->user()?->can(self::DELETED_ORDERS_PERMISSION) ?? false;
         $deletedOrdersCount = 0;
         if ($canViewDeletedOrders) {
-            $deletedQuery = Order::onlyTrashed();
+            $deletedQuery = Order::onlyTrashed()->visibleTo($request->user());
             $this->applyManagedEventsScope($deletedQuery, $managedEvents);
             $deletedOrdersCount = $deletedQuery->count();
         }
@@ -117,6 +117,7 @@ class OrderController extends Controller
         $managedEvents = $request->user()?->managedEvents ?? collect();
 
         $ordersQuery = Order::onlyTrashed()
+            ->visibleTo($request->user())
             ->withCount('items')
             ->with(['customer']);
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
@@ -169,7 +170,7 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
@@ -234,7 +235,7 @@ class OrderController extends Controller
 
     public function edit(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
 
@@ -255,7 +256,7 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         $validated = $request->validate([
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
@@ -412,7 +413,7 @@ class OrderController extends Controller
 
     public function destroy(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         abort_unless($request->user()?->can('orders.delete'), 403);
 
@@ -432,7 +433,7 @@ class OrderController extends Controller
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);
 
         $targetOrder = Order::onlyTrashed()->findOrFail($order);
-        $this->abortIfOrderOutsideManagedEvent($request, $targetOrder);
+        $this->abortIfOrderNotAccessible($request, $targetOrder);
         $targetOrder->restore();
 
         activity('orders')
@@ -445,7 +446,7 @@ class OrderController extends Controller
 
     public function storeNote(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         $validated = $request->validate([
             'body' => ['required', 'string', 'max:2000'],
@@ -474,7 +475,7 @@ class OrderController extends Controller
 
     public function approve(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         if ($order->status !== 'pending_approval') {
             return back()->with('error', 'Only pending approval orders can be approved.');
@@ -511,7 +512,7 @@ class OrderController extends Controller
 
     public function reject(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         if ($order->status !== 'pending_approval') {
             return back()->with('error', 'Only pending approval orders can be rejected.');
@@ -539,7 +540,7 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
-        $this->abortIfOrderOutsideManagedEvent($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order);
 
         $validated = $request->validate([
             'status' => ['required', 'in:pending_approval,pending_payment,on_hold,paid,canceled,rejected,refunded,partially_refunded'],
@@ -601,7 +602,7 @@ class OrderController extends Controller
         $managedEvents = $request->user()?->managedEvents ?? collect();
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
 
-        $ordersQuery = Order::query()->with(['customer', 'items.event']);
+        $ordersQuery = Order::query()->visibleTo($request->user())->with(['customer', 'items.event']);
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
         if ($request->filled('status')) {
@@ -737,8 +738,11 @@ class OrderController extends Controller
         });
     }
 
-    private function abortIfOrderOutsideManagedEvent(Request $request, Order $order): void
+    private function abortIfOrderNotAccessible(Request $request, Order $order): void
     {
+        // Orders excluded from statistics need the `showing_orders` permission (404 so their existence is not leaked).
+        abort_unless($order->isVisibleTo($request->user()), 404);
+
         $managedEvents = $request->user()?->managedEvents ?? collect();
         if ($managedEvents->isEmpty()) {
             return;

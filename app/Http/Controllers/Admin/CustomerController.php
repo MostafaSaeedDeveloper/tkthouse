@@ -23,7 +23,8 @@ class CustomerController extends Controller
                     $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
                 });
             })
-            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvents, $managedEventIds) {
+            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvents, $managedEventIds, $request) {
+                $ordersQuery->visibleTo($request->user());
                 if ($managedEvents->isNotEmpty()) {
                     $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
                 }
@@ -68,7 +69,8 @@ class CustomerController extends Controller
                     $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
                 });
             })
-            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvents, $managedEventIds) {
+            ->withCount(['orders as orders_count' => function (Builder $ordersQuery) use ($managedEvents, $managedEventIds, $request) {
+                $ordersQuery->visibleTo($request->user());
                 if ($managedEvents->isNotEmpty()) {
                     $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
                 }
@@ -122,7 +124,8 @@ class CustomerController extends Controller
             abort_unless($hasVisibleOrder, 403);
         }
 
-        $customer->load(['orders' => function ($query) use ($managedEvents, $managedEventIds) {
+        $customer->load(['orders' => function ($query) use ($managedEvents, $managedEventIds, $request) {
+            $query->visibleTo($request->user());
             if ($managedEvents->isNotEmpty()) {
                 $query->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
             }

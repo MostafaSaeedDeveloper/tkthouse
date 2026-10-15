@@ -58,7 +58,9 @@ class CheckoutTicketRulesTest extends TestCase
         foreach ([1, 3] as $qty) {
             $this->actingAs($user)
                 ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $couple->id, 'qty' => $qty]])]))
-                ->assertSessionHasErrors('cart');
+                ->assertRedirect(route('front.events.show', $event))
+                ->assertSessionHas('error');
+            $this->assertNull(session('checkout.event_selection'));
         }
     }
 
@@ -70,11 +72,11 @@ class CheckoutTicketRulesTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 5]])]))
-            ->assertSessionHasErrors('cart');
+            ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
 
         $this->actingAs($user)
             ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 3], ['ticket_id' => $ga->id, 'qty' => 3]])]))
-            ->assertSessionHasErrors('cart');
+            ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
 
         $this->actingAs($user)
             ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 2], ['ticket_id' => $ga->id, 'qty' => 2]])]))
@@ -108,11 +110,11 @@ class CheckoutTicketRulesTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $sold->id, 'qty' => 1]])]))
-            ->assertSessionHasErrors('cart');
+            ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
 
         $this->actingAs($user)
             ->get(route('front.checkout', ['event' => $event->id, 'cart' => '%%%not-base64%%%']))
-            ->assertSessionHasErrors('cart');
+            ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
     }
 
     public function test_placing_the_order_rechecks_that_the_selection_is_still_bookable(): void
@@ -135,5 +137,103 @@ class CheckoutTicketRulesTest extends TestCase
             ->assertSessionHasErrors('tickets');
 
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_a_partly_unavailable_cart_is_rejected_instead_of_silently_dropping_tickets(): void
+    {
+        $user = User::factory()->create();
+        $event = $this->event();
+        $ok = $this->ticket($event);
+        $sold = $this->ticket($event, ['name' => 'Gone', 'status' => 'sold_out']);
+
+        $this->actingAs($user)
+            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ok->id, 'qty' => 1], ['ticket_id' => $sold->id, 'qty' => 1]])]))
+            ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
+        $this->assertNull(session('checkout.event_selection'));
+    }
+
+    public function test_a_ticket_from_another_event_cannot_be_smuggled_into_the_cart(): void
+    {
+        $user = User::factory()->create();
+        $event = $this->event();
+        $other = $this->event(['name' => 'Other Night']);
+        $foreign = $this->ticket($other);
+
+        $this->actingAs($user)
+            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $foreign->id, 'qty' => 1]])]))
+            ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
+    }
+
+    public function test_open_checkout_no_longer_exists(): void
+    {
+        $user = User::factory()->create();
+        $event = $this->event();
+        $this->ticket($event);
+
+        // No event / cart: sent back to the events list, nothing to buy.
+        $this->actingAs($user)->get(route('front.checkout'))->assertRedirect(route('front.events'))->assertSessionHas('error');
+        $this->actingAs($user)->get(route('front.checkout', ['event' => $event->id]))->assertRedirect(route('front.events'));
+        $this->actingAs($user)->get(route('front.checkout', ['cart' => $this->cart([['ticket_id' => 1, 'qty' => 1]])]))->assertRedirect(route('front.events'));
+
+        // Posting the old "open" payload without a valid selection creates nothing.
+        $this->actingAs($user)->post(route('front.checkout.store'), [
+            'first_name' => 'A', 'last_name' => 'B', 'email' => 'a@example.com',
+            'items' => [['ticket_key' => 'event:1', 'quantity' => 1, 'holder_name' => 'A', 'holder_email' => 'a@example.com']],
+            'payment_method' => 'cash',
+        ])->assertRedirect(route('front.events'));
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_guests_still_have_to_log_in_for_checkout(): void
+    {
+        $event = $this->event();
+        $ga = $this->ticket($event);
+
+        $this->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 1]])]))
+            ->assertRedirect();
+        $this->post(route('front.checkout.store'), [])->assertRedirect();
+    }
+
+    public function test_a_stored_selection_that_became_invalid_sends_the_user_back_to_the_event(): void
+    {
+        $user = User::factory()->create();
+        $event = $this->event();
+        $ga = $this->ticket($event);
+
+        $this->actingAs($user)
+            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 1]])]))
+            ->assertOk();
+
+        $ga->update(['max_per_order' => 1, 'status' => 'sold_out']);
+
+        $this->actingAs($user)->get(route('front.checkout'))
+            ->assertRedirect(route('front.events.show', $event))
+            ->assertSessionHas('error');
+        $this->assertNull(session('checkout.event_selection'));
+    }
+
+    public function test_order_is_built_from_the_server_selection_with_fees_and_one_item_per_person(): void
+    {
+        $user = User::factory()->create();
+        $event = $this->event(['requires_booking_approval' => true]);
+        $couple = $this->ticket($event, ['name' => 'Couple', 'price' => 300, 'is_couple' => true]);
+        EventFee::create(['event_id' => $event->id, 'name' => 'Service', 'fee_type' => 'percentage', 'value' => 10]);
+
+        $this->actingAs($user)
+            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $couple->id, 'qty' => 2]])]))
+            ->assertOk();
+
+        $attendee = ['name' => 'P', 'phone' => '0100', 'email' => 'p@example.com', 'gender' => 'female', 'social_profile' => 'p'];
+        // Tampering: a single attendee for a couple pass is refused.
+        $this->actingAs($user)->post(route('front.checkout.store'), ['first_name' => 'A', 'last_name' => 'B', 'email' => 'a@example.com', 'attendees' => [$attendee]])
+            ->assertSessionHasErrors('attendees');
+        $this->assertDatabaseCount('orders', 0);
+
+        $this->actingAs($user)->post(route('front.checkout.store'), ['first_name' => 'A', 'last_name' => 'B', 'email' => 'a@example.com', 'attendees' => [$attendee, $attendee]])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('orders', ['subtotal_amount' => 600, 'total_amount' => 660]);
+        $this->assertDatabaseCount('order_items', 2);
     }
 }
