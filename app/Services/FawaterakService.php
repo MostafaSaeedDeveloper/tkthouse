@@ -141,6 +141,31 @@ class FawaterakService
         ];
     }
 
+    /**
+     * Server-to-server lookup of an invoice. Used to confirm a payment instead of trusting the browser redirect.
+     *
+     * @return array<string, mixed>
+     */
+    public function inquireInvoice(PaymentMethod $method, string $invoiceId): array
+    {
+        $config = is_array($method->config) ? $method->config : [];
+        $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
+
+        if ($apiKey === '') {
+            throw new RuntimeException('Fawaterak API key is not configured.');
+        }
+
+        $path = str_replace('{id}', rawurlencode($invoiceId), (string) config('payments.fawaterak.invoice_status_path'));
+
+        return (array) Http::baseUrl($this->apiBaseUrl())
+            ->timeout(20)
+            ->withToken($apiKey)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->get($path)
+            ->throw()
+            ->json();
+    }
+
     private function extractTransactionId(array $payload): ?string
     {
         $candidates = [

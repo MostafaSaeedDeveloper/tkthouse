@@ -72,6 +72,11 @@ class Order extends Model
         return $this->belongsTo(PromoCode::class);
     }
 
+    public function paymentAttempts()
+    {
+        return $this->hasMany(PaymentAttempt::class);
+    }
+
     public function issuedTickets()
     {
         return $this->hasMany(IssuedTicket::class);

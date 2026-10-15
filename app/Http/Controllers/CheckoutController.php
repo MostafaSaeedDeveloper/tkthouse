@@ -8,12 +8,14 @@ use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Models\PromoCode;
-use App\Services\FawaterakService;
+use App\Services\Payments\PaymentGatewayManager;
+use App\Services\Payments\PaymentService;
 use App\Services\PendingPaymentExpiryService;
 use App\Services\PaymobService;
 use App\Services\TicketIssuanceService;
 use App\Support\SystemSettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -93,11 +95,63 @@ class CheckoutController extends Controller
         return $this->storeFromLockedEventSelection($request, $baseValidated);
     }
 
+    /** Legacy URL (older emails / gateway return links): resolve to the real, status-driven confirmation page. */
     public function thankYou(Request $request)
     {
-        return view('front.checkout-thank-you', [
-            'flow' => (string) $request->query('flow', 'pending_review'),
-            'orderNumber' => (string) $request->query('order'),
+        $orderNumber = trim((string) $request->query('order'));
+
+        if ($orderNumber !== '' && Order::query()->where('order_number', $orderNumber)->where('user_id', $request->user()->id)->exists()) {
+            return redirect()->route('front.checkout.confirmation', $orderNumber);
+        }
+
+        return redirect()->route('front.account.orders');
+    }
+
+    /**
+     * Step 4. What is shown comes from the order's real status, never from a query string, so a URL can not
+     * fake a successful payment.
+     */
+    public function confirmation(Request $request, string $orderNumber, PaymentService $payments)
+    {
+        $order = Order::query()
+            ->where('order_number', $orderNumber)
+            ->where('user_id', $request->user()->id)
+            ->with(['items', 'customer'])
+            ->firstOrFail();
+
+        if ($order->status === 'pending_payment' && $order->paymentAttempts()->exists()
+            && Cache::add('order-refresh:'.$order->id, 1, 5)) {
+            // Customer may be back before the gateway callback: ask the gateway instead of guessing.
+            try {
+                $payments->refresh($order);
+            } catch (\Throwable $e) {
+                Log::warning('Confirmation refresh failed.', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+            }
+            $order->refresh();
+        }
+
+        $latestAttempt = $order->paymentAttempts()->latest('id')->first();
+
+        $state = match (true) {
+            $order->status === 'paid' => 'paid',
+            $order->status === 'pending_approval' => 'review',
+            in_array($order->status, ['canceled', 'rejected'], true) => 'closed',
+            $order->status === 'pending_payment' && $latestAttempt?->status === 'failed' && ! $order->paymentAttempts()->where('status', 'initiated')->exists() => 'failed',
+            $order->status === 'pending_payment' && $latestAttempt === null => 'unpaid',
+            default => $order->status === 'pending_payment' ? 'pending' : 'other',
+        };
+
+        $event = Event::query()->find($order->items->pluck('event_id')->filter()->first());
+        $tickets = $state === 'paid' && $order->tickets_generated_at
+            ? $order->issuedTickets()->orderBy('id')->get()
+            : collect();
+
+        return view('front.checkout.confirmation', [
+            'order' => $order,
+            'state' => $state,
+            'event' => $event,
+            'tickets' => $tickets,
+            'attempt' => $latestAttempt,
         ]);
     }
 
@@ -113,11 +167,7 @@ class CheckoutController extends Controller
 
         $order->load(['items', 'customer']);
 
-        $activePaymentMethods = PaymentMethod::query()
-            ->where('is_active', true)
-            ->where('code', '!=', 'card')
-            ->orderBy('id')
-            ->get(['name', 'code', 'provider', 'checkout_label', 'checkout_icon', 'checkout_description']);
+        $activePaymentMethods = $this->availablePaymentMethods();
 
         $selectedMethod = $activePaymentMethods->firstWhere('code', $order->payment_method)?->code
             ?? $activePaymentMethods->first()?->code
@@ -130,7 +180,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function gatewayRedirect(Request $request, Order $order, string $token, PaymobService $paymobService, FawaterakService $fawaterakService)
+    public function gatewayRedirect(Request $request, Order $order, string $token, PaymentService $payments, PaymentGatewayManager $gateways)
     {
         if ($this->expirePendingPaymentOrderIfNeeded($order)) {
             return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
@@ -138,16 +188,19 @@ class CheckoutController extends Controller
 
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
+
+        if ($order->status === 'paid') {
+            return redirect()->route('front.checkout.confirmation', $order->order_number);
+        }
+
         abort_unless($order->status === 'pending_payment', 404);
 
         $method = (string) $request->query('method', $order->payment_method);
-        $paymentMethod = PaymentMethod::query()
-            ->where('is_active', true)
-            ->where('code', $method)
-            ->first();
+        $paymentMethod = $this->availablePaymentMethods()->firstWhere('code', $method);
 
-        if (! $paymentMethod) {
-            return back()->withErrors(['payment' => 'Selected payment method is not available for online gateway.']);
+        if (! $paymentMethod || ! $gateways->supports((string) $paymentMethod->provider)) {
+            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $token])
+                ->withErrors(['payment' => 'Selected payment method is not available for online payment.']);
         }
 
         if ($order->payment_method !== $method) {
@@ -155,26 +208,13 @@ class CheckoutController extends Controller
         }
 
         try {
-            $transactionId = null;
-            $transactionLink = null;
-            $url = match ($paymentMethod->provider) {
-                'paymob' => $paymobService->createCheckoutUrl($order->loadMissing('customer')),
-                'fawaterak' => (function () use ($fawaterakService, $order, &$transactionId, &$transactionLink) {
-                    $checkoutData = $fawaterakService->createCheckoutData($order->loadMissing('customer'));
-                    $transactionId = (string) ($checkoutData['transaction_id'] ?? '');
-                    $transactionLink = (string) ($checkoutData['transaction_url'] ?? '');
-
-                    return (string) ($checkoutData['url'] ?? '');
-                })(),
-                default => throw new \RuntimeException('Selected payment method is manual and does not support online redirect.'),
-            };
+            $url = $payments->start($order, $paymentMethod);
 
             $this->logPaymentEvent($order, $request->user(), 'Payment gateway opened', [
                 'provider' => $paymentMethod->provider,
                 'payment_method' => $paymentMethod->code,
                 'payment_status' => 'opened',
-                'transaction_id' => $transactionId ?: null,
-                'transaction_url' => $transactionLink ?: $url,
+                'transaction_url' => $url,
             ]);
         } catch (\Throwable $exception) {
             $this->logPaymentEvent($order, $request->user(), 'Payment attempt failed', [
@@ -184,172 +224,73 @@ class CheckoutController extends Controller
                 'failure_reason' => $exception->getMessage(),
             ]);
 
-            return back()->withErrors(['payment' => $exception->getMessage()]);
+            Log::warning('Could not open payment gateway.', ['order_id' => $order->id, 'error' => $exception->getMessage()]);
+
+            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $token])
+                ->withErrors(['payment' => 'We could not open the payment page right now. Please try again or choose another method.']);
         }
 
         return redirect()->away($url);
     }
 
-    public function paymobCallback(Request $request)
+    /**
+     * Paymob return/processed callback. Whatever the body says, the order is only settled after the
+     * transaction has been looked up at Paymob (see PaymentService::refresh).
+     */
+    public function paymobCallback(Request $request, PaymentService $payments)
     {
         $payload = $request->all();
         $merchantOrderId = (string) data_get($payload, 'obj.order.merchant_order_id', data_get($payload, 'merchant_order_id', ''));
-        $isSuccess = (bool) data_get($payload, 'obj.success', data_get($payload, 'success', false));
+        $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
+        $isGet = $request->isMethod('get');
 
-        if ($merchantOrderId === '') {
-            Log::warning('Paymob callback received without merchant_order_id.', ['payload' => $payload]);
+        // Signed server-to-server callback: reject forged bodies early when the HMAC secret is configured.
+        $secret = (string) (config('payments.paymob.hmac_secret') ?: '');
+        if (! $isGet && $secret !== '' && is_array(data_get($payload, 'obj'))) {
+            if (! PaymobService::hmacIsValid($payload['obj'], (string) $request->query('hmac', ''), $secret)) {
+                Log::warning('Paymob callback rejected: invalid HMAC.', ['merchant_order_id' => $merchantOrderId]);
 
-            if ($request->isMethod('get')) {
-                return redirect()->route('front.checkout.thank-you', ['flow' => 'payment_failed']);
+                return response()->json(['received' => false, 'updated' => false], 403);
             }
-
-            return response()->json(['received' => true, 'updated' => false]);
         }
 
-        $order = $this->findOrderFromMerchantOrderId($merchantOrderId);
+        $order = $merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null;
+
         if (! $order) {
             Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
 
-            if ($request->isMethod('get')) {
-                return redirect()->route('front.checkout.thank-you', ['flow' => 'payment_failed', 'order' => $merchantOrderId]);
-            }
-
-            return response()->json(['received' => true, 'updated' => false]);
+            return $isGet
+                ? redirect()->route('front.checkout.thank-you', ['flow' => 'payment_failed'])
+                : response()->json(['received' => true, 'updated' => false]);
         }
 
-        $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
-        $transactionLink = (string) data_get($payload, 'obj.data.redirect_to', data_get($payload, 'obj.redirect_to', ''));
+        $outcome = $payments->refresh($order, $transactionId !== '' ? $transactionId : null, 'paymob');
 
-        if ($isSuccess && $order->status === 'pending_payment') {
-            $oldStatus = $order->status;
-            $order->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
-            app(TicketIssuanceService::class)->issueIfPaid($order);
+        Log::info('Paymob callback processed.', ['order_id' => $order->id, 'outcome' => $outcome]);
 
-            $this->logPaymentEvent($order, null, 'Payment completed successfully', [
-                'provider' => 'paymob',
-                'payment_status' => 'paid',
-                'from_status' => $oldStatus,
-                'to_status' => 'paid',
-                'transaction_id' => $transactionId ?: null,
-                'transaction_url' => $transactionLink ?: null,
-            ]);
+        if ($isGet) {
+            return redirect()->route('front.checkout.confirmation', $order->order_number);
         }
 
-        if (! $isSuccess) {
-            $this->logPaymentEvent($order, null, 'Payment failed', [
-                'provider' => 'paymob',
-                'payment_status' => 'failed',
-                'transaction_id' => $transactionId ?: null,
-                'transaction_url' => $transactionLink ?: null,
-            ]);
-        }
-
-        Log::info('Paymob callback processed.', [
-            'order_id' => $order->id,
-            'merchant_order_id' => $merchantOrderId,
-            'success' => $isSuccess,
-        ]);
-
-        if ($request->isMethod('get')) {
-            return redirect()->route('front.checkout.thank-you', [
-                'flow' => $isSuccess ? 'payment_success' : 'payment_failed',
-                'order' => $order->order_number,
-            ]);
-        }
-
-        return response()->json(['received' => true, 'updated' => $isSuccess]);
+        return response()->json(['received' => true, 'updated' => in_array($outcome, [PaymentService::OUTCOME_PAID, PaymentService::OUTCOME_ALREADY_PAID], true)]);
     }
 
-    public function confirmPayment(Request $request, Order $order, string $token)
-    {
-        if ($this->expirePendingPaymentOrderIfNeeded($order)) {
-            return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
-        }
-
-        abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
-        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-        abort_unless($order->status === 'pending_payment', 404);
-
-        $validated = $request->validate([
-            'payment_method' => ['required', Rule::in($this->activePaymentMethodCodes())],
-        ]);
-
-        $oldStatus = $order->status;
-
-        if ($order->payment_method !== $validated['payment_method']) {
-            $order->update(['payment_method' => $validated['payment_method']]);
-        }
-
-        $order->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-        ]);
-
-        app(TicketIssuanceService::class)->issueIfPaid($order);
-
-        activity('orders')
-            ->performedOn($order)
-            ->causedBy($request->user())
-            ->withProperties([
-                'from_status' => $oldStatus,
-                'to_status' => $order->status,
-            ])
-            ->log('Payment confirmed');
-
-        return redirect()->route('front.checkout.thank-you')->with('success', 'Payment completed successfully.');
-    }
-
-    public function fawaterakCallback(Request $request, Order $order, string $token)
+    /**
+     * Fawaterak redirect. The `result` query value is only a hint for the screen the customer lands on:
+     * payment is confirmed by asking Fawaterak about the invoice, never by this URL.
+     */
+    public function fawaterakCallback(Request $request, Order $order, string $token, PaymentService $payments)
     {
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
 
-        $result = strtolower((string) $request->query('result', 'failed'));
-        $isSuccess = $result === 'success';
-        $flow = $isSuccess ? 'payment_success' : 'payment_failed';
-
-        $transactionId = trim((string) ($request->query('invoice_id')
+        $hint = trim((string) ($request->query('invoice_id')
             ?: $request->query('payment_id')
             ?: $request->query('transaction_id')
             ?: $request->query('id')));
 
-        $transactionUrl = trim((string) ($request->query('redirectTo')
-            ?: $request->query('redirect_to')
-            ?: $request->query('url')));
+        $payments->refresh($order, $hint !== '' ? $hint : null, 'fawaterak');
 
-        if ($isSuccess && $order->status === 'pending_payment') {
-            $oldStatus = $order->status;
-            $order->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
-            app(TicketIssuanceService::class)->issueIfPaid($order);
-
-            $this->logPaymentEvent($order, null, 'Payment completed successfully', [
-                'provider' => 'fawaterak',
-                'payment_status' => 'paid',
-                'from_status' => $oldStatus,
-                'to_status' => 'paid',
-                'transaction_id' => $transactionId !== '' ? $transactionId : null,
-                'transaction_url' => $transactionUrl !== '' ? $transactionUrl : null,
-            ]);
-        }
-
-        if (! $isSuccess) {
-            $this->logPaymentEvent($order, null, 'Payment failed', [
-                'provider' => 'fawaterak',
-                'payment_status' => 'failed',
-                'transaction_id' => $transactionId !== '' ? $transactionId : null,
-                'transaction_url' => $transactionUrl !== '' ? $transactionUrl : null,
-            ]);
-        }
-
-        return redirect()->route('front.checkout.thank-you', [
-            'flow' => $flow,
-            'order' => $order->order_number,
-        ]);
+        return redirect()->route('front.checkout.confirmation', $order->order_number);
     }
 
     private function logPaymentEvent(Order $order, $causer, string $description, array $properties = []): Activity
@@ -572,6 +513,18 @@ class CheckoutController extends Controller
         }
 
         return null;
+    }
+
+    /** Payment methods a customer may use right now (active, not the legacy 'card', fake only when enabled). */
+    private function availablePaymentMethods()
+    {
+        return PaymentMethod::query()
+            ->where('is_active', true)
+            ->where('code', '!=', 'card')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (PaymentMethod $m) => $m->provider !== 'fake' || config('payments.fake.enabled'))
+            ->values();
     }
 
     private function activePaymentMethodCodes(): array

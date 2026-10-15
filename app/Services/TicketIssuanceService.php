@@ -9,6 +9,8 @@ use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
 use App\Models\Ticket;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -17,7 +19,31 @@ use Throwable;
 
 class TicketIssuanceService
 {
+    /**
+     * Issues the tickets of a paid order exactly once. Safe to call from callbacks, redirects, the
+     * reconciliation job and admin saves at the same time: a per-order lock serialises them and
+     * unsent tickets are claimed atomically before any mail/WhatsApp goes out.
+     */
     public function issueIfPaid(Order $order): void
+    {
+        $lock = Cache::lock('issue-tickets:'.$order->id, 120);
+
+        try {
+            $lock->block(20);
+        } catch (LockTimeoutException) {
+            Log::warning('Ticket issuance skipped: another process is issuing this order.', ['order_id' => $order->id]);
+
+            return;
+        }
+
+        try {
+            $this->issue($order);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function issue(Order $order): void
     {
         $order->unsetRelation('items');
         $order->unsetRelation('issuedTickets');
@@ -68,17 +94,24 @@ class TicketIssuanceService
         }
 
         if (! $order->tickets_generated_at) {
-            $order->forceFill(['tickets_generated_at' => now()])->save();
+            $order->forceFill(['tickets_generated_at' => now()])->saveQuietly();
         }
 
-        if ($order->issuedTickets()->whereNull('sent_at')->doesntExist()) {
+        // Claim the unsent tickets atomically; only the process that wins the claim notifies the customer.
+        $claimIds = $order->issuedTickets()->whereNull('sent_at')->pluck('id');
+        if ($claimIds->isEmpty()) {
+            return;
+        }
+
+        $claimed = IssuedTicket::query()->whereIn('id', $claimIds)->whereNull('sent_at')->update(['sent_at' => now()]);
+        if ($claimed === 0) {
             return;
         }
 
         $order->load('issuedTickets');
 
         $groupedByHolder = $order->issuedTickets
-            ->whereNull('sent_at')
+            ->whereIn('id', $claimIds->all())
             ->filter(fn (IssuedTicket $ticket) => filled($ticket->holder_email))
             ->groupBy(fn (IssuedTicket $ticket) => mb_strtolower(trim((string) $ticket->holder_email)));
 
@@ -94,17 +127,14 @@ class TicketIssuanceService
                 fn () => Mail::to($order->customer->email)->send(new OrderTicketsIssuedMail($order)),
                 ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_tickets_issued']
             );
-        }
 
-        if (filled($order->customer?->email)) {
             $this->sendMailWithRetry(
                 fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
                 ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
             );
         }
-        $this->sendOrderWhatsapp($order);
 
-        $order->issuedTickets()->whereNull('sent_at')->update(['sent_at' => now()]);
+        $this->sendOrderWhatsapp($order);
     }
 
     private function ticketNumber(int $orderId, int $itemId, int $seatIndex): string

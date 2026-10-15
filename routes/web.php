@@ -23,6 +23,7 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
 use App\Http\Controllers\FrontTicketController;
 use App\Http\Controllers\PagesController;
+use App\Http\Controllers\PaymentSimulatorController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(\App\Http\Middleware\FrontendMaintenance::class)->group(function () {
@@ -66,8 +67,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('front.checkout.store');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
+    Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
+    Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
+    Route::post('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'complete'])->name('front.payments.fake.complete');
     Route::get('/orders/{order}/payment/{token}', [CheckoutController::class, 'paymentPage'])->name('front.orders.payment');
-    Route::post('/orders/{order}/payment/{token}', [CheckoutController::class, 'confirmPayment'])->name('front.orders.payment.confirm');
     Route::get('/orders/{order}/payment/{token}/gateway', [CheckoutController::class, 'gatewayRedirect'])->name('front.orders.payment.gateway');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
