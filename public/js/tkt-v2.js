@@ -107,6 +107,14 @@
         });
     });
 
+    /* Payment method icon that fails to load falls back to a generic card glyph */
+    document.addEventListener('error', function (e) {
+        var el = e.target;
+        if (el && el.tagName === 'IMG' && el.closest && el.closest('.tkt-method__icon')) {
+            el.closest('.tkt-method__icon').textContent = '\uD83D\uDCB3';
+        }
+    }, true);
+
     /* Image fallback: show the branded placeholder when a cover fails to load */
     document.addEventListener('error', function (e) {
         var el = e.target;

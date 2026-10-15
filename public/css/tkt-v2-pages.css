@@ -168,7 +168,7 @@
 /* ==========================================================================
    CHECKOUT V2 (details, review & payment, confirmation)
    ========================================================================== */
-.tkt-checkout { padding: 20px 0 calc(var(--tkt-section-y) + 24px); }
+.tkt-checkout { padding-top: 20px; padding-bottom: calc(var(--tkt-section-y) + 24px); }
 @media (min-width: 992px) { .tkt-checkout { padding-top: 32px; } }
 .tkt-checkout__head { margin-bottom: 20px; }
 .tkt-checkout__title { font-size: var(--tkt-fs-2xl); font-weight: 800; }
@@ -270,7 +270,7 @@ body.tkt-has-bottombar { padding-bottom: 84px; }
 .tkt-promo-msg.is-error { color: var(--tkt-danger); font-weight: 600; }
 .tkt-recap { display: grid; gap: 8px; font-size: var(--tkt-fs-sm); }
 .tkt-recap dt { color: var(--tkt-muted); font-size: var(--tkt-fs-xs); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
-.tkt-recap dd { margin: 0 0 8px; font-weight: 600; overflow-wrap: anywhere; }
+.tkt-recap dd { margin: 0 0 4px; font-weight: 600; overflow-wrap: anywhere; }
 .tkt-recap-people { display: grid; gap: 6px; margin-top: 4px; }
 .tkt-recap-people li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; background: var(--tkt-surface); border-radius: var(--tkt-radius-sm); font-size: var(--tkt-fs-sm); }
 .tkt-recap-people li span:last-child { color: var(--tkt-muted); text-align: right; overflow-wrap: anywhere; }
@@ -299,3 +299,6 @@ body.tkt-has-bottombar { padding-bottom: 84px; }
 @media (max-width: 479px) { .tkt-tkt { flex-wrap: wrap; } .tkt-tkt__actions { width: 100%; } .tkt-tkt__actions .tkt-btn { flex: 1; } }
 .tkt-sim { max-width: 440px; margin: 0 auto; }
 .tkt-sim__banner { margin-bottom: 14px; }
+
+.tkt-mobile-summary { display: block; }
+@media (min-width: 992px) { .tkt-mobile-summary { display: none; } }

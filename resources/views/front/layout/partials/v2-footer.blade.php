@@ -3,7 +3,7 @@
         <div class="tkt-footer__grid">
             <div>
                 <a class="tkt-footer__logo" href="{{ route('front.home') }}"><img src="{{ $logoFooter }}" alt="{{ $siteName }}"></a>
-                <p class="tkt-footer__tagline">A cleaner, faster, more focused ticketing experience for live events.</p>
+                <p class="tkt-footer__tagline">TKT House curates premium techno events and makes booking your tickets simple and secure.</p>
                 @if(file_exists(public_path('images/payments-methods.png')))
                     <img src="{{ asset('images/payments-methods.png') }}" alt="Accepted payment methods" class="tkt-footer__payments" loading="lazy">
                 @endif

@@ -123,6 +123,7 @@
                 @endforeach
             </section>
 
+            <div class="tkt-mobile-summary">@include('front.checkout._summary', ['event' => $event, 'quote' => $quote])</div>
         </form>
 
         <aside class="tkt-checkout__aside" aria-label="Order summary">

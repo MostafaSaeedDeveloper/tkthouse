@@ -67,6 +67,9 @@
                 </div>
             </section>
 
+            {{-- Price breakdown (mobile; desktop shows it in the sticky sidebar) --}}
+            <div class="tkt-mobile-summary">@include('front.checkout._summary', ['event' => $event, 'quote' => $quote])</div>
+
             {{-- Payment --}}
             <section class="tkt-card tkt-section-card">
                 <h2 class="tkt-section-card__title">Payment method</h2>

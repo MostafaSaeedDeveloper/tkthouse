@@ -112,8 +112,7 @@
             $$('[data-sum-subtotal]').forEach(function (el) { el.textContent = money(q.subtotal); });
             $$('[data-sum-total]').forEach(function (el) { el.textContent = money(q.total); });
             $$('[data-sum-total-bar]').forEach(function (el) { el.textContent = money(q.total); });
-            var feeBox = $('[data-sum-fees]');
-            if (feeBox) {
+            $$('[data-sum-fees]').forEach(function (feeBox) {
                 feeBox.innerHTML = '';
                 q.fees.forEach(function (fee) {
                     var row = document.createElement('div');
@@ -122,13 +121,12 @@
                     var b = document.createElement('span'); b.textContent = money(fee.amount);
                     row.appendChild(a); row.appendChild(b); feeBox.appendChild(row);
                 });
-            }
-            var dRow = $('[data-sum-discount-row]');
-            if (dRow) {
+            });
+            $$('[data-sum-discount-row]').forEach(function (dRow) {
                 dRow.hidden = !(q.discount > 0);
-                var d = $('[data-sum-discount]'); if (d) d.textContent = '−' + money(q.discount);
-                var c = $('[data-sum-promo-code]'); if (c) c.textContent = q.promo_code || '';
-            }
+                var d = $('[data-sum-discount]', dRow); if (d) d.textContent = '−' + money(q.discount);
+                var c = $('[data-sum-promo-code]', dRow); if (c) c.textContent = q.promo_code || '';
+            });
             if (expected) expected.value = Number(q.total).toFixed(2);
             promoHidden.value = q.promo_code || '';
             promoRemove.hidden = !q.promo_code;
