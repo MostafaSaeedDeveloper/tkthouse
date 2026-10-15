@@ -21,6 +21,14 @@ class FawaterakGateway implements PaymentGateway
         return 'fawaterak';
     }
 
+    public function isConfigured(PaymentMethod $method): bool
+    {
+        $config = is_array($method->config) ? $method->config : [];
+
+        return filled($config['api_key'] ?? config('services.fawaterak.api_key'))
+            && (int) preg_replace('/[^0-9]/', '', (string) ($config['provider_key'] ?? '')) > 0;
+    }
+
     public function initiate(Order $order, PaymentMethod $method, PaymentAttempt $attempt): array
     {
         $data = $this->fawaterak->createCheckoutData($order->loadMissing('customer'));

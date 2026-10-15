@@ -4,30 +4,44 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Event;
-use App\Models\EventTicket;
 use App\Models\Order;
-use App\Models\PaymentMethod;
-use App\Models\PromoCode;
+use App\Services\Checkout\CheckoutPricing;
+use App\Services\Checkout\CheckoutSelection;
+use App\Services\Checkout\OrderPlacementService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PaymentService;
-use App\Services\PendingPaymentExpiryService;
-use App\Services\PaymobService;
-use App\Services\TicketIssuanceService;
-use App\Support\SystemSettings;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Spatie\Activitylog\Models\Activity;
 
+/**
+ * Checkout V2.  Step 1 (tickets) lives on the event page; this controller runs
+ *   Step 2  details   GET /checkout            + POST /checkout/details
+ *   Step 3  review    GET /checkout/review     + POST /checkout/promo, POST /checkout (place order)
+ *   Step 4  result    GET /checkout/confirmation/{order}
+ * The selection, prices, fees and promo are always recomputed on the server; the session only remembers
+ * which tickets were chosen and what the customer typed.
+ */
 class CheckoutController extends Controller
 {
+    private const SELECTION = 'checkout.event_selection';
+    private const DETAILS = 'checkout.details';
+    private const PROMO = 'checkout.promo';
+    private const SELECTION_ID = 'checkout.selection_id';
+
+    public function __construct(
+        private readonly CheckoutSelection $selection,
+        private readonly CheckoutPricing $pricing,
+    ) {
+    }
+
+    /* ------------------------------------------------------------------ Step 2: details */
+
     public function index(Request $request)
     {
-        // Checkout always belongs to one valid event: either a fresh cart from the event page or a still-valid session selection.
         if ($request->filled('event') || $request->filled('cart')) {
             if (! $request->filled('event') || ! $request->filled('cart')) {
                 return $this->backToEvents('Please choose an event and tickets first.');
@@ -36,64 +50,232 @@ class CheckoutController extends Controller
             $event = Event::query()->findOrFail((int) $request->input('event'));
 
             try {
-                $selection = $this->normalizeEventCart($event, (string) $request->input('cart'));
+                $selection = $this->selection->fromEncodedCart($event, (string) $request->input('cart'));
             } catch (ValidationException $e) {
-                return redirect()->route('front.events.show', $event)
-                    ->with('error', collect($e->errors())->flatten()->first() ?: 'Your ticket selection is not valid.');
+                return redirect()->route('front.events.show', $event)->with('error', $this->firstError($e, 'Your ticket selection is not valid.'));
             }
 
-            session(['checkout.event_selection' => $selection]);
-        } elseif ($stored = session('checkout.event_selection')) {
-            $event = Event::query()->find((int) ($stored['event_id'] ?? 0));
+            $this->startSelection($selection);
+
+            return redirect()->route('front.checkout'); // clean URL; refresh and back stay on the same step
+        }
+
+        if (! $context = $this->context($request)) {
+            return $this->invalidContextRedirect();
+        }
+
+        [$event, $selection] = $context;
+        $units = collect($selection['units']);
+
+        $details = session(self::DETAILS, []);
+        $buyer = array_merge($this->buyerDefaults($request), array_filter((array) ($details['buyer'] ?? []), fn ($v) => $v !== null && $v !== ''));
+
+        return view('front.checkout.details', [
+            'event' => $event,
+            'groups' => $this->groups($units),
+            'buyer' => $buyer,
+            'attendees' => (array) ($details['attendees'] ?? []),
+            'quote' => $this->pricing->quote($event, $units),
+            'step' => 2,
+        ]);
+    }
+
+    public function saveDetails(Request $request)
+    {
+        if (! $context = $this->context($request)) {
+            return $this->invalidContextRedirect();
+        }
+
+        $units = collect($context[1]['units']);
+
+        // Validate everything first so the customer sees all problems at once.
+        $errors = [];
+        $buyer = $attendees = null;
+        try {
+            $buyer = $this->validateBuyer($request);
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+        }
+        try {
+            $attendees = $this->validateAttendees((array) $request->input('attendees', []), $units->count());
+        } catch (ValidationException $e) {
+            $errors = array_merge($errors, $e->errors());
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        session([self::DETAILS => ['buyer' => $buyer, 'attendees' => $attendees]]);
+
+        return redirect()->route('front.checkout.review');
+    }
+
+    /* ------------------------------------------------------------------ Step 3: review & payment */
+
+    public function review(Request $request, PaymentGatewayManager $gateways)
+    {
+        if (! $context = $this->context($request)) {
+            return $this->invalidContextRedirect();
+        }
+
+        [$event, $selection] = $context;
+        $details = session(self::DETAILS);
+
+        if (! $this->detailsMatch($details, count($selection['units']))) {
+            return redirect()->route('front.checkout')->with('error', 'Please complete your details first.');
+        }
+
+        $units = collect($selection['units']);
+        $promoCode = (string) session(self::PROMO, '');
+        $promoNotice = null;
+
+        try {
+            $quote = $this->pricing->quote($event, $units, $promoCode);
+        } catch (ValidationException $e) {
+            session()->forget(self::PROMO);
+            $promoNotice = $this->firstError($e, 'The promo code is no longer valid.');
+            $promoCode = '';
+            $quote = $this->pricing->quote($event, $units);
+        }
+
+        return view('front.checkout.review', [
+            'event' => $event,
+            'quote' => $quote,
+            'groups' => $this->groups($units),
+            'buyer' => $details['buyer'],
+            'attendees' => $details['attendees'],
+            'methods' => $gateways->available(),
+            'requiresApproval' => (bool) $event->requires_booking_approval,
+            'promoCode' => $promoCode,
+            'promoNotice' => $promoNotice,
+            'step' => 3,
+        ]);
+    }
+
+    /** Previews a promo code. The discount is computed here, never in the browser. */
+    public function applyPromo(Request $request)
+    {
+        if (! $context = $this->context($request)) {
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => 'Your checkout session expired.'], 409)
+                : $this->invalidContextRedirect();
+        }
+
+        [$event, $selection] = $context;
+        $units = collect($selection['units']);
+
+        if ($request->boolean('remove') || trim((string) $request->input('promo_code')) === '') {
+            session()->forget(self::PROMO);
+            $quote = $this->pricing->quote($event, $units);
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => true, 'message' => 'Promo code removed.', 'quote' => $quote->toArray()])
+                : redirect()->route('front.checkout.review');
+        }
+
+        $code = strtoupper(trim((string) $request->input('promo_code')));
+
+        try {
+            $quote = $this->pricing->quote($event, $units, $code);
+        } catch (ValidationException $e) {
+            $message = $this->firstError($e, 'Promo code is invalid.');
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : redirect()->route('front.checkout.review')->withErrors(['promo_code' => $message])->withInput();
+        }
+
+        session([self::PROMO => $code]);
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => "Promo code {$code} applied.", 'quote' => $quote->toArray()])
+            : redirect()->route('front.checkout.review');
+    }
+
+    /** Places the order. Safe against double clicks, refreshes and parallel submissions. */
+    public function store(Request $request, PaymentGatewayManager $gateways, OrderPlacementService $placement)
+    {
+        if (! $context = $this->context($request)) {
+            // Back button / second tab right after a successful submit: take the customer to the order just created.
+            if ($recent = $this->recentOrder($request)) {
+                return $this->afterPlacement($recent, $gateways);
+            }
+
+            return $this->invalidContextRedirect();
+        }
+
+        [$event, $selection] = $context;
+        $user = $request->user();
+        $selectionId = (string) session(self::SELECTION_ID, '');
+        $doneKey = "checkout-done:{$user->id}:{$selectionId}";
+
+        // Already placed from this very selection (double click, back button, second tab): go to that order.
+        if ($selectionId !== '' && ($existing = $this->findDoneOrder($user->id, $doneKey))) {
+            return $this->afterPlacement($existing, $gateways);
+        }
+
+        $lock = Cache::lock("checkout-lock:{$user->id}", 20);
+        try {
+            $lock->block(8);
+        } catch (LockTimeoutException) {
+            return back()->with('error', 'Your order is already being processed. Please wait a moment.');
+        }
+
+        try {
+            if ($selectionId !== '' && ($existing = $this->findDoneOrder($user->id, $doneKey))) {
+                return $this->afterPlacement($existing, $gateways);
+            }
+
+            $details = $this->resolveDetails($request, count($selection['units']));
+            $requiresApproval = (bool) $event->requires_booking_approval;
+
+            $methodCode = null;
+            if (! $requiresApproval) {
+                $methodCode = (string) $request->validate([
+                    'payment_method' => ['required', 'string'],
+                ], ['payment_method.required' => 'Please choose a payment method.'])['payment_method'];
+
+                if (! $gateways->available()->contains('code', $methodCode)) {
+                    throw ValidationException::withMessages(['payment_method' => 'The selected payment method is not available.']);
+                }
+            }
+
+            $promo = trim((string) $request->input('promo_code', session(self::PROMO, '')));
+            $expected = $request->filled('expected_total') ? (float) $request->input('expected_total') : null;
 
             try {
-                abort_unless($event, 404);
-                $this->assertSelectionStillValid($event, collect($stored['units'] ?? []));
-            } catch (ValidationException|\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
-                session()->forget('checkout.event_selection');
+                $order = $placement->place(
+                    $user, $event, collect($selection['units']), $details['buyer'], $details['attendees'],
+                    $promo !== '' ? $promo : null, $methodCode, $expected, $this->affiliateUserId($request)
+                );
+            } catch (ValidationException $e) {
+                if (isset($e->errors()['price_changed'])) {
+                    return redirect()->route('front.checkout.review')->with('error', $this->firstError($e, 'Prices changed. Please review your order.'));
+                }
+                if (isset($e->errors()['cart']) || isset($e->errors()['tickets'])) {
+                    return redirect()->route('front.events.show', $event)->with('error', $this->firstError($e, 'Your selection is no longer available.'));
+                }
+                if (isset($e->errors()['promo_code'])) {
+                    session()->forget(self::PROMO);
+                    return redirect()->route('front.checkout.review')->withErrors(['promo_code' => $this->firstError($e, 'Promo code is invalid.')]);
+                }
 
-                return $event
-                    ? redirect()->route('front.events.show', $event)->with('error', 'Your ticket selection is no longer available. Please select again.')
-                    : $this->backToEvents('Please choose an event and tickets first.');
+                throw $e;
             }
+
+            if ($selectionId !== '') {
+                Cache::put($doneKey, $order->order_number, now()->addHour());
+            }
+            $this->clearCheckoutSession();
+            session(['checkout.last_order' => $order->order_number]);
+
+            return $this->afterPlacement($order, $gateways);
+        } finally {
+            $lock->release();
         }
-
-        $eventSelection = $this->hydrateEventSelectionWithFees(session('checkout.event_selection'));
-
-        if (! $eventSelection) {
-            return $this->backToEvents('Please choose an event and tickets first.');
-        }
-
-        return view('front.checkout', [
-            'mode' => 'event_locked',
-            'eventSelection' => $eventSelection,
-            'buyer' => $this->buyerDefaults($request),
-            'promoCodesPreview' => $this->promoCodesPreview(),
-            'activePaymentMethods' => PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get(['name', 'code', 'checkout_label', 'checkout_icon', 'checkout_description']),
-        ]);
     }
 
-    private function backToEvents(string $message)
-    {
-        return redirect()->route('front.events')->with('error', $message);
-    }
-
-    public function store(Request $request)
-    {
-        $baseValidated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:255'],
-            'promo_code' => ['nullable', 'string', 'max:50'],
-        ]);
-
-        if (! session('checkout.event_selection')) {
-            return $this->backToEvents('Please choose an event and tickets first.');
-        }
-
-        return $this->storeFromLockedEventSelection($request, $baseValidated);
-    }
+    /* ------------------------------------------------------------------ Step 4: confirmation */
 
     /** Legacy URL (older emails / gateway return links): resolve to the real, status-driven confirmation page. */
     public function thankYou(Request $request)
@@ -107,10 +289,7 @@ class CheckoutController extends Controller
         return redirect()->route('front.account.orders');
     }
 
-    /**
-     * Step 4. What is shown comes from the order's real status, never from a query string, so a URL can not
-     * fake a successful payment.
-     */
+    /** What is shown comes from the order's real status, never from a query string, so a URL can not fake a payment. */
     public function confirmation(Request $request, string $orderNumber, PaymentService $payments)
     {
         $order = Order::query()
@@ -119,9 +298,8 @@ class CheckoutController extends Controller
             ->with(['items', 'customer'])
             ->firstOrFail();
 
-        if ($order->status === 'pending_payment' && $order->paymentAttempts()->exists()
-            && Cache::add('order-refresh:'.$order->id, 1, 5)) {
-            // Customer may be back before the gateway callback: ask the gateway instead of guessing.
+        if ($order->status === 'pending_payment' && $order->paymentAttempts()->exists() && Cache::add('order-refresh:'.$order->id, 1, 5)) {
+            // The customer may be back before the gateway callback: ask the gateway instead of guessing.
             try {
                 $payments->refresh($order);
             } catch (\Throwable $e) {
@@ -130,355 +308,241 @@ class CheckoutController extends Controller
             $order->refresh();
         }
 
-        $latestAttempt = $order->paymentAttempts()->latest('id')->first();
+        $latest = $order->paymentAttempts()->latest('id')->first();
+        $hasOpen = $order->paymentAttempts()->where('status', 'initiated')->exists();
 
         $state = match (true) {
             $order->status === 'paid' => 'paid',
             $order->status === 'pending_approval' => 'review',
             in_array($order->status, ['canceled', 'rejected'], true) => 'closed',
-            $order->status === 'pending_payment' && $latestAttempt?->status === 'failed' && ! $order->paymentAttempts()->where('status', 'initiated')->exists() => 'failed',
-            $order->status === 'pending_payment' && $latestAttempt === null => 'unpaid',
-            default => $order->status === 'pending_payment' ? 'pending' : 'other',
+            $order->status === 'pending_payment' && $latest?->status === 'failed' && ! $hasOpen => 'failed',
+            $order->status === 'pending_payment' && $latest === null => 'unpaid',
+            $order->status === 'pending_payment' => 'pending',
+            default => 'other',
         };
 
         $event = Event::query()->find($order->items->pluck('event_id')->filter()->first());
-        $tickets = $state === 'paid' && $order->tickets_generated_at
-            ? $order->issuedTickets()->orderBy('id')->get()
-            : collect();
+        $tickets = $state === 'paid' && $order->tickets_generated_at ? $order->issuedTickets()->orderBy('id')->get() : collect();
 
         return view('front.checkout.confirmation', [
-            'order' => $order,
-            'state' => $state,
-            'event' => $event,
-            'tickets' => $tickets,
-            'attempt' => $latestAttempt,
+            'order' => $order, 'state' => $state, 'event' => $event, 'tickets' => $tickets, 'attempt' => $latest, 'step' => 4,
         ]);
     }
 
-    public function paymentPage(Request $request, Order $order, string $token)
+    /* ------------------------------------------------------------------ helpers */
+
+    /** @return array{0: Event, 1: array<string, mixed>}|null the event and a freshly re-validated selection, or null */
+    private function context(Request $request): ?array
     {
-        if ($this->expirePendingPaymentOrderIfNeeded($order)) {
-            return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
+        $stored = session(self::SELECTION);
+        if (! is_array($stored) || empty($stored['units'])) {
+            return null;
         }
 
-        abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
-        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-        abort_unless($order->status === 'pending_payment', 404);
-
-        $order->load(['items', 'customer']);
-
-        $activePaymentMethods = $this->availablePaymentMethods();
-
-        $selectedMethod = $activePaymentMethods->firstWhere('code', $order->payment_method)?->code
-            ?? $activePaymentMethods->first()?->code
-            ?? $order->payment_method;
-
-        return view('front.payment', [
-            'order' => $order,
-            'activePaymentMethods' => $activePaymentMethods,
-            'selectedMethod' => $selectedMethod,
-        ]);
-    }
-
-    public function gatewayRedirect(Request $request, Order $order, string $token, PaymentService $payments, PaymentGatewayManager $gateways)
-    {
-        if ($this->expirePendingPaymentOrderIfNeeded($order)) {
-            return redirect()->route('front.account.orders')->with('error', 'This order was canceled because the payment deadline has expired.');
-        }
-
-        abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
-        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-
-        if ($order->status === 'paid') {
-            return redirect()->route('front.checkout.confirmation', $order->order_number);
-        }
-
-        abort_unless($order->status === 'pending_payment', 404);
-
-        $method = (string) $request->query('method', $order->payment_method);
-        $paymentMethod = $this->availablePaymentMethods()->firstWhere('code', $method);
-
-        if (! $paymentMethod || ! $gateways->supports((string) $paymentMethod->provider)) {
-            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $token])
-                ->withErrors(['payment' => 'Selected payment method is not available for online payment.']);
-        }
-
-        if ($order->payment_method !== $method) {
-            $order->update(['payment_method' => $method]);
+        $event = Event::query()->with('fees')->find((int) ($stored['event_id'] ?? 0));
+        if (! $event) {
+            return null;
         }
 
         try {
-            $url = $payments->start($order, $paymentMethod);
+            // Rebuilt from current data: closed events, sold-out tickets, new limits and new prices are all picked up here.
+            $fresh = $this->selection->revalidate($event, collect($stored['units']));
+        } catch (ValidationException $e) {
+            $this->clearCheckoutSession();
+            session()->flash('error', $this->firstError($e, 'Your ticket selection is no longer available. Please select again.'));
+            session()->flash('checkout_event', $event->slug);
 
-            $this->logPaymentEvent($order, $request->user(), 'Payment gateway opened', [
-                'provider' => $paymentMethod->provider,
-                'payment_method' => $paymentMethod->code,
-                'payment_status' => 'opened',
-                'transaction_url' => $url,
-            ]);
-        } catch (\Throwable $exception) {
-            $this->logPaymentEvent($order, $request->user(), 'Payment attempt failed', [
-                'provider' => $paymentMethod->provider,
-                'payment_method' => $paymentMethod->code,
-                'payment_status' => 'failed',
-                'failure_reason' => $exception->getMessage(),
-            ]);
-
-            Log::warning('Could not open payment gateway.', ['order_id' => $order->id, 'error' => $exception->getMessage()]);
-
-            return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $token])
-                ->withErrors(['payment' => 'We could not open the payment page right now. Please try again or choose another method.']);
+            return null;
         }
 
-        return redirect()->away($url);
+        session([self::SELECTION => $fresh]);
+
+        return [$event, $fresh];
     }
 
-    /**
-     * Paymob return/processed callback. Whatever the body says, the order is only settled after the
-     * transaction has been looked up at Paymob (see PaymentService::refresh).
-     */
-    public function paymobCallback(Request $request, PaymentService $payments)
+    private function invalidContextRedirect()
     {
-        $payload = $request->all();
-        $merchantOrderId = (string) data_get($payload, 'obj.order.merchant_order_id', data_get($payload, 'merchant_order_id', ''));
-        $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
-        $isGet = $request->isMethod('get');
+        if ($slug = session('checkout_event')) {
+            return redirect()->route('front.events.show', $slug);
+        }
 
-        // Signed server-to-server callback: reject forged bodies early when the HMAC secret is configured.
-        $secret = (string) (config('payments.paymob.hmac_secret') ?: '');
-        if (! $isGet && $secret !== '' && is_array(data_get($payload, 'obj'))) {
-            if (! PaymobService::hmacIsValid($payload['obj'], (string) $request->query('hmac', ''), $secret)) {
-                Log::warning('Paymob callback rejected: invalid HMAC.', ['merchant_order_id' => $merchantOrderId]);
+        return $this->backToEvents('Please choose an event and tickets first.');
+    }
 
-                return response()->json(['received' => false, 'updated' => false], 403);
+    private function backToEvents(string $message)
+    {
+        return redirect()->route('front.events')->with('error', $message);
+    }
+
+    private function startSelection(array $selection): void
+    {
+        $previous = session(self::SELECTION);
+        $sameShape = is_array($previous) && collect($previous['units'] ?? [])->pluck('ticket_id')->all() === collect($selection['units'])->pluck('ticket_id')->all();
+
+        session([self::SELECTION => $selection, self::SELECTION_ID => (string) Str::uuid()]);
+        session()->forget(self::PROMO);
+
+        // Keep what the customer typed if the selection did not change; otherwise only the buyer block is reusable.
+        $details = session(self::DETAILS);
+        if (! $sameShape && is_array($details)) {
+            session([self::DETAILS => ['buyer' => $details['buyer'] ?? [], 'attendees' => []]]);
+        }
+    }
+
+    private function clearCheckoutSession(): void
+    {
+        session()->forget([self::SELECTION, self::DETAILS, self::PROMO, self::SELECTION_ID]);
+    }
+
+    /** The order this customer placed in the last few minutes, if any (used to make re-submits harmless). */
+    private function recentOrder(Request $request): ?Order
+    {
+        $number = session('checkout.last_order');
+
+        return $number
+            ? Order::query()->where('order_number', $number)->where('user_id', $request->user()->id)->where('created_at', '>=', now()->subMinutes(15))->first()
+            : null;
+    }
+
+    private function findDoneOrder(int $userId, string $key): ?Order
+    {
+        $number = Cache::get($key);
+
+        return $number ? Order::query()->where('order_number', $number)->where('user_id', $userId)->first() : null;
+    }
+
+    private function afterPlacement(Order $order, PaymentGatewayManager $gateways)
+    {
+        if ($order->status === 'pending_payment' && $order->payment_link_token) {
+            $method = \App\Models\PaymentMethod::query()->where('code', $order->payment_method)->first();
+            if ($method && $gateways->isOnline($method)) {
+                return redirect()->route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token, 'method' => $method->code]);
             }
         }
-
-        $order = $merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null;
-
-        if (! $order) {
-            Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
-
-            return $isGet
-                ? redirect()->route('front.checkout.thank-you', ['flow' => 'payment_failed'])
-                : response()->json(['received' => true, 'updated' => false]);
-        }
-
-        $outcome = $payments->refresh($order, $transactionId !== '' ? $transactionId : null, 'paymob');
-
-        Log::info('Paymob callback processed.', ['order_id' => $order->id, 'outcome' => $outcome]);
-
-        if ($isGet) {
-            return redirect()->route('front.checkout.confirmation', $order->order_number);
-        }
-
-        return response()->json(['received' => true, 'updated' => in_array($outcome, [PaymentService::OUTCOME_PAID, PaymentService::OUTCOME_ALREADY_PAID], true)]);
-    }
-
-    /**
-     * Fawaterak redirect. The `result` query value is only a hint for the screen the customer lands on:
-     * payment is confirmed by asking Fawaterak about the invoice, never by this URL.
-     */
-    public function fawaterakCallback(Request $request, Order $order, string $token, PaymentService $payments)
-    {
-        abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-
-        $hint = trim((string) ($request->query('invoice_id')
-            ?: $request->query('payment_id')
-            ?: $request->query('transaction_id')
-            ?: $request->query('id')));
-
-        $payments->refresh($order, $hint !== '' ? $hint : null, 'fawaterak');
 
         return redirect()->route('front.checkout.confirmation', $order->order_number);
     }
 
-    private function logPaymentEvent(Order $order, $causer, string $description, array $properties = []): Activity
+    /** @param \Illuminate\Support\Collection<int, array<string, mixed>> $units */
+    private function groups($units): array
     {
-        $logger = activity('orders')
-            ->performedOn($order)
-            ->withProperties($properties);
-
-        if ($causer) {
-            $logger->causedBy($causer);
+        $groups = [];
+        $index = 0;
+        foreach ($units as $unit) {
+            $key = (int) $unit['ticket_id'];
+            $groups[$key] ??= ['name' => (string) $unit['ticket_name'], 'price' => (float) $unit['ticket_price'], 'is_couple' => (bool) ($unit['is_couple'] ?? false), 'indexes' => []];
+            $groups[$key]['indexes'][] = $index++;
         }
 
-        return $logger->log($description);
+        return array_values($groups);
     }
 
-    private function storeFromLockedEventSelection(Request $request, array $baseValidated)
+    private function detailsMatch($details, int $count): bool
     {
-        $selection = session('checkout.event_selection', []);
-        $attendees = collect($request->input('attendees', []));
-        $ticketUnits = collect($selection['units'] ?? []);
+        return is_array($details) && count((array) ($details['attendees'] ?? [])) === $count && ! empty($details['buyer']['email']);
+    }
 
-        if ($ticketUnits->isEmpty()) {
-            throw ValidationException::withMessages(['tickets' => 'No selected tickets found. Please go back to event page and select tickets.']);
+    /** Details from the form being posted (single-step clients) or, by default, from Step 2. */
+    private function resolveDetails(Request $request, int $count): array
+    {
+        if ($request->has('attendees')) {
+            return [
+                'buyer' => $this->validateBuyer($request),
+                'attendees' => $this->validateAttendees((array) $request->input('attendees'), $count),
+            ];
         }
 
-        if ($attendees->count() !== $ticketUnits->count()) {
+        $details = session(self::DETAILS);
+        if (! $this->detailsMatch($details, $count)) {
+            throw ValidationException::withMessages(['attendees' => 'Please fill attendee data for all selected tickets.']);
+        }
+
+        return $details;
+    }
+
+    /** @return array{first_name: string, last_name: string, email: string, phone: ?string} */
+    private function validateBuyer(Request $request): array
+    {
+        if ($request->filled('full_name') && ! $request->filled('first_name')) {
+            $parts = preg_split('/\s+/', trim((string) $request->input('full_name')), 2) ?: [];
+            $request->merge(['first_name' => $parts[0] ?? '', 'last_name' => $parts[1] ?? '-']);
+        }
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+        ], [
+            'first_name.required' => 'Please enter your full name.',
+            'last_name.required' => 'Please enter your full name.',
+            'email.required' => 'Please enter your email address.',
+        ]);
+
+        return [
+            'first_name' => trim($data['first_name']),
+            'last_name' => trim($data['last_name']),
+            'email' => trim($data['email']),
+            'phone' => isset($data['phone']) ? trim($data['phone']) : null,
+        ];
+    }
+
+    /**
+     * Required attendee fields exactly as the system has always required them.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function validateAttendees(array $attendees, int $count): array
+    {
+        $attendees = array_values($attendees);
+
+        if (count($attendees) !== $count) {
             throw ValidationException::withMessages(['attendees' => 'Please fill attendee data for all selected tickets.']);
         }
 
         $errors = [];
+        $clean = [];
         foreach ($attendees as $index => $attendee) {
-            $name = trim((string) ($attendee['name'] ?? ''));
-            $phone = trim((string) ($attendee['phone'] ?? ''));
-            $email = trim((string) ($attendee['email'] ?? ''));
-            $gender = trim((string) ($attendee['gender'] ?? ''));
-            $socialProfile = trim((string) ($attendee['social_profile'] ?? ''));
+            $attendee = (array) $attendee;
+            $row = [
+                'name' => trim((string) ($attendee['name'] ?? '')),
+                'phone' => trim((string) ($attendee['phone'] ?? '')),
+                'email' => trim((string) ($attendee['email'] ?? '')),
+                'gender' => trim((string) ($attendee['gender'] ?? '')),
+                'social_profile' => trim((string) ($attendee['social_profile'] ?? '')),
+            ];
 
-            if ($name === '') {
+            if ($row['name'] === '') {
                 $errors["attendees.$index.name"] = 'Name is required.';
             }
-            if ($phone === '') {
+            if ($row['phone'] === '') {
                 $errors["attendees.$index.phone"] = 'Phone is required.';
             }
-            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (! filter_var($row['email'], FILTER_VALIDATE_EMAIL)) {
                 $errors["attendees.$index.email"] = 'Valid email is required.';
             }
-            if (! in_array($gender, ['male', 'female'], true)) {
+            if (! in_array($row['gender'], ['male', 'female'], true)) {
                 $errors["attendees.$index.gender"] = 'Gender is required.';
             }
-            if ($socialProfile === '') {
+            if ($row['social_profile'] === '') {
                 $errors["attendees.$index.social_profile"] = 'Social profile is required.';
             }
+
+            $clean[] = $row;
         }
 
         if ($errors) {
             throw ValidationException::withMessages($errors);
         }
 
-        $event = Event::query()->with('fees')->findOrFail((int) ($selection['event_id'] ?? 0));
-
-        // The selection lives in the session; re-run every booking rule against current data when the order is placed.
-        $this->assertSelectionStillValid($event, $ticketUnits);
-
-        $requiresApproval = (bool) $event->requires_booking_approval;
-
-        if (! $requiresApproval) {
-            $request->validate([
-                'payment_method' => ['required', Rule::in($this->activePaymentMethodCodes())],
-            ]);
-        }
-
-        $subtotal = (float) $ticketUnits->sum(fn ($unit) => (float) $unit['ticket_price']);
-        $feeSummary = $this->calculateEventFeeSummary($event, $subtotal);
-        $feeTotal = (float) $feeSummary['total'];
-
-        $order = DB::transaction(function () use ($request, $baseValidated, $ticketUnits, $attendees, $requiresApproval, $subtotal, $feeTotal, $event) {
-            $promoData = $this->resolvePromoCodeForCheckout((string) $request->input('promo_code', ''), $subtotal);
-            $customer = $this->upsertCustomer($baseValidated);
-
-            $order = Order::create([
-                'customer_id' => $customer->id,
-                'user_id' => $request->user()->id,
-                'affiliate_user_id' => $this->resolveAffiliateUserId($request),
-                'promo_code_id' => $promoData['promo_code']?->id,
-                'promo_code' => $promoData['promo_code']?->code,
-                'discount_amount' => $promoData['discount_amount'],
-                'subtotal_amount' => $subtotal,
-                'order_number' => $this->generateNumericOrderNumber(),
-                'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
-                'requires_approval' => $requiresApproval,
-                'payment_method' => $requiresApproval ? 'pending_review' : (string) $request->input('payment_method'),
-                'payment_link_token' => $requiresApproval ? null : Str::random(40),
-                'payment_timeout_started_at' => $requiresApproval ? null : now(),
-                'payment_timeout_minutes' => $requiresApproval ? null : SystemSettings::pendingPaymentTimeoutMinutes(),
-                'total_amount' => 0,
-            ]);
-
-            $total = 0;
-
-            foreach ($ticketUnits as $index => $unit) {
-                $attendee = $attendees[$index];
-                $lineTotal = (float) $unit['ticket_price'];
-                $total += $lineTotal;
-
-                $order->items()->create([
-                    'event_id' => $event->id,
-                    'ticket_id' => null,
-                    'ticket_name' => $unit['event_name'].' - '.$unit['ticket_name'],
-                    'ticket_price' => $unit['ticket_price'],
-                    'quantity' => 1,
-                    'line_total' => $lineTotal,
-                    'holder_name' => trim((string) ($attendee['name'] ?? '')),
-                    'holder_email' => trim((string) ($attendee['email'] ?? '')),
-                    'holder_phone' => trim((string) ($attendee['phone'] ?? '')),
-                    'holder_gender' => (string) $attendee['gender'],
-                    'holder_social_profile' => trim((string) ($attendee['social_profile'] ?? '')) ?: null,
-                ]);
-            }
-
-            $discountedSubtotal = max(0, $total - $promoData['discount_amount']);
-            $order->update(['total_amount' => $discountedSubtotal + $feeTotal]);
-
-            activity('orders')
-                ->performedOn($order)
-                ->causedBy($request->user())
-                ->withProperties([
-                    'to_status' => $order->status,
-                    'total_amount' => (float) $order->total_amount,
-                ])
-                ->log('Order submitted');
-
-            return $order;
-        });
-
-        session()->forget('checkout.event_selection');
-
-        if ($order->status === 'pending_payment') {
-            return redirect()->route('front.account.orders')
-                ->with('success', 'Order created successfully. Please complete payment before the deadline shown in your orders page.');
-        }
-
-        return redirect()->route('front.checkout.thank-you', ['flow' => 'pending_review', 'order' => $order->order_number])
-            ->with('success', 'Your order has been submitted successfully.');
+        return $clean;
     }
 
-    private function resolvePromoCodeForCheckout(string $rawPromoCode, float $subtotal): array
+    private function affiliateUserId(Request $request): ?int
     {
-        $code = strtoupper(trim($rawPromoCode));
-
-        if ($code === '') {
-            return ['promo_code' => null, 'discount_amount' => 0.0];
-        }
-
-        $promoCode = PromoCode::query()->where('code', $code)->lockForUpdate()->first();
-
-        if (! $promoCode || ! $promoCode->is_active) {
-            throw ValidationException::withMessages(['promo_code' => 'Promo code is invalid.']);
-        }
-
-        if ($promoCode->starts_at && now()->lt($promoCode->starts_at)) {
-            throw ValidationException::withMessages(['promo_code' => 'Promo code is not active yet.']);
-        }
-
-        if ($promoCode->ends_at && now()->gt($promoCode->ends_at)) {
-            throw ValidationException::withMessages(['promo_code' => 'Promo code has expired.']);
-        }
-
-        if ($promoCode->usage_limit !== null && $promoCode->used_count >= $promoCode->usage_limit) {
-            throw ValidationException::withMessages(['promo_code' => 'Promo code usage limit reached.']);
-        }
-
-        $discountAmount = $promoCode->discount_type === 'percent'
-            ? round(($subtotal * (float) $promoCode->discount_value) / 100, 2)
-            : round((float) $promoCode->discount_value, 2);
-
-        $discountAmount = min($discountAmount, $subtotal);
-
-        $promoCode->increment('used_count');
-
-        return ['promo_code' => $promoCode, 'discount_amount' => $discountAmount];
-    }
-
-    private function resolveAffiliateUserId(Request $request): ?int
-    {
-        $affiliateFromSession = (int) $request->session()->get('affiliate.referrer_id', 0);
-
-        if ($affiliateFromSession > 0) {
-            return $affiliateFromSession;
+        $fromSession = (int) $request->session()->get('affiliate.referrer_id', 0);
+        if ($fromSession > 0) {
+            return $fromSession;
         }
 
         $fallback = (int) ($request->user()->referred_by_user_id ?? 0);
@@ -486,288 +550,26 @@ class CheckoutController extends Controller
         return $fallback > 0 ? $fallback : null;
     }
 
-    private function expirePendingPaymentOrderIfNeeded(Order $order): bool
-    {
-        if ($order->status !== 'pending_payment') {
-            return false;
-        }
-
-        $order->loadMissing('customer');
-
-        return app(PendingPaymentExpiryService::class)
-            ->expireOrderIfNeeded($order, SystemSettings::pendingPaymentTimeoutMinutes());
-    }
-
-
-
-    private function findOrderFromMerchantOrderId(string $merchantOrderId): ?Order
-    {
-        $direct = Order::query()->where('order_number', $merchantOrderId)->first();
-        if ($direct) {
-            return $direct;
-        }
-
-        $baseOrderNumber = trim((string) strtok($merchantOrderId, '-'));
-        if ($baseOrderNumber !== '') {
-            return Order::query()->where('order_number', $baseOrderNumber)->first();
-        }
-
-        return null;
-    }
-
-    /** Payment methods a customer may use right now (active, not the legacy 'card', fake only when enabled). */
-    private function availablePaymentMethods()
-    {
-        return PaymentMethod::query()
-            ->where('is_active', true)
-            ->where('code', '!=', 'card')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (PaymentMethod $m) => $m->provider !== 'fake' || config('payments.fake.enabled'))
-            ->values();
-    }
-
-    private function activePaymentMethodCodes(): array
-    {
-        return PaymentMethod::query()
-            ->where('is_active', true)
-            ->where('code', '!=', 'card')
-            ->orderBy('id')
-            ->pluck('code')
-            ->values()
-            ->all();
-    }
-
-
-    private function promoCodesPreview(): array
-    {
-        return PromoCode::query()
-            ->select(['code', 'discount_type', 'discount_value', 'usage_limit', 'used_count', 'is_active', 'starts_at', 'ends_at'])
-            ->get()
-            ->map(fn (PromoCode $promoCode) => [
-                'code' => (string) $promoCode->code,
-                'discount_type' => (string) $promoCode->discount_type,
-                'discount_value' => (float) $promoCode->discount_value,
-                'usage_limit' => $promoCode->usage_limit,
-                'used_count' => (int) $promoCode->used_count,
-                'is_active' => (bool) $promoCode->is_active,
-                'starts_at' => $promoCode->starts_at?->toIso8601String(),
-                'ends_at' => $promoCode->ends_at?->toIso8601String(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    private function generateNumericOrderNumber(): string
-    {
-        do {
-            // Short numeric format: yymmdd + 4 random digits (10 digits total)
-            $candidate = now()->format('ymd').str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
-        } while (Order::query()->where('order_number', $candidate)->exists());
-
-        return $candidate;
-    }
-
-    private function upsertCustomer(array $baseValidated): Customer
-    {
-        return Customer::updateOrCreate(
-            ['email' => $baseValidated['email']],
-            [
-                'first_name' => $baseValidated['first_name'],
-                'last_name' => $baseValidated['last_name'],
-                'phone' => $baseValidated['phone'] ?? null,
-            ]
-        );
-    }
-
     private function buyerDefaults(Request $request): array
     {
         $user = $request->user();
         $customer = Customer::query()->where('email', $user->email)->first();
-        $nameParts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
+        $parts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
 
-        $accountFirstName = trim((string) ($nameParts[0] ?? ''));
-        $accountLastName = trim((string) ($nameParts[1] ?? ''));
-        $accountPhone = trim((string) ($user->phone ?? ''));
+        $first = trim((string) ($parts[0] ?? ''));
+        $last = trim((string) ($parts[1] ?? ''));
+        $phone = trim((string) ($user->phone ?? ''));
 
         return [
-            'first_name' => $accountFirstName !== '' ? $accountFirstName : ($customer?->first_name ?? ''),
-            'last_name' => $accountLastName !== '' ? $accountLastName : ($customer?->last_name ?? ''),
+            'first_name' => $first !== '' ? $first : ($customer?->first_name ?? ''),
+            'last_name' => $last !== '' ? $last : ($customer?->last_name ?? ''),
             'email' => $user->email,
-            'phone' => $accountPhone !== '' ? $accountPhone : ($customer?->phone ?? ''),
+            'phone' => $phone !== '' ? $phone : ($customer?->phone ?? ''),
         ];
     }
 
-    private function normalizeEventCart(Event $event, string $encodedCart): array
+    private function firstError(ValidationException $e, string $fallback): string
     {
-        $decoded = base64_decode(strtr($encodedCart, '-_', '+/'), true);
-        if ($decoded === false) {
-            throw ValidationException::withMessages(['cart' => 'Invalid cart data.']);
-        }
-
-        $payload = json_decode($decoded, true);
-        if (! is_array($payload)) {
-            throw ValidationException::withMessages(['cart' => 'Invalid cart format.']);
-        }
-
-        // Merge repeated ticket rows so per-order limits cannot be bypassed by splitting a ticket across rows.
-        $requested = collect($payload)
-            ->filter(fn ($row) => is_array($row))
-            ->map(fn ($row) => ['ticket_id' => (int) ($row['ticket_id'] ?? 0), 'qty' => max(1, (int) ($row['qty'] ?? 1))])
-            ->filter(fn ($row) => $row['ticket_id'] > 0)
-            ->groupBy('ticket_id')
-            ->map(fn ($rows, $ticketId) => ['ticket_id' => (int) $ticketId, 'qty' => (int) $rows->sum('qty')])
-            ->values();
-
-        return $this->buildSelection($event, $requested);
-    }
-
-    /**
-     * Single source of truth for what may be booked: bookable event, active tickets of that event,
-     * couple tickets in pairs, per-ticket maximums. Fees are computed here, server side.
-     */
-    private function buildSelection(Event $event, \Illuminate\Support\Collection $requested): array
-    {
-        if (! $this->isEventBookable($event)) {
-            throw ValidationException::withMessages(['cart' => 'Booking is closed for this event.']);
-        }
-
-        if ($requested->isEmpty()) {
-            throw ValidationException::withMessages(['cart' => 'No tickets selected.']);
-        }
-
-        $tickets = EventTicket::query()
-            ->where('event_id', $event->id)
-            ->where('status', 'active')
-            ->whereIn('id', $requested->pluck('ticket_id'))
-            ->get()
-            ->keyBy('id');
-
-        $units = [];
-        foreach ($requested as $row) {
-            $ticket = $tickets->get($row['ticket_id']);
-            if (! $ticket) {
-                throw ValidationException::withMessages(['cart' => 'One of the selected tickets is no longer available.']);
-            }
-
-            $maxQuantity = $this->maxAllowedQuantityForTicket($ticket);
-            if ((bool) ($ticket->is_couple ?? false) && (int) $row['qty'] !== 2) {
-                throw ValidationException::withMessages([
-                    'cart' => "{$ticket->name} is couples only and must be booked as 2 tickets.",
-                ]);
-            }
-
-            if ((int) $row['qty'] > $maxQuantity) {
-                throw ValidationException::withMessages([
-                    'cart' => "Maximum allowed quantity for {$ticket->name} is {$maxQuantity}.",
-                ]);
-            }
-
-            for ($i = 0; $i < $row['qty']; $i++) {
-                $units[] = [
-                    'ticket_id' => $ticket->id,
-                    'ticket_name' => $ticket->name,
-                    'ticket_price' => (float) $ticket->price,
-                    'event_name' => $event->name,
-                ];
-            }
-        }
-
-        $subtotal = collect($units)->sum('ticket_price');
-        $feeSummary = $this->calculateEventFeeSummary($event->loadMissing('fees'), (float) $subtotal);
-
-        return [
-            'event_id' => $event->id,
-            'event_name' => $event->name,
-            'requires_approval' => (bool) $event->requires_booking_approval,
-            'units' => $units,
-            'fees' => $feeSummary['breakdown'],
-            'fees_total' => $feeSummary['total'],
-        ];
-    }
-
-    /** Re-validates a stored selection (list of per-person units) against the current event and tickets. */
-    private function assertSelectionStillValid(Event $event, \Illuminate\Support\Collection $units): void
-    {
-        $requested = $units
-            ->groupBy(fn ($unit) => (int) ($unit['ticket_id'] ?? 0))
-            ->map(fn ($rows, $ticketId) => ['ticket_id' => (int) $ticketId, 'qty' => $rows->count()])
-            ->filter(fn ($row) => $row['ticket_id'] > 0)
-            ->values();
-
-        try {
-            $this->buildSelection($event, $requested);
-        } catch (ValidationException $e) {
-            throw ValidationException::withMessages(['tickets' => collect($e->errors())->flatten()->first()]);
-        }
-    }
-
-    private function hydrateEventSelectionWithFees(?array $eventSelection): ?array
-    {
-        if (! is_array($eventSelection) || empty($eventSelection)) {
-            return $eventSelection;
-        }
-
-        $eventId = (int) ($eventSelection['event_id'] ?? 0);
-        if ($eventId <= 0) {
-            return $eventSelection;
-        }
-
-        if (array_key_exists('fees', $eventSelection) && array_key_exists('fees_total', $eventSelection)) {
-            return $eventSelection;
-        }
-
-        $event = Event::query()->with('fees')->find($eventId);
-        if (! $event) {
-            return $eventSelection;
-        }
-
-        $subtotal = collect($eventSelection['units'] ?? [])->sum(fn ($unit) => (float) ($unit['ticket_price'] ?? 0));
-        $feeSummary = $this->calculateEventFeeSummary($event, (float) $subtotal);
-
-        $eventSelection['fees'] = $feeSummary['breakdown'];
-        $eventSelection['fees_total'] = $feeSummary['total'];
-        session(['checkout.event_selection' => $eventSelection]);
-
-        return $eventSelection;
-    }
-
-    private function calculateEventFeeSummary(Event $event, float $subtotal): array
-    {
-        $breakdown = $event->fees
-            ->map(function ($fee) use ($subtotal) {
-                $value = (float) ($fee->value ?? 0);
-                $amount = $fee->fee_type === 'percentage'
-                    ? round(($subtotal * $value) / 100, 2)
-                    : round($value, 2);
-
-                return [
-                    'name' => (string) $fee->name,
-                    'fee_type' => (string) $fee->fee_type,
-                    'value' => $value,
-                    'amount' => max(0, $amount),
-                ];
-            })
-            ->filter(fn (array $fee) => $fee['amount'] > 0)
-            ->values()
-            ->all();
-
-        return [
-            'breakdown' => $breakdown,
-            'total' => array_reduce($breakdown, fn (float $carry, array $fee) => $carry + (float) $fee['amount'], 0.0),
-        ];
-    }
-
-    /** Same rule the event page applies: active event that has not started yet. */
-    private function isEventBookable(Event $event): bool
-    {
-        return $event->status === 'active'
-            && $event->event_date !== null
-            && ! $event->event_date->lt(now()->startOfDay());
-    }
-
-    private function maxAllowedQuantityForTicket(EventTicket $ticket): int
-    {
-        return (bool) ($ticket->is_couple ?? false) ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
+        return (string) (collect($e->errors())->flatten()->first() ?: $fallback);
     }
 }

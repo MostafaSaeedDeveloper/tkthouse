@@ -23,6 +23,7 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
 use App\Http\Controllers\FrontTicketController;
 use App\Http\Controllers\PagesController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentSimulatorController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,12 +39,12 @@ Route::middleware(\App\Http\Middleware\FrontendMaintenance::class)->group(functi
     Route::get('/cookie-policy', [PagesController::class, 'cookie'])->name('front.cookie');
 });
 
-Route::match(['GET','POST'], '/payments/paymob/callback', [CheckoutController::class, 'paymobCallback'])->name('front.paymob.callback');
+Route::match(['GET','POST'], '/payments/paymob/callback', [PaymentController::class, 'paymobCallback'])->name('front.paymob.callback');
 
 Route::get('/t/{ticketNumber}', [FrontTicketController::class, 'shortDownload'])
     ->name('front.tickets.short-download');
 Route::get('/tickets/public/{ticketNumber}/download', [FrontTicketController::class, 'publicDownloadByNumber'])->name('front.tickets.public-download');
-Route::get('/payments/fawaterak/callback/{order}/{token}', [CheckoutController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
+Route::get('/payments/fawaterak/callback/{order}/{token}', [PaymentController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
 
 Route::middleware('guest')->group(function () {
     Route::get('/account/login', [CustomerAuthController::class, 'showLogin'])->name('front.customer.login');
@@ -65,13 +66,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');
     Route::get('/account/tickets', [CustomerDashboardController::class, 'tickets'])->name('front.account.tickets');
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
+    Route::post('/checkout/details', [CheckoutController::class, 'saveDetails'])->name('front.checkout.details');
+    Route::get('/checkout/review', [CheckoutController::class, 'review'])->name('front.checkout.review');
+    Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->name('front.checkout.promo');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('front.checkout.store');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
     Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
     Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
     Route::post('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'complete'])->name('front.payments.fake.complete');
-    Route::get('/orders/{order}/payment/{token}', [CheckoutController::class, 'paymentPage'])->name('front.orders.payment');
-    Route::get('/orders/{order}/payment/{token}/gateway', [CheckoutController::class, 'gatewayRedirect'])->name('front.orders.payment.gateway');
+    Route::get('/orders/{order}/payment/{token}', [PaymentController::class, 'show'])->name('front.orders.payment');
+    Route::get('/orders/{order}/payment/{token}/gateway', [PaymentController::class, 'gateway'])->name('front.orders.payment.gateway');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
 });

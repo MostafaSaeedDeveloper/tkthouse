@@ -24,10 +24,12 @@ class CheckoutPromoCodeTest extends TestCase
         ]);
         $ticket = EventTicket::create(['event_id' => $event->id, 'name' => 'VIP', 'price' => 100, 'status' => 'active', 'max_per_order' => 10]);
 
-        PaymentMethod::create(['name' => 'Cash', 'code' => 'cash', 'provider' => 'manual', 'is_active' => true, 'config' => []]);
+        // A manual (staff-confirmed) method: no gateway involved.
+        PaymentMethod::updateOrCreate(['code' => 'cash'], ['name' => 'Cash', 'provider' => 'manual', 'is_active' => true, 'config' => []]);
 
         $cart = rtrim(strtr(base64_encode(json_encode([['ticket_id' => $ticket->id, 'qty' => $quantity]])), '+/', '-_'), '=');
-        $this->actingAs($user)->get(route('front.checkout', ['event' => $event->id, 'cart' => $cart]))->assertOk();
+        $this->actingAs($user)->get(route('front.checkout', ['event' => $event->id, 'cart' => $cart]))->assertRedirect(route('front.checkout'));
+        $this->actingAs($user)->get(route('front.checkout'))->assertOk();
 
         return [$user, $event];
     }
@@ -63,9 +65,9 @@ class CheckoutPromoCodeTest extends TestCase
     {
         [$user] = $this->startCheckout(1);
 
-        $response = $this->from(route('front.checkout'))->actingAs($user)->post(route('front.checkout.store'), $this->payload(1, ['promo_code' => 'BAD']));
+        $response = $this->actingAs($user)->post(route('front.checkout.store'), $this->payload(1, ['promo_code' => 'BAD']));
 
-        $response->assertRedirect(route('front.checkout'));
+        $response->assertRedirect(route('front.checkout.review'));
         $response->assertSessionHasErrors('promo_code');
         $this->assertDatabaseCount('orders', 0);
     }

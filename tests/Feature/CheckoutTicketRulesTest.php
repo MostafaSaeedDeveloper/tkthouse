@@ -26,6 +26,16 @@ class CheckoutTicketRulesTest extends TestCase
         return EventTicket::create(array_merge(['event_id' => $e->id, 'name' => 'GA', 'price' => 100, 'status' => 'active', 'max_per_order' => 4], $o));
     }
 
+    /** Starts checkout exactly like the event page's Continue button: cart in the URL, then the clean details URL. */
+    private function begin(User $user, Event $event, array $rows)
+    {
+        $this->actingAs($user)
+            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart($rows)]))
+            ->assertRedirect(route('front.checkout'));
+
+        return $this->actingAs($user)->get(route('front.checkout'));
+    }
+
     private function cart(array $rows): string
     {
         return rtrim(strtr(base64_encode(json_encode($rows)), '+/', '-_'), '=');
@@ -40,13 +50,14 @@ class CheckoutTicketRulesTest extends TestCase
         EventFee::create(['event_id' => $event->id, 'name' => 'Service', 'fee_type' => 'percentage', 'value' => 10]);
         EventFee::create(['event_id' => $event->id, 'name' => 'Booking', 'fee_type' => 'fixed', 'value' => 20]);
 
-        $this->actingAs($user)
-            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 2], ['ticket_id' => $couple->id, 'qty' => 2]])]))
-            ->assertOk();
+        $this->begin($user, $event, [['ticket_id' => $ga->id, 'qty' => 2], ['ticket_id' => $couple->id, 'qty' => 2]])->assertOk();
 
         $selection = session('checkout.event_selection');
         $this->assertCount(4, $selection['units']);          // quantity = number of people/tickets
-        $this->assertEqualsWithDelta(800 * 0.10 + 20, $selection['fees_total'], 0.001); // subtotal 800 → 80 + 20
+        $quote = app(\App\Services\Checkout\CheckoutPricing::class)->quote($event, collect($selection['units']));
+        $this->assertEqualsWithDelta(800.0, $quote->subtotal, 0.001);
+        $this->assertEqualsWithDelta(800 * 0.10 + 20, $quote->feesTotal, 0.001); // subtotal 800 → 80 + 20
+        $this->assertEqualsWithDelta(900.0, $quote->total, 0.001);
     }
 
     public function test_couple_tickets_must_be_booked_as_two(): void
@@ -78,9 +89,7 @@ class CheckoutTicketRulesTest extends TestCase
             ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 3], ['ticket_id' => $ga->id, 'qty' => 3]])]))
             ->assertRedirect(route('front.events.show', $event))->assertSessionHas('error');
 
-        $this->actingAs($user)
-            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 2], ['ticket_id' => $ga->id, 'qty' => 2]])]))
-            ->assertOk();
+        $this->begin($user, $event, [['ticket_id' => $ga->id, 'qty' => 2], ['ticket_id' => $ga->id, 'qty' => 2]])->assertOk();
         $this->assertCount(4, session('checkout.event_selection.units'));
     }
 
@@ -123,9 +132,7 @@ class CheckoutTicketRulesTest extends TestCase
         $event = $this->event();
         $ga = $this->ticket($event);
 
-        $this->actingAs($user)
-            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 1]])]))
-            ->assertOk();
+        $this->begin($user, $event, [['ticket_id' => $ga->id, 'qty' => 1]])->assertOk();
 
         $ga->update(['status' => 'sold_out']);
 
@@ -134,7 +141,8 @@ class CheckoutTicketRulesTest extends TestCase
                 'first_name' => 'A', 'last_name' => 'B', 'email' => 'a@example.com',
                 'attendees' => [['name' => 'A B', 'phone' => '0100', 'email' => 'a@example.com', 'gender' => 'male', 'social_profile' => 'x']],
             ])
-            ->assertSessionHasErrors('tickets');
+            ->assertRedirect(route('front.events.show', $event))
+            ->assertSessionHas('error');
 
         $this->assertDatabaseCount('orders', 0);
     }
@@ -201,9 +209,7 @@ class CheckoutTicketRulesTest extends TestCase
         $event = $this->event();
         $ga = $this->ticket($event);
 
-        $this->actingAs($user)
-            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $ga->id, 'qty' => 1]])]))
-            ->assertOk();
+        $this->begin($user, $event, [['ticket_id' => $ga->id, 'qty' => 1]])->assertOk();
 
         $ga->update(['max_per_order' => 1, 'status' => 'sold_out']);
 
@@ -220,9 +226,7 @@ class CheckoutTicketRulesTest extends TestCase
         $couple = $this->ticket($event, ['name' => 'Couple', 'price' => 300, 'is_couple' => true]);
         EventFee::create(['event_id' => $event->id, 'name' => 'Service', 'fee_type' => 'percentage', 'value' => 10]);
 
-        $this->actingAs($user)
-            ->get(route('front.checkout', ['event' => $event->id, 'cart' => $this->cart([['ticket_id' => $couple->id, 'qty' => 2]])]))
-            ->assertOk();
+        $this->begin($user, $event, [['ticket_id' => $couple->id, 'qty' => 2]])->assertOk();
 
         $attendee = ['name' => 'P', 'phone' => '0100', 'email' => 'p@example.com', 'gender' => 'female', 'social_profile' => 'p'];
         // Tampering: a single attendee for a couple pass is refused.

@@ -270,6 +270,11 @@ class UltramsgWhatsappService
 
     private function isTicketWhatsappSendingEnabled(): bool
     {
+        // Environment kill switch (dev/staging) wins over the stored setting, which may be a copy of production's.
+        if (! config('notifications.whatsapp_enabled')) {
+            return false;
+        }
+
         return (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true);
     }
 
@@ -293,6 +298,25 @@ class UltramsgWhatsappService
             $normalized = '+'.$normalized;
         }
 
-        return preg_match('/^\+\d{8,15}$/', $normalized) ? $normalized : null;
+        if (! preg_match('/^\+\d{8,15}$/', $normalized)) {
+            return null;
+        }
+
+        // Dev/staging allow-list: numbers outside it are treated as "no valid phone" and skipped.
+        $allowlist = config('notifications.phone_allowlist');
+        if ($allowlist !== null && ! in_array($normalized, array_map(fn ($p) => $this->normalizePhoneRaw($p), $allowlist), true)) {
+            Log::info('WhatsApp recipient blocked by NOTIFY_PHONE_ALLOWLIST.');
+
+            return null;
+        }
+
+        return $normalized;
+    }
+
+    private function normalizePhoneRaw(string $phone): string
+    {
+        $n = preg_replace('/[^\d+]/', '', trim($phone));
+
+        return str_starts_with((string) $n, '+') ? $n : '+'.$n;
     }
 }

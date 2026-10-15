@@ -21,6 +21,15 @@ class PaymobGateway implements PaymentGateway
         return 'paymob';
     }
 
+    public function isConfigured(PaymentMethod $method): bool
+    {
+        $config = $method->config ?? [];
+
+        return filled($config['api_key'] ?? config('services.paymob.api_key'))
+            && filled($config['iframe_id'] ?? config('services.paymob.iframe_id'))
+            && filled($config['integration_id'] ?? null);
+    }
+
     public function initiate(Order $order, PaymentMethod $method, PaymentAttempt $attempt): array
     {
         $checkout = $this->paymob->createCheckout($order);

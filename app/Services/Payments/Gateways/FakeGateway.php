@@ -20,6 +20,11 @@ class FakeGateway implements PaymentGateway
         return 'fake';
     }
 
+    public function isConfigured(PaymentMethod $method): bool
+    {
+        return (bool) config('payments.fake.enabled');
+    }
+
     public function initiate(Order $order, PaymentMethod $method, PaymentAttempt $attempt): array
     {
         if (! config('payments.fake.enabled')) {
