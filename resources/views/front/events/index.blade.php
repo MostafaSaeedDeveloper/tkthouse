@@ -1,513 +1,80 @@
-@extends('front.layout.master')
+@extends('front.layout.app')
+
+@section('title', 'Events')
 
 @section('content')
+    @php
+        $hasSearch = $search !== '';
+        $tabUrl = fn (string $value) => route('front.events', array_filter(['q' => $search, 'when' => $value === 'all' ? null : $value]));
+        $showUpcoming = $when !== 'previous';
+        $showPrevious = $when !== 'upcoming';
+    @endphp
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-:root {
-    --bg:        #060608;
-    --surface:   #0e0e12;
-    --surface2:  #16161d;
-    --border:    rgba(255,255,255,0.07);
-    --gold:      #f5b800;
-    --gold-dim:  #c99300;
-    --text:      #e8e8ef;
-    --muted:     #6b6b7e;
-    --red:       #e8445a;
-    --radius:    14px;
-    --font-head: 'Syne', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
-}
-
-/* ── Page base ── */
-.ev-page {
-    background: var(--bg);
-    min-height: 100vh;
-    font-family: var(--font-body);
-    color: var(--text);
-    padding-bottom: 80px;
-}
-
-.sub-banner {
-    min-height: clamp(220px, 34vw, 360px);
-    display: flex;
-    align-items: center;
-    background-size: cover;
-    background-position: center;
-}
-
-.ev-section-title {
-    font-family: var(--font-head);
-    font-size: clamp(24px, 3vw, 34px);
-    font-weight: 800;
-    color: #fff;
-    margin: 52px 0 10px;
-}
-.ev-section-title:first-of-type {
-    margin: 0 0 24px;
-}
-
-
-.ev-toolbar {
-    margin: 0 0 24px;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    display: grid;
-    gap: 12px;
-    grid-template-columns: 1fr;
-}
-.ev-search-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-}
-.ev-search-input,
-.ev-filter-select {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 10px;
-    padding: 11px 14px;
-    font-size: 14px;
-}
-.ev-search-input:focus,
-.ev-filter-select:focus {
-    outline: none;
-    border-color: rgba(245,184,0,0.5);
-}
-.ev-search-btn {
-    background: var(--gold);
-    color: #000;
-    border: 0;
-    border-radius: 10px;
-    padding: 0 16px;
-    font-family: var(--font-head);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-.ev-filter-row {
-    display: grid;
-    grid-template-columns: 200px auto;
-    gap: 10px;
-}
-.ev-filter-hint {
-    color: var(--muted);
-    font-size: 12px;
-    align-self: center;
-    line-height: 1.4;
-}
-@media (max-width: 768px) {
-    .ev-search-row,
-    .ev-filter-row {
-        grid-template-columns: 1fr;
-    }
-    .ev-toolbar {
-        padding: 12px;
-    }
-    .ev-search-btn {
-        min-height: 42px;
-        width: 100%;
-    }
-    .ev-filter-hint {
-        font-size: 11px;
-    }
-}
-
-/* ── Grid ── */
-.ev-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 22px;
-    padding-top: 48px;
-}
-
-/* ── Event Card ── */
-.ev-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
-    text-decoration: none;
-    color: inherit;
-}
-.ev-card:hover {
-    border-color: rgba(245,184,0,0.3);
-    transform: translateY(-4px);
-    box-shadow: 0 20px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,184,0,0.08);
-    text-decoration: none;
-    color: inherit;
-}
-
-/* Cover image */
-.ev-card-img {
-    position: relative;
-    height: clamp(210px, 26vw, 300px);
-    overflow: hidden;
-    background: var(--surface2);
-}
-.ev-card-img img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    transition: transform 0.45s ease;
-    display: block;
-}
-.ev-card:hover .ev-card-img img { transform: scale(1.05); }
-
-/* Status badge */
-.ev-card-status {
-    position: absolute;
-    top: 14px; right: 14px;
-    background: rgba(6,6,8,0.85);
-    border: 1px solid rgba(255,255,255,0.14);
-    color: #c9c9d6;
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-.ev-card-status.sold-out { color: #ff7a7a; border-color: rgba(255,122,122,0.45); }
-
-/* Date badge */
-.ev-card-date-badge {
-    position: absolute;
-    top: 14px; left: 14px;
-    background: rgba(6,6,8,0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(245,184,0,0.25);
-    border-radius: 8px;
-    padding: 8px 12px;
-    text-align: center;
-    min-width: 48px;
-}
-.ev-card-date-badge .day {
-    font-family: var(--font-head);
-    font-size: 22px; font-weight: 800;
-    color: var(--gold);
-    line-height: 1;
-    display: block;
-}
-.ev-card-date-badge .mon {
-    font-family: var(--font-head);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--muted);
-    display: block;
-    margin-top: 2px;
-}
-
-/* Overlay gradient */
-.ev-card-img::after {
-    content: '';
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 50%;
-    background: linear-gradient(to top, rgba(14,14,18,0.9) 0%, transparent 100%);
-    pointer-events: none;
-}
-
-/* Body */
-.ev-card-body {
-    padding: 20px 22px 22px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-.ev-card-title {
-    font-family: var(--font-head);
-    font-size: 17px; font-weight: 800;
-    color: #fff;
-    margin: 0 0 14px;
-    letter-spacing: -0.2px;
-    line-height: 1.3;
-    transition: color 0.2s;
-}
-.ev-card:hover .ev-card-title { color: var(--gold); }
-
-/* Meta pills */
-.ev-card-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 18px;
-}
-.ev-meta-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 99px;
-    padding: 5px 11px;
-    font-size: 11px;
-    color: var(--muted);
-    white-space: nowrap;
-}
-.ev-meta-pill svg { width: 11px; height: 11px; opacity: 0.6; flex-shrink: 0; }
-
-/* Buy button */
-.ev-card-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    background: var(--gold);
-    color: #000;
-    font-family: var(--font-head);
-    font-size: 12px; font-weight: 800;
-    letter-spacing: 1px; text-transform: uppercase;
-    border-radius: 8px;
-    padding: 12px 20px;
-    text-decoration: none;
-    margin-top: auto;
-    transition: background 0.2s, transform 0.15s;
-}
-.ev-card-btn:hover { background: #ffc820; color: #000; text-decoration: none; transform: scale(1.02); }
-.ev-card-btn svg { width: 13px; height: 13px; }
-
-/* ── Empty state ── */
-.ev-empty {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 80px 24px;
-    border: 1px dashed rgba(255,255,255,0.08);
-    border-radius: var(--radius);
-    background: var(--surface);
-}
-.ev-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
-.ev-empty h3 { font-family: var(--font-head); font-size: 18px; font-weight: 700; color: #fff; margin: 0 0 8px; }
-.ev-empty p  { font-size: 14px; color: var(--muted); margin: 0 0 24px; }
-.ev-empty-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--gold); color: #000;
-    font-family: var(--font-head); font-size: 12px; font-weight: 800;
-    letter-spacing: 1px; text-transform: uppercase;
-    border-radius: 8px; padding: 12px 24px;
-    text-decoration: none; transition: background 0.2s;
-}
-.ev-empty-btn:hover { background: #ffc820; color: #000; text-decoration: none; }
-
-/* ── Pagination ── */
-.ev-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding-top: 48px;
-    flex-wrap: wrap;
-}
-.ev-page-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 38px; height: 38px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: var(--font-head);
-    font-size: 12px; font-weight: 700;
-    color: var(--muted);
-    text-decoration: none;
-    padding: 0 12px;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-.ev-page-btn:hover { border-color: rgba(245,184,0,0.4); color: var(--gold); text-decoration: none; }
-.ev-page-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
-.ev-page-btn.disabled { opacity: 0.3; pointer-events: none; }
-</style>
-
-<div class="sub-banner">
-    <div class="container">
-        <h6>Events</h6>
-        <p>We are a techno events company focused on unforgettable nights and secure ticket booking.</p>
-    </div>
-</div>
-
-<div class="kode_content_wrap ev-page">
-    <section>
-        <div class="container">
-        <form class="ev-toolbar" method="GET" action="{{ route('front.events') }}">
-            <div class="ev-search-row">
-                <input
-                    class="ev-search-input"
-                    type="search"
-                    name="q"
-                    value="{{ $search }}"
-                    placeholder="Search by event name or location"
-                    aria-label="Search events"
-                >
-                <button class="ev-search-btn" type="submit">Search</button>
-            </div>
-
-            <div class="ev-filter-row">
-                <select class="ev-filter-select" name="when" aria-label="Filter event time">
-                    <option value="all" @selected($when === 'all')>All events</option>
-                    <option value="upcoming" @selected($when === 'upcoming')>Upcoming only</option>
-                    <option value="previous" @selected($when === 'previous')>Previous only</option>
-                </select>
-                <div class="ev-filter-hint">Tip: Search prioritizes exact and starts-with matches for faster discovery.</div>
-            </div>
-        </form>
-
-        <h2 class="ev-section-title">Upcoming Events</h2>
-
-        <div class="ev-grid">
-            @if($when !== 'previous')
-            @forelse($events as $event)
-                <a class="ev-card" href="{{ route('front.events.show', $event) }}">
-
-                    {{-- Cover --}}
-                    <div class="ev-card-img">
-                        <img src="{{ $event->cover_image_url ?? asset('extra-images/concert1.jpg') }}"
-                             alt="{{ $event->name }}" loading="lazy">
-                        {{-- Date badge --}}
-                        <div class="ev-card-date-badge">
-                            <span class="day">{{ $event->event_date->format('d') }}@if($event->end_date && $event->end_date->ne($event->event_date))-{{ $event->end_date->format('d') }}@endif</span>
-                            <span class="mon">{{ $event->event_date->format('M') }}</span>
-                        </div>
-                        <div class="ev-card-status {{ $event->status === 'sold_out' ? 'sold-out' : '' }}">{{ str($event->status)->replace('_', ' ')->title() }}</div>
-                    </div>
-
-                    {{-- Body --}}
-                    <div class="ev-card-body">
-                        <div class="ev-card-title">{{ $event->name }}</div>
-
-                        <div class="ev-card-meta">
-                            {{-- Time --}}
-                            <span class="ev-meta-pill">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}
-                            </span>
-                            {{-- Location --}}
-                            <span class="ev-meta-pill">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                {{ $event->location }}
-                            </span>
-                            {{-- Date --}}
-                            <span class="ev-meta-pill">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                {{ $event->formatted_date_range }}
-                            </span>
-                        </div>
-
-                        <span class="ev-card-btn">
-                            Buy Ticket
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                        </span>
-                    </div>
-
-                </a>
-            @empty
-                <div class="ev-empty">
-                    <div class="ev-empty-icon">🎫</div>
-                    <h3>No upcoming events</h3>
-                    <p>Check back later for new event announcements.</p>
-                    <a class="ev-empty-btn" href="{{ route('front.home') }}">← Back to Home</a>
+    <div class="tkt-page-head">
+        <div class="tkt-container">
+            <div class="tkt-page-head__top">
+                <div>
+                    <div class="tkt-eyebrow">TKT House</div>
+                    <h1 class="tkt-h1">Events</h1>
                 </div>
-            @endforelse
-            @else
-                <div class="ev-empty">
-                    <div class="ev-empty-icon">🔎</div>
-                    <h3>Upcoming events hidden</h3>
-                    <p>Change the filter to view upcoming events.</p>
+                <form class="tkt-search" method="GET" action="{{ route('front.events') }}" role="search">
+                    @if($when !== 'all')<input type="hidden" name="when" value="{{ $when }}">@endif
+                    <div class="tkt-input-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                        <input class="tkt-input @error('q') is-invalid @enderror" type="search" name="q" value="{{ $search }}" placeholder="Search by event or location" aria-label="Search events" maxlength="120">
+                    </div>
+                    <button type="submit" class="tkt-btn tkt-btn--dark">Search</button>
+                </form>
+            </div>
+            <nav class="tkt-segment" aria-label="Filter events">
+                <a href="{{ $tabUrl('all') }}" class="{{ $when === 'all' ? 'is-active' : '' }}">All</a>
+                <a href="{{ $tabUrl('upcoming') }}" class="{{ $when === 'upcoming' ? 'is-active' : '' }}">Upcoming</a>
+                <a href="{{ $tabUrl('previous') }}" class="{{ $when === 'previous' ? 'is-active' : '' }}">Previous</a>
+            </nav>
+        </div>
+    </div>
+
+    <section class="tkt-section tkt-section--tight">
+        <div class="tkt-container">
+            @if($hasSearch)
+                <p class="tkt-results-note">Showing results for “<strong>{{ $search }}</strong>”. <a href="{{ route('front.events', array_filter(['when' => $when === 'all' ? null : $when])) }}">Clear search</a></p>
+            @endif
+
+            @if($showUpcoming)
+                <div class="tkt-listing-block">
+                    <x-tkt.section-head title="Upcoming events" />
+                    <div class="tkt-grid tkt-grid--events">
+                        @forelse($events as $event)
+                            <x-tkt.event-card :event="$event" />
+                        @empty
+                            @if($hasSearch)
+                                <x-tkt.empty-state icon="search" title="No upcoming events match your search" text="Try a different name or location." />
+                            @else
+                                <x-tkt.empty-state title="No upcoming events yet" text="New events are on the way — check back soon." />
+                            @endif
+                        @endforelse
+                    </div>
+                    {{ $events->links('vendor.pagination.tkt') }}
                 </div>
             @endif
 
-        </div>
-
-        {{-- Pagination --}}
-        @if($when !== 'previous' && $events->hasPages())
-            <div class="ev-pagination">
-                {{-- Prev --}}
-                @if($events->onFirstPage())
-                    <span class="ev-page-btn disabled">← Prev</span>
-                @else
-                    <a class="ev-page-btn" href="{{ $events->previousPageUrl() }}">← Prev</a>
-                @endif
-
-                {{-- Pages --}}
-                @foreach($events->getUrlRange(1, $events->lastPage()) as $page => $url)
-                    <a class="ev-page-btn {{ $events->currentPage() === $page ? 'active' : '' }}"
-                       href="{{ $url }}">{{ $page }}</a>
-                @endforeach
-
-                {{-- Next --}}
-                @if($events->hasMorePages())
-                    <a class="ev-page-btn" href="{{ $events->nextPageUrl() }}">Next →</a>
-                @else
-                    <span class="ev-page-btn disabled">Next →</span>
-                @endif
-            </div>
-        @endif
-
-
-
-        <h2 class="ev-section-title">Previous Events</h2>
-        @if($when === 'upcoming')
-            <p class="ev-filter-hint">Previous events are hidden while "Upcoming only" is selected.</p>
-        @endif
-
-        <div class="ev-grid">
-            @if($when !== 'upcoming')
-            @forelse($previousEvents as $event)
-                <a class="ev-card" href="{{ route('front.events.show', $event) }}">
-                    <div class="ev-card-img">
-                        <img src="{{ $event->cover_image_url ?? asset('extra-images/concert1.jpg') }}" alt="{{ $event->name }}" loading="lazy">
-                        <div class="ev-card-date-badge">
-                            <span class="day">{{ $event->event_date->format('d') }}@if($event->end_date && $event->end_date->ne($event->event_date))-{{ $event->end_date->format('d') }}@endif</span>
-                            <span class="mon">{{ $event->event_date->format('M') }}</span>
-                        </div>
-                        <div class="ev-card-status {{ $event->status === 'sold_out' ? 'sold-out' : '' }}">{{ str($event->status)->replace('_', ' ')->title() }}</div>
+            @if($showPrevious)
+                <div class="tkt-listing-block">
+                    <x-tkt.section-head title="Previous events" />
+                    <div class="tkt-grid tkt-grid--past">
+                        @forelse($previousEvents as $event)
+                            <x-tkt.event-card :event="$event" :past="true" />
+                        @empty
+                            @if($hasSearch)
+                                <x-tkt.empty-state icon="search" title="No previous events match your search" text="Try a different name or location." />
+                            @else
+                                <x-tkt.empty-state icon="clock" title="No previous events" text="Finished events will appear here once their date has passed." />
+                            @endif
+                        @endforelse
                     </div>
-
-                    <div class="ev-card-body">
-                        <div class="ev-card-title">{{ $event->name }}</div>
-                        <div class="ev-card-meta">
-                            <span class="ev-meta-pill">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}
-                            </span>
-                            <span class="ev-meta-pill">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                {{ $event->location }}
-                            </span>
-                            <span class="ev-meta-pill">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                {{ $event->formatted_date_range }}
-                            </span>
-                        </div>
-
-                        <span class="ev-card-btn">
-                            View Event
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                        </span>
-                    </div>
-                </a>
-            @empty
-                <div class="ev-empty">
-                    <div class="ev-empty-icon">🕒</div>
-                    <h3>No previous events</h3>
-                    <p>Finished events will appear here after their date passes.</p>
+                    {{ $previousEvents->links('vendor.pagination.tkt') }}
                 </div>
-            @endforelse
-        @else
-            <div class="ev-empty">
-                <div class="ev-empty-icon">🔎</div>
-                <h3>Previous events hidden</h3>
-                <p>Change the filter to view past events.</p>
-            </div>
-        @endif
-        </div>
-
+            @endif
         </div>
     </section>
-</div>
-
 @endsection

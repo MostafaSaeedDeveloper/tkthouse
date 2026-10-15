@@ -1,1406 +1,318 @@
-@extends('front.layout.master')
+@extends('front.layout.app')
+
+@section('title', $event->name)
 
 @section('content')
-
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&display=swap');
-
-    /* ── TICKET BOOKING SECTION ─────────────────────────────── */
-    .tkt-booking-section {
-        background: #0a0a0a;
-        padding: 70px 0 90px;
-        border-top: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .tkt-booking-section .section-label {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 10px;
-    }
-    .tkt-booking-section .section-label span {
-        font-family: 'Barlow', sans-serif;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 6px;
-        text-transform: uppercase;
-        color: #f4c430;
-    }
-    .tkt-booking-section .section-label::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: rgba(244,196,48,0.2);
-    }
-
-    .tkt-booking-section .section-title {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 40px;
-        letter-spacing: 4px;
-        color: #fff;
-        margin: 0 0 40px;
-        line-height: 1;
-    }
-    .tkt-booking-section .section-title span { color: #f4c430; }
-
-    @media (max-width: 575px) {
-        .tkt-booking-section .section-title {
-            font-size: 32px;
-            letter-spacing: 3px;
-            margin-bottom: 24px;
-        }
-    }
-
-    /* ── TICKET CARDS ─────────────────────────────────────── */
-    .tkt-ticket-cards { display: flex; flex-direction: column; gap: 8px; }
-
-    .tkt-ticket-card {
-        background: #0e0e0e;
-        border: 1px solid rgba(255,255,255,0.06);
-        padding: 0;
-        display: flex;
-        align-items: stretch;
-        position: relative;
-        overflow: hidden;
-        transition: border-color 0.2s, background 0.2s;
-        cursor: pointer;
-    }
-    .tkt-ticket-card:hover,
-    .tkt-ticket-card.selected {
-        border-color: rgba(244,196,48,0.35);
-    }
-    .tkt-ticket-card.selected {
-        background: rgba(244,196,48,0.03);
-    }
-
-    /* Gold left stripe */
-    .tkt-ticket-card .card-stripe {
-        width: 3px;
-        background: #f4c430;
-        flex-shrink: 0;
-        transition: width 0.2s;
-    }
-    .tkt-ticket-card.selected .card-stripe,
-    .tkt-ticket-card:hover .card-stripe { width: 4px; }
-
-    /* Category badge */
-    .tkt-ticket-card .card-badge {
-        width: 56px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 12px 8px;
-        flex-shrink: 0;
-        background: rgba(0,0,0,0.25);
-        position: relative;
-        z-index: 2;
-    }
-    .tkt-ticket-card .card-badge .badge-icon {
-        font-size: 15px;
-        color: #f4c430;
-        margin-bottom: 4px;
-    }
-    .tkt-ticket-card .card-badge .badge-label {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 9px;
-        letter-spacing: 1.5px;
-        color: rgba(255,255,255,0.4);
-        text-align: center;
-        line-height: 1.2;
-    }
-
-    /* Main info */
-    .tkt-ticket-card .card-info {
-        flex: 1;
-        padding: 12px 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        position: relative;
-        z-index: 2;
-    }
-
-    .tkt-ticket-card .card-info .ticket-name {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 17px;
-        letter-spacing: 1.5px;
-        color: #fff;
-        display: block;
-        margin-bottom: 3px;
-    }
-    .tkt-ticket-card .card-info .ticket-desc {
-        font-family: 'Barlow', sans-serif;
-        font-size: 11px;
-        color: rgba(255,255,255,0.3);
-        letter-spacing: 0.2px;
-    }
-
-    /* Availability badge */
-    .tkt-avail-badge {
-        font-family: 'Barlow', sans-serif;
-        font-size: 9px;
-        font-weight: 600;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        padding: 2px 7px;
-        border-radius: 0;
-        display: inline-block;
-        margin-top: 4px;
-    }
-    .tkt-avail-badge.available   { background: rgba(39,174,96,0.12);  color: #27ae60; border: 1px solid rgba(39,174,96,0.25); }
-    .tkt-avail-badge.limited     { background: rgba(231,76,60,0.10);   color: #e74c3c; border: 1px solid rgba(231,76,60,0.2); }
-    .tkt-avail-badge.selling     { background: rgba(243,156,18,0.10);  color: #f39c12; border: 1px solid rgba(243,156,18,0.2); }
-    .tkt-avail-badge.sold-out    { background: rgba(231,76,60,0.12); color: #ff6b6b; border: 1px solid rgba(231,76,60,0.3); }
-    .tkt-avail-badge.couples-only { background: rgba(142,68,173,0.12); color: #d7a8ff; border: 1px solid rgba(142,68,173,0.35); }
-
-    /* Price block */
-    .tkt-ticket-card .card-price {
-        text-align: right;
-        flex-shrink: 0;
-    }
-    .tkt-ticket-card .card-price .price-amount {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        color: #f4c430;
-        letter-spacing: 1.5px;
-        display: block;
-        line-height: 1;
-    }
-    .tkt-ticket-card .card-price .price-label {
-        font-family: 'Barlow', sans-serif;
-        font-size: 9px;
-        color: rgba(255,255,255,0.25);
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-    }
-
-    /* Qty counter */
-    .tkt-qty-counter {
-        display: flex;
-        align-items: center;
-        gap: 0;
-        border: 1px solid rgba(255,255,255,0.1);
-        flex-shrink: 0;
-    }
-    .tkt-qty-counter button {
-        width: 28px;
-        height: 28px;
-        background: rgba(255,255,255,0.04);
-        border: none;
-        color: #fff;
-        font-size: 13px;
-        line-height: 1;
-        cursor: pointer;
-        transition: background 0.2s, color 0.2s;
-        font-family: 'Barlow', sans-serif;
-    }
-    .tkt-qty-counter button:hover { background: #f4c430; color: #000; }
-    .tkt-qty-counter .qty-val {
-        width: 34px;
-        height: 28px;
-        background: transparent;
-        border: none;
-        border-left: 1px solid rgba(255,255,255,0.07);
-        border-right: 1px solid rgba(255,255,255,0.07);
-        color: #fff;
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 15px;
-        letter-spacing: 1px;
-        text-align: center;
-        -moz-appearance: textfield;
-    }
-    .tkt-qty-counter .qty-val::-webkit-outer-spin-button,
-    .tkt-qty-counter .qty-val::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-    /* Add to cart btn */
-    .tkt-add-btn {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 13px;
-        letter-spacing: 1.5px;
-        background: #f4c430;
-        color: #000;
-        border: none;
-        padding: 0 16px;
-        height: 28px;
-        cursor: pointer;
-        transition: background 0.2s, opacity 0.15s;
-        flex-shrink: 0;
-        white-space: nowrap;
-    }
-    .tkt-add-btn:hover { background: #e0b020; }
-    .tkt-add-btn:active { opacity: 0.85; }
-    .tkt-add-btn.is-disabled, .tkt-add-btn:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(244,196,48,0.15); color: rgba(255,255,255,0.5); }
-    .tkt-qty-counter.is-disabled { opacity: 0.4; }
-    .tkt-qty-counter.is-disabled button { pointer-events: none; }
-
-    .tkt-card-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-left: auto;
-        flex-shrink: 0;
-    }
-
-    @media (max-width: 991px) {
-        .tkt-ticket-card .card-info {
-            flex-wrap: wrap;
-            align-items: flex-start;
-        }
-
-        .tkt-ticket-card .card-meta {
-            width: 100%;
-        }
-
-        .tkt-ticket-card .card-price {
-            text-align: left;
-        }
-
-        .tkt-card-actions {
-            width: 100%;
-            margin-left: 0;
-            justify-content: space-between;
-        }
-    }
-
-    @media (max-width: 575px) {
-        .tkt-ticket-card .card-badge {
-            width: 48px;
-            padding: 10px 6px;
-        }
-
-        .tkt-ticket-card .card-info {
-            padding: 10px 12px;
-            gap: 10px;
-        }
-
-        .tkt-ticket-card .card-info .ticket-name { font-size: 15px; }
-        .tkt-ticket-card .card-price .price-amount { font-size: 19px; }
-
-        .tkt-card-actions { gap: 8px; }
-
-        .tkt-qty-counter {
-            flex: 1;
-            max-width: 110px;
-        }
-
-        .tkt-add-btn {
-            flex: 1;
-            padding: 0 10px;
-        }
-    }
-
-    /* ── ORDER SUMMARY SIDEBAR ────────────────────────────── */
-    .tkt-summary-box {
-        background: #111;
-        border: 1px solid rgba(244,196,48,0.2);
-        position: sticky;
-        top: 100px;
-    }
-
-    .tkt-summary-box .summary-header {
-        background: #f4c430;
-        padding: 16px 24px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .tkt-summary-box .summary-header span {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 18px;
-        letter-spacing: 3px;
-        color: #000;
-    }
-    .tkt-summary-box .summary-header i {
-        font-size: 16px;
-        color: #000;
-    }
-
-    .tkt-summary-box .summary-body { padding: 24px; }
-
-    .tkt-summary-box .summary-empty {
-        text-align: center;
-        padding: 30px 0;
-    }
-    .tkt-summary-box .summary-empty i {
-        font-size: 36px;
-        color: rgba(255,255,255,0.1);
-        display: block;
-        margin-bottom: 10px;
-    }
-    .tkt-summary-box .summary-empty p {
-        font-family: 'Barlow', sans-serif;
-        font-size: 12px;
-        color: rgba(255,255,255,0.25);
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        margin: 0;
-    }
-
-    .tkt-summary-box .summary-items { display: none; }
-    .tkt-summary-box.has-items .summary-empty { display: none; }
-    .tkt-summary-box.has-items .summary-items { display: block; }
-
-    .summary-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .summary-item:last-child { border-bottom: none; }
-    .summary-item .si-left .si-name {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 15px;
-        letter-spacing: 1px;
-        color: #fff;
-        display: block;
-    }
-    .summary-item .si-left .si-qty {
-        font-family: 'Barlow', sans-serif;
-        font-size: 11px;
-        color: rgba(255,255,255,0.35);
-    }
-    .summary-item .si-right {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 16px;
-        letter-spacing: 1px;
-        color: #f4c430;
-    }
-    .summary-item .si-remove {
-        background: none;
-        border: none;
-        color: rgba(255,255,255,0.2);
-        font-size: 12px;
-        cursor: pointer;
-        padding: 0 6px;
-        transition: color 0.2s;
-    }
-    .summary-item .si-remove:hover { color: #e74c3c; }
-
-    .summary-divider {
-        border: none;
-        border-top: 1px solid rgba(255,255,255,0.08);
-        margin: 16px 0;
-    }
-
-    .summary-total-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        margin-bottom: 8px;
-    }
-    .summary-total-row .tot-label {
-        font-family: 'Barlow', sans-serif;
-        font-size: 11px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.4);
-    }
-    .summary-total-row .tot-val {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 28px;
-        letter-spacing: 2px;
-        color: #f4c430;
-    }
-
-    .tkt-checkout-btn {
-        display: block;
-        width: 100%;
-        background: #f4c430;
-        color: #000;
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 17px;
-        letter-spacing: 4px;
-        text-align: center;
-        padding: 15px;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        margin-top: 18px;
-        transition: background 0.2s, transform 0.15s;
-    }
-    .tkt-checkout-btn:hover {
-        background: #e0b020;
-        color: #000;
-        text-decoration: none;
-        transform: translateY(-1px);
-    }
-    .tkt-checkout-btn:disabled {
-        background: rgba(244,196,48,0.2);
-        color: rgba(0,0,0,0.4);
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .summary-note {
-        font-family: 'Barlow', sans-serif;
-        font-size: 11px;
-        color: rgba(255,255,255,0.2);
-        text-align: center;
-        margin-top: 14px;
-        line-height: 1.5;
-    }
-    .summary-note i { color: #27ae60; margin-right: 4px; }
-
-    /* Toast notification */
-    .tkt-toast {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        background: #f4c430;
-        color: #000;
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 14px;
-        letter-spacing: 2px;
-        padding: 14px 24px;
-        z-index: 9999;
-        transform: translateY(80px);
-        opacity: 0;
-        transition: transform 0.3s ease, opacity 0.3s ease;
-        pointer-events: none;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .tkt-toast.show { transform: translateY(0); opacity: 1; }
-
-    /* ── HOUSE RULES ──────────────────────────────────────── */
-    .tkt-house-rules {
-        background: #0d0d0d;
-        border: 1px solid rgba(255,255,255,0.06);
-        padding: 30px;
-        margin-top: 50px;
-    }
-
-    .tkt-house-rules .rules-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-    }
-    .tkt-house-rules .rules-header i {
-        font-size: 18px;
-        color: #f4c430;
-    }
-    .tkt-house-rules .rules-header h4 {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        letter-spacing: 3px;
-        color: #fff;
-        margin: 0;
-    }
-
-    .tkt-rules-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-    @media (max-width: 768px) { .tkt-rules-grid { grid-template-columns: 1fr; } }
-
-    .tkt-rules-grid .rule-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        padding: 10px 14px;
-        background: rgba(255,255,255,0.03);
-        border-left: 2px solid rgba(244,196,48,0.25);
-    }
-    .tkt-rules-grid .rule-item::before {
-        content: '—';
-        color: #f4c430;
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 14px;
-        flex-shrink: 0;
-        margin-top: 1px;
-    }
-    .tkt-rules-grid .rule-item span {
-        font-family: 'Barlow', sans-serif;
-        font-size: 13px;
-        color: rgba(255,255,255,0.5);
-        line-height: 1.5;
-    }
-
-    .tkt-house-rules-mobile { display: none; }
-
-    .tkt-venue-map-box {
-        background: #0d0d0d;
-        border: 1px solid rgba(255,255,255,0.06);
-        padding: 24px;
-        margin-top: 28px;
-    }
-    .tkt-venue-map-box h4 {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        letter-spacing: 3px;
-        color: #fff;
-        margin: 0 0 16px;
-    }
-    .tkt-venue-map-box img {
-        width: 100%;
-        max-height: 420px;
-        object-fit: contain;
-        background: rgba(255,255,255,0.02);
-    }
-    .tkt-venue-map-mobile { display: none; }
-
-    /* ── ORGANIZER BOX ───────────────────────────────────────── */
-    .tkt-organizer-box {
-        background: #111;
-        border: 1px solid rgba(255,255,255,0.07);
-        padding: 24px;
-        margin-bottom: 20px;
-    }
-    .tkt-organizer-mobile { display: none; }
-    @media (max-width: 767px) {
-        .tkt-organizer-mobile  { display: block; margin-bottom: 24px; }
-        .tkt-organizer-desktop { display: none; }
-    }
-    .tkt-organizer-box .org-label {
-        font-family: 'Barlow', sans-serif;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.3);
-        margin-bottom: 16px;
-    }
-    .tkt-organizer-box .org-body {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-    .tkt-organizer-box .org-logo {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        border: 2px solid rgba(244,196,48,0.4);
-        object-fit: cover;
-        flex-shrink: 0;
-    }
-    .tkt-organizer-box .org-info .org-name {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 20px;
-        letter-spacing: 3px;
-        color: #fff;
-        display: block;
-        margin-bottom: 8px;
-        line-height: 1;
-    }
-    .tkt-organizer-box .org-instagram {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        font-family: 'Barlow', sans-serif;
-        font-size: 12px;
-        font-weight: 600;
-        color: rgba(255,255,255,0.5);
-        text-decoration: none;
-        letter-spacing: 0.5px;
-        transition: color 0.2s;
-    }
-    .tkt-organizer-box .org-instagram:hover { color: #f4c430; text-decoration: none; }
-    .tkt-organizer-box .org-instagram i { font-size: 16px; }
-
-    .tkt-event-map {
-        background: #0d0d0d;
-        border: 1px solid rgba(255,255,255,0.06);
-        padding: 24px;
-        margin-top: 28px;
-        overflow: hidden;
-    }
-    .tkt-event-map h4 {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        letter-spacing: 3px;
-        color: #fff;
-        margin: 0 0 16px;
-    }
-    .tkt-event-map iframe,
-    .tkt-event-map * iframe {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-height: 360px;
-        height: 360px !important;
-        border: 0 !important;
-        display: block;
-    }
-
-    @media (max-width: 767px) {
-        .tkt-house-rules-desktop { display: none; }
-        .tkt-venue-map-desktop { display: none; }
-        .tkt-venue-map-mobile { display: block; }
-        .tkt-house-rules-mobile {
-            display: block;
-            margin-top: 20px;
-        }
-    }
-
-    /* ── LINEUP TABLE SECTION ─────────────────────────────────── */
-    .tkt-lineup-section {
-        background: #080808;
-        padding: 70px 0 80px;
-        border-top: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .tkt-lineup-section .section-label {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        margin-bottom: 10px;
-    }
-    .tkt-lineup-section .section-label span {
-        font-family: 'Barlow', sans-serif;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 6px;
-        text-transform: uppercase;
-        color: #f4c430;
-    }
-    .tkt-lineup-section .section-label::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: rgba(244,196,48,0.2);
-    }
-    .tkt-lineup-section .section-title {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 40px;
-        letter-spacing: 4px;
-        color: #fff;
-        margin: 0 0 36px;
-        line-height: 1;
-    }
-    .tkt-lineup-section .section-title span { color: #f4c430; }
-
-    /* Table wrapper */
-    .lineup-table-wrap {
-        border: 1px solid rgba(255,255,255,0.08);
-        overflow: hidden;
-    }
-
-    /* Header row */
-    .lineup-table-head {
-        display: grid;
-        grid-template-columns: 70px 1fr 150px 160px 180px;
-        background: rgba(244,196,48,0.08);
-        border-bottom: 1px solid rgba(244,196,48,0.25);
-        padding: 0 24px;
-    }
-    .lineup-table-head .th {
-        font-family: 'Barlow', sans-serif;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        color: rgba(244,196,48,0.7);
-        padding: 14px 0;
-    }
-
-    /* Data rows */
-    .lineup-table-row {
-        display: grid;
-        grid-template-columns: 70px 1fr 150px 160px 180px;
-        align-items: center;
-        padding: 0 24px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        transition: background 0.2s;
-        position: relative;
-    }
-    .lineup-table-row:last-child { border-bottom: none; }
-    .lineup-table-row:hover { background: rgba(244,196,48,0.04); }
-
-    /* Gold left accent on hover */
-    .lineup-table-row::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: #f4c430;
-        transform: scaleY(0);
-        transition: transform 0.25s ease;
-    }
-    .lineup-table-row:hover::before { transform: scaleY(1); }
-
-    /* Index number */
-    .lineup-td-index {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 22px;
-        letter-spacing: 2px;
-        color: rgba(244,196,48,0.25);
-        padding: 20px 0;
-    }
-
-    /* Artist cell */
-    .lineup-td-artist {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        padding: 16px 0;
-    }
-    .lineup-td-artist .artist-avatar {
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid rgba(244,196,48,0.3);
-        flex-shrink: 0;
-        background: #1a1a1a;
-    }
-    .lineup-td-artist .avatar-placeholder {
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.08);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        background: #1a1a1a;
-        color: rgba(244,196,48,0.3);
-        font-size: 20px;
-    }
-    .lineup-td-artist .artist-name {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 24px;
-        letter-spacing: 2px;
-        color: #fff;
-        line-height: 1;
-        transition: color 0.2s;
-    }
-    .lineup-table-row:hover .artist-name { color: #f4c430; }
-
-    /* Time cell */
-    .lineup-td-time {
-        font-family: 'Barlow', sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 1.5px;
-        color: rgba(255,255,255,0.55);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .lineup-td-time i { color: #f4c430; font-size: 12px; }
-
-    /* Date cell */
-    .lineup-td-date {
-        font-family: 'Barlow', sans-serif;
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 1px;
-        color: rgba(255,255,255,0.55);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .lineup-td-date i { color: #f4c430; font-size: 12px; }
-
-    /* Instagram cell */
-    .lineup-td-ig a {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: 'Barlow', sans-serif;
-        font-size: 12px;
-        font-weight: 600;
-        color: rgba(255,255,255,0.35);
-        text-decoration: none;
-        letter-spacing: 0.5px;
-        transition: color 0.2s;
-    }
-    .lineup-td-ig a:hover { color: #f4c430; text-decoration: none; }
-    .lineup-td-ig a i { font-size: 15px; }
-
-    /* Responsive */
-    @media (max-width: 767px) {
-        .tkt-lineup-section .section-title { font-size: 32px; margin-bottom: 24px; }
-
-        .lineup-table-head { display: none; }
-
-        .lineup-table-row {
-            grid-template-columns: 1fr auto;
-            grid-template-rows: auto auto auto;
-            padding: 14px 16px;
-            gap: 2px 12px;
-        }
-        .lineup-td-index { display: none; }
-        .lineup-td-artist {
-            grid-column: 1;
-            grid-row: 1;
-            gap: 12px;
-            padding: 0;
-        }
-        .lineup-td-artist .artist-name { font-size: 20px; }
-        .lineup-td-artist .artist-avatar,
-        .lineup-td-artist .avatar-placeholder { width: 44px; height: 44px; }
-
-        .lineup-td-time {
-            grid-column: 2;
-            grid-row: 1;
-            font-size: 11px;
-            justify-content: flex-end;
-        }
-        .lineup-td-date {
-            grid-column: 1 / -1;
-            grid-row: 2;
-            padding-left: 56px;
-            font-size: 11px;
-        }
-        .lineup-td-ig {
-            grid-column: 1 / -1;
-            grid-row: 3;
-            padding-left: 56px;
-        }
-        .lineup-td-ig a { font-size: 11px; }
-    }
-</style>
-
-<!-- Sub Banner -->
-<div class="sub-banner">
-    <div class="container">
-        <h6>{{ $event->name }}</h6>
-    </div>
-</div>
-
-<!-- Main Content -->
-<section class="kode_content_wrap">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12">
-
-                <!-- Event Hero Image + Countdown -->
-                {{-- <div class="kode_event_counter_section">
-                    <figure>
-                        <img src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
-                        <ul class="countdown">
-                            <li><span class="days">72</span><p class="days_ref">days</p></li>
-                            <li><span class="hours">13</span><p class="hours_ref">hours</p></li>
-                            <li><span class="minutes">24</span><p class="minutes_ref">minute</p></li>
-                            <li><span class="seconds last">00</span><p class="seconds_ref">sec</p></li>
-                        </ul>
-                    </figure>
-                </div> --}}
-
-                <!-- Event Meta -->
-                <div class="kode_event_conter_capstion">
-                    <div class="counter-meta">
-                        <ul class="info-event">
-                            <li><i class="fa fa-calendar"></i><a href="#"><span>Date: {{ $event->formatted_date_range }}</span></a></li>
-                            <li><i class="fa fa-map-marker"></i><a href="#"><span>Location: {{ $event->location }}</span></a></li>
-                            <li><i class="fa fa-clock-o"></i><a href="#"><span>Time: {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}</span></a></li>
-                        </ul>
-                    </div>
-                    <img style="height:500px; object-fit:contain;" src="{{ $event->cover_image_url ?? asset('extra-images/event-update1.jpg') }}" alt="{{ $event->name }}">
-                </div>
-
-            </div><!-- /col-md-12 -->
-        </div><!-- /row -->
-    </div><!-- /container -->
-</section>
-<br>
-
-@if($event->lineups->count())
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!--  LINEUP SECTION                                             -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div class="tkt-lineup-section">
-    <div class="container">
-        <div class="section-label"><span>Who's Playing</span></div>
-        <h2 class="section-title">THE <span>LINEUP</span></h2>
-
-        <div class="lineup-table-wrap">
-
-            <!-- Header -->
-            <div class="lineup-table-head">
-                <div class="th">#</div>
-                <div class="th">Artist</div>
-                <div class="th">Date</div>
-                <div class="th">Time</div>
-                <div class="th">Instagram</div>
-            </div>
-
-            <!-- Rows -->
-            @foreach($event->lineups as $i => $artist)
-            <div class="lineup-table-row">
-                <div class="lineup-td-index">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</div>
-
-                <div class="lineup-td-artist">
-                    @if($artist->image_url)
-                        <img class="artist-avatar" src="{{ $artist->image_url }}" alt="{{ $artist->artist_name }}" loading="lazy">
-                    @else
-                        <div class="avatar-placeholder"><i class="fa fa-music"></i></div>
-                    @endif
-                    <span class="artist-name">{{ strtoupper($artist->artist_name) }}</span>
-                </div>
-
-                <div class="lineup-td-date">
-                    @if($artist->performance_date)
-                        <i class="fa fa-calendar"></i>{{ $artist->performance_date->format('d M Y') }}
-                    @else
-                        <span style="color:rgba(255,255,255,0.15);">—</span>
-                    @endif
-                </div>
-
-                <div class="lineup-td-time">
-                    @if($artist->performance_time)
-                        <i class="fa fa-clock-o"></i>{{ $artist->performance_time }}
-                    @else
-                        <span style="color:rgba(255,255,255,0.15);">—</span>
-                    @endif
-                </div>
-
-                <div class="lineup-td-ig">
-                    @if($artist->instagram)
-                        <a href="https://www.instagram.com/{{ ltrim($artist->instagram, '@') }}" target="_blank" rel="noopener noreferrer">
-                            <i class="fa fa-instagram"></i>{{ ltrim($artist->instagram, '@') }}
-                        </a>
-                    @else
-                        <span style="color:rgba(255,255,255,0.15);">—</span>
-                    @endif
-                </div>
-            </div>
-            @endforeach
-
-        </div><!-- /lineup-table-wrap -->
-    </div>
-</div>
-@endif
-
-<!-- Organizer (mobile only — appears before Buy Tickets) -->
-@if($event->id === 27)
-<div class="container tkt-organizer-mobile">
-    <div class="tkt-organizer-box" style="margin-bottom:0;">
-        <p class="org-label">Organizer</p>
-        <div class="org-body">
-            <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
-            <div class="org-info">
-                <span class="org-name">FRACTURE COMPANY</span>
-                <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
-                    <i class="fa fa-instagram"></i>fracture.sound
-                </a>
-            </div>
-        </div>
-        <div class="org-body" style="margin-top:16px;">
-            <img class="org-logo" src="https://i.ibb.co/Kj49Q6cL/0da52100-622e-498d-a417-f0aebebc4a5f.jpg" alt="Vavuraa Logo">
-            <div class="org-info">
-                <span class="org-name">VAVURAA</span>
-                <a class="org-instagram" href="https://www.instagram.com/vavuraa" target="_blank" rel="noopener noreferrer">
-                    <i class="fa fa-instagram"></i>vavuraa
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-<br class="tkt-organizer-mobile">
-@endif
-
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!--  TICKET BOOKING SECTION                                      -->
-<!-- ═══════════════════════════════════════════════════════════ -->
 @php
     $isPreviousEvent = $event->event_date->lt(now()->startOfDay());
     $isEventSoldOut = $event->status === 'sold_out';
     $isBookingClosed = $isPreviousEvent || $isEventSoldOut;
+    $multiDay = $event->end_date && $event->end_date->ne($event->event_date);
+    $time = $event->event_time ? \Carbon\Carbon::parse($event->event_time)->format('g:i A') : null;
+    $banner = $event->event_banner_url ?: $event->cover_image_url;
+
+    $tickets = $event->tickets->filter(fn ($t) => $t->status !== 'hidden')->values();
+    $descriptionHtml = \App\Support\SafeHtml::clean($event->description);
+    $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))->map(fn ($rule) => trim($rule))->filter()->values();
+    if ($rules->isEmpty()) {
+        $rules = collect([
+            'Follow venue instructions and security guidelines during the event.',
+            'Please arrive early to complete the entry process smoothly.',
+        ]);
+    }
+    $hasVenue = ! empty($event->map_embed) || $event->venue_map_url || ! empty($event->map_url);
+    $fees = $event->fees->map(fn ($fee) => [
+        'name' => (string) $fee->name,
+        'type' => (string) $fee->fee_type,
+        'value' => (float) ($fee->value ?? 0),
+    ])->values();
+
+    $tabs = collect([['id' => 'about', 'label' => 'About']]);
+    if ($event->lineups->isNotEmpty()) { $tabs->push(['id' => 'lineup', 'label' => 'Lineup']); }
+    if ($hasVenue) { $tabs->push(['id' => 'venue', 'label' => 'Venue']); }
+    if ($event->images->isNotEmpty()) { $tabs->push(['id' => 'gallery', 'label' => 'Gallery']); }
+    $tabs->push(['id' => 'rules', 'label' => 'House rules']);
 @endphp
-<div class="tkt-booking-section">
-    <div class="container">
 
-        <div class="section-label"><span>Secure Your Spot</span></div>
-        <h2 class="section-title">BUY <span>TICKETS</span></h2>
-
-        <div class="row">
-
-            <!-- LEFT: Ticket Cards -->
-            <div class="col-md-8 col-sm-12">
-                <div class="tkt-ticket-cards">
-                    @forelse($event->tickets->filter(fn($t) => $t->status !== 'hidden') as $ticket)
-                        @php
-                            $isTicketSoldOut = $ticket->status === 'sold_out';
-                            $isTicketDisabled = $isBookingClosed || $isTicketSoldOut;
-                            $badgeType = $isTicketSoldOut ? 'sold-out' : 'available';
-                            $statusLabel = $ticket->status === 'active' ? 'Available' : str($ticket->status)->replace('_', ' ')->title();
-                            $isCoupleTicket = (bool) $ticket->is_couple;
-                            $maxQuantity = $isCoupleTicket ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
-                        @endphp
-                        <div class="tkt-ticket-card" data-ticket="{{ $ticket->name }}" data-price="{{ number_format($ticket->price, 2, '.', '') }}" data-id="ticket-{{ $ticket->id }}" data-disabled="{{ $isTicketDisabled ? 1 : 0 }}" data-max-qty="{{ $maxQuantity }}" data-is-couple="{{ $isCoupleTicket ? 1 : 0 }}">
-                            <div class="card-stripe" style="background:{{ $badgeType === 'sold-out' ? '#e74c3c' : ($badgeType === 'available' ? '#27ae60' : '#f4c430') }};"></div>
-                            <div class="card-badge">
-                                <i class="fa fa-ticket card-badge-icon" style="font-size:20px;color:{{ $badgeType === 'sold-out' ? '#e74c3c' : ($badgeType === 'available' ? '#27ae60' : '#f4c430') }};"></i>
-                            </div>
-                            <div class="card-info">
-                                <div class="card-meta">
-                                    <span class="ticket-name">{{ strtoupper($ticket->name) }}</span>
-                                    <span class="ticket-desc">{{ $ticket->description ?: 'General admission ticket' }}</span>
-                                    <span class="tkt-avail-badge {{ $badgeType }}">{{ $statusLabel }}</span>
-                                    @if($isCoupleTicket)
-                                        <span class="tkt-avail-badge couples-only">Couples Only</span>
-                                    @endif
-                                </div>
-                                <div class="card-price">
-                                    <span class="price-amount">{{ number_format($ticket->price, 2) }} EGP</span>
-                                    <span class="price-label">per ticket</span>
-                                </div>
-                                <div class="tkt-card-actions">
-                                    @if(! $isCoupleTicket)
-                                    <div class="tkt-qty-counter {{ $isTicketDisabled ? 'is-disabled' : '' }}">
-                                        <button class="qty-btn qty-minus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>−</button>
-                                        <input class="qty-val" type="text" value="1" readonly>
-                                        <button class="qty-btn qty-plus" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>+</button>
-                                    </div>
-                                    @else
-                                    <div class="tkt-qty-counter is-disabled">
-                                        <input class="qty-val" type="text" value="2" readonly>
-                                    </div>
-                                    @endif
-                                    <button class="tkt-add-btn {{ $isTicketDisabled ? 'is-disabled' : '' }}" type="button" {{ $isTicketDisabled ? 'disabled' : '' }}>
-                                        <i class="fa fa-plus" style="margin-right:6px;"></i>{{ $isTicketDisabled ? 'SOLD OUT' : 'ADD' }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="tkt-ticket-empty">
-                            <div class="card-stripe"></div>
-                            <div class="card-badge">
-                                <i class="fa fa-exclamation-circle card-badge-icon" style="font-size:20px;color:#f4c430;"></i>
-                            </div>
-                            <div class="card-info">
-                                <div class="card-meta">
-                                    <span class="ticket-name">TICKETS NOT AVAILABLE YET</span>
-                                    <span class="ticket-desc">Please check again later.</span>
-                                </div>
-                            </div>
-                        </div>
-                    @endforelse
-
-                </div><!-- /tkt-ticket-cards -->
-
-                @if(! empty($event->map_embed))
-                    <div class="tkt-event-map tkt-venue-map-desktop">
-                        <h4>EVENT LOCATION MAP</h4>
-                        {!! $event->map_embed !!}
-                    </div>
-                @endif
-
-                @if($event->venue_map_url)
-                    <div class="tkt-venue-map-box tkt-venue-map-desktop">
-                        <h4>VENUE MAP</h4>
-                        <img src="{{ $event->venue_map_url }}" alt="{{ $event->name }} venue map" loading="lazy">
-                    </div>
-                @endif
-
-                <!-- House Rules -->
-                <div class="tkt-house-rules tkt-house-rules-desktop">
-                    <div class="rules-header">
-                        <i class="fa fa-exclamation-triangle"></i>
-                        <h4>HOUSE RULES</h4>
-                    </div>
-                    <div class="tkt-rules-grid">
-                        @php
-                            $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))
-                                ->map(fn ($rule) => trim($rule))
-                                ->filter();
-                        @endphp
-                        @forelse($rules as $rule)
-                            <div class="rule-item"><span>{{ $rule }}</span></div>
-                        @empty
-                            <div class="rule-item"><span>Follow venue instructions and security guidelines during the event.</span></div>
-                            <div class="rule-item"><span>Please arrive early to complete the entry process smoothly.</span></div>
-                        @endforelse
-                    </div>
+{{-- Event header --}}
+<section class="tkt-event-hero">
+    @if($banner)
+        <div class="tkt-media tkt-event-hero__media">
+            <img class="tkt-img" src="{{ $banner }}" alt="" fetchpriority="high">
+        </div>
+    @endif
+    <div class="tkt-container">
+        <div class="tkt-event-hero__inner">
+            <a class="tkt-back" href="{{ route('front.events') }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+                Back to events
+            </a>
+            <div class="tkt-event-hero__row">
+                <div class="tkt-datebox" aria-hidden="true">
+                    <span>{{ $event->event_date->format('M') }}</span>
+                    <b>{{ $event->event_date->format('d') }}</b>
                 </div>
+                <div style="min-width:0">
+                    <div class="tkt-event-hero__badges">
+                        @if($isPreviousEvent)
+                            <x-tkt.badge variant="glass">Event ended</x-tkt.badge>
+                        @elseif($isEventSoldOut)
+                            <x-tkt.badge variant="danger">Sold out</x-tkt.badge>
+                        @else
+                            <x-tkt.badge variant="primary" :dot="true">Tickets on sale</x-tkt.badge>
+                        @endif
+                    </div>
+                    <h1 class="tkt-event-hero__title">{{ $event->name }}</h1>
+                </div>
+            </div>
+            <ul class="tkt-event-hero__meta">
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    <span>{{ $event->formatted_date_range }}</span>
+                </li>
+                @if($time)
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        <span>{{ $time }}</span>
+                    </li>
+                @endif
+                @if($event->location)
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>{{ $event->location }}</span>
+                    </li>
+                @endif
+            </ul>
+        </div>
+    </div>
+</section>
 
-            </div><!-- /col-md-8 -->
+<div class="tkt-container">
+    <div class="tkt-event-layout">
 
-            <!-- RIGHT: Order Summary -->
-            <div class="col-md-4 col-sm-12">
+        {{-- Content --}}
+        <div class="tkt-event-main">
+            <div class="tkt-tabs" role="tablist" aria-label="Event information" data-tkt-tabs>
+                @foreach($tabs as $i => $tab)
+                    <button type="button" class="tkt-tab" role="tab" id="tab-{{ $tab['id'] }}" aria-controls="panel-{{ $tab['id'] }}" aria-selected="{{ $i === 0 ? 'true' : 'false' }}" tabindex="{{ $i === 0 ? 0 : -1 }}">{{ $tab['label'] }}</button>
+                @endforeach
+            </div>
 
-                <!-- Organizer (desktop only) -->
+            <div class="tkt-tabpanel is-active" role="tabpanel" id="panel-about" aria-labelledby="tab-about">
+                @if($descriptionHtml !== '')
+                    <div class="tkt-prose">{!! $descriptionHtml !!}</div>
+                @endif
+
+                <dl class="tkt-detail-list" style="{{ $descriptionHtml === '' ? 'margin-top:0' : '' }}">
+                    <div>
+                        <dt>Date</dt>
+                        <dd>{{ $event->formatted_date_range }}</dd>
+                    </div>
+                    @if($time)
+                        <div>
+                            <dt>Time</dt>
+                            <dd>{{ $time }}</dd>
+                        </div>
+                    @endif
+                    @if($event->location)
+                        <div>
+                            <dt>Location</dt>
+                            <dd>
+                                @if($event->map_url)
+                                    <a href="{{ $event->map_url }}" target="_blank" rel="noopener noreferrer">{{ $event->location }}</a>
+                                @else
+                                    {{ $event->location }}
+                                @endif
+                            </dd>
+                        </div>
+                    @endif
+                </dl>
+
                 @if($event->id === 27)
-                <div class="tkt-organizer-box tkt-organizer-desktop">
-                    <p class="org-label">Organizer</p>
-                    <div class="org-body">
-                        <img class="org-logo" src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company Logo">
-                        <div class="org-info">
-                            <span class="org-name">FRACTURE COMPANY</span>
-                            <a class="org-instagram" href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer">
-                                <i class="fa fa-instagram"></i>fracture.sound
+                    <div class="tkt-organizers">
+                        <div class="tkt-eyebrow">Organizers</div>
+                        <div class="tkt-organizer">
+                            <img src="https://i.ibb.co/MDYChVSt/b751fb37-bd47-4bb9-bb18-693cd2bf118f.jpg" alt="Fracture Company logo" loading="lazy">
+                            <div>
+                                <b>FRACTURE COMPANY</b>
+                                <a href="https://www.instagram.com/fracture.sound/" target="_blank" rel="noopener noreferrer"><i class="fa fa-instagram"></i> fracture.sound</a>
+                            </div>
+                        </div>
+                        <div class="tkt-organizer">
+                            <img src="https://i.ibb.co/Kj49Q6cL/0da52100-622e-498d-a417-f0aebebc4a5f.jpg" alt="Vavuraa logo" loading="lazy">
+                            <div>
+                                <b>VAVURAA</b>
+                                <a href="https://www.instagram.com/vavuraa" target="_blank" rel="noopener noreferrer"><i class="fa fa-instagram"></i> vavuraa</a>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            @if($event->lineups->isNotEmpty())
+                <div class="tkt-tabpanel" role="tabpanel" id="panel-lineup" aria-labelledby="tab-lineup">
+                    <ul class="tkt-lineup">
+                        @foreach($event->lineups as $artist)
+                            <li class="tkt-lineup__item">
+                                <div class="tkt-lineup__avatar">
+                                    @if($artist->image_url)
+                                        <img src="{{ $artist->image_url }}" alt="{{ $artist->artist_name }}" loading="lazy">
+                                    @else
+                                        <i class="fa fa-music" aria-hidden="true"></i>
+                                    @endif
+                                </div>
+                                <div class="tkt-lineup__info">
+                                    <div class="tkt-lineup__name">{{ $artist->artist_name }}</div>
+                                    @if($artist->performance_date || $artist->performance_time)
+                                        <div class="tkt-lineup__when">{{ $artist->performance_date?->format('d M Y') }}@if($artist->performance_date && $artist->performance_time) · @endif{{ $artist->performance_time }}</div>
+                                    @endif
+                                </div>
+                                @if($artist->instagram)
+                                    <a class="tkt-lineup__ig" href="https://www.instagram.com/{{ ltrim($artist->instagram, '@') }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $artist->artist_name }} on Instagram">
+                                        <i class="fa fa-instagram" aria-hidden="true"></i><span>{{ ltrim($artist->instagram, '@') }}</span>
+                                    </a>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @if($hasVenue)
+                <div class="tkt-tabpanel" role="tabpanel" id="panel-venue" aria-labelledby="tab-venue">
+                    @if(! empty($event->map_embed))
+                        <div class="tkt-venue-block tkt-map">{!! $event->map_embed !!}</div>
+                    @endif
+                    @if($event->map_url)
+                        <p class="tkt-venue-block"><a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $event->map_url }}" target="_blank" rel="noopener noreferrer">Open in Maps</a></p>
+                    @endif
+                    @if($event->venue_map_url)
+                        <div class="tkt-venue-block">
+                            <h3 class="tkt-h4">Venue map</h3>
+                            <a href="{{ $event->venue_map_url }}" data-tkt-lightbox data-alt="{{ $event->name }} venue map">
+                                <img class="tkt-venue-img" src="{{ $event->venue_map_url }}" alt="{{ $event->name }} venue map" loading="lazy">
                             </a>
                         </div>
-                    </div>
-                    <div class="org-body" style="margin-top:16px;">
-                        <img class="org-logo" src="https://i.ibb.co/Kj49Q6cL/0da52100-622e-498d-a417-f0aebebc4a5f.jpg" alt="Vavuraa Logo">
-                        <div class="org-info">
-                            <span class="org-name">VAVURAA</span>
-                            <a class="org-instagram" href="https://www.instagram.com/vavuraa" target="_blank" rel="noopener noreferrer">
-                                <i class="fa fa-instagram"></i>vavuraa
-                            </a>
-                        </div>
+                    @endif
+                </div>
+            @endif
+
+            @if($event->images->isNotEmpty())
+                <div class="tkt-tabpanel" role="tabpanel" id="panel-gallery" aria-labelledby="tab-gallery">
+                    <div class="tkt-gallery">
+                        @foreach($event->images as $image)
+                            @if($image->path_url)
+                                <a href="{{ $image->path_url }}" data-tkt-lightbox data-alt="{{ $event->name }} photo {{ $loop->iteration }}">
+                                    <img src="{{ $image->path_url }}" alt="{{ $event->name }} photo {{ $loop->iteration }}" loading="lazy">
+                                </a>
+                            @endif
+                        @endforeach
                     </div>
                 </div>
-                @endif
+            @endif
 
-                <div class="tkt-summary-box" id="orderSummary">
-                    <div class="summary-header">
-                        <i class="fa fa-shopping-cart"></i>
-                        <span>ORDER SUMMARY</span>
-                    </div>
-                    <div class="summary-body">
+            <div class="tkt-tabpanel" role="tabpanel" id="panel-rules" aria-labelledby="tab-rules">
+                <ol class="tkt-rules">
+                    @foreach($rules as $rule)
+                        <li>{{ $rule }}</li>
+                    @endforeach
+                </ol>
+            </div>
+        </div>
 
-                        <!-- Empty state -->
-                        <div class="summary-empty">
-                            <i class="fa fa-ticket"></i>
-                            <p>No tickets selected yet</p>
+        {{-- Tickets --}}
+        <aside class="tkt-booking" id="tktBooking" aria-label="Tickets"
+               data-checkout-base="{{ route('front.checkout') }}"
+               data-event-id="{{ $event->id }}"
+               data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}"
+               data-fees='@json($fees)'>
+            <div class="tkt-card tkt-booking__card">
+                <h2 class="tkt-booking__title">Select tickets</h2>
+
+                @if($isPreviousEvent)
+                    <div class="tkt-closed">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                        <div>
+                            <strong>This event has ended.</strong>
+                            <p class="tkt-text-muted" style="margin-top:2px">Tickets are no longer available. Browse our upcoming events instead.</p>
                         </div>
-
-                        <!-- Items list -->
-                        <div class="summary-items" id="summaryItems"></div>
-
-                        <hr class="summary-divider">
-
-                        <div class="summary-total-row">
-                            <span class="tot-label">Total</span>
-                            <span class="tot-val" id="summaryTotal">0.00 EGP</span>
-                        </div>
-
-                        <a href="{{ route('front.checkout') }}" data-checkout-base="{{ route('front.checkout') }}" data-event-id="{{ $event->id }}" data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}" class="tkt-checkout-btn" id="checkoutBtn" style="pointer-events:none; background:rgba(244,196,48,0.2); color:rgba(0,0,0,0.4);">
-                            {{ $isBookingClosed ? 'BOOKING CLOSED' : 'PROCEED TO CHECKOUT' }} &nbsp;<i class="fa fa-arrow-right"></i>
-                        </a>
-
-                        <p class="summary-note">
-                            <i class="fa fa-lock"></i>{{ $isBookingClosed ? 'This event is sold out or already finished. Checkout disabled.' : 'Secure checkout · No hidden fees' }}
-                        </p>
                     </div>
-                </div>
+                    <a class="tkt-btn tkt-btn--primary tkt-btn--block" style="margin-top:14px" href="{{ route('front.events', ['when' => 'upcoming']) }}">See upcoming events</a>
+                @else
+                    @if($isEventSoldOut)
+                        <div class="tkt-alert tkt-alert--danger" style="margin-bottom:12px">This event is sold out.</div>
+                    @endif
 
-                @if(! empty($event->map_embed))
-                    <div class="tkt-event-map tkt-venue-map-mobile">
-                        <h4>EVENT LOCATION MAP</h4>
-                        {!! $event->map_embed !!}
-                    </div>
-                @endif
-
-                @if($event->venue_map_url)
-                    <div class="tkt-venue-map-box tkt-venue-map-mobile">
-                        <h4>VENUE MAP</h4>
-                        <img src="{{ $event->venue_map_url }}" alt="{{ $event->name }} venue map" loading="lazy">
-                    </div>
-                @endif
-
-                <div class="tkt-house-rules tkt-house-rules-mobile">
-                    <div class="rules-header">
-                        <i class="fa fa-exclamation-triangle"></i>
-                        <h4>HOUSE RULES</h4>
-                    </div>
-                    <div class="tkt-rules-grid">
-                        @php
-                            $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))
-                                ->map(fn ($rule) => trim($rule))
-                                ->filter();
-                        @endphp
-                        @forelse($rules as $rule)
-                            <div class="rule-item"><span>{{ $rule }}</span></div>
+                    <div class="tkt-tickets">
+                        @forelse($tickets as $ticket)
+                            @php
+                                $isTicketSoldOut = $ticket->status === 'sold_out';
+                                $isUnavailable = $isBookingClosed || $isTicketSoldOut;
+                                $isCouple = (bool) $ticket->is_couple;
+                                $maxQuantity = $isCouple ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
+                            @endphp
+                            <div class="tkt-ticket {{ $isUnavailable ? 'is-unavailable' : '' }}"
+                                 data-id="ticket-{{ $ticket->id }}"
+                                 data-ticket="{{ $ticket->name }}"
+                                 data-price="{{ number_format($ticket->price, 2, '.', '') }}"
+                                 data-max-qty="{{ $maxQuantity }}"
+                                 data-is-couple="{{ $isCouple ? 1 : 0 }}"
+                                 data-disabled="{{ $isUnavailable ? 1 : 0 }}">
+                                <div class="tkt-ticket__head">
+                                    <div style="min-width:0">
+                                        <div class="tkt-ticket__name">{{ $ticket->name }}</div>
+                                        @if($ticket->description)
+                                            <div class="tkt-ticket__desc">{{ $ticket->description }}</div>
+                                        @endif
+                                    </div>
+                                    <div class="tkt-ticket__price">{{ number_format($ticket->price, 2) }} <small>EGP / ticket</small></div>
+                                </div>
+                                <div class="tkt-ticket__foot">
+                                    <div class="tkt-ticket__limit">
+                                        @if($isTicketSoldOut)
+                                            <x-tkt.badge variant="danger">Sold out</x-tkt.badge>
+                                        @elseif($isCouple)
+                                            <x-tkt.badge variant="warning">Couples only · 2 tickets</x-tkt.badge>
+                                        @else
+                                            <span>Max {{ $maxQuantity }} per order</span>
+                                        @endif
+                                    </div>
+                                    @unless($isUnavailable)
+                                        <div class="tkt-stepper" role="group" aria-label="Quantity for {{ $ticket->name }}">
+                                            <button type="button" data-step="-1" aria-label="Decrease quantity" disabled>−</button>
+                                            <output aria-live="polite">0</output>
+                                            <button type="button" data-step="1" aria-label="Increase quantity">+</button>
+                                        </div>
+                                    @endunless
+                                </div>
+                            </div>
                         @empty
-                            <div class="rule-item"><span>Follow venue instructions and security guidelines during the event.</span></div>
-                            <div class="rule-item"><span>Please arrive early to complete the entry process smoothly.</span></div>
+                            <x-tkt.empty-state icon="ticket" title="Tickets not available yet" text="Please check again later." style="padding:28px 16px" />
                         @endforelse
                     </div>
-                </div>
-            </div><!-- /col-md-4 -->
 
-        </div><!-- /row -->
-    </div><!-- /container -->
+                    <div class="tkt-summary" id="orderSummary">
+                        <div class="tkt-summary__detail">
+                            <p class="tkt-summary__empty">No tickets selected yet</p>
+                            <div class="tkt-summary__lines" id="summaryLines"></div>
+                        </div>
+                        <div class="tkt-summary__total">
+                            <span>Total<button type="button" class="tkt-summary__toggle" id="summaryToggle" aria-expanded="false">Details</button></span>
+                            <b id="summaryTotal">0.00 EGP</b>
+                        </div>
+                        <a href="{{ route('front.checkout') }}" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block tkt-checkout-btn is-disabled" id="checkoutBtn" aria-disabled="true" tabindex="-1">
+                            {{ $isBookingClosed ? 'Booking closed' : 'Continue to checkout' }}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        </a>
+                        <p class="tkt-summary__note">{{ $isBookingClosed ? 'This event is sold out, so checkout is disabled.' : 'Secure checkout · Final amount is confirmed at the next step' }}</p>
+                    </div>
+                @endif
+            </div>
+        </aside>
+    </div>
 </div>
-
-<!-- Toast -->
-<div class="tkt-toast" id="tktToast">
-    <i class="fa fa-check"></i>
-    <span id="toastMsg">Ticket added to order!</span>
-</div>
-
-<script>
-(function() {
-    // Cart state
-    var cart = {};
-    var checkoutBtnInit = document.getElementById('checkoutBtn');
-    var bookingClosed = checkoutBtnInit && checkoutBtnInit.dataset.bookingClosed === '1';
-
-    // Qty counters
-    document.querySelectorAll('.tkt-ticket-card').forEach(function(card) {
-        var minus = card.querySelector('.qty-minus');
-        var plus  = card.querySelector('.qty-plus');
-        var val   = card.querySelector('.qty-val');
-        var addBtn = card.querySelector('.tkt-add-btn');
-        var isCouple = card.dataset.isCouple === '1';
-        var maxQty = parseInt(card.dataset.maxQty || '10', 10);
-
-        if (Number.isNaN(maxQty) || maxQty < 1) {
-            maxQty = 10;
-        }
-
-        if (!val || !addBtn || card.dataset.disabled === '1') {
-            return;
-        }
-
-        if (!isCouple && minus && plus) {
-        minus.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var v = parseInt(val.value);
-            if (v > 1) val.value = v - 1;
-        });
-        plus.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var v = parseInt(val.value);
-            if (v < maxQty) val.value = v + 1;
-        });
-        }
-
-        // Add to cart
-        addBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            var id     = card.dataset.id;
-            var name   = card.dataset.ticket;
-            var price  = parseFloat(card.dataset.price);
-            var qty    = isCouple ? 2 : parseInt(val.value);
-            var currentQty = cart[id] ? parseInt(cart[id].qty, 10) : 0;
-            var remainingQty = Math.max(0, maxQty - currentQty);
-
-            if (remainingQty <= 0) {
-                showToast('Maximum allowed for this ticket is ' + maxQty + '.');
-                return;
-            }
-
-            if (qty > remainingQty) {
-                qty = remainingQty;
-            }
-
-            if (isCouple) {
-                cart[id] = { name: name, price: price, qty: 2 };
-            } else if (cart[id]) {
-                cart[id].qty += qty;
-            } else {
-                cart[id] = { name: name, price: price, qty: qty };
-            }
-
-            card.classList.add('selected');
-            renderSummary();
-            if (isCouple) {
-                showToast(name + ' is couples only (2 tickets).');
-            } else if (qty < parseInt(val.value, 10)) {
-                showToast(name + ' limited to ' + maxQty + ' tickets.');
-            } else {
-                showToast(name + ' × ' + qty + ' added!');
-            }
-        });
-    });
-
-    function renderSummary() {
-        var summaryBox   = document.getElementById('orderSummary');
-        var summaryItems = document.getElementById('summaryItems');
-        var summaryTotal = document.getElementById('summaryTotal');
-        var checkoutBtn  = document.getElementById('checkoutBtn');
-
-        var keys = Object.keys(cart);
-        var total = 0;
-        summaryItems.innerHTML = '';
-
-        keys.forEach(function(id) {
-            var item = cart[id];
-            var sub  = item.price * item.qty;
-            total   += sub;
-
-            var div = document.createElement('div');
-            div.className = 'summary-item';
-            div.innerHTML =
-                '<div class="si-left">' +
-                    '<span class="si-name">' + item.name.toUpperCase() + '</span>' +
-                    '<span class="si-qty">× ' + item.qty + ' ticket' + (item.qty > 1 ? 's' : '') + '</span>' +
-                '</div>' +
-                '<div style="display:flex;align-items:center;gap:8px;">' +
-                    '<span class="si-right">' + sub.toFixed(2) + ' EGP</span>' +
-                    '<button class="si-remove" data-id="' + id + '" title="Remove">✕</button>' +
-                '</div>';
-            summaryItems.appendChild(div);
-        });
-
-        // Remove buttons
-        summaryItems.querySelectorAll('.si-remove').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var rid = this.dataset.id;
-                // Deselect card
-                var card = document.querySelector('[data-id="' + rid + '"]');
-                if (card) card.classList.remove('selected');
-                delete cart[rid];
-                renderSummary();
-            });
-        });
-
-        summaryTotal.textContent = total.toFixed(2) + ' EGP';
-
-        updateCheckoutLink();
-
-        if (bookingClosed) {
-            summaryBox.classList.remove('has-items');
-            checkoutBtn.style.pointerEvents = 'none';
-            checkoutBtn.style.background = 'rgba(244,196,48,0.2)';
-            checkoutBtn.style.color = 'rgba(0,0,0,0.4)';
-            return;
-        }
-
-        if (keys.length > 0) {
-            summaryBox.classList.add('has-items');
-            checkoutBtn.style.pointerEvents = 'auto';
-            checkoutBtn.style.background = '#f4c430';
-            checkoutBtn.style.color = '#000';
-        } else {
-            summaryBox.classList.remove('has-items');
-            checkoutBtn.style.pointerEvents = 'none';
-            checkoutBtn.style.background = 'rgba(244,196,48,0.2)';
-            checkoutBtn.style.color = 'rgba(0,0,0,0.4)';
-        }
-    }
-
-
-
-    function updateCheckoutLink() {
-        var checkoutBtn  = document.getElementById('checkoutBtn');
-        if (!checkoutBtn) return;
-        if (checkoutBtn.dataset.bookingClosed === '1') {
-            checkoutBtn.href = checkoutBtn.dataset.checkoutBase || checkoutBtn.href;
-            return;
-        }
-
-        var payload = [];
-        Object.keys(cart).forEach(function(id) {
-            var ticketId = parseInt((id || '').replace('ticket-', ''), 10);
-            if (!Number.isNaN(ticketId)) {
-                payload.push({ ticket_id: ticketId, qty: cart[id].qty });
-            }
-        });
-
-        if (!payload.length) {
-            checkoutBtn.href = checkoutBtn.dataset.checkoutBase || checkoutBtn.href;
-            return;
-        }
-
-        var encoded = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        var base = checkoutBtn.dataset.checkoutBase || checkoutBtn.href;
-        var eventId = checkoutBtn.dataset.eventId;
-        checkoutBtn.href = base + '?event=' + encodeURIComponent(eventId) + '&cart=' + encodeURIComponent(encoded);
-    }
-
-    function showToast(msg) {
-        var toast   = document.getElementById('tktToast');
-        var toastMsg = document.getElementById('toastMsg');
-        toastMsg.textContent = msg;
-        toast.classList.add('show');
-        setTimeout(function() { toast.classList.remove('show'); }, 2800);
-    }
-})();
-</script>
-
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/tkt-booking.js') }}?v={{ filemtime(public_path('js/tkt-booking.js')) }}"></script>
+@endpush

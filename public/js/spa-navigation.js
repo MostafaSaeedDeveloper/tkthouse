@@ -78,6 +78,12 @@
       return;
     }
 
+    // Pages built on a different layout (e.g. the V2 design) need a full page load.
+    if ((doc.body && doc.body.getAttribute('data-layout') || '') !== (document.body.getAttribute('data-layout') || '')) {
+      window.location.href = url;
+      return;
+    }
+
     var currentContent = document.querySelector(contentSelector);
     if (!currentContent) return;
 
