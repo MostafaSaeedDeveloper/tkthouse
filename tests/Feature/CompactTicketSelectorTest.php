@@ -111,7 +111,7 @@ class CompactTicketSelectorTest extends TestCase
 
         $this->assertStringContainsString('class="tkt-ticket__price"', $html);
         $css = file_get_contents(public_path('css/tkt-v2-pages.css'));
-        $this->assertStringContainsString('grid-template-areas: "info price" "limit step"', $css);   // name/price/limit/stepper never share a cell
+        $this->assertStringContainsString('grid-template-areas: "info" "price" "limit" "step"', $css);   // name/price/limit/stepper never share a cell
         $this->assertStringContainsString('overflow-wrap: anywhere', $css);
         $this->assertStringNotContainsString('-webkit-line-clamp', substr($css, strpos($css, '/* Ticket selection (compact)'), 2400));   // the name is never cut
     }
