@@ -15,14 +15,14 @@
 <x-admin.filters :action="route('admin.guest-list.index')" :reset="route('admin.guest-list.index')">
     <div class="a-field"><label class="form-label" for="glSearch">Search</label><input type="text" id="glSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / guest"></div>
     <div class="a-field"><label class="form-label" for="glEvent">Event Name</label>
-        <select id="glEvent" name="event_name" class="form-select js-select2">
+        <select id="glEvent" name="event_name" class="form-select">
             <option value="">All events</option>
             @foreach($eventNames as $eventName)
                 <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
             @endforeach
         </select></div>
     <div class="a-field"><label class="form-label" for="glType">Guest Type</label>
-        <select id="glType" name="guest_type" class="form-select js-select2">
+        <select id="glType" name="guest_type" class="form-select">
             <option value="">All types</option>
             @foreach($guestTypes as $guestType)
                 <option value="{{ $guestType }}" @selected(request('guest_type') === $guestType)>{{ $guestType }}</option>
@@ -81,7 +81,7 @@
             <div class="a-tk-modal-fields">
                 <div class="a-field a-span-3">
                     <label class="form-label" for="invEvent">Event</label>
-                    <select id="invEvent" name="event_name" class="form-select js-modal-select2" required>
+                    <select id="invEvent" name="event_name" class="form-select" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
@@ -120,7 +120,7 @@
             <div class="a-tk-modal-fields">
                 <div class="a-field a-span-3">
                     <label class="form-label" for="impEvent">Event</label>
-                    <select id="impEvent" name="event_name" class="form-select js-modal-select2" required>
+                    <select id="impEvent" name="event_name" class="form-select" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
@@ -146,39 +146,4 @@
 </div>
 @endsection
 
-@push('scripts')
-<script>
-(() => {
-  if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
-
-  function initModalSelect2(modalId) {
-    const $modal = jQuery(modalId);
-    if (! $modal.length) return;
-
-    $modal.on('shown.bs.modal', function () {
-      $modal.find('select.js-modal-select2').each(function () {
-        const $el = jQuery(this);
-        if ($el.data('select2')) return;
-        $el.select2({
-          width: '100%',
-          dropdownParent: $modal.find('.modal-content'),
-        });
-      });
-    });
-
-    $modal.on('hidden.bs.modal', function () {
-      $modal.find('select.js-modal-select2').each(function () {
-        const $el = jQuery(this);
-        if ($el.data('select2')) {
-          $el.select2('destroy');
-        }
-      });
-    });
-  }
-
-  initModalSelect2('#createInvitationModal');
-  initModalSelect2('#importGuestListModal');
-})();
-</script>
-@endpush
 

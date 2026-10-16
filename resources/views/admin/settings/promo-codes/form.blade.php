@@ -23,7 +23,7 @@
                 <input type="text" class="form-control" id="code" name="code" value="{{ old('code', $promoCode->code) }}" required>
             </x-admin.field>
             <x-admin.field label="Discount Type" name="discount_type" required>
-                <select class="form-select no-select2" id="discount_type" name="discount_type" required>
+                <select class="form-select" id="discount_type" name="discount_type" required>
                     <option value="percent" @selected(old('discount_type', $promoCode->discount_type ?: 'percent') === 'percent')>Percent (%)</option>
                     <option value="fixed" @selected(old('discount_type', $promoCode->discount_type) === 'fixed')>Fixed Amount (EGP)</option>
                 </select>

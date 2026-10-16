@@ -20,14 +20,14 @@
     <div class="a-field"><label class="form-label" for="oSearch">Search</label>
         <input type="text" id="oSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer"></div>
     <div class="a-field"><label class="form-label" for="oStatus">Status</label>
-        <select name="status" id="oStatus" class="form-select no-select2">
+        <select name="status" id="oStatus" class="form-select">
             <option value="">All</option>
             @foreach($statusList as $status)
                 <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
             @endforeach
         </select></div>
     <div class="a-field"><label class="form-label" for="oPay">Payment method</label>
-        <select name="payment_method" id="oPay" class="form-select no-select2">
+        <select name="payment_method" id="oPay" class="form-select">
             <option value="">All</option>
             @foreach($paymentMethods as $method)
                 <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
@@ -35,7 +35,7 @@
         </select></div>
     @if($canFilterByEvent)
     <div class="a-field"><label class="form-label" for="oEvent">Event</label>
-        <select name="event_id" id="oEvent" class="form-select no-select2">
+        <select name="event_id" id="oEvent" class="form-select">
             <option value="">All Events</option>
             @foreach($events as $event)
                 <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select no-select2" id="exportStatusSelect">
+                            <select name="status" class="form-select" id="exportStatusSelect">
                                 <option value="">All Statuses</option>
                                 @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $s)
                                     <option value="{{ $s }}">{{ str($s)->headline() }}</option>
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Payment Method</label>
-                            <select name="payment_method" class="form-select no-select2" id="exportPaymentSelect">
+                            <select name="payment_method" class="form-select" id="exportPaymentSelect">
                                 <option value="">All Payment Methods</option>
                                 @foreach($paymentMethods as $method)
                                     <option value="{{ $method->code }}">{{ $method->checkout_label ?: $method->name }}</option>
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         @if($canFilterByEvent)
                         <div class="col-md-6">
                             <label class="form-label">Event</label>
-                            <select name="event_id" class="form-select no-select2" id="exportEventSelect">
+                            <select name="event_id" class="form-select" id="exportEventSelect">
                                 <option value="">All Events</option>
                                 @foreach($events as $event)
                                     <option value="{{ $event->id }}">{{ $event->name }}</option>
@@ -243,17 +243,5 @@ document.getElementById('deselectAllCols')?.addEventListener('click', () => {
     document.querySelectorAll('.export-col-check').forEach(c => c.checked = false);
 });
 
-// Init select2 inside export modal — global init skips these (no-select2 class)
-// We init manually on shown.bs.modal so dropdownParent is set correctly
-if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
-    jQuery('#exportOrdersModal').on('shown.bs.modal', function () {
-        const $modal = jQuery('#exportOrdersModal');
-        ['#exportStatusSelect', '#exportPaymentSelect', '#exportEventSelect'].forEach(function (id) {
-            const $el = jQuery(id);
-            if (!$el.length || $el.data('select2')) return;
-            $el.select2({ dropdownParent: $modal, width: '100%' });
-        });
-    });
-}
 </script>
 @endsection

@@ -18,14 +18,14 @@
 <x-admin.filters :action="route('admin.tickets.index')" :reset="route('admin.tickets.index')">
     <div class="a-field"><label class="form-label" for="tkSearch">Search</label><input type="text" id="tkSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / holder"></div>
     <div class="a-field"><label class="form-label" for="tkEvent">Event Name</label>
-        <select id="tkEvent" name="event_name" class="form-select js-select2">
+        <select id="tkEvent" name="event_name" class="form-select">
             <option value="">All events</option>
             @foreach($eventNames as $eventName)
                 <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
             @endforeach
         </select></div>
     <div class="a-field"><label class="form-label" for="tkStatus">Status</label>
-        <select id="tkStatus" name="status" class="form-select js-select2">
+        <select id="tkStatus" name="status" class="form-select">
             <option value="">All</option>
             @foreach($statusOptions as $value => $label)
                 <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>

@@ -28,9 +28,9 @@
 <x-admin.filters :action="route('admin.payments.index')" :reset="route('admin.payments.index')">
     <div class="a-field"><label class="form-label" for="pq">Search</label><input class="form-control" id="pq" name="q" value="{{ $search }}" placeholder="Order, reference or transaction id"></div>
     <div class="a-field"><label class="form-label" for="pstatus">Status</label>
-        <select class="form-select no-select2" id="pstatus" name="status">@foreach($filters as $k => $label)<option value="{{ $k }}" @selected($filter === $k)>{{ $label }}</option>@endforeach</select></div>
+        <select class="form-select" id="pstatus" name="status">@foreach($filters as $k => $label)<option value="{{ $k }}" @selected($filter === $k)>{{ $label }}</option>@endforeach</select></div>
     <div class="a-field"><label class="form-label" for="pprov">Gateway</label>
-        <select class="form-select no-select2" id="pprov" name="provider"><option value="">All gateways</option>@foreach($providers as $p)<option value="{{ $p }}" @selected($provider === $p)>{{ ucfirst($p) }}</option>@endforeach</select></div>
+        <select class="form-select" id="pprov" name="provider"><option value="">All gateways</option>@foreach($providers as $p)<option value="{{ $p }}" @selected($provider === $p)>{{ ucfirst($p) }}</option>@endforeach</select></div>
 </x-admin.filters>
 
 <x-admin.card flush>

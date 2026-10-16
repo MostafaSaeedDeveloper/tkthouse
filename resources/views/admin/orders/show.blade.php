@@ -211,7 +211,7 @@
       <form method="POST" action="{{ route('admin.orders.status.update', $order) }}">
         @csrf
         <label class="form-label" for="statusModalSelect">Status</label>
-        <select id="statusModalSelect" class="form-select no-select2" name="status">
+        <select id="statusModalSelect" class="form-select" name="status">
           @foreach($statusOptions as $value => $label)
             <option value="{{ $value }}" {{ $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
           @endforeach

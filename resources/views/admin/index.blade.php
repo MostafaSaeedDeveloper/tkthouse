@@ -89,7 +89,7 @@
                 <input type="hidden" name="range" value="{{ $rangeKey }}">
                 @if($rangeKey === 'custom')<input type="hidden" name="from" value="{{ $from }}"><input type="hidden" name="to" value="{{ $to }}">@endif
                 <label class="a-sr-only" for="aEvent">Event</label>
-                <select class="form-select no-select2" id="aEvent" name="event_id" onchange="this.form.submit()" style="min-width:200px;max-width:260px">
+                <select class="form-select" id="aEvent" name="event_id" onchange="this.form.submit()" style="min-width:200px;max-width:260px">
                     <option value="">All events</option>
                     @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($selectedEvent?->id === $e->id)>{{ $e->name }}</option>@endforeach
                 </select>
@@ -113,7 +113,7 @@
             <x-admin.card title="Sales overview" :subtitle="$rangeLabel">
                 <x-slot:actions>
                     <label class="a-sr-only" for="aMetric">Chart metric</label>
-                    <select class="form-select no-select2" id="aMetric" style="width:auto;min-height:38px"><option value="sales">Sales (EGP)</option><option value="orders">Bookings</option></select>
+                    <select class="form-select" id="aMetric" style="width:auto;min-height:38px"><option value="sales">Sales (EGP)</option><option value="orders">Bookings</option></select>
                 </x-slot:actions>
                 @if(array_sum($series['orders']) === 0 && array_sum($series['sales']) == 0)
                     <x-admin.empty icon="fa-chart-line" title="No sales in this period" text="Try a longer date range." />
