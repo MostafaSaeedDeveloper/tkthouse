@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Orders')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php $statusList = ['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded']; @endphp
@@ -50,59 +49,51 @@
     @else
     <x-admin.table stack caption="Orders">
         <thead>
-            <tr><th>Order</th><th>Customer</th><th class="a-num">Items</th><th>Event</th><th>Ticket types</th><th class="a-num">Total</th><th>Status</th><th>Payment deadline</th><th class="a-num">Actions</th></tr>
+            <tr><th>Order</th><th>Customer</th><th>Event &amp; tickets</th><th class="a-num">Total</th><th>Status</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr>
         </thead>
         <tbody>
         @foreach($orders as $order)
             @php
                 $names = $order->items->pluck('ticket_name');
-                $eventNames = $names->map(fn ($n) => str_contains((string) $n, ' - ') ? trim((string) str($n)->before(' - ')) : null)->filter()->unique();
-                $ticketTypes = $names->map(fn ($n) => trim((string) \Illuminate\Support\Str::afterLast((string) $n, ' - ')))->unique();
+                $eventNames = $names->map(fn ($n) => str_contains((string) $n, ' - ') ? trim((string) str($n)->before(' - ')) : null)->filter()->unique()->values();
+                $ticketTypes = $names->map(fn ($n) => trim((string) \Illuminate\Support\Str::afterLast((string) $n, ' - ')))->unique()->values();
                 $secondsLeft = $order->paymentSecondsRemaining();
             @endphp
             <tr>
-                <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a>
-                    <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></td>
-                <td data-label="Customer" class="a-wrap"><span class="a-table__main">{{ $order->customer?->full_name }}</span><span class="a-table__sub">{{ $order->customer?->email }}</span></td>
-                <td data-label="Items" class="a-num">{{ $order->items_count }}</td>
-                <td data-label="Event" class="a-wrap"><div class="a-ord-tags">@foreach($eventNames as $eventName)<span class="a-ord-tag a-ord-tag--event">{{ $eventName }}</span>@endforeach</div></td>
-                <td data-label="Ticket types" class="a-wrap"><div class="a-ord-tags">
-                    @foreach($ticketTypes as $ticketType)
-                        @php $ticketColor = $ticketColorMap[\Illuminate\Support\Str::lower(trim($ticketType))] ?? '#6c757d'; @endphp
-                        <span class="a-ord-tag" style="background-color: {{ $ticketColor }}">{{ $ticketType }}</span>
-                    @endforeach</div></td>
-                <td data-label="Total" class="a-num">{{ number_format($order->total_amount, 2) }} EGP</td>
-                <td data-label="Status"><x-admin.status :status="$order->status" kind="order" />
-                    @if($order->payment_method)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</span>@endif</td>
-                <td data-label="Payment deadline">
+                <td data-label="Order"><div class="a-cell"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a>
+                    <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></div></td>
+                <td data-label="Customer"><div class="a-cell"><span class="a-table__main a-trunc">{{ $order->customer?->full_name }}</span><span class="a-table__sub a-trunc" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></div></td>
+                <td data-label="Event &amp; tickets"><div class="a-cell">
+                    <span class="a-table__main a-trunc" title="{{ $eventNames->implode(', ') }}">{{ $eventNames->first() ?? '—' }}@if($eventNames->count() > 1) <span class="a-muted">+{{ $eventNames->count() - 1 }}</span>@endif</span>
+                    <span class="a-table__sub"><x-admin.more :items="$ticketTypes" /> · {{ $order->items_count }} {{ \Illuminate\Support\Str::plural('ticket', $order->items_count) }}</span>
+                </div></td>
+                <td data-label="Total" class="a-num"><div class="a-cell"><b>{{ number_format($order->total_amount, 2) }}</b> <span class="a-muted">EGP</span></div></td>
+                <td data-label="Status"><div class="a-cell"><x-admin.status :status="$order->status" kind="order" />
+                    @if($order->payment_method)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</span>@endif
                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
-                        <span class="badge bg-warning text-dark a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}</span>
-                    @else
-                        <span class="a-muted">—</span>
+                        <span class="a-table__sub">Expires in <span class="a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? '…' : 'Expired' }}</span></span>
                     @endif
-                </td>
-                <td data-label="Actions"><div class="a-table__actions">
-                    @can('orders.update')
-                        @if($order->status === 'pending_approval')
-                            <form method="POST" action="{{ route('admin.orders.approve', $order) }}" data-a-confirm="Approve this order and send the payment link?" data-a-confirm-title="Approve order" data-a-confirm-ok="Approve">@csrf
-                                <button class="a-btn a-btn--success a-btn--sm" type="submit" title="Approve" aria-label="Approve order"><i class="fa fa-check"></i></button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.orders.reject', $order) }}" data-a-confirm="Reject this order?" data-a-confirm-title="Reject order" data-a-confirm-ok="Reject">@csrf
-                                <button class="a-btn a-btn--danger a-btn--sm" type="submit" title="Reject" aria-label="Reject order"><i class="fa fa-times"></i></button>
-                            </form>
-                        @endif
-                    @endcan
-                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order"><i class="fa fa-eye"></i></a>
-                    @can('orders.update')
-                        <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.edit', $order) }}" title="Edit" aria-label="Edit order"><i class="fa fa-pen"></i></a>
-                    @endcan
-                    @can('orders.delete')
-                        <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" data-a-confirm="Delete this order? It can be restored from Deleted Orders." data-a-confirm-title="Delete order" data-a-confirm-ok="Delete">
-                            @csrf
-                            @method('DELETE')
-                            <button class="a-btn a-btn--danger a-btn--sm" type="submit" title="Delete" aria-label="Delete order"><i class="fa fa-trash"></i></button>
-                        </form>
-                    @endcan
+                </div></td>
+                <td data-label=""><div class="a-table__actions">
+                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}">View</a>
+                    @canany(['orders.update', 'orders.delete'])
+                    <x-admin.dropdown label="" aria-label="More actions">
+                        @can('orders.update')
+                            @if($order->status === 'pending_approval')
+                                <form method="POST" action="{{ route('admin.orders.approve', $order) }}" data-a-confirm="Approve this order and send the payment link?" data-a-confirm-title="Approve order" data-a-confirm-ok="Approve">@csrf
+                                    <button class="a-menu__item" type="submit"><i class="fa fa-check"></i> Approve</button></form>
+                                <form method="POST" action="{{ route('admin.orders.reject', $order) }}" data-a-confirm="Reject this order?" data-a-confirm-title="Reject order" data-a-confirm-ok="Reject">@csrf
+                                    <button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-xmark"></i> Reject</button></form>
+                                <div class="a-menu__sep"></div>
+                            @endif
+                            <a class="a-menu__item" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i> Edit</a>
+                        @endcan
+                        @can('orders.delete')
+                            <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" data-a-confirm="Delete this order? It can be restored from Deleted Orders." data-a-confirm-title="Delete order" data-a-confirm-ok="Delete">@csrf @method('DELETE')
+                                <button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-trash"></i> Delete</button></form>
+                        @endcan
+                    </x-admin.dropdown>
+                    @endcanany
                 </div></td>
             </tr>
         @endforeach

@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', $event->name.' Dashboard')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
 <x-admin.page-header :title="$event->name.' Dashboard'" subtitle="Event-specific summary for tickets sold, invitations, guest list, revenue, check-ins and analytics." :crumbs="['Dashboard' => route('admin.dashboard'), 'Events' => route('admin.events.index'), $event->name]">
@@ -10,21 +9,20 @@
 
 <x-admin.flash />
 
-<div class="a-ev-toolbar">
-    <div class="a-ev-range" role="group" aria-label="Date range">
-        @foreach($rangeOptions as $key => $label)
-            <a href="{{ route('admin.events.dashboard', ['event' => $event, 'range' => $key]) }}"
-               class="a-chip {{ $selectedRange === $key ? 'is-active' : '' }}" @if($selectedRange === $key) aria-current="true" @endif>{{ $label }}</a>
-        @endforeach
-    </div>
-    <x-admin.filters :action="route('admin.events.dashboard', $event)">
-        <input type="hidden" name="range" value="custom">
-        <div class="a-field"><label class="form-label" for="evFrom">From date</label><input type="text" id="evFrom" name="from" class="form-control js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" placeholder="From date"></div>
-        <div class="a-field"><label class="form-label" for="evTo">To date</label><input type="text" id="evTo" name="to" class="form-control js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" placeholder="To date"></div>
-    </x-admin.filters>
+<div class="a-ev-range" role="group" aria-label="Date range">
+    @foreach($rangeOptions as $key => $label)
+        <a href="{{ route('admin.events.dashboard', ['event' => $event, 'range' => $key]) }}"
+           class="a-chip {{ $selectedRange === $key ? 'is-active' : '' }}" @if($selectedRange === $key) aria-current="true" @endif>{{ $label }}</a>
+    @endforeach
 </div>
 
-<p class="a-ev-context">Showing <strong>{{ $event->name }}</strong> within <strong>{{ $rangeLabel }}</strong>.</p>
+<x-admin.filters :action="route('admin.events.dashboard', $event)" :reset="route('admin.events.dashboard', $event)">
+    <input type="hidden" name="range" value="custom">
+    <x-admin.date label="From date" name="from" id="evFrom" :value="optional($startAt)->format('Y-m-d')" />
+    <x-admin.date label="To date" name="to" id="evTo" :value="optional($endAt)->format('Y-m-d')" />
+</x-admin.filters>
+
+<p class="a-hint a-ev-context">Showing <strong>{{ $event->name }}</strong> within <strong>{{ $rangeLabel }}</strong>.</p>
 
 <div class="a-grid a-grid--4">
     <x-admin.kpi label="Tickets Sold" :value="number_format($ticketsSold)" icon="fa-ticket" />

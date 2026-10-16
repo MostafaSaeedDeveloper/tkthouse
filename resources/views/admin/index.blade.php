@@ -12,57 +12,6 @@
     $rangeParams = array_filter(['event_id' => $selectedEvent?->id]);
 @endphp
 
-@push('styles')
-<style>
-    .a-dash__top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-    .a-dash__hello { margin: 0 0 4px; color: var(--a-muted); font-size: 14px; }
-    .a-dash__title { font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2rem); font-weight: 800; line-height: 1.15; }
-    .a-range { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .a-seg { display: inline-flex; padding: 4px; background: #fff; border: 1px solid var(--a-line); border-radius: 12px; gap: 2px; }
-    .a-seg a, .a-seg button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 13px; font-weight: 700; color: var(--a-muted); cursor: pointer; display: inline-flex; align-items: center; }
-    .a-seg a:hover, .a-seg button:hover { color: var(--a-ink); }
-    .a-seg .is-active { background: var(--a-yellow); color: #000; }
-    .a-custom { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .a-custom.is-open { display: flex; }
-    .a-custom input { min-height: 40px; padding: 0 12px; border: 1px solid var(--a-line-strong); border-radius: 10px; font: inherit; font-size: 13px; }
-    .a-dash__grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-    @media (min-width: 1280px) { .a-dash__grid { grid-template-columns: minmax(0, 1fr) 380px; } }
-    .a-dash__col { display: grid; gap: 20px; min-width: 0; align-content: start; }
-    .a-dash__charts { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
-    @media (min-width: 900px) { .a-dash__charts { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
-    .a-chartbox { position: relative; height: 260px; }
-    .a-chartbox--donut { height: 200px; max-width: 240px; margin: 0 auto; }
-    .a-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center; }
-    .a-donut-center b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .a-donut-center span { font-size: 12px; color: var(--a-muted); }
-    .a-legend { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; font-size: 13px; }
-    .a-legend li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
-    .a-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-    .a-legend .a-num { font-variant-numeric: tabular-nums; font-weight: 700; }
-    .a-split { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--a-line); font-size: 13px; }
-    .a-split div { display: flex; justify-content: space-between; gap: 10px; }
-    .a-split b { font-variant-numeric: tabular-nums; }
-    .a-event { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--a-line); }
-    .a-event:first-child { border-top: 0; padding-top: 0; }
-    .a-event__img { position: relative; width: 64px; height: 64px; border-radius: 12px; background: #1a1a1a center / cover no-repeat; overflow: hidden; }
-    .a-event__date { position: absolute; left: 6px; top: 6px; padding: 2px 6px; border-radius: 6px; background: #fff; color: #111; font-size: 10px; font-weight: 800; line-height: 1.1; text-align: center; }
-    .a-event__date b { display: block; font-size: 14px; }
-    .a-event__name { font-weight: 800; font-size: 14px; display: block; overflow-wrap: anywhere; }
-    .a-event__meta { font-size: 12.5px; color: var(--a-muted); display: block; overflow-wrap: anywhere; }
-    .a-ring { --p: 0; width: 132px; height: 132px; border-radius: 50%; background: conic-gradient(#178a4c calc(var(--p) * 1%), #ececE6 0); display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-    .a-ring > div { width: 100px; height: 100px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .a-ring b { font-size: 22px; font-weight: 800; } .a-ring span { font-size: 11px; color: var(--a-muted); }
-    .a-scan-stats { display: grid; gap: 10px; margin-top: 16px; font-size: 13px; }
-    .a-scan-stats div { display: flex; justify-content: space-between; gap: 10px; } .a-scan-stats b { font-variant-numeric: tabular-nums; }
-    .a-quick { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
-    .a-quick a { display: grid; gap: 2px; padding: 14px; border: 1px solid var(--a-line); border-radius: 12px; background: var(--a-surface-2); font-weight: 800; font-size: 14px; }
-    .a-quick a small { font-weight: 500; font-size: 12px; color: var(--a-muted); }
-    .a-quick a i { margin-bottom: 6px; color: #7a5b00; }
-    .a-quick a.is-primary { background: var(--a-yellow); border-color: var(--a-yellow); }
-    .a-quick a.is-primary i, .a-quick a.is-primary small { color: #000; }
-    .a-quick a:hover { border-color: var(--a-ink); }
-</style>
-@endpush
 
 @section('content')
 <div class="a-dash__top">
@@ -147,17 +96,16 @@
                 <x-admin.empty icon="fa-receipt" title="No orders yet" text="New orders appear here as they come in." />
             @else
                 <x-admin.table stack caption="Recent orders">
-                    <thead><tr><th>Order</th><th>Customer</th><th>Event</th><th class="a-num">Tickets</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+                    <thead><tr><th>Order</th><th>Customer</th><th>Event</th><th class="a-num">Amount</th><th>Status</th></tr></thead>
                     <tbody>
                     @foreach($recentOrders as $o)
+                        @php $cn = trim(($o->customer?->first_name ?? '').' '.($o->customer?->last_name ?? '')) ?: '—'; $en = $o->items->pluck('event.name')->filter()->first() ?? '—'; $tc = (int) $o->items->sum('quantity'); @endphp
                         <tr>
-                            <td data-label="Order">@can('orders.view')<a class="a-table__main" href="{{ route('admin.orders.show', $o) }}">#{{ $o->order_number }}</a>@else #{{ $o->order_number }} @endcan</td>
-                            <td data-label="Customer"><span class="a-table__main">{{ trim(($o->customer?->first_name ?? '').' '.($o->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub a-trunc">{{ $o->customer?->email }}</span></td>
-                            <td data-label="Event"><span class="a-trunc">{{ $o->items->pluck('event.name')->filter()->first() ?? '—' }}</span></td>
-                            <td data-label="Tickets" class="a-num">{{ (int) $o->items->sum('quantity') }}</td>
+                            <td data-label="Order">@can('orders.view')<a class="a-table__main" href="{{ route('admin.orders.show', $o) }}">#{{ $o->order_number }}</a>@else #{{ $o->order_number }} @endcan<span class="a-table__sub">{{ $o->created_at->format('d M, H:i') }}</span></td>
+                            <td data-label="Customer"><span class="a-table__main a-trunc">{{ $cn }}</span><span class="a-table__sub a-trunc" title="{{ $o->customer?->email }}">{{ $o->customer?->email }}</span></td>
+                            <td data-label="Event"><span class="a-table__main a-trunc" title="{{ $en }}">{{ $en }}</span><span class="a-table__sub">{{ $tc }} {{ \Illuminate\Support\Str::plural('ticket', $tc) }}</span></td>
                             <td data-label="Amount" class="a-num">{{ $moneyShort($o->total_amount) }}</td>
                             <td data-label="Status"><x-admin.status :status="$o->status" /></td>
-                            <td data-label="Date">{{ $o->created_at->format('d M, H:i') }}</td>
                         </tr>
                     @endforeach
                     </tbody>

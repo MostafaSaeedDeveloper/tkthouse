@@ -176,10 +176,12 @@ class DashboardMetrics
         $labels = PaymentMethod::query()->get(['code', 'name', 'checkout_label'])->mapWithKeys(fn ($m) => [(string) $m->code => trim((string) ($m->checkout_label ?: $m->name))]);
         $paidTotal = (float) $paid->sum('total_amount');
 
-        $byMethod = $paid->groupBy(fn ($o) => (string) $o->payment_method)->map(function (Collection $rows, string $code) use ($labels, $paidTotal) {
+        // Two method codes can share the same customer-facing label ("Apple Pay"); the dashboard lists each label once.
+        $labelOf = fn ($o) => (string) $o->payment_method === '' ? 'No method recorded' : ($labels[(string) $o->payment_method] ?? (string) $o->payment_method);
+        $byMethod = $paid->groupBy($labelOf)->map(function (Collection $rows, string $label) use ($paidTotal) {
             $amount = (float) $rows->sum('total_amount');
 
-            return ['label' => $code === '' ? 'No method recorded' : ($labels[$code] ?? $code), 'amount' => $amount, 'orders' => $rows->count(), 'share' => $paidTotal > 0 ? round($amount / $paidTotal * 100, 1) : 0];
+            return ['label' => $label, 'amount' => $amount, 'orders' => $rows->count(), 'share' => $paidTotal > 0 ? round($amount / $paidTotal * 100, 1) : 0];
         })->sortByDesc('amount')->values();
 
         $window = fn (array $statuses) => (float) $this->orders()->whereIn('status', $statuses)->whereBetween('created_at', [$start, $end])->sum('total_amount');

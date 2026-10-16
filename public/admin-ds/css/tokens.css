@@ -1,0 +1,83 @@
+/* ==========================================================================
+   TKT Admin Design System — 1/6 design tokens
+   Every colour, size, radius and shadow used by the admin comes from here.
+   Nothing outside this file should contain a hex colour except status/chart data.
+   ========================================================================== */
+:root {
+    /* brand */
+    --a-yellow: #FFD200;
+    --a-yellow-hover: #F2C500;
+    --a-yellow-soft: #FFF6C7;
+    --a-yellow-ink: #6B5200;          /* text on yellow-soft */
+    --a-dark: #111111;                /* alias: solid dark (buttons, active chips) */
+    --a-black: #111111; --a-white: #FFFFFF;
+    --a-on-yellow: #111111;           /* text on the yellow primary */
+    --a-dark-surface: #1E1E1E;        /* inputs / chips on the black topbar */
+    --a-dark-surface-2: #2A2A2A;
+    --a-skeleton-a: #EEF0F3; --a-skeleton-b: #F6F7F9;
+
+    /* surfaces */
+    --a-sidebar: #111111;
+    --a-topbar: #111111;
+    --a-bg: #F7F8FA;                  /* main background */
+    --a-surface: #FFFFFF;             /* cards */
+    --a-surface-2: #F9FAFB;           /* table head, subtle blocks */
+    --a-hover: #F3F4F6;
+
+    /* text */
+    --a-ink: #171717;                 /* primary text */
+    --a-ink-soft: #374151;
+    --a-muted: #6B7280;               /* secondary text */
+    --a-faint: #9CA3AF;
+
+    /* lines */
+    --a-line: #E5E7EB;                /* borders */
+    --a-line-soft: #EEF0F3;           /* row separators */
+    --a-line-strong: #D1D5DB;         /* form controls */
+
+    /* on dark (sidebar / topbar) */
+    --a-on-dark: #FFFFFF;
+    --a-on-dark-soft: #D4D4D8;
+    --a-on-dark-muted: #9CA3AF;
+    --a-dark-line: rgba(255, 255, 255, .10);
+    --a-dark-hover: rgba(255, 255, 255, .07);
+
+    /* status colours — meaning only (never decoration) */
+    --a-success: #15803D; --a-success-soft: #E8F6EE; --a-success-line: #BBE5CB;
+    --a-warning: #A15C00; --a-warning-soft: #FFF4DB; --a-warning-line: #F3D9A0;
+    --a-danger:  #B91C1C; --a-danger-soft:  #FDECEC; --a-danger-line:  #F3C4C4;
+    --a-info:    #1D4ED8; --a-info-soft:    #E8EFFE; --a-info-line:    #C3D4F8;
+
+    /* type */
+    --a-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    --a-fs-xs: 11.5px;                /* table head, captions */
+    --a-fs-sm: 12.5px;                /* secondary text, labels */
+    --a-fs-table: 13px;               /* table body */
+    --a-fs-base: 14px;                /* body, inputs, buttons */
+    --a-fs-md: 15px;                  /* card titles */
+    --a-fs-lg: 18px;
+    --a-fs-xl: 22px;                  /* page title */
+    --a-fs-kpi: 24px;                 /* KPI numbers */
+    --a-fw-normal: 400; --a-fw-medium: 500; --a-fw-semibold: 600; --a-fw-bold: 700;
+
+    /* spacing scale (compact) */
+    --a-s-1: 4px; --a-s-2: 8px; --a-s-3: 12px; --a-s-4: 16px; --a-s-5: 20px; --a-s-6: 24px; --a-s-8: 32px;
+
+    /* shape */
+    --a-radius: 12px;                 /* cards */
+    --a-radius-sm: 8px;               /* controls */
+    --a-radius-xs: 6px;
+    --a-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+    --a-shadow-pop: 0 12px 32px rgba(16, 24, 40, .16);
+    --a-focus: 0 0 0 3px rgba(255, 210, 0, .5);
+
+    /* controls (one height for every input / select / button) */
+    --a-control-h: 36px;
+    --a-control-h-sm: 30px;
+    --a-control-h-lg: 42px;
+
+    /* layout */
+    --a-sidebar-w: 240px;
+    --a-topbar-h: 56px;
+    --a-content-max: 1600px;
+}

@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Edit User')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Edit User" :subtitle="$user->name" :crumbs="['Dashboard' => route('admin.dashboard'), 'Users' => route('admin.users.index'), 'Edit']" />
 <x-admin.flash />

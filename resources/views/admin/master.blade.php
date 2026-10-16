@@ -24,9 +24,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  {{-- Bootstrap 5 grid/utilities/JS come from the bundled base; the look is entirely admin-v2.css --}}
+  {{-- Bootstrap 5 grid/utilities/JS come from the bundled Dashmix base; the look is entirely the TKT Admin Design System (public/admin-ds/css) --}}
   <link rel="stylesheet" href="{{ asset('admin/assets/css/dashmix.min.css') }}">
-  <link rel="stylesheet" href="{{ asset('admin-v2/admin-v2.css') }}?v={{ filemtime(public_path('admin-v2/admin-v2.css')) }}">
+  @foreach(['tokens', 'base', 'layout', 'components', 'dashboard', 'module-events', 'module-orders', 'module-admin'] as $ds)
+    <link rel="stylesheet" href="{{ asset('admin-ds/css/'.$ds.'.css') }}?v={{ filemtime(public_path('admin-ds/css/'.$ds.'.css')) }}">
+  @endforeach
   <link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
@@ -102,7 +104,7 @@
 
 {{-- Scripts --}}
 <script src="{{ asset('admin/assets/js/dashmix.app.min.js') }}"></script>
-<script src="{{ asset('admin-v2/admin-v2.js') }}?v={{ filemtime(public_path('admin-v2/admin-v2.js')) }}"></script>
+<script src="{{ asset('admin-ds/admin.js') }}?v={{ filemtime(public_path('admin-ds/admin.js')) }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
@@ -140,7 +142,7 @@
         + window.adminValidationErrors.map(i => `<li>${i}</li>`).join('') + '</ul>',
     });
 
-  // Every DELETE form gets the shared confirmation dialog (admin-v2.js) unless it set its own message.
+  // Every DELETE form gets the shared confirmation dialog (admin-ds/admin.js) unless it set its own message.
   document.querySelectorAll('form').forEach(form => {
     const method = (form.querySelector('input[name="_method"]')?.value || form.method || '').toUpperCase();
     if (method !== 'DELETE' || form.hasAttribute('data-a-confirm')) return;

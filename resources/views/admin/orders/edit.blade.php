@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Edit Order')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php
@@ -12,12 +11,11 @@
 
 <x-admin.page-header :title="'Edit Order #'.$displayOrderNumber" subtitle="Modify order details, ticket holders, and pricing adjustments." :crumbs="['Dashboard' => route('admin.dashboard'), 'Orders' => route('admin.orders.index'), '#'.$displayOrderNumber => route('admin.orders.show', $order), 'Edit']">
   <a href="{{ route('admin.orders.show', $order) }}" class="a-btn a-btn--outline"><i class="fa fa-arrow-left"></i> Back to Order</a>
-  <button class="a-btn a-btn--primary" type="submit" form="editOrderForm"><i class="fa fa-save"></i> Save Changes</button>
 </x-admin.page-header>
 
 <x-admin.flash />
 
-<form action="{{ route('admin.orders.update', $order) }}" method="POST" id="editOrderForm" data-a-loading>
+<form action="{{ route('admin.orders.update', $order) }}" method="POST" id="editOrderForm" data-a-loading class="a-ord-form">
   @csrf
   @method('PUT')
 
@@ -29,17 +27,15 @@
             $ticketName = trim((string) $item->ticket_name);
             $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
             $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
-            $normalizedType = \Illuminate\Support\Str::lower($ticketType);
-            $ticketTypeColor = ['early bird' => '#6c757d', 'regular' => '#0d6efd', 'phase 1' => '#0d6efd', 'phase 2' => '#6f42c1', 'vip' => '#b58900'][$normalizedType] ?? '#6c757d';
             $socialProfileRaw = trim((string) $item->holder_social_profile);
             $socialProfileLink = $socialProfileRaw !== ''
               ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
               : null;
           @endphp
           <div class="a-ord-edititem">
-            <div style="min-width:0">
+            <div class="a-ord-item__main">
               <div class="a-ord-item__name">{{ $eventName }}
-                @if($ticketType !== '' && $ticketType !== $eventName)<span class="a-ord-tag" style="background-color: {{ $ticketTypeColor }}">{{ $ticketType }}</span>@endif
+                @if($ticketType !== '' && $ticketType !== $eventName)<x-admin.badge class="a-ord-type">{{ $ticketType }}</x-admin.badge>@endif
               </div>
               <div class="a-ord-item__meta">
                 @if($item->holder_name)<div><i class="fa fa-user"></i> {{ $item->holder_name }}</div>@endif
@@ -52,7 +48,7 @@
               </div>
             </div>
             <div>
-              <span class="a-table__sub">Qty</span><strong>x{{ $item->quantity }}</strong>
+              <span class="form-label">Qty</span><strong>x{{ $item->quantity }}</strong>
               <input type="hidden" name="items[{{ $item->id }}][id]" value="{{ $item->id }}">
               <input type="hidden" name="items[{{ $item->id }}][quantity]" value="{{ $item->quantity }}">
               <input type="hidden" name="items[{{ $item->id }}][holder_name]" value="{{ $item->holder_name }}">
@@ -98,6 +94,7 @@
 
     <div class="a-ord-col">
       <x-admin.card title="Order Settings">
+        <div class="a-form-grid">
         <div class="a-field">
           <label class="form-label" for="statusSelect">Status</label>
           <select class="form-select no-select2" name="status" id="statusSelect">
@@ -106,7 +103,7 @@
             @endforeach
           </select>
         </div>
-        <div class="a-field" style="margin-top:14px">
+        <div class="a-field">
           <label class="form-label" for="editPaymentMethod">Payment Method</label>
           <select class="form-select no-select2" name="payment_method" id="editPaymentMethod">
             @foreach($paymentMethods as $method)
@@ -114,7 +111,7 @@
             @endforeach
           </select>
         </div>
-        <div class="a-field" style="margin-top:14px">
+        <div class="a-field">
           <label class="form-label" for="editPromoCode">Promo Code</label>
           <select class="form-select no-select2" name="promo_code" id="editPromoCode">
             <option value="">No Promo Code</option>
@@ -127,7 +124,7 @@
         </div>
 
         @can('showing_orders')
-          <div class="a-field" style="margin-top:14px">
+          <div class="a-field">
             <div class="form-check">
               <input class="form-check-input" id="editExclude" type="checkbox" name="exclude_from_statistics" value="1" {{ old('exclude_from_statistics', $order->exclude_from_statistics) ? 'checked' : '' }}>
               <label class="form-check-label" for="editExclude">Exclude this order from dashboard and reports statistics</label>
@@ -137,7 +134,7 @@
         @endcan
 
         @if($order->status === 'pending_payment' && $paymentLink)
-          <div class="a-field" style="margin-top:14px">
+          <div class="a-field">
             <label class="form-label" for="editPaymentLink">Payment Link</label>
             <div class="a-ord-linkbox">
               <input class="form-control" id="editPaymentLink" type="text" readonly value="{{ $paymentLink }}" onclick="this.select()">
@@ -145,6 +142,7 @@
             </div>
           </div>
         @endif
+      </div>
       </x-admin.card>
 
       <x-admin.card title="Order Info">
@@ -161,7 +159,7 @@
     </div>
   </div>
 
-  <div class="a-form-actions" style="margin:20px 0 0">
+  <div class="a-form-actions">
     <a href="{{ route('admin.orders.show', $order) }}" class="a-btn a-btn--outline">Cancel</a>
     <button class="a-btn a-btn--primary" type="submit"><i class="fa fa-save"></i> Save Changes</button>
   </div>

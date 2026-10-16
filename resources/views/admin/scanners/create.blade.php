@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Add Scanner User')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Add Scanner User" subtitle="Gate staff sign in with these details." :crumbs="['Dashboard' => route('admin.dashboard'), 'Scanners' => route('admin.scanners.index'), 'Add']">
     <a href="{{ route('admin.scanners.index') }}" class="a-btn a-btn--outline">Back</a>

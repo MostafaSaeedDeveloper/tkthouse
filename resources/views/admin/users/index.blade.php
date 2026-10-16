@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Users')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Users" subtitle="Admin users, their roles and event scope." :crumbs="['Dashboard' => route('admin.dashboard'), 'Users']">
     @can('users.create')
@@ -11,66 +10,38 @@
 <x-admin.flash />
 
 <x-admin.filters :action="route('admin.users.index')" :reset="route('admin.users.index')">
-    <div class="a-field"><label class="form-label" for="search">Search</label>
-        <input type="text" id="search" name="search" class="form-control" value="{{ $search }}" placeholder="Name, username or email"></div>
-    <div class="a-field"><label class="form-label" for="role">Role</label>
-        <select id="role" name="role" class="form-select">
-            <option value="">All Roles</option>
-            @foreach($roles as $roleName)
-                <option value="{{ $roleName }}" @selected($roleName === $role)>{{ $roleName }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="permission">Permission</label>
-        <select id="permission" name="permission" class="form-select">
-            <option value="">All Permissions</option>
-            @foreach($permissions as $permissionName)
-                <option value="{{ $permissionName }}" @selected($permissionName === $permission)>{{ $permissionName }}</option>
-            @endforeach
-        </select></div>
+    <x-admin.search name="search" :value="$search" placeholder="Name, username or email" />
+    <x-admin.select label="Role" name="role" id="role" :options="collect($roles)->mapWithKeys(fn ($r) => [$r => $r])->all()" :value="$role" placeholder="All Roles" class="no-select2" />
+    <x-admin.select label="Permission" name="permission" id="permission" :options="collect($permissions)->mapWithKeys(fn ($p) => [$p => $p])->all()" :value="$permission" placeholder="All Permissions" class="no-select2" />
 </x-admin.filters>
 
-<x-admin.card flush>
+<x-admin.card flush title="Admin users" :subtitle="$users->total().' total'">
     @if($users->isEmpty())
         <x-admin.empty icon="fa-users" title="No users found" text="Try a different search or filter." />
     @else
         <x-admin.table stack caption="Users">
             <thead>
-                <tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Custom Permissions</th><th>Event Scope</th><th>Last Login</th><th>IP</th><th><span class="a-sr-only">Actions</span></th></tr>
+                <tr><th>User</th><th>Role</th><th>Access</th><th>Last login</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr>
             </thead>
             <tbody>
             @foreach($users as $user)
                 <tr>
-                    <td data-label="Name"><span class="a-table__main">{{ $user->name }}</span></td>
-                    <td data-label="Username">{{ $user->username }}</td>
-                    <td data-label="Email">{{ $user->email }}</td>
-                    <td data-label="Role">@if($user->roles->first()?->name)<x-admin.badge variant="dark">{{ $user->roles->first()->name }}</x-admin.badge>@else - @endif</td>
-                    <td data-label="Custom Permissions" class="a-wrap">
-                        <div class="a-m-chips">
-                        @forelse($user->permissions as $userPermission)
-                            <x-admin.badge>{{ $userPermission->name }}</x-admin.badge>
-                        @empty
-                            -
-                        @endforelse
-                        </div>
+                    <td data-label="User"><span class="a-table__main a-trunc a-m-trunc-md">{{ $user->name }}</span><span class="a-table__sub a-trunc a-m-trunc-md" title="{{ $user->username }} · {{ $user->email }}">{{ $user->username }} · {{ $user->email }}</span></td>
+                    <td data-label="Role">@if($user->roles->first()?->name)<x-admin.badge variant="dark">{{ $user->roles->first()->name }}</x-admin.badge>@else<span class="a-muted">—</span>@endif</td>
+                    <td data-label="Access">
+                        <span class="a-table__main">@if($user->managedEvents->isEmpty()) All events @else <x-admin.more :items="$user->managedEvents->pluck('name')" /> @endif</span>
+                        @if($user->permissions->isNotEmpty())<span class="a-table__sub">+ <x-admin.more :items="$user->permissions->pluck('name')" /></span>@endif
                     </td>
-                    <td data-label="Event Scope" class="a-wrap">
-                        <div class="a-m-chips">
-                        @forelse($user->managedEvents as $me)
-                            <x-admin.badge>{{ $me->name }}</x-admin.badge>
-                        @empty
-                            All Events
-                        @endforelse
-                        </div>
-                    </td>
-                    <td data-label="Last Login">{{ $user->last_login_at?->format('Y-m-d H:i') ?: '-' }}</td>
-                    <td data-label="IP">{{ $user->last_login_ip ?: '-' }}</td>
-                    <td data-label="Actions">
+                    <td data-label="Last login">{{ $user->last_login_at?->format('d M Y, H:i') ?: '—' }}@if($user->last_login_ip)<span class="a-table__sub">{{ $user->last_login_ip }}</span>@endif</td>
+                    <td data-label="">
                         <div class="a-table__actions">
                         @can('users.update')
                             <a href="{{ route('admin.users.edit',$user) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>
                         @endcan
                         @can('users.delete')
-                            <form method="POST" action="{{ route('admin.users.destroy',$user) }}" data-a-confirm="Delete user {{ $user->name }}? This cannot be undone." data-a-confirm-title="Delete user" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-btn a-btn--danger a-btn--sm" type="submit">Delete</button></form>
+                            <x-admin.dropdown label="" aria-label="More actions">
+                                <form method="POST" action="{{ route('admin.users.destroy',$user) }}" data-a-confirm="Delete user {{ $user->name }}? This cannot be undone." data-a-confirm-title="Delete user" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-trash"></i> Delete</button></form>
+                            </x-admin.dropdown>
                         @endcan
                         </div>
                     </td>

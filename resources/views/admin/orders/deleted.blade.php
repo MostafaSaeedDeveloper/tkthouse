@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Deleted Orders')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php $statusList = ['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded']; @endphp
@@ -12,30 +11,11 @@
 <x-admin.flash />
 
 <x-admin.filters :action="route('admin.orders.deleted')" :reset="route('admin.orders.deleted')">
-    <div class="a-field"><label class="form-label" for="dSearch">Search</label>
-        <input type="text" id="dSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer"></div>
-    <div class="a-field"><label class="form-label" for="dStatus">Status</label>
-        <select name="status" id="dStatus" class="form-select no-select2">
-            <option value="">All</option>
-            @foreach($statusList as $status)
-                <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="dPay">Payment method</label>
-        <select name="payment_method" id="dPay" class="form-select no-select2">
-            <option value="">All</option>
-            @foreach($paymentMethods as $method)
-                <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
-            @endforeach
-        </select></div>
+    <x-admin.search name="search" :value="request('search')" placeholder="Order # / customer" />
+    <x-admin.select label="Status" name="status" id="dStatus" class="no-select2" placeholder="All" :value="request('status')" :options="collect($statusList)->mapWithKeys(fn ($st) => [$st => str($st)->headline()])->all()" />
+    <x-admin.select label="Payment method" name="payment_method" id="dPay" class="no-select2" placeholder="All" :value="request('payment_method')" :options="$paymentMethods->mapWithKeys(fn ($m) => [$m->code => $m->checkout_label ?: $m->name])->all()" />
     @if($canFilterByEvent)
-    <div class="a-field"><label class="form-label" for="dEvent">Event</label>
-        <select name="event_id" id="dEvent" class="form-select no-select2">
-            <option value="">All Events</option>
-            @foreach($events as $event)
-                <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
-            @endforeach
-        </select></div>
+        <x-admin.select label="Event" name="event_id" id="dEvent" class="no-select2" placeholder="All Events" :value="request('event_id')" :options="$events->mapWithKeys(fn ($e) => [$e->id => $e->name])->all()" />
     @endif
 </x-admin.filters>
 
@@ -44,16 +24,16 @@
         <x-admin.empty icon="fa-trash-can" title="No deleted orders found" text="Deleted orders will appear here and can be restored." />
     @else
     <x-admin.table stack caption="Deleted orders">
-        <thead><tr><th>Order</th><th>Customer</th><th class="a-num">Items</th><th class="a-num">Total</th><th>Deleted at</th><th class="a-num">Actions</th></tr></thead>
+        <thead><tr><th>Order</th><th>Customer</th><th class="a-num">Total</th><th>Deleted at</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
         <tbody>
         @foreach($orders as $order)
             <tr>
-                <td data-label="Order"><span class="a-table__main">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</span></td>
-                <td data-label="Customer" class="a-wrap"><span class="a-table__main">{{ $order->customer?->full_name }}</span><span class="a-table__sub">{{ $order->customer?->email }}</span></td>
-                <td data-label="Items" class="a-num">{{ $order->items_count }}</td>
-                <td data-label="Total" class="a-num">{{ number_format($order->total_amount, 2) }} EGP</td>
-                <td data-label="Deleted at">{{ optional($order->deleted_at)->format('Y-m-d h:i A') }}</td>
-                <td data-label="Actions"><div class="a-table__actions">
+                <td data-label="Order"><div class="a-cell"><span class="a-table__main a-num-tab">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</span>
+                    <span class="a-table__sub">{{ $order->items_count }} {{ \Illuminate\Support\Str::plural('ticket', $order->items_count) }}</span></div></td>
+                <td data-label="Customer"><div class="a-cell"><span class="a-table__main a-trunc" title="{{ $order->customer?->full_name }}">{{ $order->customer?->full_name ?: '—' }}</span><span class="a-table__sub a-trunc" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></div></td>
+                <td data-label="Total" class="a-num"><div class="a-cell"><b>{{ number_format($order->total_amount, 2) }}</b> <span class="a-muted">EGP</span></div></td>
+                <td data-label="Deleted at"><div class="a-cell">{{ optional($order->deleted_at)->format('d M Y') }}<span class="a-table__sub">{{ optional($order->deleted_at)->format('h:i A') }}</span></div></td>
+                <td data-label=""><div class="a-table__actions">
                     @can('orders.restore')
                         <form method="POST" action="{{ route('admin.orders.restore', $order->id) }}" data-a-confirm="Restore this order?" data-a-confirm-title="Restore order" data-a-confirm-ok="Restore">
                             @csrf

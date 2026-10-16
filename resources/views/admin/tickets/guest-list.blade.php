@@ -1,36 +1,25 @@
 @extends('admin.master')
 @section('title', 'Guest List')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
 <x-admin.page-header title="Guest List" subtitle="Invitation tickets issued outside of paid orders." :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
-    <a href="{{ route('admin.guest-list.template') }}" class="a-btn a-btn--outline"><i class="fa fa-file-arrow-down"></i> Import Template</a>
-    <a href="{{ route('admin.guest-list.export') }}" class="a-btn a-btn--outline"><i class="fa fa-file-export"></i> Export</a>
-    <button type="button" class="a-btn a-btn--outline" data-bs-toggle="modal" data-bs-target="#importGuestListModal"><i class="fa fa-file-import"></i> Import</button>
+    <x-admin.dropdown label="More">
+        <a class="a-menu__item" href="{{ route('admin.guest-list.template') }}"><i class="fa fa-file-arrow-down"></i> Import template</a>
+        <a class="a-menu__item" href="{{ route('admin.guest-list.export') }}"><i class="fa fa-file-export"></i> Export</a>
+        <button type="button" class="a-menu__item" data-bs-toggle="modal" data-bs-target="#importGuestListModal"><i class="fa fa-file-import"></i> Import</button>
+    </x-admin.dropdown>
     <button type="button" class="a-btn a-btn--primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal"><i class="fa fa-plus"></i> Create Invitation</button>
 </x-admin.page-header>
 
 <x-admin.flash />
 
 <x-admin.filters :action="route('admin.guest-list.index')" :reset="route('admin.guest-list.index')">
-    <div class="a-field"><label class="form-label" for="glSearch">Search</label><input type="text" id="glSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / guest"></div>
-    <div class="a-field"><label class="form-label" for="glEvent">Event Name</label>
-        <select id="glEvent" name="event_name" class="form-select js-select2">
-            <option value="">All events</option>
-            @foreach($eventNames as $eventName)
-                <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="glType">Guest Type</label>
-        <select id="glType" name="guest_type" class="form-select js-select2">
-            <option value="">All types</option>
-            @foreach($guestTypes as $guestType)
-                <option value="{{ $guestType }}" @selected(request('guest_type') === $guestType)>{{ $guestType }}</option>
-            @endforeach
-        </select></div>
+    <x-admin.search name="search" :value="request('search')" placeholder="Ticket # / guest" />
+    <x-admin.select label="Event" name="event_name" id="glEvent" class="no-select2" placeholder="All events" :options="collect($eventNames)->mapWithKeys(fn ($n) => [$n => $n])->all()" :value="request('event_name')" />
+    <x-admin.select label="Guest type" name="guest_type" id="glType" class="no-select2" placeholder="All types" :options="collect($guestTypes)->mapWithKeys(fn ($t) => [$t => $t])->all()" :value="request('guest_type')" />
 </x-admin.filters>
 
-<x-admin.card flush>
+<x-admin.card flush title="Guest Tickets" :subtitle="number_format($tickets->total()).' total'">
     @if($tickets->isEmpty())
         <x-admin.empty icon="fa-list-check" title="No guest tickets found" text="Create an invitation or import a CSV to add guests.">
             <button type="button" class="a-btn a-btn--primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal"><i class="fa fa-plus"></i> Create Invitation</button>
@@ -38,26 +27,28 @@
     @else
         <x-admin.table stack caption="Guest tickets">
             <thead>
-                <tr><th>Ticket Number</th><th>Name</th><th>Event</th><th>Guest Type</th><th>Status</th><th class="a-num">Actions</th></tr>
+                <tr><th>Ticket</th><th>Guest</th><th>Event</th><th>Status</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr>
             </thead>
             <tbody>
             @foreach($tickets as $ticket)
                 <tr>
-                    <td data-label="Ticket Number"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a></td>
-                    <td data-label="Name" class="a-wrap">{{ $ticket->holder_name }}</td>
-                    <td data-label="Event" class="a-wrap">{{ $ticket->eventLabel() }}</td>
-                    <td data-label="Guest Type" class="a-wrap">{{ $ticket->guest_type }}</td>
+                    <td data-label="Ticket"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a></td>
+                    <td data-label="Guest"><span class="a-table__main a-trunc a-tk-cell" title="{{ $ticket->holder_name }}">{{ $ticket->holder_name ?: '-' }}</span>
+                        @if($ticket->guest_type)<span class="a-table__sub a-trunc a-tk-cell" title="{{ $ticket->guest_type }}">{{ $ticket->guest_type }}</span>@endif</td>
+                    <td data-label="Event"><span class="a-trunc a-tk-cell" title="{{ $ticket->eventLabel() }}">{{ $ticket->eventLabel() ?: '-' }}</span></td>
                     <td data-label="Status"><x-admin.status :status="$ticket->status" kind="ticket" /></td>
-                    <td data-label="Actions">
+                    <td data-label="">
                         <div class="a-table__actions">
-                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>
+                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}">View</a>
                             @can('tickets.delete')
+                            <x-admin.dropdown label="" aria-label="More actions">
                                 <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete guest ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <input type="hidden" name="redirect_to" value="guest-list">
-                                    <button class="a-btn a-btn--danger a-btn--sm" type="submit" aria-label="Delete ticket {{ $ticket->ticket_number }}" title="Delete"><i class="fa fa-trash"></i></button>
+                                    <button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
                                 </form>
+                            </x-admin.dropdown>
                             @endcan
                         </div>
                     </td>
@@ -132,7 +123,7 @@
                     <input type="file" id="importFile" name="file" class="form-control" accept=".csv,text/csv" required>
                 </div>
             </div>
-            <div class="a-hint" style="margin-top:14px">
+            <div class="a-hint">
                 Template now contains only ticket data (guest_type, name, email, phone, gender).
             </div>
         </div>

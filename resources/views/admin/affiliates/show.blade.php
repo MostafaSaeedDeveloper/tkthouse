@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Affiliate: '.$affiliate->name)
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 <x-admin.page-header :title="'Affiliate: '.$affiliate->name" :subtitle="$affiliate->email" :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates' => route('admin.affiliates.index'), $affiliate->name]">
@@ -10,37 +9,37 @@
 
 <x-admin.flash />
 
-<div class="a-grid a-grid--4" style="margin-bottom:20px">
+<div class="a-grid a-m-kpis">
     <x-admin.kpi label="Referred Users" :value="$stats['referred_users']" icon="fa-user-plus" />
     <x-admin.kpi label="Orders" :value="$stats['orders_total']" icon="fa-receipt" />
     <x-admin.kpi label="Paid Orders" :value="$stats['orders_paid']" icon="fa-circle-check" />
     <x-admin.kpi label="Paid Revenue" :value="number_format($stats['revenue_paid'], 2).' EGP'" icon="fa-wallet" />
 </div>
 
-<x-admin.card title="Affiliate Link" style="margin-bottom:20px">
+<x-admin.card title="Affiliate Link">
     @if($affiliateLink)
         <dl class="a-kv">
-            <div><dt>Full Affiliate Link</dt><dd class="a-cus-link" style="justify-content:flex-end"><a href="{{ $affiliateLink }}" target="_blank" rel="noopener">{{ $affiliateLink }}</a>
+            <div><dt>Full Affiliate Link</dt><dd class="a-cus-link a-m-linkrow"><a href="{{ $affiliateLink }}" target="_blank" rel="noopener">{{ $affiliateLink }}</a>
                 <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $affiliateLink }}">Copy</button></dd></div>
-            <div><dt>Short Affiliate Link</dt><dd class="a-cus-link" style="justify-content:flex-end"><a href="{{ $shortAffiliateLink }}" target="_blank" rel="noopener">{{ $shortAffiliateLink }}</a>
+            <div><dt>Short Affiliate Link</dt><dd class="a-cus-link a-m-linkrow"><a href="{{ $shortAffiliateLink }}" target="_blank" rel="noopener">{{ $shortAffiliateLink }}</a>
                 <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $shortAffiliateLink }}">Copy</button></dd></div>
             <div><dt>Target</dt><dd><code>{{ $affiliate->affiliate_target_url ?: '/account/register' }}</code></dd></div>
         </dl>
     @else
         <p class="a-muted">No affiliate link generated yet.</p>
     @endif
-    <form method="POST" action="{{ route('admin.affiliates.store') }}" style="margin-top:16px" data-a-loading>
+    <form method="POST" action="{{ route('admin.affiliates.store') }}" class="a-m-inline-form" data-a-loading>
         @csrf
         <input type="hidden" name="user_id" value="{{ $affiliate->id }}">
         <div class="a-field">
             <label class="form-label" for="target_url">Target Link</label>
             <input id="target_url" name="target_url" class="form-control" value="{{ old('target_url', $affiliate->affiliate_target_url ?: '/account/register') }}" placeholder="/events/my-event">
         </div>
-        <button class="a-btn a-btn--dark" type="submit" style="margin-top:12px">Update Link</button>
+        <button class="a-btn a-btn--dark" type="submit">Update Link</button>
     </form>
 </x-admin.card>
 
-<x-admin.card flush title="Referred Users" style="margin-bottom:20px">
+<x-admin.card flush title="Referred Users">
     @if($referredUsers->isEmpty())
         <x-admin.empty icon="fa-user-plus" title="No referred users yet" />
     @else
@@ -50,7 +49,7 @@
         @foreach($referredUsers as $user)
             <tr>
                 <td data-label="Name">{{ $user->name }}</td>
-                <td data-label="Email" class="a-wrap">{{ $user->email }}</td>
+                <td data-label="Email"><span class="a-trunc" title="{{ $user->email }}">{{ $user->email }}</span></td>
                 <td data-label="Joined At">{{ $user->created_at?->format('Y-m-d H:i') }}</td>
             </tr>
         @endforeach
@@ -61,17 +60,9 @@
 </x-admin.card>
 
 <x-admin.filters :action="route('admin.affiliates.show', $affiliate)" :reset="route('admin.affiliates.show', $affiliate)">
-    <div class="a-field"><label class="form-label" for="afoEvent">Event</label>
-        <select name="event_id" id="afoEvent" class="form-select no-select2">
-            <option value="">All Events</option>
-            @foreach($events as $event)
-                <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="afoFrom">From</label>
-        <input type="date" id="afoFrom" name="date_from" class="form-control" value="{{ $filters['date_from'] }}"></div>
-    <div class="a-field"><label class="form-label" for="afoTo">To</label>
-        <input type="date" id="afoTo" name="date_to" class="form-control" value="{{ $filters['date_to'] }}"></div>
+    <x-admin.select label="Event" name="event_id" id="afoEvent" :options="$events->pluck('name', 'id')->all()" :value="$filters['event_id']" placeholder="All Events" class="no-select2" />
+    <x-admin.input label="From" name="date_from" id="afoFrom" type="date" :value="$filters['date_from']" />
+    <x-admin.input label="To" name="date_to" id="afoTo" type="date" :value="$filters['date_to']" />
 </x-admin.filters>
 
 @if($filters['event_id'] || $filters['date_from'] || $filters['date_to'])
@@ -88,12 +79,12 @@
         <x-admin.empty icon="fa-receipt" title="No orders found" />
     @else
     <x-admin.table stack caption="Orders via affiliate">
-        <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment Method</th><th class="a-num">Total</th><th class="a-num">View</th></tr></thead>
+        <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment Method</th><th class="a-num">Total</th><th class="a-num"><span class="a-sr-only">View</span></th></tr></thead>
         <tbody>
         @foreach($orders as $order)
             <tr>
                 <td data-label="Order #"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ $order->order_number }}</a></td>
-                <td data-label="Buyer">{{ $order->user?->name ?? '-' }}</td>
+                <td data-label="Buyer"><span class="a-trunc">{{ $order->user?->name ?? '-' }}</span></td>
                 <td data-label="Status"><x-admin.status :status="$order->status" kind="order" /></td>
                 <td data-label="Payment Method">{{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}</td>
                 <td data-label="Total" class="a-num">{{ number_format((float) $order->total_amount, 2) }} EGP</td>

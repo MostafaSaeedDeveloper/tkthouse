@@ -1,12 +1,11 @@
 @extends('admin.master')
 @section('title', 'Edit Permission')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Edit Permission" :crumbs="['Dashboard' => route('admin.dashboard'), 'Permissions' => route('admin.permissions.index'), 'Edit']" />
 <x-admin.flash />
 <form method="POST" action="{{ route('admin.permissions.update',$permission) }}" data-a-loading>
     @csrf @method('PUT')
-    <x-admin.card class="a-m-narrow">
+    <x-admin.card class="a-m-narrow a-m-narrow--sm">
         <x-admin.form-section title="Permission" cols="1">
             <x-admin.field label="Permission Name" name="name" for="p-name" required><input id="p-name" name="name" class="form-control" value="{{ old('name',$permission->name) }}" required></x-admin.field>
         </x-admin.form-section>

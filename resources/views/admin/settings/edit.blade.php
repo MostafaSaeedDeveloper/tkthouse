@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'General Settings')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="General Settings" subtitle="Branding, WhatsApp ticket sending and payment timeout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings']">
     <a class="a-btn a-btn--outline" href="{{ route('admin.payment-methods.index') }}"><i class="fa fa-credit-card"></i> Payment Methods</a>
@@ -22,7 +21,7 @@
             <x-admin.field label="Logo Footer" name="logo_footer" for="s-logo-footer"><input id="s-logo-footer" type="file" class="form-control" name="logo_footer" accept="image/*"></x-admin.field>
         </x-admin.form-section>
 
-        <x-admin.form-section title="Orders and messaging" cols="1">
+        <x-admin.form-section title="Orders and messaging" cols="2">
             <div class="a-m-switch form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="whatsapp_ticket_sending_enabled" name="whatsapp_ticket_sending_enabled" value="1" @checked(old('whatsapp_ticket_sending_enabled', data_get($settings, 'whatsapp_ticket_sending_enabled', true)))>
                 <label class="form-check-label" for="whatsapp_ticket_sending_enabled">

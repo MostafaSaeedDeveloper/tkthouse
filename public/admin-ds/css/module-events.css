@@ -1,0 +1,62 @@
+/* TKT Admin Design System — module rules (only what the shared components cannot express).
+   events + tickets + guest list. Buttons, badges, cards, tables, inputs, filters live in components.css. */
+
+/* ---- lists ---- */
+.a-ev-cell { max-width: 300px; }
+.a-tk-cell { max-width: 115px; }
+@media (min-width: 1200px) { .a-tk-cell { max-width: 170px; } }
+@media (min-width: 1280px) { .a-tk-cell { max-width: 240px; } }
+
+/* ---- event form: repeatable rows (ticket types, fees, lineup) ---- */
+.a-ev-head { display: flex; justify-content: space-between; align-items: center; gap: var(--a-s-3); flex-wrap: wrap; }
+.a-ev-rows { display: grid; gap: var(--a-s-3); }
+.a-ev-row { display: grid; grid-template-columns: 1fr; gap: var(--a-s-3); padding: var(--a-s-3); min-width: 0; background: var(--a-surface-2); border: 1px solid var(--a-line); border-radius: var(--a-radius-sm); }
+.a-ev-row .form-check { min-height: var(--a-control-h); display: flex; align-items: center; gap: var(--a-s-2); margin: 0; padding-left: 0; }
+.a-ev-row .form-check .form-check-input { margin: 0; float: none; flex: none; }
+.a-ev-row input[type="color"] { padding: 3px; }
+.a-ev-row__tools { display: flex; justify-content: flex-end; align-items: flex-end; }
+@media (min-width: 768px) {
+    .a-ev-row--ticket, .a-ev-row--lineup { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .a-ev-row--fee { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; }
+    .a-ev-span-2 { grid-column: span 2; } .a-ev-span-3 { grid-column: span 3; } .a-ev-span-6 { grid-column: 1 / -1; }
+}
+
+/* ---- event form: image upload + preview ---- */
+.a-ev-media { display: grid; grid-template-columns: 1fr; gap: var(--a-s-3); align-items: start; }
+@media (min-width: 768px) { .a-ev-media { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+.a-ev-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 56px; padding: var(--a-s-2); text-align: center; background: var(--a-surface); border: 1px dashed var(--a-line-strong); border-radius: var(--a-radius-sm); font-size: var(--a-fs-sm); color: var(--a-muted); }
+.a-ev-preview img { max-width: 100%; max-height: 120px; object-fit: cover; border-radius: var(--a-radius-xs); }
+.a-ev-lineup-img { max-width: 100%; max-height: 56px; margin-top: var(--a-s-2); object-fit: cover; border-radius: var(--a-radius-xs); }
+
+/* ---- event show / dashboard ---- */
+.a-ev-range { display: flex; flex-wrap: wrap; gap: var(--a-s-2); margin-bottom: var(--a-s-3); }
+.a-ev-range .a-chip { text-decoration: none; color: var(--a-ink); }
+.a-ev-range .a-chip.is-active { color: var(--a-on-dark); }
+.a-ev-context { margin: 0 0 var(--a-s-4); }
+.a-ev-desc { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* ---- ticket detail ---- */
+.a-tk-holder { display: flex; align-items: center; gap: var(--a-s-3); margin-bottom: var(--a-s-4); min-width: 0; }
+.a-tk-avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--a-yellow-soft); color: var(--a-yellow-ink); display: inline-flex; align-items: center; justify-content: center; font-weight: var(--a-fw-bold); font-size: var(--a-fs-sm); }
+.a-tk-holder__text { min-width: 0; }
+.a-tk-holder__name { font-weight: var(--a-fw-semibold); overflow-wrap: anywhere; }
+.a-tk-holder__sub { font-size: var(--a-fs-sm); color: var(--a-muted); overflow-wrap: anywhere; }
+.a-tk-qr { display: flex; flex-direction: column; align-items: center; gap: var(--a-s-2); text-align: center; }
+.a-tk-qr img { width: 160px; max-width: 100%; height: auto; aspect-ratio: 1; padding: var(--a-s-2); background: var(--a-surface); border: 1px solid var(--a-line); border-radius: var(--a-radius-sm); }
+.a-tk-qr__num { font-weight: var(--a-fw-semibold); letter-spacing: .04em; overflow-wrap: anywhere; }
+.a-tk-log { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--a-s-3); }
+.a-tk-log li { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--a-s-3); border-bottom: 1px solid var(--a-line-soft); font-size: var(--a-fs-table); }
+.a-tk-log li:last-child { border-bottom: 0; padding-bottom: 0; }
+.a-tk-log__when { font-size: var(--a-fs-sm); color: var(--a-muted); font-weight: var(--a-fw-semibold); }
+.a-tk-send { margin-top: var(--a-s-3); }
+
+/* ---- guest list ---- */
+.a-tk-modal-fields { display: grid; grid-template-columns: 1fr; gap: var(--a-s-3); }
+@media (min-width: 768px) { .a-tk-modal-fields { grid-template-columns: repeat(6, minmax(0, 1fr)); } .a-span-2 { grid-column: span 2; } .a-span-3 { grid-column: span 3; } .a-span-6 { grid-column: 1 / -1; } }
+.a-tk-foot { justify-content: flex-end; }
+.a-tk-rows td .form-control, .a-tk-rows td .form-select { min-width: 150px; }
+.a-tk-rows td .iti { width: 100%; }
+@media (max-width: 767px) {
+    .a-tk-rows tbody td { flex-direction: column; align-items: stretch; text-align: left; }
+    .a-tk-rows tbody td .form-control, .a-tk-rows tbody td .form-select { min-width: 0; width: 100%; }
+}
