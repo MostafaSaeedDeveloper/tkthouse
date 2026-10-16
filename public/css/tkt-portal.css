@@ -1,5 +1,5 @@
 /* TKT House — customer portal (my account, orders, tickets). Uses the V2 tokens from tkt-v2.css. */
-.tkt-portal { padding: 28px 0 var(--tkt-section-y); }
+.tkt-portal { padding-top: 28px; padding-bottom: var(--tkt-section-y); }
 .tkt-portal__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
 .tkt-portal__who { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .tkt-portal__avatar { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--tkt-primary); color: var(--tkt-on-primary); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem; }
