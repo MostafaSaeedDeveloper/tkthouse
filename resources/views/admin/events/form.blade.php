@@ -36,309 +36,284 @@
     }
 @endphp
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Event Name</label>
+<x-admin.form-section title="Basic information" description="Name, schedule and where the event takes place." :cols="2">
+    <x-admin.field label="Event Name" for="event_name" name="name" required class="is-full">
         <input name="name" id="event_name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
-    </div>
-    <div class="col-md-3 mb-3">
-        <label class="form-label">Start Date</label>
-        <input type="text" name="event_date" class="form-control js-flatpickr" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d" required>
-    </div>
-    <div class="col-md-3 mb-3">
-        <label class="form-label">End Date <small class="text-muted">(optional, for multi-day events)</small></label>
-        <input type="text" name="end_date" class="form-control js-flatpickr" value="{{ old('end_date', isset($event) ? $event->end_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d">
-    </div>
-    <div class="col-md-3 mb-3">
-        <label class="form-label">Time</label>
-        <input type="time" name="event_time" class="form-control" value="{{ old('event_time', $event->event_time ?? '') }}" required>
-    </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Location</label>
-        <input name="location" class="form-control" value="{{ old('location', $event->location ?? '') }}" required>
-    </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Slug</label>
+    </x-admin.field>
+    <x-admin.field label="Start Date" for="event_date" name="event_date" required>
+        <input type="text" name="event_date" id="event_date" class="form-control js-flatpickr" value="{{ old('event_date', isset($event) ? $event->event_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d" required>
+    </x-admin.field>
+    <x-admin.field label="End Date" for="end_date" name="end_date" hint="Optional, for multi-day events.">
+        <input type="text" name="end_date" id="end_date" class="form-control js-flatpickr" value="{{ old('end_date', isset($event) ? $event->end_date?->format('Y-m-d') : '') }}" data-date-format="Y-m-d">
+    </x-admin.field>
+    <x-admin.field label="Time" for="event_time" name="event_time" required>
+        <input type="time" name="event_time" id="event_time" class="form-control" value="{{ old('event_time', $event->event_time ?? '') }}" required>
+    </x-admin.field>
+    <x-admin.field label="Location" for="event_location" name="location" required>
+        <input name="location" id="event_location" class="form-control" value="{{ old('location', $event->location ?? '') }}" required>
+    </x-admin.field>
+    <x-admin.field label="Slug" for="event_slug" name="slug" hint="Leave empty to generate it from the event name.">
         <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name">
-    </div>
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Map URL (Optional)</label>
-        <input name="map_url" class="form-control" value="{{ old('map_url', $event->map_url ?? '') }}">
-    </div>
-    <div class="col-12 mb-3">
-        <label class="form-label">Map Embed Code (Optional)</label>
-        <textarea name="map_embed" class="form-control" rows="4" placeholder='<iframe src="https://www.google.com/maps/embed?pb=..." ...></iframe>'>{{ old('map_embed', $event->map_embed ?? '') }}</textarea>
-    </div>
-    <div class="col-md-4 mb-3">
-        <label class="form-label">Status</label>
-        <select name="status" class="form-select">
+    </x-admin.field>
+    <x-admin.field label="Map URL (Optional)" for="event_map_url" name="map_url">
+        <input name="map_url" id="event_map_url" class="form-control" value="{{ old('map_url', $event->map_url ?? '') }}">
+    </x-admin.field>
+    <x-admin.field label="Map Embed Code (Optional)" for="event_map_embed" name="map_embed" class="is-full">
+        <textarea name="map_embed" id="event_map_embed" class="form-control" rows="4" placeholder='<iframe src="https://www.google.com/maps/embed?pb=..." ...></iframe>'>{{ old('map_embed', $event->map_embed ?? '') }}</textarea>
+    </x-admin.field>
+</x-admin.form-section>
+
+<x-admin.form-section class="a-ev-block" title="Availability &amp; checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
+    <x-admin.field label="Status" for="event_status" name="status">
+        <select name="status" id="event_status" class="form-select">
             <option value="active" @selected(old('status', $event->status ?? 'active') === 'active')>Active</option>
             <option value="inactive" @selected(old('status', $event->status ?? '') === 'inactive')>Inactive</option>
             <option value="draft" @selected(old('status', $event->status ?? '') === 'draft')>Draft</option>
             <option value="sold_out" @selected(old('status', $event->status ?? '') === 'sold_out')>Sold Out</option>
         </select>
-    </div>
-    <div class="col-md-4 mb-3">
-        <label class="form-label">Checkout Flow</label>
-        <select name="requires_booking_approval" class="form-select">
+    </x-admin.field>
+    <x-admin.field label="Checkout Flow" for="event_checkout_flow" name="requires_booking_approval">
+        <select name="requires_booking_approval" id="event_checkout_flow" class="form-select">
             <option value="1" @selected((int) old('requires_booking_approval', $event->requires_booking_approval ?? 1) === 1)>Require admin approval before payment</option>
             <option value="0" @selected((int) old('requires_booking_approval', $event->requires_booking_approval ?? 1) === 0)>Allow direct payment at checkout</option>
         </select>
-    </div>
-    <div class="col-12 mb-3">
-        <div class="row g-3 align-items-start">
-            <div class="col-md-8">
-                <label class="form-label">Event Image (Optional)</label>
-                <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
-                <div class="form-text">Upload an image to be shown as the event cover.</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Image Preview</label>
-                <div class="border rounded p-2 text-center bg-body-light">
-                    <img
-                        id="cover-image-preview"
-                        data-has-existing="{{ isset($event) && $event->cover_image ? 1 : 0 }}"
-                        src="{{ isset($event) ? ($event->cover_image_url ?? '') : '' }}"
-                        alt="Event cover preview"
-                        class="img-fluid rounded {{ isset($event) && $event->cover_image ? '' : 'd-none' }}"
-                        style="max-height: 180px; object-fit: cover;"
-                    >
-                    <div id="cover-image-placeholder" class="small text-muted {{ isset($event) && $event->cover_image ? 'd-none' : '' }}">
-                        No image selected.
-                    </div>
-                </div>
+    </x-admin.field>
+</x-admin.form-section>
+
+<x-admin.form-section class="a-ev-block" title="Media" description="Cover, home page banner, venue map and gallery images." :cols="1">
+    <div class="a-ev-media">
+        <x-admin.field label="Event Image (Optional)" for="cover_image" name="cover_image" hint="Upload an image to be shown as the event cover.">
+            <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
+        </x-admin.field>
+        <div>
+            <span class="form-label">Image Preview</span>
+            <div class="a-ev-preview">
+                <img id="cover-image-preview" data-has-existing="{{ isset($event) && $event->cover_image ? 1 : 0 }}" src="{{ isset($event) ? ($event->cover_image_url ?? '') : '' }}" alt="Event cover preview" class="{{ isset($event) && $event->cover_image ? '' : 'd-none' }}">
+                <div id="cover-image-placeholder" class="{{ isset($event) && $event->cover_image ? 'd-none' : '' }}">No image selected.</div>
             </div>
         </div>
     </div>
 
-    <div class="col-12 mb-3">
-        <div class="row g-3 align-items-start">
-            <div class="col-md-8">
-                <label class="form-label">Event Banner (Optional)</label>
-                <input type="file" name="event_banner" id="event_banner" class="form-control" accept="image/*">
-                <div class="form-text">Upload a banner image to appear in the home page slider.</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Banner Preview</label>
-                <div class="border rounded p-2 text-center bg-body-light">
-                    <img
-                        id="event-banner-preview"
-                        data-has-existing="{{ isset($event) && $event->event_banner ? 1 : 0 }}"
-                        src="{{ isset($event) ? ($event->event_banner_url ?? '') : '' }}"
-                        alt="Event banner preview"
-                        class="img-fluid rounded {{ isset($event) && $event->event_banner ? '' : 'd-none' }}"
-                        style="max-height: 180px; object-fit: cover;"
-                    >
-                    <div id="event-banner-placeholder" class="small text-muted {{ isset($event) && $event->event_banner ? 'd-none' : '' }}">
-                        No banner selected.
-                    </div>
-                </div>
+    <div class="a-ev-media">
+        <x-admin.field label="Event Banner (Optional)" for="event_banner" name="event_banner" hint="Upload a banner image to appear in the home page slider.">
+            <input type="file" name="event_banner" id="event_banner" class="form-control" accept="image/*">
+        </x-admin.field>
+        <div>
+            <span class="form-label">Banner Preview</span>
+            <div class="a-ev-preview">
+                <img id="event-banner-preview" data-has-existing="{{ isset($event) && $event->event_banner ? 1 : 0 }}" src="{{ isset($event) ? ($event->event_banner_url ?? '') : '' }}" alt="Event banner preview" class="{{ isset($event) && $event->event_banner ? '' : 'd-none' }}">
+                <div id="event-banner-placeholder" class="{{ isset($event) && $event->event_banner ? 'd-none' : '' }}">No banner selected.</div>
             </div>
         </div>
     </div>
 
-    <div class="col-12 mb-3">
-        <div class="row g-3 align-items-start">
-            <div class="col-md-8">
-                <label class="form-label">Venue Map Image (Optional)</label>
-                <input type="file" name="venue_map" id="venue_map" class="form-control" accept="image/*">
-                <div class="form-text">Upload a venue map image to show before House Rules on the event page.</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Venue Map Preview</label>
-                <div class="border rounded p-2 text-center bg-body-light">
-                    <img
-                        id="venue-map-preview"
-                        data-has-existing="{{ isset($event) && $event->venue_map ? 1 : 0 }}"
-                        src="{{ isset($event) ? ($event->venue_map_url ?? '') : '' }}"
-                        alt="Venue map preview"
-                        class="img-fluid rounded {{ isset($event) && $event->venue_map ? '' : 'd-none' }}"
-                        style="max-height: 180px; object-fit: cover;"
-                    >
-                    <div id="venue-map-placeholder" class="small text-muted {{ isset($event) && $event->venue_map ? 'd-none' : '' }}">
-                        No venue map selected.
-                    </div>
-                </div>
+    <div class="a-ev-media">
+        <x-admin.field label="Venue Map Image (Optional)" for="venue_map" name="venue_map" hint="Upload a venue map image to show before House Rules on the event page.">
+            <input type="file" name="venue_map" id="venue_map" class="form-control" accept="image/*">
+        </x-admin.field>
+        <div>
+            <span class="form-label">Venue Map Preview</span>
+            <div class="a-ev-preview">
+                <img id="venue-map-preview" data-has-existing="{{ isset($event) && $event->venue_map ? 1 : 0 }}" src="{{ isset($event) ? ($event->venue_map_url ?? '') : '' }}" alt="Venue map preview" class="{{ isset($event) && $event->venue_map ? '' : 'd-none' }}">
+                <div id="venue-map-placeholder" class="{{ isset($event) && $event->venue_map ? 'd-none' : '' }}">No venue map selected.</div>
             </div>
         </div>
     </div>
-    <div class="col-12 mb-3">
-        <label class="form-label">Description (Optional)</label>
-        <textarea name="description" class="form-control js-ckeditor-description" rows="3" placeholder="Add event details for attendees...">{{ old('description', $event->description ?? '') }}</textarea>
-        <div class="form-text">You can leave this empty if you don't need a description.</div>
-    </div>
-    <div class="col-12 mb-3">
-        <label class="form-label">House Rules</label>
-        <textarea name="house_rules" class="form-control" rows="3">{{ old('house_rules', $event->house_rules ?? '') }}</textarea>
-    </div>
-    <div class="col-12 mb-3">
-        <label class="form-label">Gallery Images (Optional, Multiple)</label>
-        <input type="file" name="gallery_images[]" class="form-control" multiple>
-    </div>
+
+    <x-admin.field label="Gallery Images (Optional, Multiple)" for="gallery_images" name="gallery_images">
+        <input type="file" name="gallery_images[]" id="gallery_images" class="form-control" multiple>
+    </x-admin.field>
 
     @if(isset($event) && $event->images->count())
-        <div class="col-12 mb-3">
-            <div class="small text-muted">Current Images: {{ $event->images->count() }}</div>
+        <div>
+            <div class="a-hint">Current Images: {{ $event->images->count() }}</div>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" value="1" name="replace_gallery" id="replace_gallery">
                 <label class="form-check-label" for="replace_gallery">Replace gallery images</label>
             </div>
         </div>
     @endif
+</x-admin.form-section>
+
+<x-admin.form-section class="a-ev-block" title="Content" description="Shown to attendees on the event page." :cols="1">
+    <x-admin.field label="Description (Optional)" for="event_description" name="description" hint="You can leave this empty if you don't need a description.">
+        <textarea name="description" id="event_description" class="form-control js-ckeditor-description" rows="3" placeholder="Add event details for attendees...">{{ old('description', $event->description ?? '') }}</textarea>
+    </x-admin.field>
+    <x-admin.field label="House Rules" for="event_house_rules" name="house_rules">
+        <textarea name="house_rules" id="event_house_rules" class="form-control" rows="3">{{ old('house_rules', $event->house_rules ?? '') }}</textarea>
+    </x-admin.field>
+</x-admin.form-section>
+
+{{-- Ticket types: fully dynamic, add as many as needed --}}
+<div class="a-ev-block">
+    <div class="a-ev-section-head">
+        <div>
+            <h3>Ticket Types</h3>
+            <p class="a-ev-block__desc">Add as many ticket types as you need, each with its own price, availability and limits.</p>
+        </div>
+        <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-ticket-row"><i class="fa fa-plus"></i> Add Ticket Type</button>
+    </div>
+    <div class="a-ev-rows" id="ticket-rows" data-next-index="{{ count($ticketRows) }}">
+        @foreach($ticketRows as $index => $ticket)
+            <div class="a-ev-row a-ev-row--ticket ticket-row">
+                <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-name">Ticket Name</label><input class="form-control" id="tickets-{{ $index }}-name" name="tickets[{{ $index }}][name]" value="{{ $ticket['name'] ?? '' }}"></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-price">Price</label><input type="number" step="0.01" class="form-control" id="tickets-{{ $index }}-price" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-status">Status</label><select class="form-select" id="tickets-{{ $index }}-status" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control form-control-color w-100" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max/Order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
+                <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-label">Label</label><input class="form-control" id="tickets-{{ $index }}-label" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
+                <div class="a-field a-ev-span-3"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
+                <div class="a-field">
+                    <span class="form-label">Couple ticket</span>
+                    <div class="form-check">
+                        <input type="hidden" name="tickets[{{ $index }}][is_couple]" value="0">
+                        <input class="form-check-input" type="checkbox" value="1" name="tickets[{{ $index }}][is_couple]" id="ticket-couple-{{ $index }}" @checked((bool) ($ticket['is_couple'] ?? false))>
+                        <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples Only</label>
+                    </div>
+                </div>
+                <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+            </div>
+        @endforeach
+    </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-    <h4 class="h5 mb-0">Ticket Types</h4>
-    <button type="button" class="btn btn-sm btn-alt-primary" id="add-ticket-row">Add Ticket Type</button>
+<div class="a-ev-block">
+    <div class="a-ev-section-head">
+        <div>
+            <h3>Event Fees</h3>
+            <p class="a-ev-block__desc">Optional service fees added at checkout, as a percentage or a fixed amount.</p>
+        </div>
+        <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-fee-row"><i class="fa fa-plus"></i> Add Fee</button>
+    </div>
+    <div class="a-ev-rows" id="fee-rows" data-next-index="{{ count($feeRows) }}">
+        @foreach($feeRows as $index => $fee)
+            <div class="a-ev-row a-ev-row--fee fee-row">
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-name">Fee Name</label><input class="form-control" id="fees-{{ $index }}-name" name="fees[{{ $index }}][name]" value="{{ $fee['name'] ?? '' }}"></div>
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-type">Fee Type</label><select class="form-select" id="fees-{{ $index }}-type" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-value">Value</label><input type="number" step="0.01" class="form-control" id="fees-{{ $index }}-value" name="fees[{{ $index }}][value]" value="{{ $fee['value'] ?? '' }}"></div>
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-description">Description</label><input class="form-control" id="fees-{{ $index }}-description" name="fees[{{ $index }}][description]" value="{{ $fee['description'] ?? '' }}"></div>
+                <div class="a-ev-row__tools"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove fee"><i class="fa fa-trash"></i> Remove</button></div>
+            </div>
+        @endforeach
+    </div>
 </div>
-<div id="ticket-rows" data-next-index="{{ count($ticketRows) }}">
-    @foreach($ticketRows as $index => $ticket)
-        <div class="row border rounded p-3 mb-2 ticket-row align-items-end g-2">
-            <div class="col-lg-3 col-md-6"><label class="form-label">Ticket Name</label><input class="form-control" name="tickets[{{ $index }}][name]" value="{{ $ticket['name'] ?? '' }}"></div>
-            <div class="col-lg-2 col-md-3"><label class="form-label">Price</label><input type="number" step="0.01" class="form-control" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
-            <div class="col-lg-2 col-md-3"><label class="form-label">Status</label><select class="form-select" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
-            <div class="col-lg-1 col-md-3"><label class="form-label">Color</label><input type="color" class="form-control form-control-color w-100" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
-            <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
-            <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
-            <div class="col-lg-1 col-md-3"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
-            <div class="col-lg-2 col-md-4">
-                <div class="form-check mt-4">
-                    <input type="hidden" name="tickets[{{ $index }}][is_couple]" value="0">
-                    <input class="form-check-input" type="checkbox" value="1" name="tickets[{{ $index }}][is_couple]" id="ticket-couple-{{ $index }}" @checked((bool) ($ticket['is_couple'] ?? false))>
-                    <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples Only</label>
+
+<div class="a-ev-block">
+    <div class="a-ev-section-head">
+        <div>
+            <h3>Lineup Artists</h3>
+            <p class="a-ev-block__desc">Performers shown on the event page, ordered by the Order field.</p>
+        </div>
+        <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-lineup-row"><i class="fa fa-plus"></i> Add Artist</button>
+    </div>
+    <div class="a-ev-rows" id="lineup-rows" data-next-index="{{ count($lineupRows) }}">
+        @foreach($lineupRows as $index => $lineup)
+            <div class="a-ev-row a-ev-row--lineup lineup-row">
+                <div class="a-field a-ev-span-3">
+                    <label class="form-label" for="lineups-{{ $index }}-artist">Artist Name</label>
+                    <input class="form-control" id="lineups-{{ $index }}-artist" name="lineups[{{ $index }}][artist_name]" value="{{ $lineup['artist_name'] ?? '' }}" placeholder="DJ / Artist name">
+                </div>
+                <div class="a-field a-ev-span-3">
+                    <label class="form-label" for="lineups-{{ $index }}-instagram">Instagram Handle</label>
+                    <div class="input-group">
+                        <span class="input-group-text">@</span>
+                        <input class="form-control" id="lineups-{{ $index }}-instagram" name="lineups[{{ $index }}][instagram]" value="{{ ltrim($lineup['instagram'] ?? '', '@') }}" placeholder="username">
+                    </div>
+                </div>
+                <div class="a-field a-ev-span-2">
+                    <label class="form-label" for="lineups-{{ $index }}-time">Performance Time</label>
+                    <input class="form-control" id="lineups-{{ $index }}-time" name="lineups[{{ $index }}][performance_time]" value="{{ $lineup['performance_time'] ?? '' }}" placeholder="e.g. 10:00 PM">
+                </div>
+                <div class="a-field a-ev-span-2">
+                    <label class="form-label" for="lineups-{{ $index }}-date">Performance Date</label>
+                    <input type="text" class="form-control js-flatpickr" id="lineups-{{ $index }}-date" name="lineups[{{ $index }}][performance_date]" value="{{ $lineup['performance_date'] ?? '' }}" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
+                </div>
+                <div class="a-field">
+                    <label class="form-label" for="lineups-{{ $index }}-order">Order</label>
+                    <input type="number" min="0" class="form-control" id="lineups-{{ $index }}-order" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
+                </div>
+                <div class="a-field a-ev-span-6">
+                    <label class="form-label" for="lineup-image-{{ $index }}">Artist Image</label>
+                    <input type="hidden" name="lineups[{{ $index }}][existing_image]" value="{{ $lineup['image'] ?? '' }}">
+                    <input type="file" class="form-control lineup-image-input" id="lineup-image-{{ $index }}" name="lineup_images[{{ $index }}]" accept="image/*" data-preview-id="lineup-preview-{{ $index }}">
+                    @if(!empty($lineup['_existing_image_url']))
+                        <img id="lineup-preview-{{ $index }}" src="{{ $lineup['_existing_image_url'] }}" alt="Artist image" class="a-ev-lineup-img">
+                    @else
+                        <img id="lineup-preview-{{ $index }}" src="" alt="" class="a-ev-lineup-img d-none">
+                    @endif
+                </div>
+                <div class="a-ev-row__tools a-ev-span-6">
+                    <button type="button" class="a-btn a-btn--danger a-btn--sm remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
                 </div>
             </div>
-            <div class="col-lg-10 col-md-8 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
-        </div>
-    @endforeach
-</div>
-
-<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-    <h4 class="h5 mb-0">Event Fees</h4>
-    <button type="button" class="btn btn-sm btn-alt-primary" id="add-fee-row">Add Fee</button>
-</div>
-<div id="fee-rows" data-next-index="{{ count($feeRows) }}">
-    @foreach($feeRows as $index => $fee)
-        <div class="row border rounded p-3 mb-2 fee-row">
-            <div class="col-md-3 mb-2"><label class="form-label">Fee Name</label><input class="form-control" name="fees[{{ $index }}][name]" value="{{ $fee['name'] ?? '' }}"></div>
-            <div class="col-md-3 mb-2"><label class="form-label">Fee Type</label><select class="form-select" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
-            <div class="col-md-2 mb-2"><label class="form-label">Value</label><input type="number" step="0.01" class="form-control" name="fees[{{ $index }}][value]" value="{{ $fee['value'] ?? '' }}"></div>
-            <div class="col-md-3 mb-2"><label class="form-label">Description</label><input class="form-control" name="fees[{{ $index }}][description]" value="{{ $fee['description'] ?? '' }}"></div>
-            <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
-        </div>
-    @endforeach
-</div>
-
-<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-    <h4 class="h5 mb-0">Lineup Artists</h4>
-    <button type="button" class="btn btn-sm btn-alt-primary" id="add-lineup-row">Add Artist</button>
-</div>
-<div id="lineup-rows" data-next-index="{{ count($lineupRows) }}">
-    @foreach($lineupRows as $index => $lineup)
-        <div class="row border rounded p-3 mb-2 lineup-row align-items-end g-2">
-            <div class="col-lg-3 col-md-6">
-                <label class="form-label">Artist Name</label>
-                <input class="form-control" name="lineups[{{ $index }}][artist_name]" value="{{ $lineup['artist_name'] ?? '' }}" placeholder="DJ / Artist name">
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <label class="form-label">Instagram Handle</label>
-                <div class="input-group">
-                    <span class="input-group-text">@</span>
-                    <input class="form-control" name="lineups[{{ $index }}][instagram]" value="{{ ltrim($lineup['instagram'] ?? '', '@') }}" placeholder="username">
-                </div>
-            </div>
-            <div class="col-lg-2 col-md-4">
-                <label class="form-label">Performance Time</label>
-                <input class="form-control" name="lineups[{{ $index }}][performance_time]" value="{{ $lineup['performance_time'] ?? '' }}" placeholder="e.g. 10:00 PM">
-            </div>
-            <div class="col-lg-2 col-md-4">
-                <label class="form-label">Performance Date</label>
-                <input type="text" class="form-control js-flatpickr" name="lineups[{{ $index }}][performance_date]" value="{{ $lineup['performance_date'] ?? '' }}" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
-            </div>
-            <div class="col-lg-1 col-md-2">
-                <label class="form-label">Order</label>
-                <input type="number" min="0" class="form-control" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <label class="form-label">Artist Image</label>
-                <input type="hidden" name="lineups[{{ $index }}][existing_image]" value="{{ $lineup['image'] ?? '' }}">
-                <input type="file" class="form-control lineup-image-input" name="lineup_images[{{ $index }}]" accept="image/*" data-preview-id="lineup-preview-{{ $index }}">
-                @if(!empty($lineup['_existing_image_url']))
-                    <img id="lineup-preview-{{ $index }}" src="{{ $lineup['_existing_image_url'] }}" alt="Artist image" class="mt-2 rounded" style="max-height:60px; object-fit:cover;">
-                @else
-                    <img id="lineup-preview-{{ $index }}" src="" alt="" class="mt-2 rounded d-none" style="max-height:60px; object-fit:cover;">
-                @endif
-            </div>
-            <div class="col-12 d-flex justify-content-end">
-                <button type="button" class="btn btn-sm btn-alt-danger remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
-            </div>
-        </div>
-    @endforeach
+        @endforeach
+    </div>
 </div>
 
 <template id="lineup-row-template">
-    <div class="row border rounded p-3 mb-2 lineup-row align-items-end g-2">
-        <div class="col-lg-3 col-md-6">
-            <label class="form-label">Artist Name</label>
-            <input class="form-control" name="__LINEUPNAME__[artist_name]" placeholder="DJ / Artist name">
+    <div class="a-ev-row a-ev-row--lineup lineup-row">
+        <div class="a-field a-ev-span-3">
+            <label class="form-label" for="lineup-__LINEUPINDEX__-artist">Artist Name</label>
+            <input class="form-control" id="lineup-__LINEUPINDEX__-artist" name="__LINEUPNAME__[artist_name]" placeholder="DJ / Artist name">
         </div>
-        <div class="col-lg-3 col-md-6">
-            <label class="form-label">Instagram Handle</label>
+        <div class="a-field a-ev-span-3">
+            <label class="form-label" for="lineup-__LINEUPINDEX__-instagram">Instagram Handle</label>
             <div class="input-group">
                 <span class="input-group-text">@</span>
-                <input class="form-control" name="__LINEUPNAME__[instagram]" placeholder="username">
+                <input class="form-control" id="lineup-__LINEUPINDEX__-instagram" name="__LINEUPNAME__[instagram]" placeholder="username">
             </div>
         </div>
-        <div class="col-lg-2 col-md-4">
-            <label class="form-label">Performance Time</label>
-            <input class="form-control" name="__LINEUPNAME__[performance_time]" placeholder="e.g. 10:00 PM">
+        <div class="a-field a-ev-span-2">
+            <label class="form-label" for="lineup-__LINEUPINDEX__-time">Performance Time</label>
+            <input class="form-control" id="lineup-__LINEUPINDEX__-time" name="__LINEUPNAME__[performance_time]" placeholder="e.g. 10:00 PM">
         </div>
-        <div class="col-lg-2 col-md-4">
-            <label class="form-label">Performance Date</label>
-            <input type="text" class="form-control js-flatpickr" name="__LINEUPNAME__[performance_date]" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
+        <div class="a-field a-ev-span-2">
+            <label class="form-label" for="lineup-__LINEUPINDEX__-date">Performance Date</label>
+            <input type="text" class="form-control js-flatpickr" id="lineup-__LINEUPINDEX__-date" name="__LINEUPNAME__[performance_date]" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
         </div>
-        <div class="col-lg-1 col-md-2">
-            <label class="form-label">Order</label>
-            <input type="number" min="0" class="form-control" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
+        <div class="a-field">
+            <label class="form-label" for="lineup-__LINEUPINDEX__-order">Order</label>
+            <input type="number" min="0" class="form-control" id="lineup-__LINEUPINDEX__-order" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
         </div>
-        <div class="col-lg-3 col-md-6">
-            <label class="form-label">Artist Image</label>
-            <input type="file" class="form-control lineup-image-input" name="lineup_images[__LINEUPINDEX__]" accept="image/*" data-preview-id="lineup-preview-__LINEUPINDEX__">
-            <img id="lineup-preview-__LINEUPINDEX__" src="" alt="" class="mt-2 rounded d-none" style="max-height:60px; object-fit:cover;">
+        <div class="a-field a-ev-span-6">
+            <label class="form-label" for="lineup-image-__LINEUPINDEX__">Artist Image</label>
+            <input type="file" class="form-control lineup-image-input" id="lineup-image-__LINEUPINDEX__" name="lineup_images[__LINEUPINDEX__]" accept="image/*" data-preview-id="lineup-preview-__LINEUPINDEX__">
+            <img id="lineup-preview-__LINEUPINDEX__" src="" alt="" class="a-ev-lineup-img d-none">
         </div>
-        <div class="col-12 d-flex justify-content-end">
-            <button type="button" class="btn btn-sm btn-alt-danger remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
+        <div class="a-ev-row__tools a-ev-span-6">
+            <button type="button" class="a-btn a-btn--danger a-btn--sm remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
         </div>
     </div>
 </template>
 
 <template id="ticket-row-template">
-    <div class="row border rounded p-3 mb-2 ticket-row align-items-end g-2">
-        <div class="col-lg-3 col-md-6"><label class="form-label">Ticket Name</label><input class="form-control" name="__NAME__[name]"></div>
-        <div class="col-lg-2 col-md-3"><label class="form-label">Price</label><input type="number" step="0.01" class="form-control" name="__NAME__[price]"></div>
-        <div class="col-lg-2 col-md-3"><label class="form-label">Status</label><select class="form-select" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
-        <div class="col-lg-1 col-md-3"><label class="form-label">Color</label><input type="color" class="form-control form-control-color w-100" name="__NAME__[color]" value="#0d6efd"></div>
-        <div class="col-lg-1 col-md-3"><label class="form-label">Label</label><input class="form-control" name="__NAME__[label]"></div>
-        <div class="col-lg-2 col-md-6"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
-        <div class="col-lg-1 col-md-3"><label class="form-label">Max/Order</label><input type="number" min="1" max="100" class="form-control" name="__NAME__[max_per_order]" value="10"></div>
-        <div class="col-lg-2 col-md-4">
-            <div class="form-check mt-4">
+    <div class="a-ev-row a-ev-row--ticket ticket-row">
+        <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-name">Ticket Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-price">Price</label><input type="number" step="0.01" class="form-control" id="__ID__-price" name="__NAME__[price]"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-status">Status</label><select class="form-select" id="__ID__-status" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
+        <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control form-control-color w-100" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-max">Max/Order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
+        <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-label">Label</label><input class="form-control" id="__ID__-label" name="__NAME__[label]"></div>
+        <div class="a-field a-ev-span-3"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
+        <div class="a-field">
+            <span class="form-label">Couple ticket</span>
+            <div class="form-check">
                 <input type="hidden" name="__NAME__[is_couple]" value="0">
                 <input class="form-check-input" type="checkbox" value="1" name="__NAME__[is_couple]" id="__ID__">
                 <label class="form-check-label" for="__ID__">Couples Only</label>
             </div>
         </div>
-        <div class="col-lg-10 col-md-8 d-flex justify-content-lg-end justify-content-start"><button type="button" class="btn btn-sm btn-alt-danger remove-row"><i class="fa fa-trash"></i></button></div>
+        <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
 
 <template id="fee-row-template">
-    <div class="row border rounded p-3 mb-2 fee-row">
-        <div class="col-md-3 mb-2"><label class="form-label">Fee Name</label><input class="form-control" name="__NAME__[name]"></div>
-        <div class="col-md-3 mb-2"><label class="form-label">Fee Type</label><select class="form-select" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
-        <div class="col-md-2 mb-2"><label class="form-label">Value</label><input type="number" step="0.01" class="form-control" name="__NAME__[value]"></div>
-        <div class="col-md-3 mb-2"><label class="form-label">Description</label><input class="form-control" name="__NAME__[description]"></div>
-        <div class="col-md-1 mb-2 d-flex align-items-end"><button type="button" class="btn btn-sm btn-alt-danger w-100 remove-row"><i class="fa fa-trash"></i></button></div>
+    <div class="a-ev-row a-ev-row--fee fee-row">
+        <div class="a-field"><label class="form-label" for="__ID__-name">Fee Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-type">Fee Type</label><select class="form-select" id="__ID__-type" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
+        <div class="a-field"><label class="form-label" for="__ID__-value">Value</label><input type="number" step="0.01" class="form-control" id="__ID__-value" name="__NAME__[value]"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
+        <div class="a-ev-row__tools"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove fee"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
 

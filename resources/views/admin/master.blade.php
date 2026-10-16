@@ -1,169 +1,108 @@
 <!doctype html>
-<html lang="en" class="remember-theme">
+<html lang="en">
 <head>
+<meta name="color-scheme" content="light">
+<script>/* Admin V2 is a light-content design: keep Dashmix from switching to its dark theme when the OS prefers dark */(function(){var h=document.documentElement;function f(){if(h.classList.contains('dark'))h.classList.remove('dark');if(h.hasAttribute('data-bs-theme'))h.removeAttribute('data-bs-theme');}f();new MutationObserver(f).observe(h,{attributes:true,attributeFilter:['class','data-bs-theme']});})();</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   @php
-  $siteName = \App\Support\SystemSettings::get('site_name', 'TKT House');
-  $primaryColor = \App\Support\SystemSettings::get('primary_color', '#f5b800');
-  $secondaryColor = \App\Support\SystemSettings::get('secondary_color', '#111111');
-  $logoLight = \App\Support\SystemSettings::get('site_logo_light') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_light')) : asset('images/logo-light.png');
-@endphp
-  <title>{{ $siteName }} — Admin</title>
+    $siteName = \App\Support\SystemSettings::get('site_name', 'TKT House');
+    $logoLight = \App\Support\SystemSettings::get('site_logo_light') ? asset('storage/'.\App\Support\SystemSettings::get('site_logo_light')) : asset('images/logo-light.png');
+    $authUser = auth()->user();
+    $initial = $authUser ? mb_strtoupper(mb_substr(trim((string) ($authUser->name ?: $authUser->email)), 0, 1)) : '?';
+    $roleName = $authUser?->getRoleNames()->first();
+    $pageTitle = trim($__env->yieldContent('title'));
+  @endphp
+  <title>{{ $pageTitle !== '' ? $pageTitle.' · ' : '' }}{{ $siteName }} Admin</title>
   <meta name="robots" content="noindex, nofollow">
 
-  <link rel="shortcut icon"                         href="{{ asset('images/favicon.png') }}">
+  <link rel="shortcut icon" href="{{ asset('images/favicon.png') }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/favicon.png') }}">
-  <link rel="apple-touch-icon" sizes="180x180"      href="{{ asset('images/favicon.png') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/favicon.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  {{-- 1. Dashmix base (structure + layout) --}}
+  {{-- Bootstrap 5 grid/utilities/JS come from the bundled base; the look is entirely admin-v2.css --}}
   <link rel="stylesheet" href="{{ asset('admin/assets/css/dashmix.min.css') }}">
-
-  {{-- 2. TKT House theme — must come AFTER dashmix to override --}}
-  <link rel="stylesheet" href="{{ asset('admin/assets/css/custom.css') }}">
+  <link rel="stylesheet" href="{{ asset('admin-v2/admin-v2.css') }}?v={{ filemtime(public_path('admin-v2/admin-v2.css')) }}">
   <link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
-  <style>
-  .iti { display: block !important; width: 100%; }
-  .iti__selected-country { background: transparent !important; border-right: 1px solid rgba(255,255,255,0.09) !important; padding: 0 8px !important; gap: 3px !important; display: flex !important; align-items: center !important; }
-  .iti__selected-country .iti__flag        { order: 1 !important; }
-  .iti__selected-country .iti__selected-dial-code { order: 2 !important; }
-  .iti__selected-country .iti__arrow       { order: 3 !important; margin-left: 3px !important; }
-  .iti__selected-country:hover { background: rgba(215,166,0,0.08) !important; }
-  .iti__selected-dial-code { color: #dbe4ff !important; font-size: 13px !important; font-weight: 500 !important; }
-  .iti__arrow { border-top-color: #7e849b !important; }
-  .iti--open .iti__arrow { border-bottom-color: #7e849b !important; }
-  .iti__flag-container   { background: transparent !important; }
-  .iti__dropdown-content { background: #181821 !important; border: 1px solid rgba(255,255,255,0.35) !important; border-radius: 10px !important; overflow: hidden !important; box-shadow: 0 16px 48px rgba(0,0,0,0.75) !important; z-index: 999999 !important; padding: 0 !important; }
-  .iti__country-list { background: #181821 !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; z-index: 999999 !important; max-height: 280px !important; overflow-y: auto !important; padding: 4px 0 !important; margin: 0 !important; }
-  .iti__country-list::-webkit-scrollbar { width: 4px; } .iti__country-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 99px; }
-  .iti__search-input-wrapper { background: #181821 !important; padding: 8px 10px 6px !important; }
-  .iti__search-input { display: block !important; width: 100% !important; height: 44px !important; background: #0f0f18 !important; border: 1px solid rgba(255,255,255,0.13) !important; border-radius: 10px !important; color: #dbe4ff !important; font-size: 13px !important; padding: 0 14px !important; outline: none !important; box-sizing: border-box !important; }
-  .iti__search-input::placeholder { color: #7e849b !important; }
-  .iti__divider { border-color: rgba(255,255,255,0.08) !important; margin: 2px 0 !important; }
-  .iti__country { display: flex !important; align-items: center !important; gap: 10px !important; padding: 0 14px !important; height: 46px !important; color: #dbe4ff !important; font-size: 13px !important; background: transparent !important; }
-  .iti__country:hover, .iti__country.iti__highlight { background: rgba(214,166,0,0.18) !important; }
-  .iti__country-name { color: #dbe4ff !important; flex: 1 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-  .iti__dial-code { color: #7e849b !important; font-size: 12px !important; }
-  </style>
-
-  <script src="{{ asset('admin/assets/js/setTheme.js') }}"></script>
-  <style>:root{--brand-primary: {{ $primaryColor }};--brand-secondary: {{ $secondaryColor }};}</style>
+  @stack('styles')
 </head>
 
-<body>
+<body class="a-body">
+<a class="a-skip" href="#aMain">Skip to content</a>
 
-<div id="page-container"
-     class="sidebar-o sidebar-dark enable-page-overlay side-scroll page-header-fixed main-content-narrow">
+<div class="a-shell" id="page-container">
+  <aside class="a-sidebar" id="aSidebar" aria-label="Main navigation">
+    <div class="a-sidebar__brand">
+      <a href="{{ route('admin.dashboard') }}" aria-label="{{ $siteName }} admin home"><img src="{{ $logoLight }}" alt="{{ $siteName }}"></a>
+      <button type="button" class="a-sidebar__close" data-a-nav-close aria-label="Close menu"><i class="fa fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    <nav class="a-sidebar__scroll">
+      @include('admin.navbar')
+    </nav>
+    <div class="a-sidebar__foot"><a href="{{ route('front.home') }}"><i class="fa fa-arrow-up-right-from-square" aria-hidden="true"></i> View website</a></div>
+  </aside>
+  <div class="a-backdrop" data-a-nav-close></div>
 
-  {{-- ── Sidebar ── --}}
-  <nav id="sidebar" aria-label="Main Navigation">
-    @include('admin.navbar')
-  </nav>
+  <div class="a-main">
+    <header class="a-topbar" role="banner">
+      <button type="button" class="a-topbar__menu" data-a-nav-open aria-label="Open menu" aria-controls="aSidebar" aria-expanded="false"><i class="fa fa-bars" aria-hidden="true"></i></button>
 
-  {{-- ── Top Header ── --}}
-  <header id="page-header">
-    <div class="content-header">
+      <form class="a-search" role="search" method="GET" action="{{ route('admin.search') }}">
+        <i class="fa fa-magnifying-glass" aria-hidden="true"></i>
+        <label class="a-sr-only" for="aSearch">Search</label>
+        <input id="aSearch" type="search" name="q" value="{{ request()->routeIs('admin.search') ? request('q') : '' }}" placeholder="Search events, orders, customers…" maxlength="80" autocomplete="off">
+      </form>
 
-      {{-- Left --}}
-      <div class="space-x-1">
-        <button type="button" class="btn btn-alt-secondary"
-                data-toggle="layout" data-action="sidebar_toggle">
-          <i class="fa fa-fw fa-bars"></i>
-        </button>
-        <button type="button" class="btn btn-alt-secondary"
-                data-toggle="layout" data-action="header_search_on">
-          <i class="fa fa-fw fa-search opacity-50"></i>
-          <span class="ms-1 d-none d-sm-inline-block">Search</span>
-        </button>
-      </div>
-
-      {{-- Right --}}
-      <div class="space-x-1">
-
-        {{-- User dropdown --}}
-        <div class="dropdown d-inline-block">
-          <button type="button" class="btn btn-alt-secondary"
-                  id="page-header-user-dropdown"
-                  data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fa fa-fw fa-circle-user d-sm-none"></i>
-            <span class="d-none d-sm-inline-block">{{ auth()->user()?->name ?? 'Administrator' }}</span>
-            <i class="fa fa-fw fa-angle-down opacity-50 ms-1 d-none d-sm-inline-block"></i>
+      <div class="a-topbar__actions">
+        @can('events.create')
+          <a class="a-btn a-btn--primary d-none d-md-inline-flex" href="{{ route('admin.events.create') }}"><i class="fa fa-plus" aria-hidden="true"></i> Create event</a>
+        @endcan
+        <div class="a-menu">
+          <button type="button" class="a-userbtn" data-a-menu-toggle aria-haspopup="true" aria-expanded="false">
+            <span class="a-userbtn__avatar">@if($authUser?->profile_image)<img src="{{ asset('storage/'.$authUser->profile_image) }}" alt="">@else{{ $initial }}@endif</span>
+            <span class="a-userbtn__text"><b>{{ $authUser?->name ?? 'Administrator' }}</b><small>{{ $roleName ? ucwords(str_replace(['_', '-'], ' ', $roleName)) : 'Team member' }}</small></span>
+            <i class="fa fa-chevron-down" aria-hidden="true" style="font-size:11px;color:#8c8c85"></i>
           </button>
-          <div class="dropdown-menu dropdown-menu-end p-0"
-               aria-labelledby="page-header-user-dropdown">
-            <div class="bg-primary-dark rounded-top text-center p-3">
-              User Options
-            </div>
-            <div class="p-2">
-              <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="dropdown-item">
-                  <i class="far fa-fw fa-arrow-alt-circle-left me-1"></i> Sign Out
-                </button>
-              </form>
-            </div>
+          <div class="a-menu__panel" role="menu">
+            <div class="a-menu__head"><b>{{ $authUser?->name }}</b><small>{{ $authUser?->email }}</small></div>
+            <a class="a-menu__item" role="menuitem" href="{{ route('front.home') }}"><i class="fa fa-globe" aria-hidden="true"></i> View website</a>
+            <form method="POST" action="{{ route('logout') }}">@csrf
+              <button type="submit" class="a-menu__item" role="menuitem"><i class="fa fa-arrow-right-from-bracket" aria-hidden="true"></i> Sign out</button>
+            </form>
           </div>
         </div>
-
       </div>
+    </header>
 
+    <main class="a-content" id="aMain" tabindex="-1">
+      @if(session('success') && ! isset($__adminToastHandled))
+        {{-- success flashes are shown as toasts by the script below --}}
+      @endif
+      @yield('content')
+    </main>
+  </div>
+</div>
+
+{{-- Shared confirmation dialog (any form/button with data-a-confirm) --}}
+<div class="modal fade" id="aConfirm" tabindex="-1" aria-labelledby="aConfirmTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
+    <div class="modal-content">
+      <div class="modal-header"><h2 class="modal-title" id="aConfirmTitle" data-a-confirm-title>Please confirm</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body"><p class="mb-0" data-a-confirm-text></p></div>
+      <div class="modal-footer"><button type="button" class="a-btn a-btn--outline" data-bs-dismiss="modal">Cancel</button><button type="button" class="a-btn a-btn--primary" data-a-confirm-ok>Confirm</button></div>
     </div>
-
-    {{-- Search overlay --}}
-    <div id="page-header-search" class="overlay-header">
-      <div class="content-header">
-        <form class="w-100" method="GET" action="#">
-          <div class="input-group">
-            <button type="button" class="btn btn-alt-secondary"
-                    data-toggle="layout" data-action="header_search_off">
-              <i class="fa fa-fw fa-times-circle"></i>
-            </button>
-            <input type="text" class="form-control border-0"
-                   placeholder="Search…" name="q">
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {{-- Loader --}}
-    <div id="page-header-loader" class="overlay-header">
-      <div class="content-header">
-        <div class="w-100 text-center">
-          <i class="fa fa-fw fa-sun fa-spin" style="color:var(--gold)"></i>
-        </div>
-      </div>
-    </div>
-
-  </header>
-
-  {{-- ── Main ── --}}
-  <main id="main-container">
-    @yield('content')
-  </main>
-
-  {{-- ── Footer ── --}}
-  <footer id="page-footer">
-    <div class="content py-2">
-      <div class="row align-items-center">
-        <div class="col-sm-6 text-center text-sm-start">
-          <a href="{{ route('front.home') }}" style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.5px;">
-            <img style="height: 20px" src="{{ $logoLight }}" alt="{{ $siteName }}">
-        </a>
-          <span class="ms-2" style="font-size:11px;"> &copy; {{ date('Y') }}</span>
-        </div>
-        <div class="col-sm-6 text-center text-sm-end">
-          <a href="{{ route('front.home') }}" style="font-size:12px;">← Back to website</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-
+  </div>
 </div>
 
 {{-- Scripts --}}
 <script src="{{ asset('admin/assets/js/dashmix.app.min.js') }}"></script>
+<script src="{{ asset('admin-v2/admin-v2.js') }}?v={{ filemtime(public_path('admin-v2/admin-v2.js')) }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
@@ -201,18 +140,13 @@
         + window.adminValidationErrors.map(i => `<li>${i}</li>`).join('') + '</ul>',
     });
 
+  // Every DELETE form gets the shared confirmation dialog (admin-v2.js) unless it set its own message.
   document.querySelectorAll('form').forEach(form => {
     const method = (form.querySelector('input[name="_method"]')?.value || form.method || '').toUpperCase();
-    if (method !== 'DELETE') return;
-    form.addEventListener('submit', e => {
-      if (form.dataset.confirmed === '1') return;
-      e.preventDefault();
-      Swal.fire({
-        title: 'Are you sure?', text: 'This action cannot be undone.',
-        icon: 'warning', showCancelButton: true,
-        confirmButtonText: 'Yes, delete it', cancelButtonText: 'Cancel',
-      }).then(r => { if (r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); } });
-    });
+    if (method !== 'DELETE' || form.hasAttribute('data-a-confirm')) return;
+    form.setAttribute('data-a-confirm', 'This action cannot be undone.');
+    form.setAttribute('data-a-confirm-title', 'Delete this item?');
+    form.setAttribute('data-a-confirm-ok', 'Delete');
   });
 })();
 </script>

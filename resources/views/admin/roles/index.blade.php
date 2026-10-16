@@ -1,4 +1,37 @@
 @extends('admin.master')
+@section('title', 'Roles')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<div class="content">@include('admin.partials.flash')<div class="d-flex justify-content-between mb-3"><h2 class="h4">Roles</h2><a class="btn btn-primary" href="{{ route('admin.roles.create') }}">Create Role</a></div><div class="block block-rounded"><div class="table-responsive"><table class="table"><thead><tr><th>Name</th><th>Permissions</th><th></th></tr></thead><tbody>@foreach($roles as $role)<tr><td>{{ $role->name }}</td><td>{{ $role->permissions->pluck('name')->implode(', ') ?: '-' }}</td><td class="text-end"><a href="{{ route('admin.roles.edit',$role) }}" class="btn btn-sm btn-alt-primary">Edit</a><form method="POST" action="{{ route('admin.roles.destroy',$role) }}" class="d-inline">@csrf @method('DELETE')<button class="btn btn-sm btn-danger">Delete</button></form></td></tr>@endforeach</tbody></table></div></div>{{ $roles->links() }}</div>
+<x-admin.page-header title="Roles" subtitle="Bundles of permissions you can assign to users." :crumbs="['Dashboard' => route('admin.dashboard'), 'Roles']">
+    <a class="a-btn a-btn--primary" href="{{ route('admin.roles.create') }}"><i class="fa fa-plus"></i> Create Role</a>
+</x-admin.page-header>
+<x-admin.flash />
+<x-admin.card flush>
+    @if($roles->isEmpty())
+        <x-admin.empty icon="fa-user-shield" title="No roles yet" text="Create a role to group permissions.">
+            <a class="a-btn a-btn--primary" href="{{ route('admin.roles.create') }}">Create Role</a>
+        </x-admin.empty>
+    @else
+        <x-admin.table stack caption="Roles">
+            <thead><tr><th>Name</th><th>Permissions</th><th><span class="a-sr-only">Actions</span></th></tr></thead>
+            <tbody>
+            @foreach($roles as $role)
+                <tr>
+                    <td data-label="Name"><span class="a-table__main">{{ $role->name }}</span><span class="a-table__sub">{{ $role->permissions->count() }} permissions</span></td>
+                    <td data-label="Permissions" class="a-wrap">
+                        <div class="a-m-chips">
+                        @forelse($role->permissions as $perm)<x-admin.badge>{{ $perm->name }}</x-admin.badge>@empty - @endforelse
+                        </div>
+                    </td>
+                    <td data-label="Actions"><div class="a-table__actions">
+                        <a href="{{ route('admin.roles.edit',$role) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>
+                        <form method="POST" action="{{ route('admin.roles.destroy',$role) }}" data-a-confirm="Delete role {{ $role->name }}?" data-a-confirm-title="Delete role" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-btn a-btn--danger a-btn--sm" type="submit">Delete</button></form>
+                    </div></td>
+                </tr>
+            @endforeach
+            </tbody>
+        </x-admin.table>
+        <x-admin.pager :paginator="$roles" />
+    @endif
+</x-admin.card>
 @endsection

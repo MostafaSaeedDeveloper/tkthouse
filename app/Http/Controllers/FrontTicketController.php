@@ -16,7 +16,9 @@ class FrontTicketController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
 
-        return view('front.tickets.show', compact('ticket'));
+        $ticket->load(['order', 'dashboardTicket', 'orderItem.event']);
+
+        return view('front.tickets.show', ['ticket' => $ticket, 'event' => $ticket->orderItem?->event]);
     }
 
     public function download(Request $request, IssuedTicket $ticket)
@@ -57,25 +59,13 @@ class FrontTicketController extends Controller
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
 
+    /** Only the account that owns the paid order (or the verified holder of a gifted ticket) may open a ticket. */
     private function authorizeTicket(Request $request, IssuedTicket $ticket): void
     {
         $user = $request->user();
         abort_unless($user, 403);
 
-        $ticket->loadMissing('order.customer');
-
-        // Unclaimed guest orders are not part of any account yet (the buying browser uses signed links).
-        abort_if($ticket->order?->owner_unverified, 403);
-
-        $orderUserId = $ticket->order?->user_id;
-        $orderCustomerEmail = $ticket->order?->customer?->email;
-        $holderEmail = $ticket->holder_email;
-
-        $canView = ($orderUserId !== null && (int) $orderUserId === (int) $user->id)
-            || ($orderCustomerEmail !== null && strcasecmp($orderCustomerEmail, (string) $user->email) === 0)
-            || ($holderEmail !== null && strcasecmp($holderEmail, (string) $user->email) === 0);
-
-        abort_unless($canView, 403);
+        abort_unless(IssuedTicket::query()->ownedByCustomer($user)->whereKey($ticket->id)->exists(), 403);
     }
 
     private function resolveEvent(string $ticketName): ?Event

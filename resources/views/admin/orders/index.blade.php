@@ -1,170 +1,116 @@
 @extends('admin.master')
+@section('title', 'Orders')
+
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
-<div class="content">
-    @include('admin.partials.flash')
+@php $statusList = ['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded']; @endphp
+<x-admin.page-header title="Orders" subtitle="Search, filter and manage every order." :crumbs="['Dashboard' => route('admin.dashboard'), 'Orders']">
+    @can('orders.deleted.view')
+        <a class="a-btn a-btn--outline" href="{{ route('admin.orders.deleted') }}"><i class="fa fa-trash-can"></i> Deleted Orders <x-admin.badge variant="dark">{{ $deletedOrdersCount ?? 0 }}</x-admin.badge></a>
+    @endcan
+    @if($canExport)
+        <button type="button" class="a-btn a-btn--dark" data-bs-toggle="modal" data-bs-target="#exportOrdersModal"><i class="fa fa-download"></i> Export CSV</button>
+    @endif
+</x-admin.page-header>
 
-    <div class="d-md-flex justify-content-md-between align-items-md-center mb-3">
-        <div>
-            <h1 class="h3 mb-1">Orders</h1>
-            <p class="text-muted mb-0">Orders list.</p>
-        </div>
-    </div>
+<x-admin.flash />
 
-    <div class="block block-rounded mb-3">
-        <div class="block-content py-3">
-            <form method="GET" class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select js-select2">
-                        <option value="">All</option>
-                        @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $status)
-                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
-                        @endforeach
-                    </select>
-                </div>                <div class="col-md-2">
-                    <label class="form-label">Payment Method</label>
-                    <select name="payment_method" class="form-select js-select2">
-                        <option value="">All</option>
-                        @foreach($paymentMethods as $method)
-                            <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                @if($canFilterByEvent)
-                <div class="col-md-3">
-                    <label class="form-label">Event</label>
-                    <select name="event_id" class="form-select js-select2">
-                        <option value="">All Events</option>
-                        @foreach($events as $event)
-                            <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
-                <div class="col-md-3 d-flex gap-2">
-                    <button class="btn btn-primary" type="submit">Filter</button>
-                    <a class="btn btn-alt-secondary" href="{{ route('admin.orders.index') }}">Reset</a>
-                </div>
-            </form>
-        </div>
-    </div>
+<x-admin.filters :action="route('admin.orders.index')" :reset="route('admin.orders.index')">
+    <div class="a-field"><label class="form-label" for="oSearch">Search</label>
+        <input type="text" id="oSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer"></div>
+    <div class="a-field"><label class="form-label" for="oStatus">Status</label>
+        <select name="status" id="oStatus" class="form-select no-select2">
+            <option value="">All</option>
+            @foreach($statusList as $status)
+                <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
+            @endforeach
+        </select></div>
+    <div class="a-field"><label class="form-label" for="oPay">Payment method</label>
+        <select name="payment_method" id="oPay" class="form-select no-select2">
+            <option value="">All</option>
+            @foreach($paymentMethods as $method)
+                <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
+            @endforeach
+        </select></div>
+    @if($canFilterByEvent)
+    <div class="a-field"><label class="form-label" for="oEvent">Event</label>
+        <select name="event_id" id="oEvent" class="form-select no-select2">
+            <option value="">All Events</option>
+            @foreach($events as $event)
+                <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
+            @endforeach
+        </select></div>
+    @endif
+</x-admin.filters>
 
-    <div class="block block-rounded">
-        <div class="block-header block-header-default">
-            <h3 class="block-title">All Orders</h3>
-            <div class="block-options d-flex align-items-center gap-2">
-                @can('orders.deleted.view')
-                    <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.deleted') }}">
-                        Deleted Orders <span class="badge bg-dark ms-1">{{ $deletedOrdersCount ?? 0 }}</span>
-                    </a>
-                @endcan
-                @if($canExport)
-                    <button type="button" class="btn btn-sm btn-alt-success" data-bs-toggle="modal" data-bs-target="#exportOrdersModal">
-                        <i class="fa fa-download me-1"></i> Export CSV
-                    </button>
-                @endif
-                <span class="badge bg-primary">{{ $orders->total() }} Total</span>
-            </div>
-        </div>
-        <div class="block-content p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-vcenter mb-0">
-                    <thead>
-                        <tr>
-                            <th>Order #</th><th>Customer</th><th>Items</th><th>Event</th><th>Ticket Types</th><th>Total</th><th>Status</th><th>Payment Deadline</th><th class="text-end">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($orders as $order)
-                        <tr>
-                            <td class="fw-semibold">
-                                <a href="{{ route('admin.orders.show', $order) }}">
-                                    {{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}
-                                </a>
-                            </td>
-                            <td>{{ $order->customer?->full_name }}<br><span class="fs-sm text-muted">{{ $order->customer?->email }}</span></td>
-                            <td>{{ $order->items_count }}</td>
-                            <td style="max-width: 320px;">
-                                <div class="d-flex flex-wrap gap-1">
-                                    @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => str_contains((string) $ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : null)->filter()->unique() as $eventName)
-                                        <span class="badge bg-secondary" style="display: inline-block; white-space: normal; line-height: 1.2; max-width: 280px; word-break: break-word;">{{ $eventName }}</span>
-                                    @endforeach
-                                </div>
-                            </td>
-                            <td style="max-width: 260px;">
-                                <div class="d-flex flex-wrap gap-1">
-                                    @foreach($order->items->pluck('ticket_name')->map(fn ($ticketName) => trim((string) 
-                                        \Illuminate\Support\Str::afterLast((string) $ticketName, ' - ')))->unique() as $ticketType)
-                                        @php
-                                            $normalizedType = \Illuminate\Support\Str::lower(trim((string) \Illuminate\Support\Str::afterLast($ticketType, ' - ')));
-                                            $ticketColor = $ticketColorMap[$normalizedType] ?? '#6c757d';
-                                        @endphp
-                                        <span class="badge" style="background-color: {{ $ticketColor }}; color: #fff; display: inline-block; white-space: normal; line-height: 1.2; max-width: 220px; word-break: break-word;">{{ $ticketType }}</span>
-                                    @endforeach
-                                </div>
-                            </td>
-                            <td>{{ number_format($order->total_amount, 2) }} EGP</td>
-                            @php
-                                    $statusClass = match($order->status) {
-                                        'paid' => 'bg-success',
-                                        'pending_approval', 'pending_payment', 'on_hold' => 'bg-warning text-dark',
-                                        'refunded', 'partially_refunded' => 'bg-primary',
-                                        default => 'bg-danger',
-                                    };
-                                @endphp
-                                <td><span class="badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
-                            <td>
-                                @php $secondsLeft = $order->paymentSecondsRemaining(); @endphp
-                                @if($order->status === 'pending_payment' && $secondsLeft !== null)
-                                    <span class="badge bg-warning text-dark js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">
-                                        {{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}
-                                    </span>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </td>
-                            <td class="text-end" style="white-space: nowrap; min-width: 170px;">
-                                <div class="d-inline-flex flex-nowrap align-items-center gap-1">
-                                @can('orders.update')
-                                    @if($order->status === 'pending_approval')
-                                        <form class="d-inline" method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
-                                            <button class="btn btn-sm btn-alt-success" type="submit" title="Approve"><i class="fa fa-check"></i></button>
-                                        </form>
-                                        <form class="d-inline" method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
-                                            <button class="btn btn-sm btn-alt-danger" type="submit" title="Reject"><i class="fa fa-times"></i></button>
-                                        </form>
-                                    @endif
-                                @endcan
-                                <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.orders.show', $order) }}"><i class="fa fa-eye"></i></a>
-                                @can('orders.update')
-                                    <a class="btn btn-sm btn-alt-warning" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen"></i></a>
-                                @endcan
-                                @can('orders.delete')
-                                    <form class="d-inline" method="POST" action="{{ route('admin.orders.destroy', $order) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-sm btn-alt-danger" type="submit" title="Delete"><i class="fa fa-trash"></i></button>
-                                    </form>
-                                @endcan
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="9" class="text-center py-4 text-muted">No orders found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="mt-3">{{ $orders->links() }}</div>
-</div>
+<x-admin.card flush title="All Orders" :subtitle="$orders->total().' total'">
+    @if($orders->isEmpty())
+        <x-admin.empty icon="fa-receipt" title="No orders found" text="Try changing or resetting the filters." />
+    @else
+    <x-admin.table stack caption="Orders">
+        <thead>
+            <tr><th>Order</th><th>Customer</th><th class="a-num">Items</th><th>Event</th><th>Ticket types</th><th class="a-num">Total</th><th>Status</th><th>Payment deadline</th><th class="a-num">Actions</th></tr>
+        </thead>
+        <tbody>
+        @foreach($orders as $order)
+            @php
+                $names = $order->items->pluck('ticket_name');
+                $eventNames = $names->map(fn ($n) => str_contains((string) $n, ' - ') ? trim((string) str($n)->before(' - ')) : null)->filter()->unique();
+                $ticketTypes = $names->map(fn ($n) => trim((string) \Illuminate\Support\Str::afterLast((string) $n, ' - ')))->unique();
+                $secondsLeft = $order->paymentSecondsRemaining();
+            @endphp
+            <tr>
+                <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a>
+                    <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></td>
+                <td data-label="Customer" class="a-wrap"><span class="a-table__main">{{ $order->customer?->full_name }}</span><span class="a-table__sub">{{ $order->customer?->email }}</span></td>
+                <td data-label="Items" class="a-num">{{ $order->items_count }}</td>
+                <td data-label="Event" class="a-wrap"><div class="a-ord-tags">@foreach($eventNames as $eventName)<span class="a-ord-tag a-ord-tag--event">{{ $eventName }}</span>@endforeach</div></td>
+                <td data-label="Ticket types" class="a-wrap"><div class="a-ord-tags">
+                    @foreach($ticketTypes as $ticketType)
+                        @php $ticketColor = $ticketColorMap[\Illuminate\Support\Str::lower(trim($ticketType))] ?? '#6c757d'; @endphp
+                        <span class="a-ord-tag" style="background-color: {{ $ticketColor }}">{{ $ticketType }}</span>
+                    @endforeach</div></td>
+                <td data-label="Total" class="a-num">{{ number_format($order->total_amount, 2) }} EGP</td>
+                <td data-label="Status"><x-admin.status :status="$order->status" kind="order" />
+                    @if($order->payment_method)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</span>@endif</td>
+                <td data-label="Payment deadline">
+                    @if($order->status === 'pending_payment' && $secondsLeft !== null)
+                        <span class="badge bg-warning text-dark a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}</span>
+                    @else
+                        <span class="a-muted">—</span>
+                    @endif
+                </td>
+                <td data-label="Actions"><div class="a-table__actions">
+                    @can('orders.update')
+                        @if($order->status === 'pending_approval')
+                            <form method="POST" action="{{ route('admin.orders.approve', $order) }}" data-a-confirm="Approve this order and send the payment link?" data-a-confirm-title="Approve order" data-a-confirm-ok="Approve">@csrf
+                                <button class="a-btn a-btn--success a-btn--sm" type="submit" title="Approve" aria-label="Approve order"><i class="fa fa-check"></i></button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.orders.reject', $order) }}" data-a-confirm="Reject this order?" data-a-confirm-title="Reject order" data-a-confirm-ok="Reject">@csrf
+                                <button class="a-btn a-btn--danger a-btn--sm" type="submit" title="Reject" aria-label="Reject order"><i class="fa fa-times"></i></button>
+                            </form>
+                        @endif
+                    @endcan
+                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order"><i class="fa fa-eye"></i></a>
+                    @can('orders.update')
+                        <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.edit', $order) }}" title="Edit" aria-label="Edit order"><i class="fa fa-pen"></i></a>
+                    @endcan
+                    @can('orders.delete')
+                        <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" data-a-confirm="Delete this order? It can be restored from Deleted Orders." data-a-confirm-title="Delete order" data-a-confirm-ok="Delete">
+                            @csrf
+                            @method('DELETE')
+                            <button class="a-btn a-btn--danger a-btn--sm" type="submit" title="Delete" aria-label="Delete order"><i class="fa fa-trash"></i></button>
+                        </form>
+                    @endcan
+                </div></td>
+            </tr>
+        @endforeach
+        </tbody>
+    </x-admin.table>
+    <x-admin.pager :paginator="$orders" />
+    @endif
+</x-admin.card>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -249,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     {{-- Columns --}}
                     <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Columns to Export</h6>
-                    <div class="row g-2">
+                    <div class="a-ord-export-cols">
                         @php
                             $exportColumns = [
                                 'order_number'   => 'Order #',
@@ -267,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ];
                         @endphp
                         @foreach($exportColumns as $colKey => $colLabel)
-                        <div class="col-6 col-md-4">
+                        <div>
                             <div class="form-check">
                                 <input class="form-check-input export-col-check" type="checkbox" name="columns[]" value="{{ $colKey }}" id="col_{{ $colKey }}" checked>
                                 <label class="form-check-label" for="col_{{ $colKey }}">{{ $colLabel }}</label>
@@ -276,13 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         @endforeach
                     </div>
                     <div class="mt-2 d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-alt-secondary" id="selectAllCols">Select All</button>
-                        <button type="button" class="btn btn-sm btn-alt-secondary" id="deselectAllCols">Deselect All</button>
+                        <button type="button" class="a-btn a-btn--outline a-btn--sm" id="selectAllCols">Select All</button>
+                        <button type="button" class="a-btn a-btn--outline a-btn--sm" id="deselectAllCols">Deselect All</button>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-alt-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success"><i class="fa fa-download me-1"></i> Download CSV</button>
+                    <button type="button" class="a-btn a-btn--outline" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-download me-1"></i> Download CSV</button>
                 </div>
             </form>
         </div>

@@ -1,517 +1,259 @@
 @extends('admin.master')
+@section('title', 'Dashboard')
+
+@php
+    $money = fn ($n) => number_format((float) $n, 2).' EGP';
+    $moneyShort = fn ($n) => number_format((float) $n, 0).' EGP';
+    $first = explode(' ', trim((string) auth()->user()?->name))[0] ?: 'there';
+    $trend = function (?float $pct) {
+        if ($pct === null) return null;
+        return ($pct >= 0 ? '▲ ' : '▼ ').abs($pct).'% vs previous period';
+    };
+    $rangeParams = array_filter(['event_id' => $selectedEvent?->id]);
+@endphp
+
+@push('styles')
+<style>
+    .a-dash__top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .a-dash__hello { margin: 0 0 4px; color: var(--a-muted); font-size: 14px; }
+    .a-dash__title { font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2rem); font-weight: 800; line-height: 1.15; }
+    .a-range { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .a-seg { display: inline-flex; padding: 4px; background: #fff; border: 1px solid var(--a-line); border-radius: 12px; gap: 2px; }
+    .a-seg a, .a-seg button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 13px; font-weight: 700; color: var(--a-muted); cursor: pointer; display: inline-flex; align-items: center; }
+    .a-seg a:hover, .a-seg button:hover { color: var(--a-ink); }
+    .a-seg .is-active { background: var(--a-yellow); color: #000; }
+    .a-custom { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .a-custom.is-open { display: flex; }
+    .a-custom input { min-height: 40px; padding: 0 12px; border: 1px solid var(--a-line-strong); border-radius: 10px; font: inherit; font-size: 13px; }
+    .a-dash__grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 1280px) { .a-dash__grid { grid-template-columns: minmax(0, 1fr) 380px; } }
+    .a-dash__col { display: grid; gap: 20px; min-width: 0; align-content: start; }
+    .a-dash__charts { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+    @media (min-width: 900px) { .a-dash__charts { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
+    .a-chartbox { position: relative; height: 260px; }
+    .a-chartbox--donut { height: 200px; max-width: 240px; margin: 0 auto; }
+    .a-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center; }
+    .a-donut-center b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .a-donut-center span { font-size: 12px; color: var(--a-muted); }
+    .a-legend { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; font-size: 13px; }
+    .a-legend li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; }
+    .a-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .a-legend .a-num { font-variant-numeric: tabular-nums; font-weight: 700; }
+    .a-split { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--a-line); font-size: 13px; }
+    .a-split div { display: flex; justify-content: space-between; gap: 10px; }
+    .a-split b { font-variant-numeric: tabular-nums; }
+    .a-event { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--a-line); }
+    .a-event:first-child { border-top: 0; padding-top: 0; }
+    .a-event__img { position: relative; width: 64px; height: 64px; border-radius: 12px; background: #1a1a1a center / cover no-repeat; overflow: hidden; }
+    .a-event__date { position: absolute; left: 6px; top: 6px; padding: 2px 6px; border-radius: 6px; background: #fff; color: #111; font-size: 10px; font-weight: 800; line-height: 1.1; text-align: center; }
+    .a-event__date b { display: block; font-size: 14px; }
+    .a-event__name { font-weight: 800; font-size: 14px; display: block; overflow-wrap: anywhere; }
+    .a-event__meta { font-size: 12.5px; color: var(--a-muted); display: block; overflow-wrap: anywhere; }
+    .a-ring { --p: 0; width: 132px; height: 132px; border-radius: 50%; background: conic-gradient(#178a4c calc(var(--p) * 1%), #ececE6 0); display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+    .a-ring > div { width: 100px; height: 100px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .a-ring b { font-size: 22px; font-weight: 800; } .a-ring span { font-size: 11px; color: var(--a-muted); }
+    .a-scan-stats { display: grid; gap: 10px; margin-top: 16px; font-size: 13px; }
+    .a-scan-stats div { display: flex; justify-content: space-between; gap: 10px; } .a-scan-stats b { font-variant-numeric: tabular-nums; }
+    .a-quick { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    .a-quick a { display: grid; gap: 2px; padding: 14px; border: 1px solid var(--a-line); border-radius: 12px; background: var(--a-surface-2); font-weight: 800; font-size: 14px; }
+    .a-quick a small { font-weight: 500; font-size: 12px; color: var(--a-muted); }
+    .a-quick a i { margin-bottom: 6px; color: #7a5b00; }
+    .a-quick a.is-primary { background: var(--a-yellow); border-color: var(--a-yellow); }
+    .a-quick a.is-primary i, .a-quick a.is-primary small { color: #000; }
+    .a-quick a:hover { border-color: var(--a-ink); }
+</style>
+@endpush
 
 @section('content')
-
-<link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-:root {
-    --gold:     #f5b800;
-    --gold-dim: #c99300;
-    --surface:  #0e0e12;
-    --surface2: #16161d;
-    --border:   rgba(255,255,255,0.07);
-    --text:     #e8e8ef;
-    --muted:    #6b6b7e;
-    --green:    #22c55e;
-    --red:      #e8445a;
-    --blue:     #3b82f6;
-    --font-h:   'Syne', sans-serif;
-    --font-b:   'DM Sans', sans-serif;
-    --radius:   12px;
-}
-
-.db-wrap { background: #060608; min-height: 100vh; font-family: var(--font-b); color: var(--text); padding: 32px 0 60px; --bs-link-color: var(--muted); --bs-link-hover-color: var(--gold); }
-
-/* ── Page header ── */
-.db-page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
-.db-page-eyebrow { font-family: var(--font-h); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-.db-page-title { font-family: var(--font-h); font-size: clamp(22px, 3vw, 30px); font-weight: 800; color: #fff; letter-spacing: -0.5px; margin: 0; }
-.db-page-title span { color: var(--gold); }
-.db-date { font-size: 12px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; white-space: nowrap; }
-
-.db-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; align-items:center; }
-a.db-filter-btn,
-a.db-filter-btn:link,
-a.db-filter-btn:visited,
-a.db-filter-btn:focus,
-a.db-filter-btn:focus-visible { font-size:12px; color:var(--muted) !important; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:7px 12px; text-decoration:none; transition:all .2s; }
-a.db-filter-btn:hover { color:var(--gold) !important; border-color:rgba(245,184,0,0.3); }
-a.db-filter-btn.active,
-a.db-filter-btn.active:link,
-a.db-filter-btn.active:visited,
-a.db-filter-btn.active:focus,
-a.db-filter-btn.active:focus-visible { color:#111 !important; background:var(--gold); border-color:var(--gold); font-weight:700; }
-.db-filter-form { display:flex; gap:8px; align-items:center; }
-.db-filter-input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; }
-.db-filter-select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 10px; font-size:12px; min-width: 220px; }
-.db-filter-apply { background:var(--gold); color:#111; border:0; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; }
-
-/* ── Custom Event Dropdown ── */
-.db-custom-select { position:relative; min-width:180px; }
-.db-custom-select-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:13px; cursor:pointer; user-select:none; white-space:nowrap; transition:border-color .2s; max-width:220px; overflow:hidden; }
-.db-custom-select-btn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.db-custom-select-btn svg { flex-shrink:0; }
-.db-custom-select-btn:hover { border-color:rgba(245,184,0,0.4); }
-.db-custom-select.open .db-custom-select-btn { border-color:var(--gold); }
-.db-custom-select-menu { display:none; position:fixed; width:280px; background:#1a1a22; border:1px solid rgba(245,184,0,0.25); border-radius:10px; padding:6px; z-index:99999; box-shadow:0 12px 40px rgba(0,0,0,0.7); }
-.db-custom-select-menu.is-open { display:block; }
-.db-custom-select-search { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:7px 10px; font-size:12px; outline:none; margin-bottom:6px; box-sizing:border-box; }
-.db-custom-select-search::placeholder { color:var(--muted); }
-.db-custom-select-search:focus { border-color:rgba(245,184,0,0.4); }
-.db-custom-select-list { max-height:220px; overflow-y:auto; }
-.db-custom-select-list::-webkit-scrollbar { width:4px; }
-.db-custom-select-list::-webkit-scrollbar-track { background:transparent; }
-.db-custom-select-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-.db-custom-select-option { padding:8px 10px; border-radius:6px; font-size:13px; color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; transition:background .15s; }
-.db-custom-select-option:hover { background:rgba(255,255,255,0.06); }
-.db-custom-select-option.selected { color:var(--gold); font-weight:600; }
-.db-custom-select-option.hidden { display:none; }
-.db-sold-out-tag { font-size:10px; font-weight:700; color:#e8445a; background:rgba(232,68,90,0.12); border-radius:99px; padding:2px 7px; flex-shrink:0; }
-
-
-/* ── Stat cards ── */
-.db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-@media (max-width: 1100px) { .db-stats { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 500px)  { .db-stats { grid-template-columns: 1fr; } }
-
-.db-stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 22px 18px; position: relative; overflow: hidden; transition: border-color 0.2s, transform 0.2s; }
-.db-stat:hover { border-color: rgba(245,184,0,0.2); transform: translateY(-2px); }
-.db-stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent, var(--gold)); opacity: 0.7; }
-.db-stat.green { --accent: var(--green); }
-.db-stat.blue  { --accent: var(--blue);  }
-.db-stat.red   { --accent: var(--red);   }
-
-.db-stat-top   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.db-stat-label { font-family: var(--font-h); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.db-stat-icon  { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; background: rgba(245,184,0,0.08); }
-.db-stat.green .db-stat-icon { background: rgba(34,197,94,0.08); }
-.db-stat.blue  .db-stat-icon { background: rgba(59,130,246,0.08); }
-.db-stat.red   .db-stat-icon { background: rgba(232,68,90,0.08); }
-.db-stat-val { font-family: var(--font-h); font-size: 28px; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 6px; }
-.db-stat-sub { font-size: 12px; color: var(--muted); }
-
-/* ── Charts row ── */
-.db-charts { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
-@media (max-width: 900px) { .db-charts { grid-template-columns: 1fr; } }
-
-/* ── Cards ── */
-.db-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.db-card-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
-.db-card-title { font-family: var(--font-h); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); display: flex; align-items: center; gap: 8px; }
-.db-card-title::before { content: ''; width: 3px; height: 14px; background: var(--gold); border-radius: 2px; }
-.db-card-action { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-.db-card-action:hover { color: var(--gold); }
-.db-card-body { padding: 22px; }
-.chart-container { position: relative; height: 220px; }
-
-/* ── Bottom grid ── */
-.db-bottom { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
-@media (max-width: 900px) { .db-bottom { grid-template-columns: 1fr; } }
-
-/* ── Table ── */
-.db-table { width: 100%; border-collapse: collapse; }
-.db-table thead th { font-family: var(--font-h); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 0 16px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-.db-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-.db-table tbody tr:last-child { border-bottom: none; }
-.db-table tbody tr:hover { background: rgba(255,255,255,0.02); }
-.db-table td { padding: 13px 16px; font-size: 13px; color: var(--text); vertical-align: middle; }
-.db-table td.muted { color: var(--muted); font-size: 12px; }
-
-/* ── Badges ── */
-.db-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 9px; border-radius: 99px; }
-.db-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-.db-badge.pending  { color: var(--gold);  background: rgba(245,184,0,0.1); }
-.db-badge.approved { color: var(--green); background: rgba(34,197,94,0.1); }
-.db-badge.rejected { color: var(--red);   background: rgba(232,68,90,0.1); }
-.db-badge.paid     { color: var(--blue);  background: rgba(59,130,246,0.1); }
-
-/* ── Top events ── */
-.db-event-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.db-event-row:last-child { border-bottom: none; }
-.db-event-rank    { font-family: var(--font-h); font-size: 11px; font-weight: 700; color: var(--muted); width: 20px; flex-shrink: 0; }
-.db-event-info    { flex: 1; min-width: 0; }
-.db-event-name    { font-size: 13px; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-event-meta    { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.db-event-revenue { font-family: var(--font-h); font-size: 13px; font-weight: 700; color: var(--gold); white-space: nowrap; }
-
-/* ── Pending alert ── */
-a.db-pending-alert,
-a.db-pending-alert:link,
-a.db-pending-alert:visited,
-a.db-pending-alert:focus,
-a.db-pending-alert:focus-visible { background: rgba(245,184,0,0.06); border: 1px dashed rgba(245,184,0,0.3); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--gold) !important; margin-bottom: 20px; text-decoration: none; transition: background 0.2s; }
-a.db-pending-alert :is(span, strong, i) { color: inherit !important; }
-a.db-pending-alert:hover { background: rgba(245,184,0,0.1); color: var(--gold) !important; }
-.db-pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; animation: blink 1.8s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-/* ── Quick links ── */
-.db-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.db-quick-link { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 13px 14px; text-decoration: none; color: var(--text); font-size: 13px; font-weight: 500; transition: border-color 0.2s, background 0.2s; }
-.db-quick-link:hover { border-color: rgba(245,184,0,0.3); background: rgba(245,184,0,0.04); color: #fff; }
-.db-quick-icon { font-size: 16px; }
-
-/* ── Animations ── */
-.fade-up { animation: fadeUp 0.4s ease both; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-.delay-1{animation-delay:.05s} .delay-2{animation-delay:.10s}
-.delay-3{animation-delay:.15s} .delay-4{animation-delay:.20s}
-</style>
-
-<div class="db-wrap">
-<div class="content">
-
-    {{-- ╔══════════════════════════════════════╗
-         ║          PAGE HEADER                 ║
-         ╚══════════════════════════════════════╝ --}}
-    <div class="db-page-head fade-up">
-        <div>
-            <div class="db-page-eyebrow">Admin Panel</div>
-            <h1 class="db-page-title">Dashboard <span>Overview</span></h1>
-        </div>
-        <div class="db-date"><i class="fa fa-calendar-alt me-1"></i> {{ now()->format('D, d M Y') }}</div>
+<div class="a-dash__top">
+    <div>
+        <p class="a-dash__hello">Welcome back, {{ $first }}</p>
+        <h1 class="a-dash__title">Here’s what’s happening with your events</h1>
     </div>
-
-    <div class="db-filters fade-up">
-        @foreach($rangeOptions as $key => $label)
-            <a
-                href="{{ route('admin.dashboard', array_filter(['range' => $key, 'event_id' => $selectedEventId ?: null])) }}"
-                class="db-filter-btn {{ $selectedRange === $key ? 'active' : '' }}"
-            >
-                {{ $label }}
-            </a>
-        @endforeach
-
-        {{-- Custom event dropdown --}}
-        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form" id="eventFilterForm">
-            <input type="hidden" name="range" value="{{ $selectedRange }}">
-            @if($selectedRange === 'custom')
-                <input type="hidden" name="from" value="{{ optional($startAt)->format('Y-m-d') }}">
-                <input type="hidden" name="to" value="{{ optional($endAt)->format('Y-m-d') }}">
-            @endif
-            <input type="hidden" name="event_id" id="eventIdInput" value="{{ $selectedEventId ?: '' }}">
-
-            <div class="db-custom-select" id="eventDropdown">
-                <div class="db-custom-select-btn" id="eventDropdownBtn">
-                    <span id="eventDropdownLabel">
-                        @if($selectedEvent)
-                            {{ $selectedEvent->name }}{{ $selectedEvent->status === 'sold_out' ? ' (Sold Out)' : '' }}
-                        @else
-                            All Events
-                        @endif
-                    </span>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-                <div class="db-custom-select-menu" id="eventDropdownMenu">
-                    <input type="text" class="db-custom-select-search" id="eventDropdownSearch" placeholder="Search events...">
-                    <div class="db-custom-select-list" id="eventDropdownList">
-                        <div class="db-custom-select-option {{ !$selectedEventId ? 'selected' : '' }}" data-value="">All Events</div>
-                        @foreach($eventOptions as $eventOption)
-                            <div class="db-custom-select-option {{ (int)$selectedEventId === (int)$eventOption->id ? 'selected' : '' }}" data-value="{{ $eventOption->id }}">
-                                <span>{{ $eventOption->name }}</span>
-                                @if($eventOption->status === 'sold_out')
-                                    <span class="db-sold-out-tag">Sold Out</span>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </form>
-
-        <form method="GET" action="{{ route('admin.dashboard') }}" class="db-filter-form">
+    <div class="a-range">
+        <div class="a-seg" role="group" aria-label="Date range">
+            @foreach(['7d' => '7 days', '30d' => '30 days', '3m' => '3 months', '1y' => '1 year'] as $key => $label)
+                <a href="{{ route('admin.dashboard', array_merge($rangeParams, ['range' => $key])) }}" class="{{ $rangeKey === $key ? 'is-active' : '' }}" @if($rangeKey === $key) aria-current="true" @endif>{{ $label }}</a>
+            @endforeach
+            <button type="button" class="{{ $rangeKey === 'custom' ? 'is-active' : '' }}" data-a-custom-toggle aria-expanded="{{ $rangeKey === 'custom' ? 'true' : 'false' }}" aria-controls="aCustomRange">Custom</button>
+        </div>
+        <form class="a-custom {{ $rangeKey === 'custom' ? 'is-open' : '' }}" id="aCustomRange" method="GET" action="{{ route('admin.dashboard') }}">
             <input type="hidden" name="range" value="custom">
-            @if($selectedEventId)
-                <input type="hidden" name="event_id" value="{{ $selectedEventId }}">
-            @endif
-            <input type="text" name="from" class="db-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
-            <input type="text" name="to" class="db-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
-            <button type="submit" class="db-filter-apply">Apply</button>
+            @if($selectedEvent)<input type="hidden" name="event_id" value="{{ $selectedEvent->id }}">@endif
+            <label class="a-sr-only" for="aFrom">From</label><input type="date" id="aFrom" name="from" value="{{ $from }}" required>
+            <label class="a-sr-only" for="aTo">To</label><input type="date" id="aTo" name="to" value="{{ $to }}" required>
+            <button class="a-btn a-btn--dark a-btn--sm" type="submit">Apply</button>
         </form>
+        @if($eventOptions->count() > 1)
+            <form method="GET" action="{{ route('admin.dashboard') }}">
+                <input type="hidden" name="range" value="{{ $rangeKey }}">
+                @if($rangeKey === 'custom')<input type="hidden" name="from" value="{{ $from }}"><input type="hidden" name="to" value="{{ $to }}">@endif
+                <label class="a-sr-only" for="aEvent">Event</label>
+                <select class="form-select no-select2" id="aEvent" name="event_id" onchange="this.form.submit()" style="min-width:200px;max-width:260px">
+                    <option value="">All events</option>
+                    @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($selectedEvent?->id === $e->id)>{{ $e->name }}</option>@endforeach
+                </select>
+            </form>
+        @endif
     </div>
+</div>
 
-    {{-- ╔══════════════════════════════════════╗
-         ║   PENDING ORDERS ALERT               ║
-         ║   WIRE: show only if $pendingOrders > 0
-         ║   href="{{ route('admin.orders.index', ['status'=>'pending']) }}"
-         ╚══════════════════════════════════════╝ --}}
-    @if($pendingOrders > 0)
-    <a href="{{ route('admin.orders.index') }}" class="db-pending-alert fade-up delay-1">
-        <div class="db-pending-dot"></div>
-        <span><strong>{{ $pendingOrders }} order(s)</strong> pending your review — click to view</span>
-        <i class="fa fa-arrow-right ms-auto"></i>
-    </a>
-    @endif
+<x-admin.flash />
 
-    {{-- ╔══════════════════════════════════════╗
-         ║          STAT CARDS                  ║
-         ║  WIRE each .db-stat-val with:        ║
-         ║   Orders    → {{ number_format($totalOrders) }}
-         ║   Revenue   → {{ number_format($totalRevenue, 0) }}
-         ║   Gross Rev → {{ number_format($grossRevenue, 0) }}
-         ║   Paid      → {{ number_format($totalPaidOrders) }}
-         ║   Customers → {{ number_format($totalCustomers) }}
-         ║   Events    → {{ number_format($totalEvents) }}
-         ║   Pending   → {{ number_format($pendingOrders) }}
-         ║   Tickets   → {{ number_format($ticketsSold) }}
-         ╚══════════════════════════════════════╝ --}}
-    <div class="db-stats">
+<div class="a-grid a-grid--4" style="margin-bottom:20px">
+    <x-admin.kpi label="Total sales" :value="$moneyShort($kpis['sales'])" icon="fa-wallet" :hint="$trend($kpis['sales_change']) ?? 'Paid orders · '.$rangeLabel" />
+    <x-admin.kpi label="Tickets sold" :value="number_format($kpis['tickets'])" icon="fa-ticket" :hint="$trend($kpis['tickets_change']) ?? 'Paid orders · '.$rangeLabel" />
+    <x-admin.kpi label="Active events" :value="number_format($kpis['active_events'])" icon="fa-calendar-days" hint="Currently on sale" />
+    <x-admin.kpi label="Paid orders" :value="number_format($kpis['paid_orders'])" icon="fa-receipt" :hint="number_format($kpis['pending_orders']).' awaiting payment or approval'" />
+</div>
 
-        <div class="db-stat green fade-up delay-1">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Gross Revenue</div>
-                <div class="db-stat-icon">💵</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($grossRevenue, 0) }} EGP</div>
-            <div class="db-stat-sub">Paid orders only</div>
-        </div>
+<div class="a-dash__grid">
+    <div class="a-dash__col">
+        <div class="a-dash__charts">
+            <x-admin.card title="Sales overview" :subtitle="$rangeLabel">
+                <x-slot:actions>
+                    <label class="a-sr-only" for="aMetric">Chart metric</label>
+                    <select class="form-select no-select2" id="aMetric" style="width:auto;min-height:38px"><option value="sales">Sales (EGP)</option><option value="orders">Bookings</option></select>
+                </x-slot:actions>
+                @if(array_sum($series['orders']) === 0 && array_sum($series['sales']) == 0)
+                    <x-admin.empty icon="fa-chart-line" title="No sales in this period" text="Try a longer date range." />
+                @else
+                    <div class="a-chartbox"><canvas id="aSalesChart" role="img" aria-label="Sales over time"></canvas></div>
+                @endif
+            </x-admin.card>
 
-        <div class="db-stat fade-up delay-4">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Total Paid Orders</div>
-                <div class="db-stat-icon">✅</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalPaidOrders) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
-        </div>
-
-        <div class="db-stat blue fade-up delay-1">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Customers</div>
-                <div class="db-stat-icon">👥</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalCustomers) }}</div>
-            <div class="db-stat-sub">New in {{ $rangeLabel }}</div>
-        </div>
-
-        <div class="db-stat red fade-up delay-2">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Active Events</div>
-                <div class="db-stat-icon">🎟️</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalEvents) }}</div>
-            <div class="db-stat-sub">Published events</div>
-        </div>
-
-        <div class="db-stat red fade-up delay-3">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Pending Orders</div>
-                <div class="db-stat-icon">⏳</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($pendingOrders) }}</div>
-            <div class="db-stat-sub">Awaiting review/payment</div>
-        </div>
-
-        <div class="db-stat blue fade-up delay-4">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Tickets Sold</div>
-                <div class="db-stat-icon">🎫</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($ticketsSold) }}</div>
-            <div class="db-stat-sub">Paid orders only</div>
-        </div>
-
-
-
-        <div class="db-stat fade-up delay-4">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Total Scans</div>
-                <div class="db-stat-icon">📲</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($totalScans) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
-        </div>
-
-        <div class="db-stat green fade-up delay-1">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Checked-in Scans</div>
-                <div class="db-stat-icon">✅</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($checkInsCount) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
-        </div>
-
-        <div class="db-stat blue fade-up delay-1">
-            <div class="db-stat-top">
-                <div class="db-stat-label">Guest Invitations</div>
-                <div class="db-stat-icon">📋</div>
-            </div>
-            <div class="db-stat-val">{{ number_format($guestInvitations) }}</div>
-            <div class="db-stat-sub">Within {{ $rangeLabel }}</div>
-        </div>
-
-    </div>
-
-
-
-    {{-- ╔══════════════════════════════════════╗
-         ║    RECENT ORDERS  +  RIGHT COLUMN    ║
-         ╚══════════════════════════════════════╝ --}}
-    <div class="db-bottom fade-up delay-3">
-
-        {{-- ── Recent Orders ──────────────────────────────────
-             WIRE: replace <tbody> content with:
-               @foreach($recentOrders as $order)
-                 <tr>
-                   <td class="muted">#{{ $order->id }}</td>
-                   <td>{{ $order->first_name }} {{ $order->last_name }}</td>
-                   <td class="muted">{{ $order->items->first()?->ticket?->event?->name ?? '—' }}</td>
-                   <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">
-                       {{ number_format($order->total, 2) }}
-                   </td>
-                   <td><span class="db-badge {{ $order->status }}">{{ ucfirst($order->status) }}</span></td>
-                 </tr>
-               @endforeach
-        ── --}}
-        <div class="db-card">
-            <div class="db-card-head">
-                <div class="db-card-title">Recent Orders ({{ $rangeLabel }})</div>
-                <a href="{{ route('admin.orders.index') }}" class="db-card-action">All Orders →</a>
-            </div>
-            <div class="db-card-body" style="padding:0">
-                <table class="db-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Customer</th>
-                            <th>Event</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($recentOrders as $order)
-                            @php
-                                $eventName = $order->items->first()?->ticket_name;
-                                $eventName = $eventName && str_contains($eventName, ' - ') ? strstr($eventName, ' - ', true) : ($eventName ?: '—');
-                                $statusClass = in_array($order->status, ['pending', 'pending_approval', 'pending_payment']) ? 'pending' : (in_array($order->status, ['approved', 'approved_pending_payment']) ? 'approved' : (in_array($order->status, ['paid']) ? 'paid' : 'rejected'));
-                            @endphp
-                            <tr>
-                                <td class="muted">#{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->id }}</td>
-                                <td>{{ $order->customer?->full_name ?: 'N/A' }}</td>
-                                <td class="muted">{{ $eventName }}</td>
-                                <td style="color:var(--gold);font-family:var(--font-h);font-weight:700;">{{ number_format((float) $order->total_amount, 2) }} EGP</td>
-                                <td><span class="db-badge {{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $order->status)) }}</span></td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" class="muted" style="padding:16px;">No orders yet.</td></tr>
-                        @endforelse
-                                        </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- ── Right column ── --}}
-        <div style="display:flex;flex-direction:column;gap:16px;">
-
-            {{-- Quick Access --}}
-            <div class="db-card">
-                <div class="db-card-head">
-                    <div class="db-card-title">Quick Access</div>
+            <x-admin.card title="Revenue summary" :subtitle="'Paid orders · '.$rangeLabel">
+                @if($revenue['paid'] <= 0)
+                    <x-admin.empty icon="fa-wallet" title="No paid orders" text="Paid orders by payment method appear here." />
+                @else
+                    <div class="a-chartbox a-chartbox--donut"><canvas id="aRevenueChart" role="img" aria-label="Paid revenue by payment method"></canvas>
+                        <div class="a-donut-center"><b>{{ $moneyShort($revenue['paid']) }}</b><span>Paid</span></div></div>
+                    <ul class="a-legend">
+                        @foreach($revenue['by_method'] as $i => $m)
+                            <li><i data-color="{{ $i }}"></i><span>{{ $m['label'] }}</span><span class="a-num">{{ $m['share'] }}%</span><span class="a-num a-muted">{{ $moneyShort($m['amount']) }}</span></li>
+                        @endforeach
+                    </ul>
+                @endif
+                <div class="a-split">
+                    <div><span class="a-muted">Pending (not yet paid)</span><b>{{ $moneyShort($revenue['pending']) }}</b></div>
+                    <div><span class="a-muted">Refunded</span><b>{{ $moneyShort($revenue['refunded']) }}</b></div>
                 </div>
-                <div class="db-card-body">
-                    <div class="db-quick">
-                        <a href="{{ route('admin.events.index') }}"    class="db-quick-link"><span class="db-quick-icon">🎟️</span> Events</a>
-                        <a href="{{ route('admin.orders.index') }}"    class="db-quick-link"><span class="db-quick-icon">🧾</span> Orders</a>
-                        <a href="{{ route('admin.customers.index') }}" class="db-quick-link"><span class="db-quick-icon">👥</span> Customers</a>
-                        <a href="{{ route('admin.tickets.index') }}"   class="db-quick-link"><span class="db-quick-icon">🎫</span> Tickets</a>
-                        <a href="{{ route('admin.users.index') }}"     class="db-quick-link"><span class="db-quick-icon">🔑</span> Users</a>
-                        <a href="{{ route('admin.roles.index') }}"     class="db-quick-link"><span class="db-quick-icon">🛡️</span> Roles</a>
+            </x-admin.card>
+        </div>
+
+        <x-admin.card title="Recent orders" flush>
+            <x-slot:actions>@can('orders.view')<a class="a-link a-text-sm" href="{{ route('admin.orders.index') }}">View all</a>@endcan</x-slot:actions>
+            @if($recentOrders->isEmpty())
+                <x-admin.empty icon="fa-receipt" title="No orders yet" text="New orders appear here as they come in." />
+            @else
+                <x-admin.table stack caption="Recent orders">
+                    <thead><tr><th>Order</th><th>Customer</th><th>Event</th><th class="a-num">Tickets</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody>
+                    @foreach($recentOrders as $o)
+                        <tr>
+                            <td data-label="Order">@can('orders.view')<a class="a-table__main" href="{{ route('admin.orders.show', $o) }}">#{{ $o->order_number }}</a>@else #{{ $o->order_number }} @endcan</td>
+                            <td data-label="Customer"><span class="a-table__main">{{ trim(($o->customer?->first_name ?? '').' '.($o->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub a-trunc">{{ $o->customer?->email }}</span></td>
+                            <td data-label="Event"><span class="a-trunc">{{ $o->items->pluck('event.name')->filter()->first() ?? '—' }}</span></td>
+                            <td data-label="Tickets" class="a-num">{{ (int) $o->items->sum('quantity') }}</td>
+                            <td data-label="Amount" class="a-num">{{ $moneyShort($o->total_amount) }}</td>
+                            <td data-label="Status"><x-admin.status :status="$o->status" /></td>
+                            <td data-label="Date">{{ $o->created_at->format('d M, H:i') }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </x-admin.table>
+            @endif
+        </x-admin.card>
+    </div>
+
+    <div class="a-dash__col">
+        <x-admin.card title="Upcoming events">
+            <x-slot:actions>@can('events.view')<a class="a-link a-text-sm" href="{{ route('admin.events.index') }}">View all</a>@endcan</x-slot:actions>
+            @forelse($upcoming as $e)
+                @php $img = $e->cover_image_url ?? null; @endphp
+                <div class="a-event">
+                    <div class="a-event__img" @if($img) style="background-image:url('{{ $img }}')" @endif><span class="a-event__date">{{ $e->event_date->format('M') }}<b>{{ $e->event_date->format('d') }}</b></span></div>
+                    <div style="min-width:0">
+                        @can('events.view')<a class="a-event__name" href="{{ route('admin.events.show', $e) }}">{{ $e->name }}</a>@else<span class="a-event__name">{{ $e->name }}</span>@endcan
+                        <span class="a-event__meta">{{ $e->location }}</span>
+                        <span class="a-event__meta">{{ number_format($e->tickets_sold) }} tickets sold · <x-admin.status :status="$e->status" kind="event" /></span>
                     </div>
                 </div>
+            @empty
+                <x-admin.empty icon="fa-calendar-days" title="No upcoming events" text="Create an event to start selling tickets." />
+            @endforelse
+        </x-admin.card>
+
+        @if($scans)
+            <x-admin.card title="Ticket check-ins" subtitle="Upcoming events">
+                <div class="a-ring" style="--p: {{ $scans['percent'] }}"><div><b>{{ $scans['percent'] }}%</b><span>Checked in</span></div></div>
+                <div class="a-scan-stats">
+                    <div><span class="a-muted">Checked in</span><b>{{ number_format($scans['checked_in']) }}</b></div>
+                    <div><span class="a-muted">Remaining</span><b>{{ number_format($scans['remaining']) }}</b></div>
+                    <div><span class="a-muted">Total tickets</span><b>{{ number_format($scans['total']) }}</b></div>
+                </div>
+            </x-admin.card>
+        @endif
+
+        <x-admin.card title="Quick actions">
+            <div class="a-quick">
+                @can('events.create')<a class="is-primary" href="{{ route('admin.events.create') }}"><i class="fa fa-plus"></i>Create event<small>Set up a new event</small></a>@endcan
+                @can('tickets.view')<a href="{{ route('admin.tickets.index') }}"><i class="fa fa-ticket"></i>Manage tickets<small>View and edit tickets</small></a>@endcan
+                @can('promo-codes.create')<a href="{{ route('admin.promo-codes.create') }}"><i class="fa fa-tags"></i>Create promo code<small>Boost your sales</small></a>@endcan
+                @can('reports.view')<a href="{{ route('admin.reports.index') }}"><i class="fa fa-chart-column"></i>View reports<small>Detailed analytics</small></a>@endcan
             </div>
-
-        </div>
+        </x-admin.card>
     </div>
-
 </div>
-</div>
-</div>
-
-{{-- ╔══════════════════════════════════════╗
-     ║           CHARTS JS                  ║
-     ║  WIRE chart data — replace the       ║
-     ║  hardcoded arrays with:              ║
-     ║   labels: {!! json_encode($revenueLabels) !!}
-     ║   data:   {!! json_encode($revenueData) !!}
-     ║   (same for orders chart)            ║
-     ╚══════════════════════════════════════╝ --}}
-<script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
-<script>
-window.addEventListener('load', function () {
-    if (window.Dashmix && typeof Dashmix.helpersOnLoad === 'function') {
-        Dashmix.helpersOnLoad(['js-flatpickr']);
-    } else if (typeof flatpickr !== 'undefined') {
-        flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y' });
-    }
-
-    var dropdown = document.getElementById('eventDropdown');
-    var btn      = document.getElementById('eventDropdownBtn');
-    var menu     = document.getElementById('eventDropdownMenu');
-    var input    = document.getElementById('eventIdInput');
-    var label    = document.getElementById('eventDropdownLabel');
-    var form     = document.getElementById('eventFilterForm');
-
-    if (!dropdown) return;
-
-    // Move menu to body so it's never clipped by overflow:hidden parents
-    document.body.appendChild(menu);
-
-    var search = document.getElementById('eventDropdownSearch');
-    var isOpen = false;
-
-    function openMenu() {
-        var rect = btn.getBoundingClientRect();
-        menu.style.top  = (rect.bottom + window.scrollY + 6) + 'px';
-        menu.style.left = rect.left + 'px';
-        menu.classList.add('is-open');
-        btn.parentElement.classList.add('open');
-        isOpen = true;
-        setTimeout(function(){ search && search.focus(); }, 50);
-    }
-
-    function closeMenu() {
-        menu.classList.remove('is-open');
-        btn.parentElement.classList.remove('open');
-        isOpen = false;
-        if (search) { search.value = ''; }
-        menu.querySelectorAll('.db-custom-select-option').forEach(function(opt){ opt.classList.remove('hidden'); });
-    }
-
-    btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        isOpen ? closeMenu() : openMenu();
-    });
-
-    if (search) {
-        search.addEventListener('input', function (e) {
-            e.stopPropagation();
-            var q = this.value.toLowerCase();
-            menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
-                opt.classList.toggle('hidden', q.length > 0 && !opt.textContent.toLowerCase().includes(q));
-            });
-        });
-        search.addEventListener('click', function(e){ e.stopPropagation(); });
-    }
-
-    menu.querySelectorAll('.db-custom-select-option').forEach(function (opt) {
-        opt.addEventListener('click', function (e) {
-            e.stopPropagation();
-            input.value = this.getAttribute('data-value');
-            var nameEl = this.querySelector('span') || this;
-            label.textContent = nameEl.textContent.trim();
-            if (this.querySelector('.db-sold-out-tag')) label.textContent += ' (Sold Out)';
-            closeMenu();
-            form.submit();
-        });
-    });
-
-    document.addEventListener('click', function () { if (isOpen) closeMenu(); });
-});
-</script>
-
-
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var toggle = document.querySelector('[data-a-custom-toggle]');
+    if (toggle) toggle.addEventListener('click', function () {
+        var f = document.getElementById('aCustomRange');
+        var open = !f.classList.contains('is-open');
+        f.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) document.getElementById('aFrom').focus();
+    });
+
+    if (typeof Chart === 'undefined') return;
+    var palette = ['#FFD200', '#111111', '#9a9a92', '#c9a400', '#555555', '#d9d9d3', '#7a5b00'];
+    document.querySelectorAll('.a-legend i[data-color]').forEach(function (i) { i.style.background = palette[i.dataset.color % palette.length]; });
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+    var series = @json($series);
+    var salesEl = document.getElementById('aSalesChart');
+    if (salesEl) {
+        var metric = 'sales';
+        var chart = new Chart(salesEl, {
+            type: 'line',
+            data: { labels: series.labels, datasets: [{ label: 'Sales (EGP)', data: series.sales, borderColor: '#E6B800', backgroundColor: 'rgba(255,210,0,.18)', fill: true, tension: .35, pointRadius: series.labels.length > 40 ? 0 : 3, pointBackgroundColor: '#FFD200', borderWidth: 2.5 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111', padding: 10, displayColors: false, callbacks: { label: function (c) { return metric === 'sales' ? c.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' EGP' : c.parsed.y + ' bookings'; } } } },
+                scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#8a8a82' } }, y: { beginAtZero: true, grid: { color: '#eeeeea' }, ticks: { color: '#8a8a82', precision: 0 } } }
+            }
+        });
+        document.getElementById('aMetric').addEventListener('change', function (e) {
+            metric = e.target.value;
+            chart.data.datasets[0].label = metric === 'sales' ? 'Sales (EGP)' : 'Bookings';
+            chart.data.datasets[0].data = metric === 'sales' ? series.sales : series.orders;
+            chart.update();
+        });
+    }
+
+    var revEl = document.getElementById('aRevenueChart');
+    if (revEl) {
+        var rev = @json($revenue['by_method']);
+        new Chart(revEl, {
+            type: 'doughnut',
+            data: { labels: rev.map(function (m) { return m.label; }), datasets: [{ data: rev.map(function (m) { return m.amount; }), backgroundColor: rev.map(function (m, i) { return palette[i % palette.length]; }), borderWidth: 0 }] },
+            options: { cutout: '72%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111', callbacks: { label: function (c) { return c.label + ': ' + c.parsed.toLocaleString('en-US') + ' EGP'; } } } } }
+        });
+    }
+})();
+</script>
+@endpush

@@ -1,14 +1,13 @@
 @extends('admin.master')
+@section('title', 'Create Ticket')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<div class="content">
-    <div class="block block-rounded">
-        <div class="block-header block-header-default"><h3 class="block-title">Create Ticket</h3></div>
-        <div class="block-content">
-            <form method="POST" action="{{ route('admin.tickets.store') }}">
-                @include('admin.tickets.form')
-            </form>
-        </div>
-    </div>
-</div>
+<x-admin.page-header title="Create Ticket" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Create']" />
+<x-admin.flash />
+<form method="POST" action="{{ route('admin.tickets.store') }}" data-a-loading>
+    <x-admin.card>
+        @include('admin.tickets.form')
+    </x-admin.card>
+</form>
 @endsection

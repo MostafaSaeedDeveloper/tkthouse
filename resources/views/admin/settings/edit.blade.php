@@ -1,79 +1,40 @@
 @extends('admin.master')
-
+@section('title', 'General Settings')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<div class="content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">General Settings</h2>
-        <div class="dropdown">
-            <button class="btn btn-alt-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">Settings Menu</button>
-            <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item" href="{{ route('admin.settings.edit') }}">General Settings</a>
-                <a class="dropdown-item" href="{{ route('admin.payment-methods.index') }}">Payment Methods</a>
-            </div>
-        </div>
-    </div>
+<x-admin.page-header title="General Settings" subtitle="Branding, WhatsApp ticket sending and payment timeout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings']">
+    <a class="a-btn a-btn--outline" href="{{ route('admin.payment-methods.index') }}"><i class="fa fa-credit-card"></i> Payment Methods</a>
+</x-admin.page-header>
+<x-admin.flash />
+<form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" data-a-loading>
+    @csrf
+    @method('PUT')
+    <x-admin.card class="a-m-narrow">
+        <x-admin.form-section title="Brand" description="Site name and colors." cols="3">
+            <x-admin.field class="is-full" label="Site Name" name="site_name" for="s-site-name" required><input id="s-site-name" type="text" class="form-control" name="site_name" value="{{ old('site_name', $settings['site_name'] ?? 'TKT House') }}" required></x-admin.field>
+            <x-admin.field label="Primary Color" name="primary_color" for="s-primary"><input id="s-primary" type="color" class="form-control form-control-color a-m-color" name="primary_color" value="{{ old('primary_color', $settings['primary_color'] ?? '#f5b800') }}"></x-admin.field>
+            <x-admin.field label="Secondary Color" name="secondary_color" for="s-secondary"><input id="s-secondary" type="color" class="form-control form-control-color a-m-color" name="secondary_color" value="{{ old('secondary_color', $settings['secondary_color'] ?? '#111111') }}"></x-admin.field>
+        </x-admin.form-section>
 
-    @include('admin.partials.flash')
+        <x-admin.form-section title="Logos" description="Upload only the logos you want to replace." cols="3">
+            <x-admin.field label="Logo Light" name="logo_light" for="s-logo-light"><input id="s-logo-light" type="file" class="form-control" name="logo_light" accept="image/*"></x-admin.field>
+            <x-admin.field label="Logo Dark" name="logo_dark" for="s-logo-dark"><input id="s-logo-dark" type="file" class="form-control" name="logo_dark" accept="image/*"></x-admin.field>
+            <x-admin.field label="Logo Footer" name="logo_footer" for="s-logo-footer"><input id="s-logo-footer" type="file" class="form-control" name="logo_footer" accept="image/*"></x-admin.field>
+        </x-admin.form-section>
 
-    <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="block block-rounded">
-        @csrf
-        @method('PUT')
-        <div class="block-content">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Site Name</label>
-                    <input type="text" class="form-control" name="site_name" value="{{ old('site_name', $settings['site_name'] ?? 'TKT House') }}" required>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Primary Color</label>
-                    <input type="color" class="form-control form-control-color" name="primary_color" value="{{ old('primary_color', $settings['primary_color'] ?? '#f5b800') }}">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Secondary Color</label>
-                    <input type="color" class="form-control form-control-color" name="secondary_color" value="{{ old('secondary_color', $settings['secondary_color'] ?? '#111111') }}">
-                </div>
+        <x-admin.form-section title="Orders and messaging" cols="1">
+            <div class="a-m-switch form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="whatsapp_ticket_sending_enabled" name="whatsapp_ticket_sending_enabled" value="1" @checked(old('whatsapp_ticket_sending_enabled', data_get($settings, 'whatsapp_ticket_sending_enabled', true)))>
+                <label class="form-check-label" for="whatsapp_ticket_sending_enabled">
+                    <strong>Enable sending tickets via WhatsApp</strong>
+                    <span class="a-hint d-block">Disable this to stop WhatsApp sending from admin and post-payment flows.</span>
+                </label>
             </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3"><label class="form-label">Logo Light</label><input type="file" class="form-control" name="logo_light" accept="image/*"></div>
-                <div class="col-md-4 mb-3"><label class="form-label">Logo Dark</label><input type="file" class="form-control" name="logo_dark" accept="image/*"></div>
-                <div class="col-md-4 mb-3"><label class="form-label">Logo Footer</label><input type="file" class="form-control" name="logo_footer" accept="image/*"></div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div class="form-check form-switch mt-2">
-                        <input
-                            class="form-check-input"
-                            type="checkbox"
-                            id="whatsapp_ticket_sending_enabled"
-                            name="whatsapp_ticket_sending_enabled"
-                            value="1"
-                            @checked(old('whatsapp_ticket_sending_enabled', data_get($settings, 'whatsapp_ticket_sending_enabled', true)))
-                        >
-                        <label class="form-check-label" for="whatsapp_ticket_sending_enabled">
-                            Enable sending tickets via WhatsApp
-                        </label>
-                        <div class="form-text">Disable this to stop WhatsApp sending from admin and post-payment flows.</div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Pending Payment Timeout (minutes)</label>
-                    <input
-                        type="number"
-                        min="1"
-                        max="10080"
-                        class="form-control"
-                        name="pending_payment_timeout_minutes"
-                        value="{{ old('pending_payment_timeout_minutes', data_get($settings, 'pending_payment_timeout_minutes', 2880)) }}"
-                    >
-                    <div class="form-text">Default is 2880 minutes (2 days). Orders still pending payment after this period are auto-canceled.</div>
-                </div>
-            </div>
-        </div>
-        <div class="block-content block-content-full text-end bg-body-light">
-            <button class="btn btn-primary" type="submit">Save Settings</button>
-        </div>
-    </form>
-</div>
+            <x-admin.field label="Pending Payment Timeout (minutes)" name="pending_payment_timeout_minutes" for="s-timeout" hint="Default is 2880 minutes (2 days). Orders still pending payment after this period are auto-canceled.">
+                <input id="s-timeout" type="number" min="1" max="10080" class="form-control" name="pending_payment_timeout_minutes" value="{{ old('pending_payment_timeout_minutes', data_get($settings, 'pending_payment_timeout_minutes', 2880)) }}">
+            </x-admin.field>
+        </x-admin.form-section>
+        <div class="a-form-actions"><button class="a-btn a-btn--primary" type="submit">Save Settings</button></div>
+    </x-admin.card>
+</form>
 @endsection

@@ -1,136 +1,73 @@
-@extends('front.layout.master')
+@extends('front.account.layout')
+@section('title', 'My orders')
+@section('heading', 'My orders')
 
-@section('content')
+@php
+    $money = fn ($n) => number_format((float) $n, 2).' EGP';
+@endphp
 
-@include('front.account.partials._acc_styles')
-
-<div class="acc-banner">
-    <div class="container">
-        <div class="acc-banner-inner">
-            <div>
-                <div class="acc-banner-label">Account</div>
-                <h1 class="acc-banner-title">My <span>Orders</span></h1>
-                <p class="acc-banner-sub">Track and manage all your ticket orders</p>
-            </div>
+@section('portal')
+<section aria-labelledby="ordersTitle">
+    <form class="tkt-portal__toolbar" method="GET" action="{{ route('front.account.orders') }}" role="search">
+        <label class="tkt-sr-only" for="orderSearch">Search orders</label>
+        <div class="tkt-portal__search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="tkt-input" id="orderSearch" type="search" name="q" value="{{ $search }}" placeholder="Search by order number or event" maxlength="80">
         </div>
+        @if($filter !== 'all')<input type="hidden" name="status" value="{{ $filter }}">@endif
+        <button class="tkt-btn tkt-btn--dark" type="submit">Search</button>
+    </form>
+
+    <div class="tkt-portal__chips" role="group" aria-label="Filter orders">
+        @foreach($filters as $key => $label)
+            <a href="{{ route('front.account.orders', array_filter(['status' => $key === 'all' ? null : $key, 'q' => $search ?: null])) }}" class="tkt-chip {{ $filter === $key ? 'is-active' : '' }}" @if($filter === $key) aria-current="true" @endif>{{ $label }}</a>
+        @endforeach
     </div>
-</div>
 
-<section class="acc-page">
-    <div class="container">
-
-        @include('front.account.partials.navigation')
-
-        <div class="acc-card">
-            <div class="acc-card-head">
-                <div class="acc-card-title">Order History</div>
-            </div>
-            <div style="overflow-x:auto;">
-                <table class="acc-table acc-orders-table">
-                    <thead>
-                        <tr>
-                            <th>Order #</th>
-                            <th>Status</th>
-                            <th>Payment Deadline</th>
-                            <th>Payment Method</th>
-                            <th>Total</th>
-                            <th>Date</th>
-                            <th class="text-end">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($orders as $order)
-                            @php
-                                $sc = match($order->status) {
-                                    'paid'                 => 'acc-badge-paid',
-                                    'rejected','canceled'  => 'acc-badge-rejected',
-                                    default                => 'acc-badge-pending',
-                                };
-                            @endphp
-                            @php
-                                $methodCode = (string) ($order->payment_method ?? '');
-                                $methodLabel = $paymentMethodLabels[$methodCode] ?? ucwords(str_replace('_', ' ', $methodCode ?: 'N/A'));
-                                $secondsLeft = $order->paymentSecondsRemaining();
-                                $deadlineAt = $order->paymentDeadlineAt();
-                                $safeSecondsLeft = $secondsLeft !== null ? max(0, (int) $secondsLeft) : null;
-                                $initialTimerLabel = 'Expired';
-                                if ($safeSecondsLeft !== null && $safeSecondsLeft > 0) {
-                                    $days = intdiv($safeSecondsLeft, 86400);
-                                    $hours = intdiv($safeSecondsLeft % 86400, 3600);
-                                    $mins = intdiv($safeSecondsLeft % 3600, 60);
-                                    $secs = $safeSecondsLeft % 60;
-                                    $initialTimerLabel = ($days > 0 ? $days.'d ' : '')
-                                        .str_pad((string) $hours, 2, '0', STR_PAD_LEFT).':'
-                                        .str_pad((string) $mins, 2, '0', STR_PAD_LEFT).':'
-                                        .str_pad((string) $secs, 2, '0', STR_PAD_LEFT);
-                                }
-                            @endphp
-                            <tr>
-                                <td class="acc-mono">{{ $order->order_number }}</td>
-                                <td><span class="acc-badge {{ $sc }}">{{ ucwords(str_replace('_',' ',$order->status)) }}</span></td>
-                                <td>
-                                    @if($order->status === 'pending_payment' && $secondsLeft !== null)
-                                        <span class="acc-deadline-chip js-order-timer" data-seconds-left="{{ $safeSecondsLeft }}">
-                                            {{ $initialTimerLabel }}
-                                        </span>
-                                        <small class="acc-deadline-sub">Until: {{ $deadlineAt?->format('d M Y, h:i A') }}</small>
-                                    @else
-                                        <span style="color:var(--muted);font-size:11px;">—</span>
-                                    @endif
-                                </td>
-                                <td><span class="acc-badge acc-badge-method">{{ $methodLabel }}</span></td>
-                                <td style="font-weight:600;color:#fff;">{{ number_format($order->total_amount,2) }} <span style="color:var(--muted);font-size:11px;">EGP</span></td>
-                                <td style="color:var(--muted);font-size:12px;">{{ $order->created_at?->format('d M Y, g:i A') }}</td>
-                                <td class="text-end">
-                                    @if($order->status === 'pending_payment' && $order->payment_link_token)
-                                        <a href="{{ route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) }}" class="acc-paynow-btn">Pay Now</a>
-                                    @else
-                                        <span style="color:var(--muted);font-size:11px;">—</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="7"><div class="acc-empty"><i class="fa fa-bag-shopping"></i><span>No orders yet.</span></div></td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if($orders->hasPages())
-                <div class="acc-page-footer">{{ $orders->links() }}</div>
+    @if($orders->isEmpty())
+        <x-tkt.empty-state icon="ticket" :title="($search !== '' || $filter !== 'all') ? 'No orders match your search' : 'No orders yet'" :text="($search !== '' || $filter !== 'all') ? 'Try a different search or filter.' : 'When you book tickets, your orders appear here.'">
+            @if($search !== '' || $filter !== 'all')
+                <a class="tkt-btn tkt-btn--outline" href="{{ route('front.account.orders') }}">Clear filters</a>
+            @else
+                <a class="tkt-btn tkt-btn--primary" href="{{ route('front.events') }}">Browse events</a>
             @endif
-        </div>
-
-    </div>
+        </x-tkt.empty-state>
+    @else
+        <ul class="tkt-portal__list" aria-label="Orders">
+            @foreach($orders as $order)
+                @php
+                    $event = \App\Support\CustomerPortal::eventOf($order);
+                    $image = $event?->cover_image_url ?: $event?->event_banner_url;
+                    $count = (int) $order->items->sum('quantity');
+                    [$orderLabel, $orderVariant] = \App\Support\CustomerPortal::orderBadge($order->status);
+                    [$payLabel, $payVariant] = \App\Support\CustomerPortal::paymentBadge($order);
+                @endphp
+                <li class="tkt-order-card">
+                    <a class="tkt-order-card__media tkt-media {{ $image ? '' : 'is-empty' }}" href="{{ route('front.account.orders.show', $order->order_number) }}" tabindex="-1" aria-hidden="true">
+                        @if($image)<img class="tkt-img" src="{{ $image }}" alt="" loading="lazy">@endif
+                    </a>
+                    <div class="tkt-order-card__body">
+                        <div class="tkt-order-card__top">
+                            <span class="tkt-order-card__ref">Order {{ $order->order_number }}</span>
+                            <span class="tkt-order-card__badges">
+                                <x-tkt.badge :variant="$orderVariant">{{ $orderLabel }}</x-tkt.badge>
+                                @if($payLabel !== $orderLabel)<x-tkt.badge :variant="$payVariant">{{ $payLabel }}</x-tkt.badge>@endif
+                            </span>
+                        </div>
+                        <h2 class="tkt-order-card__title">{{ $event?->name ?? $order->items->first()?->ticket_name ?? 'Event' }}</h2>
+                        <dl class="tkt-order-card__meta">
+                            <div><dt>Booked</dt><dd>{{ $order->created_at->format('d M Y') }}</dd></div>
+                            <div><dt>Tickets</dt><dd>{{ $count }}</dd></div>
+                            <div><dt>Total</dt><dd>{{ $money($order->total_amount) }}</dd></div>
+                        </dl>
+                    </div>
+                    <div class="tkt-order-card__action">
+                        <a class="tkt-btn tkt-btn--outline" href="{{ route('front.account.orders.show', $order->order_number) }}">View details<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+        {{ $orders->links('vendor.pagination.tkt') }}
+    @endif
 </section>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const timers = document.querySelectorAll('.js-order-timer');
-    if (!timers.length) return;
-
-    const render = (el, seconds) => {
-        if (seconds <= 0) {
-            el.textContent = 'Expired';
-            return;
-        }
-
-        const days = Math.floor(seconds / 86400);
-        const hours = Math.floor((seconds % 86400) / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        const dd = days > 0 ? `${days}d ` : '';
-        el.textContent = `${dd}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    };
-
-    timers.forEach((el) => {
-        let remaining = parseInt(el.dataset.secondsLeft || '0', 10);
-        render(el, remaining);
-        setInterval(() => {
-            remaining -= 1;
-            render(el, remaining);
-        }, 1000);
-    });
-});
-</script>
-
 @endsection

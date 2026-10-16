@@ -1,108 +1,72 @@
 @extends('admin.master')
-
+@section('title', ($method->exists ? 'Edit' : 'Create').' Payment Method')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<div class="content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="h4 mb-1">{{ $method->exists ? 'Edit' : 'Create' }} Payment Method</h2>
-            <a href="{{ route('admin.payment-methods.index') }}" class="fs-sm">← Back to Payment Methods</a>
-        </div>
-    </div>
+<x-admin.page-header :title="($method->exists ? 'Edit' : 'Create').' Payment Method'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Payment Methods' => route('admin.payment-methods.index'), $method->exists ? 'Edit' : 'Create']">
+    <a href="{{ route('admin.payment-methods.index') }}" class="a-btn a-btn--ghost">&larr; Back to Payment Methods</a>
+</x-admin.page-header>
+<x-admin.flash />
+<form method="POST" enctype="multipart/form-data" action="{{ $method->exists ? route('admin.payment-methods.update', $method) : route('admin.payment-methods.store') }}" data-a-loading>
+    @csrf
+    @if($method->exists) @method('PUT') @endif
+    @php($cfg = $method->config ?? [])
+    <x-admin.card class="a-m-narrow">
+        <x-admin.form-section title="Method" cols="3">
+            <x-admin.field label="Name" name="name" for="pm-name" required><input id="pm-name" class="form-control" name="name" value="{{ old('name', $method->name) }}" required></x-admin.field>
+            <x-admin.field label="Code" name="code" for="pm-code" required hint="Examples: visa, wallet, paymob_card, paymob_wallet, paymob_apple_pay"><input id="pm-code" class="form-control" name="code" value="{{ old('code', $method->code) }}" required></x-admin.field>
+            <x-admin.field label="Provider" name="provider" for="provider-select" required>
+                <select class="form-select" name="provider" id="provider-select" required>
+                    <option value="manual" @selected(old('provider', $method->provider ?: 'manual') === 'manual')>Manual</option>
+                    <option value="paymob" @selected(old('provider', $method->provider) === 'paymob')>Paymob</option>
+                    <option value="fawaterak" @selected(old('provider', $method->provider) === 'fawaterak')>Fawaterak</option>
+                </select>
+            </x-admin.field>
+        </x-admin.form-section>
 
-    @include('admin.partials.flash')
-
-    <form method="POST" enctype="multipart/form-data" action="{{ $method->exists ? route('admin.payment-methods.update', $method) : route('admin.payment-methods.store') }}" class="block block-rounded">
-        @csrf
-        @if($method->exists) @method('PUT') @endif
-
-        @php($cfg = $method->config ?? [])
-
-        <div class="block-content">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Name</label>
-                    <input class="form-control" name="name" value="{{ old('name', $method->name) }}" required>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Code</label>
-                    <input class="form-control" name="code" value="{{ old('code', $method->code) }}" required>
-                    <small class="text-muted">Examples: visa, wallet, paymob_card, paymob_wallet, paymob_apple_pay</small>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Provider</label>
-                    <select class="form-select" name="provider" id="provider-select" required>
-                        <option value="manual" @selected(old('provider', $method->provider ?: 'manual') === 'manual')>Manual</option>
-                        <option value="paymob" @selected(old('provider', $method->provider) === 'paymob')>Paymob</option>
-                        <option value="fawaterak" @selected(old('provider', $method->provider) === 'fawaterak')>Fawaterak</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Checkout Label</label>
-                    <input class="form-control" name="checkout_label" value="{{ old('checkout_label', $method->checkout_label) }}" placeholder="Text shown in checkout">
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Checkout Icon Image</label>
-                    <input type="file" class="form-control" name="checkout_icon_file" accept="image/*">
-                    @if($method->checkout_icon_url)
-                        <div class="mt-2"><img src="{{ $method->checkout_icon_url }}" alt="icon" style="height:36px;width:36px;object-fit:contain;border-radius:6px;background:#fff"></div>
-                    @endif
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Checkout Description (Optional)</label>
-                    <input class="form-control" name="checkout_description" value="{{ old('checkout_description', $method->checkout_description) }}" placeholder="Optional short description under payment method">
-                </div>
-            </div>
-
-            <div class="form-check form-switch mb-4">
+        <x-admin.form-section title="Checkout appearance" description="What customers see when choosing this method." cols="3">
+            <x-admin.field label="Checkout Label" name="checkout_label" for="pm-label"><input id="pm-label" class="form-control" name="checkout_label" value="{{ old('checkout_label', $method->checkout_label) }}" placeholder="Text shown in checkout"></x-admin.field>
+            <x-admin.field label="Checkout Icon Image" name="checkout_icon_file" for="pm-icon">
+                <input id="pm-icon" type="file" class="form-control" name="checkout_icon_file" accept="image/*">
+                @if($method->checkout_icon_url)<div class="mt-2"><img src="{{ $method->checkout_icon_url }}" alt="Current icon" style="height:36px;width:36px;object-fit:contain;border-radius:6px;background:#fff"></div>@endif
+            </x-admin.field>
+            <x-admin.field label="Checkout Description (Optional)" name="checkout_description" for="pm-desc"><input id="pm-desc" class="form-control" name="checkout_description" value="{{ old('checkout_description', $method->checkout_description) }}" placeholder="Optional short description under payment method"></x-admin.field>
+            <div class="is-full a-m-switch form-check form-switch">
                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $method->is_active ?? true))>
-                <label class="form-check-label" for="is_active">Active</label>
+                <label class="form-check-label" for="is_active"><strong>Active</strong><span class="a-hint d-block">Inactive methods are hidden at checkout.</span></label>
             </div>
+        </x-admin.form-section>
 
-            <div id="paymob-config" style="display:none;">
-                <h5>Paymob Configuration</h5>
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label class="form-label">API Key</label><input class="form-control" name="paymob_api_key" value="{{ old('paymob_api_key', $cfg['api_key'] ?? '') }}"></div>
-                    <div class="col-md-3 mb-3"><label class="form-label">Iframe ID</label><input class="form-control" name="paymob_iframe_id" value="{{ old('paymob_iframe_id', $cfg['iframe_id'] ?? '') }}"></div>
-                    <div class="col-md-3 mb-3"><label class="form-label">Integration ID</label><input class="form-control" name="paymob_integration_id" value="{{ old('paymob_integration_id', $cfg['integration_id'] ?? '') }}"></div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Callback URL (Copy & add in Paymob dashboard)</label>
+        <div id="paymob-config" style="display:none;">
+            <x-admin.form-section title="Paymob Configuration" cols="3">
+                <x-admin.field class="is-full" label="API Key" name="paymob_api_key" for="pm-pk"><input id="pm-pk" class="form-control" name="paymob_api_key" value="{{ old('paymob_api_key', $cfg['api_key'] ?? '') }}"></x-admin.field>
+                <x-admin.field label="Iframe ID" name="paymob_iframe_id" for="pm-iframe"><input id="pm-iframe" class="form-control" name="paymob_iframe_id" value="{{ old('paymob_iframe_id', $cfg['iframe_id'] ?? '') }}"></x-admin.field>
+                <x-admin.field label="Integration ID" name="paymob_integration_id" for="pm-integ"><input id="pm-integ" class="form-control" name="paymob_integration_id" value="{{ old('paymob_integration_id', $cfg['integration_id'] ?? '') }}"></x-admin.field>
+                <x-admin.field class="is-full" label="Callback URL (Copy & add in Paymob dashboard)" for="paymob-callback-url">
                     <div class="input-group">
                         <input id="paymob-callback-url" type="text" class="form-control" readonly value="{{ route('front.paymob.callback') }}">
                         <button class="btn btn-alt-secondary" type="button" id="copy-paymob-callback">Copy</button>
                     </div>
-                </div>
-            </div>
-
-
-            <div id="fawaterak-config" style="display:none;">
-                <h5>Fawaterak Configuration</h5>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">API Key</label>
-                        <input class="form-control" id="fawaterak-api-key" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Payment Method (from Fawaterak)</label>
-                        <select class="form-select" id="fawaterak-method-select" name="fawaterak_provider_key" data-current="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">
-                            <option value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') ? 'Current: '.old('fawaterak_provider_key', $cfg['provider_key'] ?? '') : 'Enter API key to load methods' }}</option>
-                        </select>
-                        <small id="fawaterak-method-hint" class="text-muted">The dropdown updates when API key changes.</small>
-                    </div>
-                </div>
-                <p class="text-muted fs-sm mb-0">You can create multiple payment methods with provider = Fawaterak, each one can use a different API/Provider key pair.</p>
-            </div>
-
+                </x-admin.field>
+            </x-admin.form-section>
         </div>
 
-        <div class="block-content block-content-full text-end bg-body-light">
-            <button class="btn btn-primary" type="submit">Save</button>
+        <div id="fawaterak-config" style="display:none;">
+            <x-admin.form-section title="Fawaterak Configuration" description="You can create multiple payment methods with provider = Fawaterak, each one can use a different API/Provider key pair." cols="2">
+                <x-admin.field label="API Key" name="fawaterak_api_key" for="fawaterak-api-key"><input class="form-control" id="fawaterak-api-key" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}"></x-admin.field>
+                <div class="a-field">
+                    <label class="form-label" for="fawaterak-method-select">Payment Method (from Fawaterak)</label>
+                    <select class="form-select" id="fawaterak-method-select" name="fawaterak_provider_key" data-current="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">
+                        <option value="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') ? 'Current: '.old('fawaterak_provider_key', $cfg['provider_key'] ?? '') : 'Enter API key to load methods' }}</option>
+                    </select>
+                    <div id="fawaterak-method-hint" class="a-hint">The dropdown updates when API key changes.</div>
+                    @error('fawaterak_provider_key')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+                </div>
+            </x-admin.form-section>
         </div>
-    </form>
-</div>
+
+        <div class="a-form-actions"><a class="a-btn a-btn--outline" href="{{ route('admin.payment-methods.index') }}">Cancel</a><button class="a-btn a-btn--primary" type="submit">Save</button></div>
+    </x-admin.card>
+</form>
 @endsection
 
 @push('scripts')
