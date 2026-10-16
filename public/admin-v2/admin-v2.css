@@ -336,3 +336,16 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 .a-sel__opt.is-selected .a-sel__tick { opacity: 1; }
 .a-sel__empty { padding: 12px 10px; color: var(--a-muted); text-align: center; }
 .a-sel__empty[hidden], .a-sel__opt[hidden], .a-sel__group[hidden] { display: none; }
+
+/* ---------- button colour fix ----------
+   `.a-body a { color: inherit }` (and the topbar/sidebar link rules) out-ranked the single-class button colours, so <a class="a-btn …">
+   showed inherited text: white on the yellow "Create event" button, dark on the dark "Export CSV" button. These rules out-rank them. */
+.a-body a.a-btn--primary, .a-body a.a-btn--primary:hover, .a-body a.a-btn--primary:focus { color: #000; }
+.a-body a.a-btn--dark, .a-body a.a-btn--dark:hover, .a-body a.a-btn--dark:focus { color: #fff; }
+.a-body a.a-btn--outline, .a-body a.a-btn--outline:hover { color: var(--a-ink); }
+.a-body a.a-btn--ghost, .a-body a.a-btn--ghost:hover { color: var(--a-ink); }
+.a-body a.a-btn--danger { color: var(--a-danger); }
+.a-body a.a-btn--danger:hover { color: #fff; }
+.a-body a.a-btn--success { color: var(--a-success); }
+.a-body a.a-btn--success:hover { color: #fff; }
+.a-body .a-btn--primary i, .a-body .a-btn--dark i { color: inherit; }

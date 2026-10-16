@@ -21,7 +21,7 @@ class OfferedMethods
             return $this->gateways->available();
         }
 
-        return PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('id')->get()
+        return PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('sort_order')->orderBy('id')->get()
             ->filter(function (PaymentMethod $m) use ($resolution) {
                 if ($resolution->allowedMethods !== null && ! in_array($m->code, $resolution->allowedMethods, true)) {
                     return false;

@@ -30,6 +30,7 @@
                 @if($method->checkout_icon_url)<div class="mt-2"><img src="{{ $method->checkout_icon_url }}" alt="Current icon" style="height:36px;width:36px;object-fit:contain;border-radius:6px;background:#fff"></div>@endif
             </x-admin.field>
             <x-admin.field label="Checkout Description (Optional)" name="checkout_description" for="pm-desc"><input id="pm-desc" class="form-control" name="checkout_description" value="{{ old('checkout_description', $method->checkout_description) }}" placeholder="Optional short description under payment method"></x-admin.field>
+            <x-admin.field label="Sort order" name="sort_order" for="pm-sort" hint="Lower numbers are shown first at checkout."><input id="pm-sort" type="number" min="0" max="9999" class="form-control" name="sort_order" value="{{ old('sort_order', $method->sort_order ?? 0) }}"></x-admin.field>
             <div class="is-full a-m-switch form-check form-switch">
                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $method->is_active ?? true))>
                 <label class="form-check-label" for="is_active"><strong>Active</strong><span class="a-hint d-block">Inactive methods are hidden at checkout.</span></label>
@@ -38,7 +39,8 @@
 
         <div id="paymob-config" style="display:none;">
             <x-admin.form-section title="Paymob Configuration" cols="3">
-                <x-admin.field class="is-full" label="API Key" name="paymob_api_key" for="pm-pk"><input id="pm-pk" class="form-control" name="paymob_api_key" value="{{ old('paymob_api_key', $cfg['api_key'] ?? '') }}"></x-admin.field>
+                <p class="a-hint is-full">Legacy per-method credentials, used only when no merchant account applies. Prefer <a href="{{ route('admin.payments.providers') }}">Providers &amp; Merchant Accounts</a>. A stored key is never shown; leave blank to keep it.</p>
+                <x-admin.field class="is-full" label="API Key" name="paymob_api_key" for="pm-pk" :hint="!empty($cfg['api_key']) ? 'A key is stored (••••'.substr($cfg['api_key'], -4).'). Type a new one to replace it.' : null"><input id="pm-pk" type="password" autocomplete="new-password" class="form-control" name="paymob_api_key" value=""></x-admin.field>
                 <x-admin.field label="Iframe ID" name="paymob_iframe_id" for="pm-iframe"><input id="pm-iframe" class="form-control" name="paymob_iframe_id" value="{{ old('paymob_iframe_id', $cfg['iframe_id'] ?? '') }}"></x-admin.field>
                 <x-admin.field label="Integration ID" name="paymob_integration_id" for="pm-integ"><input id="pm-integ" class="form-control" name="paymob_integration_id" value="{{ old('paymob_integration_id', $cfg['integration_id'] ?? '') }}"></x-admin.field>
                 <x-admin.field class="is-full" label="Callback URL (Copy & add in Paymob dashboard)" for="paymob-callback-url">
@@ -52,7 +54,7 @@
 
         <div id="fawaterak-config" style="display:none;">
             <x-admin.form-section title="Fawaterak Configuration" description="You can create multiple payment methods with provider = Fawaterak, each one can use a different API/Provider key pair." cols="2">
-                <x-admin.field label="API Key" name="fawaterak_api_key" for="fawaterak-api-key"><input class="form-control" id="fawaterak-api-key" name="fawaterak_api_key" value="{{ old('fawaterak_api_key', $cfg['api_key'] ?? '') }}"></x-admin.field>
+                <x-admin.field label="API Key" name="fawaterak_api_key" for="fawaterak-api-key" :hint="!empty($cfg['api_key']) ? 'A key is stored (••••'.substr($cfg['api_key'], -4).'). Leave blank to keep it.' : null"><input class="form-control" type="password" autocomplete="new-password" id="fawaterak-api-key" name="fawaterak_api_key" value=""></x-admin.field>
                 <div class="a-field">
                     <label class="form-label" for="fawaterak-method-select">Payment Method (from Fawaterak)</label>
                     <select class="form-select" id="fawaterak-method-select" name="fawaterak_provider_key" data-current="{{ old('fawaterak_provider_key', $cfg['provider_key'] ?? '') }}">
@@ -90,11 +92,11 @@
   let loading = false;
   const loadFawaterakMethods = async () => {
     const apiKey = (fApiKey?.value || '').trim();
-    if (!apiKey || loading) return;
+    if ((!apiKey && !{{ $method->exists && !empty($cfg['api_key']) ? 'true' : 'false' }}) || loading) return;
     loading = true;
     fHint.textContent = 'Loading methods...';
     try {
-      const url = `{{ route('admin.payment-methods.fawaterak-methods') }}?api_key=${encodeURIComponent(apiKey)}`;
+      const url = `{{ route('admin.payment-methods.fawaterak-methods') }}?api_key=${encodeURIComponent(apiKey)}{{ $method->exists ? '&method='.$method->id : '' }}`;
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       const data = await res.json();
       const current = fMethodSelect.dataset.current || '';

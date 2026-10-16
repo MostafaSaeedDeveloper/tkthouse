@@ -43,7 +43,7 @@ class PaymentGatewayManager
         return \App\Models\PaymentMethod::query()
             ->where('is_active', true)
             ->where('code', '!=', 'card')
-            ->orderBy('id')
+            ->orderBy('sort_order')->orderBy('id')
             ->get()
             ->filter(fn (\App\Models\PaymentMethod $m) => ! $this->supports((string) $m->provider) || $this->for((string) $m->provider)->isConfigured($m))
             ->values();

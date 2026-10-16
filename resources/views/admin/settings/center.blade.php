@@ -5,6 +5,7 @@
 <x-admin.page-header :title="$group['label']" subtitle="Business settings are stored in the database, validated and audited. Infrastructure secrets stay in the server environment." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings', $group['label']]" />
 <x-admin.flash />
 @include('admin.settings._nav')
+@if($section === 'payments')@include('admin.settings._payments-nav')@endif
 
 <form method="POST" action="{{ $section === 'general' ? route('admin.settings.update') : route('admin.settings.section.update', $section) }}" enctype="multipart/form-data" data-a-loading>
     @csrf

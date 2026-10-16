@@ -107,6 +107,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.reroute_payment',
             'settings.payment-accounts.view',
             'settings.payment-accounts.manage',
+            'payments.transactions.view',
+            'payments.transactions.inquire',
+            'payments.refunds.view',
+            'payments.refunds.create',
+            'payments.refunds.approve',
+            'payments.accounts.view',
+            'payments.accounts.manage',
+            'payments.webhooks.view',
         ];
 
         foreach ($permissions as $permissionName) {

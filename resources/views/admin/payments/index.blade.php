@@ -4,7 +4,7 @@
 @php $money = fn ($n) => number_format((float) $n, 2).' EGP'; @endphp
 
 @section('content')
-<x-admin.page-header title="Payments" subtitle="Every payment attempt with its gateway status. Read-only: refunds and settlements are handled by the payment provider.">
+<x-admin.page-header title="Payments" subtitle="Every payment attempt with its gateway status.">
     @can('payment-methods.view')<a class="a-btn a-btn--outline" href="{{ route('admin.payment-methods.index') }}"><i class="fa fa-gear"></i> Payment methods</a>@endcan
 </x-admin.page-header>
 

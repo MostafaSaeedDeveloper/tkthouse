@@ -50,7 +50,7 @@ class IntegrationManagementTest extends TestCase
         $this->assertStringNotContainsString(self::SECRET, (string) $raw);
         $this->assertSame(self::SECRET, $account->fresh()->secret('api_key'));
 
-        $page = $this->actingAs($u)->get(route('admin.integrations.index'))->assertOk();
+        $page = $this->actingAs($u)->get(route('admin.payments.providers'))->assertOk();
         $page->assertDontSee(self::SECRET)->assertDontSee('hmac-secret-value-xyz')->assertSee('••••');
         $this->assertStringNotContainsString(self::SECRET, json_encode($account->fresh()->toArray()));
 

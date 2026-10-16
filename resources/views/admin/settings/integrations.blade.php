@@ -1,10 +1,13 @@
 @extends('admin.master')
-@section('title', 'Integrations')
+@section('title', $kind === 'payment' ? 'Providers & Merchant Accounts' : 'Integrations')
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<x-admin.page-header title="Integrations" subtitle="Credentials are encrypted at rest and never shown again. Saving never enables an account." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings', 'Integrations']" />
+<x-admin.page-header :title="$kind === 'payment' ? 'Providers & Merchant Accounts' : 'Integrations'" :subtitle="$kind === 'payment' ? 'Paymob and Fawaterak merchant accounts. Credentials are encrypted at rest and never shown again; saving never enables an account.' : 'Messaging and other non-financial services. Payment providers are managed under Settings → Payments.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings', $kind === 'payment' ? 'Payments' : 'Integrations']" />
 <x-admin.flash />
 @include('admin.settings._nav')
+@if($kind === 'payment')@include('admin.settings._payments-nav')@else
+    @canany(['payments.accounts.view', 'settings.integrations.view'])<p class="a-hint">Looking for Paymob or Fawaterak? They moved to <a href="{{ route('admin.payments.providers') }}">Settings → Payments → Providers &amp; Merchant Accounts</a> (nothing was deleted).</p>@endcanany
+@endif
 
 @foreach($definitions as $provider => $def)
     <x-admin.card :title="$def['label']" class="a-m-form-card" :id="'int-'.$provider">
@@ -14,6 +17,7 @@
                 <summary class="a-btn-group" style="cursor:pointer;gap:10px;flex-wrap:wrap">
                     <strong>{{ $account->name }}</strong>
                     <x-admin.badge :variant="$account->environment === 'production' ? 'dark' : 'info'">{{ ucfirst($account->environment) }}</x-admin.badge>
+                    @if($kind === 'payment' && $defaultAccountId === $account->id)<x-admin.badge variant="primary">Default account</x-admin.badge>@endif
                     <x-admin.badge :variant="$account->enabled ? 'success' : 'warning'">{{ $account->archived_at ? 'Archived' : ($account->enabled ? 'Enabled' : 'Disabled') }}</x-admin.badge>
                     <x-admin.badge :variant="match($account->status){'verified'=>'success','error'=>'danger',default=>'warning'}">{{ ucfirst($account->status) }}</x-admin.badge>
                 </summary>
@@ -33,6 +37,9 @@
                 <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
                     @if($canTest)
                         <form method="POST" action="{{ route('admin.integrations.test', $account) }}" data-a-loading>@csrf<button class="a-btn a-btn--outline" type="submit"><i class="fa fa-plug"></i> Test connection</button></form>
+                    @endif
+                    @if($canManage && $kind === 'payment' && $account->isUsable() && $defaultAccountId !== $account->id)
+                        <form method="POST" action="{{ route('admin.integrations.default', $account) }}">@csrf<button class="a-btn a-btn--outline" type="submit">Make default</button></form>
                     @endif
                     @if($canManage)
                         @if($account->enabled)

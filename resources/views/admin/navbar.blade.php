@@ -34,7 +34,7 @@
     $settings = array_values(array_filter([
         $can('settings.view') ? ['Settings Center', 'admin.settings.edit', ['admin.settings.*']] : null,
         $can('settings.integrations.view') ? ['Integrations', 'admin.integrations.index', ['admin.integrations.*']] : null,
-        $can('payment-methods.view') ? ['Payment methods', 'admin.payment-methods.index', ['admin.payment-methods.*']] : null,
+        ($can('payment-methods.view') || $can('payments.accounts.view')) ? ['Payments settings', $can('payment-methods.view') ? 'admin.payment-methods.index' : 'admin.payments.providers', ['admin.payment-methods.*', 'admin.payments.providers', 'admin.payments.webhooks*']] : null,
     ]));
     $settingsOpen = collect($settings)->contains(fn ($s) => $on(...$s[2]));
     $teamOpen = collect($team)->contains(fn ($s) => $on(...$s[3]));

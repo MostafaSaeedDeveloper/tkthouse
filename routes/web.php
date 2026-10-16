@@ -192,14 +192,16 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
 
     Route::get('settings/integrations', [IntegrationController::class, 'index'])->middleware('permission:settings.integrations.view')->name('integrations.index');
-    Route::post('settings/integrations/{provider}', [IntegrationController::class, 'store'])->middleware('permission:settings.integrations.manage')->name('integrations.store');
-    Route::put('settings/integrations/accounts/{account}', [IntegrationController::class, 'update'])->middleware('permission:settings.integrations.manage')->name('integrations.update');
-    Route::post('settings/integrations/accounts/{account}/test', [IntegrationController::class, 'test'])->middleware('permission:settings.integrations.test')->name('integrations.test');
-    Route::post('settings/integrations/accounts/{account}/enable', [IntegrationController::class, 'enable'])->middleware('permission:settings.integrations.manage')->name('integrations.enable');
-    Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:settings.integrations.manage')->name('integrations.disable');
-    Route::post('settings/integrations/accounts/{account}/attest', [IntegrationController::class, 'attest'])->middleware('permission:settings.integrations.manage')->name('integrations.attest');
-    Route::post('settings/integrations/accounts/{account}/archive', [IntegrationController::class, 'archive'])->middleware('permission:settings.integrations.manage')->name('integrations.archive');
-    Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:settings.integrations.manage')->name('integrations.destroy');
+    Route::get('settings/payments/providers', [IntegrationController::class, 'providers'])->middleware('permission:payments.accounts.view|settings.integrations.view')->name('payments.providers');
+    Route::post('settings/integrations/accounts/{account}/default', [IntegrationController::class, 'makeDefault'])->middleware('permission:payments.accounts.manage|settings.payment-accounts.manage')->name('integrations.default');
+    Route::post('settings/integrations/{provider}', [IntegrationController::class, 'store'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.store');
+    Route::put('settings/integrations/accounts/{account}', [IntegrationController::class, 'update'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.update');
+    Route::post('settings/integrations/accounts/{account}/test', [IntegrationController::class, 'test'])->middleware('permission:payments.accounts.manage|settings.integrations.test')->name('integrations.test');
+    Route::post('settings/integrations/accounts/{account}/enable', [IntegrationController::class, 'enable'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.enable');
+    Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.disable');
+    Route::post('settings/integrations/accounts/{account}/attest', [IntegrationController::class, 'attest'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.attest');
+    Route::post('settings/integrations/accounts/{account}/archive', [IntegrationController::class, 'archive'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.archive');
+    Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.destroy');
 
     Route::post('settings/orders/grant-view-all', [SystemSettingController::class, 'grantViewAll'])->middleware('permission:settings.orders')->name('settings.orders.grant-view-all');
     Route::post('settings/notifications/test', [SystemSettingController::class, 'testNotification'])->middleware('permission:settings.integrations.test')->name('settings.notifications.test');
