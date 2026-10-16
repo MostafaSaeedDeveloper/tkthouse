@@ -166,13 +166,12 @@ class CompactTicketSelectorTest extends TestCase
         $this->assertStringContainsString('setters[id](0)', $js);                                              // clearing goes through the normal quantity path
     }
 
-    public function test_layout_rules_for_internal_scroll_sticky_summary_and_mobile_fold(): void
+    public function test_layout_rules_full_length_list_and_mobile_fold(): void
     {
         $css = file_get_contents(public_path('css/tkt-v2-pages.css'));
 
-        $this->assertStringContainsString('max-height: min(420px, 52vh)', $css);                              // desktop list scrolls inside itself
-        $this->assertStringContainsString('max-height: calc(100vh - var(--tkt-header-h) - 32px)', $css);     // the card fits short screens
-        $this->assertStringContainsString('position: sticky; top: calc(var(--tkt-header-h) + 16px)', $css);   // stays in view under the fixed header
+        $this->assertStringNotContainsString('max-height: min(420px, 52vh)', $css);                           // tickets are listed in full length: no inner scroll
+        $this->assertStringNotContainsString('max-height: calc(100vh - var(--tkt-header-h) - 32px)', $css);
         $this->assertStringContainsString('.tkt-ticket.is-selected { background: #FFF8D6; border-color: var(--tkt-primary)', $css);
         $this->assertStringContainsString('env(safe-area-inset-bottom)', $css);
         $js = file_get_contents(public_path('js/tkt-booking.js'));
