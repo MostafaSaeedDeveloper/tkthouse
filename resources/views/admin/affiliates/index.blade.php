@@ -23,18 +23,17 @@
         </x-admin.empty>
     @else
     <x-admin.table stack caption="Affiliates">
-        <thead><tr><th>User</th><th>Affiliate link</th><th class="a-num">Referred</th><th class="a-num">Orders</th><th class="a-num">Paid revenue</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
+        <thead><tr><th>User</th><th>Affiliate link</th><th>Activity</th><th class="a-num">Paid revenue</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
         <tbody>
         @foreach($affiliates as $affiliate)
             @php $paidRevenue = (float) ($affiliate->affiliate_paid_revenue ?? 0); @endphp
             <tr>
-                <td data-label="User"><a class="a-table__main a-trunc" href="{{ route('admin.affiliates.show', $affiliate) }}">{{ $affiliate->name }}</a><span class="a-table__sub a-trunc" title="{{ $affiliate->email }}">{{ $affiliate->email }}</span></td>
-                <td data-label="Affiliate link"><div class="a-cus-link">
-                    <a class="a-trunc a-m-trunc-lg" href="{{ $affiliate->generated_short_affiliate_link }}" target="_blank" rel="noopener" title="{{ $affiliate->generated_short_affiliate_link }}">{{ $affiliate->generated_short_affiliate_link }}</a>
+                <td data-label="User"><a class="a-table__main a-trunc a-m-trunc-sm" href="{{ route('admin.affiliates.show', $affiliate) }}">{{ $affiliate->name }}</a><span class="a-table__sub a-trunc a-m-trunc-sm" title="{{ $affiliate->email }}">{{ $affiliate->email }}</span></td>
+                <td data-label="Affiliate link" class="a-wrap"><div class="a-cus-link">
+                    <a href="{{ $affiliate->generated_short_affiliate_link }}" target="_blank" rel="noopener">{{ $affiliate->generated_short_affiliate_link }}</a>
                     <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $affiliate->generated_short_affiliate_link }}">Copy</button>
                 </div></td>
-                <td data-label="Referred" class="a-num">{{ number_format($affiliate->referred_users_count) }}</td>
-                <td data-label="Orders" class="a-num">{{ number_format($affiliate->affiliate_orders_count) }}</td>
+                <td data-label="Activity"><span class="a-table__main">{{ number_format($affiliate->affiliate_orders_count) }} {{ \Illuminate\Support\Str::plural('order', $affiliate->affiliate_orders_count) }}</span><span class="a-table__sub">{{ number_format($affiliate->referred_users_count) }} referred</span></td>
                 <td data-label="Paid revenue" class="a-num"><b>{{ number_format($paidRevenue, 2) }}</b> <span class="a-muted">EGP</span></td>
                 <td data-label=""><div class="a-table__actions">
                     <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="a-btn a-btn--outline a-btn--sm">View</a>

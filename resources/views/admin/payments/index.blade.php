@@ -10,7 +10,7 @@
 
 <x-admin.flash />
 
-<div class="a-grid a-grid--4">
+<div class="a-grid a-m-kpis">
     <x-admin.kpi class="a-m-kpi--success" label="Paid" :value="$money($stats['paid']).' EGP'" icon="fa-circle-check" :hint="number_format($stats['paid_count']).' paid attempts'" />
     <x-admin.kpi class="a-m-kpi--warning" label="Pending" :value="number_format($stats['processing'])" icon="fa-hourglass-half" :hint="$stats['review'] > 0 ? number_format($stats['review']).' need review' : 'Processing at the gateway'" />
     <x-admin.kpi class="a-m-kpi--danger" label="Failed" :value="number_format($stats['failed'])" icon="fa-circle-xmark" hint="Customers can retry" />
@@ -46,10 +46,10 @@
                 @endphp
                 <tr>
                     <td data-label="Order"><a class="a-table__main a-num" href="{{ route('admin.orders.show', $a->order) }}">#{{ $a->order->order_number }}</a><span class="a-table__sub">{{ $a->created_at->format('d M Y, H:i') }}</span></td>
-                    <td data-label="Customer"><span class="a-table__main a-trunc">{{ $customerName }}</span><span class="a-table__sub a-trunc" title="{{ $a->order->customer?->email }}">{{ $a->order->customer?->email }}</span></td>
-                    <td data-label="Gateway &amp; reference"><span class="a-table__main">{{ ucfirst($a->provider) }} <span class="a-muted a-m-mono">{{ $a->method_code }}</span></span>
-                        <span class="a-table__sub a-trunc a-m-mono" title="{{ $reference }}">{{ $reference }}</span>
-                        @if($a->failure_reason)<span class="a-table__sub a-trunc" title="{{ $a->failure_reason }}">{{ $a->failure_reason }}</span>@endif</td>
+                    <td data-label="Customer"><span class="a-table__main a-trunc a-m-trunc-sm">{{ $customerName }}</span><span class="a-table__sub a-trunc a-m-trunc-sm" title="{{ $a->order->customer?->email }}">{{ $a->order->customer?->email }}</span></td>
+                    <td data-label="Gateway &amp; reference"><span class="a-table__main">{{ ucfirst($a->provider) }} <span class="a-muted">{{ $a->method_code }}</span></span>
+                        <span class="a-table__sub a-trunc a-m-trunc-sm a-m-mono" title="{{ $reference }}">{{ $reference }}</span>
+                        @if($a->failure_reason)<span class="a-table__sub a-trunc a-m-trunc-sm" title="{{ $a->failure_reason }}">{{ $a->failure_reason }}</span>@endif</td>
                     <td data-label="Amount" class="a-num"><b>{{ $money($a->amount) }}</b> <span class="a-muted">EGP</span></td>
                     <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" />@if($review)<span class="a-table__sub"><x-admin.badge variant="warning">Needs review</x-admin.badge></span>@endif</td>
                 </tr>

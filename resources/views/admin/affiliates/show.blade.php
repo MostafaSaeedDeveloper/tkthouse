@@ -9,7 +9,7 @@
 
 <x-admin.flash />
 
-<div class="a-grid a-grid--4">
+<div class="a-grid a-m-kpis">
     <x-admin.kpi label="Referred Users" :value="$stats['referred_users']" icon="fa-user-plus" />
     <x-admin.kpi label="Orders" :value="$stats['orders_total']" icon="fa-receipt" />
     <x-admin.kpi label="Paid Orders" :value="$stats['orders_paid']" icon="fa-circle-check" />

@@ -7,6 +7,8 @@
 .a-m-code, .a-m-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .01em; }
 .a-m-code { font-weight: var(--a-fw-semibold); }
 .a-m-mono { font-size: var(--a-fs-sm); }
+.a-m-trunc-sm { max-width: 128px; }
+.a-m-trunc-md { max-width: 240px; }
 .a-m-trunc-lg { max-width: 300px; }
 .a-m-trunc-xl { max-width: 420px; }
 .a-m-min0 { min-width: 0; }
@@ -14,6 +16,8 @@
 .a-m-inline-form { margin-top: var(--a-s-4); display: grid; gap: var(--a-s-3); justify-items: start; }
 .a-m-inline-form .a-field { width: 100%; }
 
+/* workaround: .a-sr-only (absolute) inside a table escapes the scroll wrapper and widens the page (shared bug, see report) */
+.a-body .a-table-wrap { position: relative; }
 /* workaround: `.a-body a` colour beats .a-btn--primary on links inside empty states (shared bug, see report) */
 .a-body .a-empty .a-btn--primary { color: var(--a-dark); }
 
@@ -22,6 +26,10 @@
 .a-m-kpi--warning .a-kpi__icon { background: var(--a-warning-soft); color: var(--a-warning); }
 .a-m-kpi--danger .a-kpi__icon { background: var(--a-danger-soft); color: var(--a-danger); }
 .a-m-kpi--info .a-kpi__icon { background: var(--a-info-soft); color: var(--a-info); }
+
+/* KPI rows with long money values: two per row until there is room for four */
+.a-m-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 1280px) { .a-m-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* forms */
 .a-body .a-m-multi { height: auto; min-height: 168px; padding: var(--a-s-1); }

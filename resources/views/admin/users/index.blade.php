@@ -21,13 +21,12 @@
     @else
         <x-admin.table stack caption="Users">
             <thead>
-                <tr><th>User</th><th>Email</th><th>Role</th><th>Access</th><th>Last login</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr>
+                <tr><th>User</th><th>Role</th><th>Access</th><th>Last login</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr>
             </thead>
             <tbody>
             @foreach($users as $user)
                 <tr>
-                    <td data-label="User"><span class="a-table__main a-trunc">{{ $user->name }}</span><span class="a-table__sub a-trunc">{{ $user->username }}</span></td>
-                    <td data-label="Email"><span class="a-trunc" title="{{ $user->email }}">{{ $user->email }}</span></td>
+                    <td data-label="User"><span class="a-table__main a-trunc a-m-trunc-md">{{ $user->name }}</span><span class="a-table__sub a-trunc a-m-trunc-md" title="{{ $user->username }} · {{ $user->email }}">{{ $user->username }} · {{ $user->email }}</span></td>
                     <td data-label="Role">@if($user->roles->first()?->name)<x-admin.badge variant="dark">{{ $user->roles->first()->name }}</x-admin.badge>@else<span class="a-muted">—</span>@endif</td>
                     <td data-label="Access">
                         <span class="a-table__main">@if($user->managedEvents->isEmpty()) All events @else <x-admin.more :items="$user->managedEvents->pluck('name')" /> @endif</span>
