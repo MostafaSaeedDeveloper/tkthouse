@@ -1,4 +1,6 @@
-# Unified Payment Management, Provider Webhooks & Refunds — final report
+# Unified Payment Management, Provider Webhooks & Refunds — final report (rev. 2 after review)
+
+> **Rev. 2 changes (review follow-up):** second-person refund approval is now **ON by default** with no self-approval and a gate evaluated at send/confirm time; additive production permission policy (`payments:sync-permissions`); the leaked Fawaterak key was removed from source and seeders made non-destructive (`docs/security-secret-rotation.md` — **rotation is still required**); the MariaDB long-name failure is fixed; manual-refund workflow and mobile QA were run in the browser. Deployment/rollback: `docs/v2-payments-deployment.md`. Sections 3, 6 and 8 below are superseded by `docs/v2-payments-qa-matrix.md`.
 
 Branch `claude/v2-admin-settings-assignment` · five phases, one commit each · **nothing merged to main, no production credential touched, no real refund performed.**
 

@@ -74,5 +74,24 @@ Record the exact request/response shapes (secrets redacted) and correct `PaymobR
 
 `payments:validate` (read-only) before and after any run reports orphaned/inconsistent payment rows; `--backfill-references` fills only missing `internal_reference` values.
 
-## 5. Evidence & sign-off
+## 5. Progressive production activation of refunds — ONE merchant account at a time
+Do not start this section until §1–§4 are signed off **in the sandbox**, the approval policy is verified (below) and the Fawaterak key has been rotated (`docs/security-secret-rotation.md`).
+
+**A. Permissions (once, additive).** On production run `php artisan payments:sync-permissions` (dry run: prints what would change), review, then `--apply`. It never removes a permission and never runs the destructive `RolesAndPermissionsSeeder`. Policy: Super Admin = everything; Order Manager = view transactions (scoped), view refunds, create refund requests (no approve, no account/webhook management); Order Agent = view own orders' transactions only. Approvers are made explicitly in Admin → Roles / Users.
+
+**B. Approval policy (default ON).** Settings → Payments → *Require a second person to approve refunds* is ON by default. Before enabling refunds confirm it is ON, and test with two real users: requester cannot approve; approver can; self-approval refused; nothing reaches the provider before approval. If production ever shows OFF (a stored value from earlier testing), do **not** flip it silently: record who decided, why, and when in the change ticket — the change is audited (Settings → Audit log) and takes effect immediately, including for refunds created earlier.
+
+**C. Per account, in order** (Account 1 fully done and observed before Account 2):
+1. Paymob: confirm in the portal that this account's callback URL is registered and that one real **Signed Webhook** has been received (Webhooks screen shows *Verified*).
+2. Confirm routing: a real sandbox/low-value order shows the expected merchant account in Order Details and in the portal.
+3. Confirm the sandbox evidence for **full refund, partial refund and refund inquiry** exists for this exact account (R1–R3, R7).
+4. Settings → Providers → *Confirm refunds verified* on that account (note = run reference).
+5. Set `PAYMENTS_REFUNDS_LIVE=true` **only when the first account is ready** (environment-wide switch; accounts without the attestation stay manual).
+6. First production refund: a real, small, internally-owned payment; requester ≠ approver; watch status → *succeeded* via inquiry; verify in the provider portal; record in the change ticket.
+7. Observe for 48 h (Refunds screen, `payments:validate`, error logs) before enabling the next account.
+Fawaterak refunds stay **manual/external** (no documented API); do not attest API refunds for it.
+
+**D. Emergency stop.** Set `PAYMENTS_REFUNDS_LIVE=false` (API sending stops immediately, manual workflow remains) and/or *Disable refunds* on the account. Refunds already sent stay `processing`/`unknown` until a person verifies them with the provider.
+
+## 6. Evidence & sign-off
 Keep a table per provider (cases, result, evidence link, tester, date). Approver signs: ☐ Paymob payments ☐ Paymob webhooks ☐ Paymob refunds ☐ Fawaterak payments ☐ Fawaterak webhooks (☐ Fawaterak refunds = manual workflow only). Only then plan Production (see the rollout plan in `docs/v2-stage-e-report.md`).
