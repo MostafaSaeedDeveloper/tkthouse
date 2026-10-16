@@ -67,7 +67,7 @@
                     <span class="a-table__main a-trunc" title="{{ $eventNames->implode(', ') }}">{{ $eventNames->first() ?? '—' }}@if($eventNames->count() > 1) <span class="a-muted">+{{ $eventNames->count() - 1 }}</span>@endif</span>
                     <span class="a-table__sub"><x-admin.more :items="$ticketTypes" /> · {{ $order->items_count }} {{ \Illuminate\Support\Str::plural('ticket', $order->items_count) }}</span>
                 </div></td>
-                <td data-label="Total" class="a-num"><b>{{ number_format($order->total_amount, 2) }}</b> <span class="a-muted">EGP</span></td>
+                <td data-label="Total" class="a-num"><div class="a-cell"><b>{{ number_format($order->total_amount, 2) }}</b> <span class="a-muted">EGP</span></div></td>
                 <td data-label="Status"><div class="a-cell"><x-admin.status :status="$order->status" kind="order" />
                     @if($order->payment_method)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</span>@endif
                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
