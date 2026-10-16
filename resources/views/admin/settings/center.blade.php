@@ -9,7 +9,7 @@
 <form method="POST" action="{{ $section === 'general' ? route('admin.settings.update') : route('admin.settings.section.update', $section) }}" enctype="multipart/form-data" data-a-loading>
     @csrf
     @method('PUT')
-    <x-admin.card class="a-m-narrow">
+    <x-admin.card class="{{ $section === 'payments' ? '' : 'a-m-narrow' }}">
         <x-admin.form-section :title="$group['label']" cols="2">
             @foreach($definitions as $key => $def)
                 @php $val = old($key, $values[$key] ?? $def['default']); @endphp

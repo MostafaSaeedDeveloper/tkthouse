@@ -533,6 +533,7 @@ class CheckoutController extends Controller
             if ($routingChanged) {
                 // The draft (buyer + attendees) is already stored in the session: reloading re-renders it with a fresh reservation.
                 Log::info('Checkout routing reservation invalid.', ['reason' => $e->reason]);
+                session()->flash('error', $message); // shown again after the page reloads (the AJAX alert disappears with it)
             }
 
             return $request->expectsJson()

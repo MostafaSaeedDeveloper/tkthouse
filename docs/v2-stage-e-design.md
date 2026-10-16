@@ -1,6 +1,6 @@
 # Stage E — Merchant Accounts & Payment Routing: final design (for approval)
 
-**Nothing in this document is implemented.** Stage E starts only after explicit approval. It changes who collects money, so every
+**Status: approved and implemented** (see `docs/v2-stage-e-report.md`); §3 and §8–9 contain the approved revisions (provisional reservations, immutability, switch rules). It changes who collects money, so every
 choice that touches settlement is listed in §8.
 
 Builds on what Stage C already ships: `integration_accounts` (encrypted credentials, several accounts per provider, test

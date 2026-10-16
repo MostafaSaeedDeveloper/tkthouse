@@ -172,7 +172,7 @@ class CheckoutReservationTest extends TestCase
         $this->assertNull($this->pointer());
 
         // reload: buyer data is still there, a fresh reservation points at the remaining agent, nothing was silently re-routed
-        $this->get(route('front.checkout'))->assertOk()->assertSee('Nour Hassan')->assertSee('nour@example.test');
+        $this->get(route('front.checkout'))->assertOk()->assertSee('Nour Hassan')->assertSee('nour@example.test')->assertSee('Your payment options changed or expired');
         $this->assertSame($this->agent2->id, $this->reservation()->assignee_id);
     }
 
