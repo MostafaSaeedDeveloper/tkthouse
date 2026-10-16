@@ -128,7 +128,14 @@
             minus.disabled = qty === 0;
             plus.disabled = qty >= maxQty;
             card.classList.toggle('is-selected', qty > 0);
+            var sub = card.querySelector('[data-ticket-sub]');
+            if (sub) {
+                var price = parseFloat(card.dataset.price);
+                sub.hidden = qty === 0;
+                sub.textContent = qty > 0 ? qty + ' × ' + money(price) + ' = ' + money(price * qty) : '';
+            }
             render();
+            refreshMore();
         }
 
         minus.addEventListener('click', function () {
@@ -145,6 +152,61 @@
         });
     });
 
+    /* Long names / descriptions: clamp to a few lines, with a toggle only when something is actually cut. */
+    function setupClamps() {
+        Array.prototype.forEach.call(root.querySelectorAll('.tkt-ticket'), function (card) {
+            var toggle = card.querySelector('[data-clamp-toggle]');
+            var targets = Array.prototype.slice.call(card.querySelectorAll('[data-clamp]'));
+            if (!toggle || !targets.length) return;
+            var cut = targets.some(function (el) { return el.scrollHeight > el.clientHeight + 1; });
+            toggle.hidden = !cut && !card.classList.contains('is-expanded');
+        });
+    }
+    root.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-clamp-toggle]');
+        if (!t) return;
+        var card = t.closest('.tkt-ticket');
+        var open = card.classList.toggle('is-expanded');
+        t.textContent = open ? 'Show less' : 'Read more';
+        t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    /* "Show more tickets": the extra cards stay out of the way until asked for, but a selected ticket is never hidden
+       and the cart never depends on what is visible. */
+    var moreButtons = Array.prototype.slice.call(root.querySelectorAll('[data-show-more]'));
+    function refreshMore() {
+        moreButtons.forEach(function (btn) {
+            var list = root.querySelector(btn.getAttribute('data-show-more'));
+            if (!list) return;
+            var expanded = !list.classList.contains('is-collapsed');
+            var hiddenCount = Array.prototype.filter.call(list.querySelectorAll('.tkt-ticket.is-extra'), function (c) { return !c.classList.contains('is-selected'); }).length;
+            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            var label = btn.querySelector('[data-more-text]');
+            if (expanded) {
+                label.textContent = btn.getAttribute('data-less-label');
+                btn.hidden = false;
+            } else if (btn.classList.contains('tkt-more--off')) {
+                label.textContent = btn.getAttribute('data-more-label') + ' (' + hiddenCount + ' more)';
+                btn.hidden = hiddenCount === 0;
+            } else {
+                label.textContent = btn.getAttribute('data-more-label') + ' (' + hiddenCount + ')';
+                btn.hidden = hiddenCount === 0;
+            }
+        });
+        setupClamps();
+    }
+    moreButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var list = root.querySelector(btn.getAttribute('data-show-more'));
+            if (!list) return;
+            list.classList.toggle('is-collapsed');
+            refreshMore();
+            if (list.classList.contains('is-collapsed')) btn.scrollIntoView({ block: 'nearest' });
+        });
+    });
+    window.addEventListener('resize', setupClamps);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(setupClamps);
+
     if (toggleEl) {
         toggleEl.addEventListener('click', function () {
             var open = summary.classList.toggle('is-expanded');
@@ -157,4 +219,5 @@
     });
 
     render();
+    refreshMore();
 })();

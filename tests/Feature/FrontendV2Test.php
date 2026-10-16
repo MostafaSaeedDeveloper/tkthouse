@@ -145,7 +145,7 @@ class FrontendV2Test extends TestCase
             ->assertSee('Urban Grooves')
             ->assertSee('450.00')
             ->assertSee('Max 6 per order')
-            ->assertSee('Couples only')
+            ->assertSee('Couple pass · 2 tickets')
             ->assertSee('Sold out')
             ->assertDontSee('Secret')
             ->assertSee('data-id="ticket-'.$event->tickets()->where('name', 'General Admission')->first()->id.'"', false)
