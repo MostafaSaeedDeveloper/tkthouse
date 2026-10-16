@@ -120,6 +120,7 @@ class UserController extends Controller
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->applyAccountFlags($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
@@ -193,6 +194,7 @@ class UserController extends Controller
         $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
         $user->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->applyAccountFlags($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
@@ -207,6 +209,36 @@ class UserController extends Controller
         activity('users')->causedBy(auth()->user())->log('User deleted: '.$user->username);
 
         return back()->with('success', 'User deleted successfully.');
+    }
+
+    /**
+     * is_active / can_receive_orders are only touched when the form actually sent them (account_flags marker), so an API-style
+     * partial update can never disable anyone by omission. Protected rules: the super admin account, the acting user
+     * themselves, and customer accounts (no role and no permission) can never be deactivated from here.
+     */
+    private function applyAccountFlags(Request $request, User $user): void
+    {
+        if (! $request->boolean('account_flags')) {
+            return;
+        }
+
+        $isStaff = $user->roles()->exists() || $user->permissions()->exists();
+        $wantActive = $request->boolean('is_active');
+
+        if (! $wantActive) {
+            abort_if($this->isSuperAdminAccount($user), 422, 'The super admin account cannot be deactivated.');
+            abort_if($user->id === $request->user()->id, 422, 'You cannot deactivate your own account.');
+            abort_unless($isStaff, 422, 'Only staff accounts can be deactivated here; customer accounts are not affected by staff settings.');
+        }
+
+        $user->forceFill([
+            'is_active' => $wantActive,
+            'can_receive_orders' => $isStaff && $request->boolean('can_receive_orders'),
+        ])->save();
+
+        if (! $wantActive) {
+            activity('users')->performedOn($user)->causedBy($request->user())->log('User deactivated');
+        }
     }
 
     private function ensureCanManageUser(?User $actor, User $target): void

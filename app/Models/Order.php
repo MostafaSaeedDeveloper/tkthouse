@@ -31,6 +31,11 @@ class Order extends Model
         'tickets_generated_at',
         'total_amount',
         'exclude_from_statistics',
+        'assigned_user_id',
+        'assigned_by_user_id',
+        'assigned_at',
+        'sold_by_user_id',
+        'sold_at',
     ];
 
     protected function casts(): array
@@ -42,6 +47,8 @@ class Order extends Model
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',
             'tickets_generated_at' => 'datetime',
+            'assigned_at' => 'datetime',
+            'sold_at' => 'datetime',
             'payment_timeout_started_at' => 'datetime',
             'payment_timeout_minutes' => 'integer',
             'discount_amount' => 'decimal:2',
@@ -72,6 +79,26 @@ class Order extends Model
     public function promoCode()
     {
         return $this->belongsTo(PromoCode::class);
+    }
+
+    public function assignedUser()
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    public function assignedBy()
+    {
+        return $this->belongsTo(User::class, 'assigned_by_user_id');
+    }
+
+    public function soldBy()
+    {
+        return $this->belongsTo(User::class, 'sold_by_user_id');
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(OrderAssignment::class)->orderByDesc('id');
     }
 
     public function paymentAttempts()
@@ -117,12 +144,21 @@ class Order extends Model
     /** Back-office visibility: hidden (statistics-excluded) orders need the `showing_orders` permission. */
     public function scopeVisibleTo($query, ?\App\Models\User $user)
     {
-        return $user?->can(self::SHOW_HIDDEN_PERMISSION) ? $query : $query->includedInStatistics();
+        $query = $user?->can(self::SHOW_HIDDEN_PERMISSION) ? $query : $query->includedInStatistics();
+
+        return \App\Orders\OrderAccess::apply($query, $user, $this->getTable());
+    }
+
+    /** Assignment scoping only (no hidden-order rule) for statistics queries that already use includedInStatistics(). */
+    public function scopeAssignedScope($query, ?\App\Models\User $user)
+    {
+        return \App\Orders\OrderAccess::apply($query, $user, $this->getTable());
     }
 
     public function isVisibleTo(?\App\Models\User $user): bool
     {
-        return ! $this->exclude_from_statistics || (bool) $user?->can(self::SHOW_HIDDEN_PERMISSION);
+        return (! $this->exclude_from_statistics || (bool) $user?->can(self::SHOW_HIDDEN_PERMISSION))
+            && \App\Orders\OrderAccess::canView($this, $user);
     }
 
     public function paymentDeadlineAt(?int $timeoutMinutes = null): ?\Illuminate\Support\Carbon

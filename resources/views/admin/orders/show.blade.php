@@ -207,6 +207,36 @@
   </div>
 
   <div class="a-ord-col">
+    @if($assignmentOn)
+    <x-admin.card title="Assignment" subtitle="Who is responsible for this order.">
+        <dl class="a-kv">
+            <div><dt>Assigned to</dt><dd>@if($order->assignedUser)<strong>{{ $order->assignedUser->name }}</strong>@else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif</dd></div>
+            @if($order->assigned_at)<div><dt>Assigned by</dt><dd>{{ $order->assignedBy?->name ?? 'Automatic' }} · {{ $order->assigned_at->format('d M Y, H:i') }}</dd></div>@endif
+            @if($order->sold_at)<div><dt>Sale attributed to</dt><dd>{{ $order->soldBy?->name ?? 'Unattributed' }} · {{ $order->sold_at->format('d M Y, H:i') }}</dd></div>@endif
+        </dl>
+        @if($canAssign)
+        <form method="POST" action="{{ route('admin.orders.assign', $order) }}" data-a-loading class="a-form-grid">
+            @csrf
+            <x-admin.field label="Change assignee" name="assignee_id" for="oa-assignee">
+                <select id="oa-assignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}" @selected($order->assigned_user_id === $a->id)>{{ $a->name }}</option>@endforeach</select>
+            </x-admin.field>
+            <x-admin.field label="Reason (optional)" name="reason" for="oa-reason"><input id="oa-reason" class="form-control" name="reason" maxlength="300"></x-admin.field>
+            <p class="a-hint is-full">Reassigning never changes the payment account or any payment attempt of this order.</p>
+            <div class="a-form-actions is-full"><button class="a-btn a-btn--primary" type="submit">Save assignee</button></div>
+        </form>
+        @endif
+        @if($assignmentHistory->isNotEmpty())
+            <h3 class="a-m-section__title" style="margin-top:16px">History</h3>
+            <ul class="a-timeline">
+                @foreach($assignmentHistory as $h)
+                    <li><strong>{{ $h->meta['to'] ?? 'Unassigned' }}</strong> <span class="a-muted">from {{ $h->meta['from'] ?? 'Unassigned' }}</span><br>
+                        <span class="a-table__sub">{{ $h->created_at?->format('d M Y, H:i') }} · by {{ $h->meta['by'] ?? 'system' }} · {{ str_replace('_', ' ', $h->source) }}@if($h->reason) · “{{ $h->reason }}”@endif</span></li>
+                @endforeach
+            </ul>
+        @endif
+    </x-admin.card>
+    @endif
+
     <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
       <div class="a-ord-who">
         <div class="a-ord-avatar" aria-hidden="true">{{ $customerInitials ?: 'NA' }}</div>

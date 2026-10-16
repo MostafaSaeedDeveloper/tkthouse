@@ -45,6 +45,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'passwordless_since' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'can_receive_orders' => 'boolean',
             'last_login_at' => 'datetime',
         ];
     }

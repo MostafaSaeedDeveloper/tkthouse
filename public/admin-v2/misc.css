@@ -71,3 +71,6 @@
 .a-lg__back { margin-top: 22px; text-align: center; font-size: 13px; }
 .a-lg__back a { color: #FFD200; text-decoration: none; font-weight: 600; }
 .a-lg__back a:hover { text-decoration: underline; }
+
+.a-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.a-timeline li { border-left: 3px solid var(--a-yellow); padding-left: 12px; font-size: 14px; }

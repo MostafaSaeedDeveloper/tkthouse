@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Orders;
+
+use App\Models\Order;
+use App\Models\User;
+use App\Support\SystemSettings;
+use Illuminate\Database\Eloquent\Builder;
+
+/**
+ * Who may see / act on which order when Order Assignment is enabled. One choke point used by every admin query.
+ *
+ * Disabled (default): behaves exactly as before — no extra restriction is applied, and nothing here ever *widens* access.
+ * Enabled: super admin or `orders.view_all` => everything; `orders.view_assigned` => own orders (+ unassigned when
+ * `orders.view_unassigned`); anyone else => nothing (fail closed).
+ */
+final class OrderAccess
+{
+    public const ALL = 'all';
+    public const ASSIGNED = 'assigned';
+    public const NONE = 'none';
+
+    public static function enabled(): bool
+    {
+        return (bool) SystemSettings::get('order_assignment_enabled', false);
+    }
+
+    public static function isSuper(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        $norm = fn (string $v) => strtolower((string) preg_replace('/[^a-z0-9]/i', '', $v));
+
+        return $norm((string) $user->username) === 'superadmin'
+            || $user->roles->contains(fn ($r) => $norm($r->name) === 'superadmin');
+    }
+
+    public static function level(?User $user): string
+    {
+        if (! self::enabled()) {
+            return self::ALL;
+        }
+        if (! $user) {
+            return self::NONE;
+        }
+        if (self::isSuper($user) || $user->can('orders.view_all')) {
+            return self::ALL;
+        }
+
+        return $user->can('orders.view_assigned') ? self::ASSIGNED : self::NONE;
+    }
+
+    /** True when the user is restricted by assignment (global dashboards/reports must not be shown to them). */
+    public static function scoped(?User $user): bool
+    {
+        return self::level($user) !== self::ALL;
+    }
+
+    public static function apply(Builder $query, ?User $user, string $table = 'orders'): Builder
+    {
+        $level = self::level($user);
+        if ($level === self::ALL) {
+            return $query;
+        }
+        if ($level === self::NONE) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $col = $table.'.assigned_user_id';
+        $seeUnassigned = $user->can('orders.view_unassigned');
+
+        return $query->where(fn ($q) => $q->where($col, $user->id)->when($seeUnassigned, fn ($w) => $w->orWhereNull($col)));
+    }
+
+    public static function canView(Order $order, ?User $user): bool
+    {
+        return match (self::level($user)) {
+            self::ALL => true,
+            self::NONE => false,
+            default => (int) $order->assigned_user_id === (int) $user->id || ($order->assigned_user_id === null && $user->can('orders.view_unassigned')),
+        };
+    }
+
+    /** Acting on an order (edit/status/notes/approve...). Agents need `orders.manage_assigned` and the order must be theirs. */
+    public static function canManage(Order $order, ?User $user): bool
+    {
+        return match (self::level($user)) {
+            self::ALL => true,
+            self::NONE => false,
+            default => (int) $order->assigned_user_id === (int) $user->id && $user->can('orders.manage_assigned'),
+        };
+    }
+
+    public static function canAssign(?User $user, bool $reassign = false): bool
+    {
+        if (! self::enabled() || ! $user) {
+            return false;
+        }
+
+        return self::isSuper($user) || $user->can($reassign ? 'orders.reassign' : 'orders.assign');
+    }
+}

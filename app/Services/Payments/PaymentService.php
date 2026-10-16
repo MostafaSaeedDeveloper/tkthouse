@@ -269,6 +269,7 @@ class PaymentService
 
                 $from = $order->status;
                 $order->forceFill(['status' => 'paid', 'paid_at' => now()])->saveQuietly();
+                app(\App\Orders\OrderAssignmentService::class)->snapshotSale($order); // attribution is frozen at payment time
                 if ($order->trashed()) {
                     $order->restore();
                 }

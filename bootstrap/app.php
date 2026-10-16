@@ -14,9 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\StoreAffiliateReferral::class,
+            \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
 
         $middleware->alias([
+            'orders.global' => \App\Http\Middleware\EnsureNotOrderScoped::class,
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
             'customer.account' => \App\Http\Middleware\EnsureCustomerAccountAccess::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

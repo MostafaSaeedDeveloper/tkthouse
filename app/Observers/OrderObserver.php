@@ -13,6 +13,10 @@ class OrderObserver
             return;
         }
 
+        if ($order->wasChanged('status')) {
+            app(\App\Orders\OrderAssignmentService::class)->snapshotSale($order);
+        }
+
         app(TicketIssuanceService::class)->issueIfPaid($order);
     }
 

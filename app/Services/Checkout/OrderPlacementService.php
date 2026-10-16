@@ -51,6 +51,7 @@ class OrderPlacementService
             $customer = $this->customerFor($user, $buyer);
 
             $order = $this->createOrder($user, $customer, $quote, $requiresApproval, $methodCode, $promoCode, $affiliateUserId);
+            app(\App\Orders\OrderAssignmentService::class)->assignOnCreate($order); // never throws; unassigned on any problem
 
             foreach ($freshUnits->values() as $index => $unit) {
                 $attendee = $attendees[$index];

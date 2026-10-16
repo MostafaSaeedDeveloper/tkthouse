@@ -102,8 +102,8 @@ Auth::routes(['register' => false]);
 Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::class])->prefix('dashboard')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
-    Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware('permission:dashboard.view')->name('events.dashboard');
-    Route::get('events/{event}/report', [ReportController::class, 'event'])->middleware('permission:reports.view')->name('events.report');
+    Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware(['permission:dashboard.view', 'orders.global'])->name('events.dashboard');
+    Route::get('events/{event}/report', [ReportController::class, 'event'])->middleware(['permission:reports.view', 'orders.global'])->name('events.report');
 
     Route::resource('users', UserController::class)->except('show')
         ->middlewareFor('index', 'permission:users.view')
@@ -136,12 +136,12 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor('destroy', 'permission:tickets.delete');
 
 
-    Route::get('guest-list', [GuestListController::class, 'index'])->middleware('permission:tickets.view')->name('guest-list.index');
-    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware('permission:tickets.create')->name('guest-list.create');
-    Route::post('guest-list', [GuestListController::class, 'store'])->middleware('permission:tickets.create')->name('guest-list.store');
-    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware('permission:tickets.create')->name('guest-list.import');
-    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware('permission:tickets.view')->name('guest-list.export');
-    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware('permission:tickets.view')->name('guest-list.template');
+    Route::get('guest-list', [GuestListController::class, 'index'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.index');
+    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.create');
+    Route::post('guest-list', [GuestListController::class, 'store'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.store');
+    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.import');
+    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.export');
+    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.template');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
     Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
@@ -182,7 +182,10 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
     Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view')->name('payments.index');
-    Route::get('reports', [ReportController::class, 'index'])->middleware('permission:reports.view')->name('reports.index');
+    Route::post('orders/{order}/assign', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'assign'])->middleware('permission:orders.view')->name('orders.assign');
+    Route::post('orders/assign-bulk', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'bulk'])->middleware('permission:orders.view')->name('orders.assign.bulk');
+    Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
+    Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
 
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
@@ -195,6 +198,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:settings.integrations.manage')->name('integrations.disable');
     Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:settings.integrations.manage')->name('integrations.destroy');
 
+    Route::post('settings/orders/grant-view-all', [SystemSettingController::class, 'grantViewAll'])->middleware('permission:settings.orders')->name('settings.orders.grant-view-all');
     Route::post('settings/notifications/test', [SystemSettingController::class, 'testNotification'])->middleware('permission:settings.integrations.test')->name('settings.notifications.test');
 
     Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|notifications|security')->name('settings.section');

@@ -38,3 +38,15 @@
         </select>
     </x-admin.field>
 </x-admin.form-section>
+
+<x-admin.form-section title="Status & orders" description="Inactive users cannot sign in or receive orders; their history is kept." cols="1">
+    <input type="hidden" name="account_flags" value="1">
+    <div class="a-m-switch form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="u-active" name="is_active" value="1" @checked(old('is_active', isset($user) ? $user->is_active : true))>
+        <label class="form-check-label" for="u-active"><strong>Active</strong><span class="a-hint d-block">Turn off to block sign-in without deleting the account.</span></label>
+    </div>
+    <div class="a-m-switch form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="u-orders" name="can_receive_orders" value="1" @checked(old('can_receive_orders', isset($user) ? $user->can_receive_orders : false))>
+        <label class="form-check-label" for="u-orders"><strong>Can receive assigned orders</strong><span class="a-hint d-block">Also needs the orders.view_assigned permission (e.g. the "Order Agent" role). Used by automatic assignment.</span></label>
+    </div>
+</x-admin.form-section>

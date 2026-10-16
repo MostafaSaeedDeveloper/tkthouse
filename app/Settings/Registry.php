@@ -56,7 +56,6 @@ final class Registry
             'order_assignment_mode' => ['group' => 'orders', 'type' => 'select', 'label' => 'Assignment mode', 'default' => 'manual',
                 'options' => ['manual' => 'Manual', 'round_robin' => 'Automatic — round robin', 'default_assignee' => 'Default assignee'], 'rules' => ['required', 'in:manual,round_robin,default_assignee']],
             'order_default_assignee_id' => ['group' => 'orders', 'type' => 'user', 'label' => 'Default assignee', 'default' => null, 'rules' => ['nullable', 'integer']],
-            'order_assignment_notifications' => ['group' => 'orders', 'type' => 'bool', 'label' => 'Notify staff when an order is assigned to them (in activity log)', 'default' => false, 'rules' => ['boolean']],
 
             // ---- Notifications
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,
