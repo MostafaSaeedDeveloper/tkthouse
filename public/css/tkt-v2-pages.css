@@ -136,15 +136,23 @@
 .tkt-stepper button:disabled { color: #bdbdbd; cursor: not-allowed; }
 .tkt-stepper output { min-width: 34px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
 .tkt-ticket.is-selected .tkt-stepper { border-color: var(--tkt-ink); }
-.tkt-more { margin-top: 10px; }
+.tkt-more-row { display: flex; gap: 8px; margin-top: 10px; }
+.tkt-more-row .tkt-more { flex: 1; }
 .tkt-more[hidden] { display: none; }
+.tkt-summary__clear { margin-top: 10px; display: none; }
+.tkt-summary.has-items .tkt-summary__clear { display: block; }
+.tkt-summary__clear-btn { padding: 0; border: 0; background: none; font: inherit; font-size: var(--tkt-fs-sm); font-weight: 700; color: var(--tkt-muted); text-decoration: underline; cursor: pointer; min-height: 32px; }
+.tkt-summary__clear-btn:hover { color: var(--tkt-ink); }
+.tkt-summary__clear-btn:focus-visible { outline: 0; box-shadow: var(--tkt-focus); border-radius: 6px; }
+.tkt-summary__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 6px; border: 1px solid var(--tkt-line-strong); border-radius: var(--tkt-radius-sm); background: var(--tkt-surface); font-size: var(--tkt-fs-sm); font-weight: 600; }
+.tkt-summary__confirm[hidden] { display: none; }
+.tkt-summary__confirm span { flex: 1 1 100%; }
 /* desktop: the list has its own scroll area so the summary never moves down */
 .tkt-tickets-scroll { margin: 0 -6px; padding: 0 6px; }
 @media (min-width: 992px) {
     .tkt-booking__card { display: flex; flex-direction: column; max-height: calc(100vh - var(--tkt-header-h) - 32px); overflow: hidden; }
     .tkt-tickets-scroll { flex: 0 1 auto; min-height: 120px; max-height: min(420px, 52vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 2px; }
     .tkt-booking__head, .tkt-soldout, .tkt-summary, .tkt-alert, .tkt-closed { flex: none; }
-    .tkt-more { display: none !important; }
 }
 /* sold-out tickets: one folded line, tiny rows when opened, never selectable */
 .tkt-soldout { margin-top: 12px; border-top: 1px dashed var(--tkt-line-strong); padding-top: 8px; }

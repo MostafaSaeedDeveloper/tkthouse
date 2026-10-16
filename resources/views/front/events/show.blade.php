@@ -231,7 +231,7 @@
                data-checkout-base="{{ route('front.checkout') }}"
                data-event-id="{{ $event->id }}"
                data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}"
-               data-fold-initial="3" data-fold-step="5"
+               data-fold-initial="5" data-fold-step="5"
                data-fees='@json($fees)'>
             <div class="tkt-card tkt-booking__card">
                 <header class="tkt-booking__head">
@@ -300,7 +300,10 @@
                                 @endforeach
                             </div>
                         </div>
-                        <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--block tkt-more" data-more hidden></button>
+                        <div class="tkt-more-row">
+                            <button type="button" class="tkt-btn tkt-btn--outline tkt-more" data-more hidden></button>
+                            <button type="button" class="tkt-btn tkt-btn--ghost tkt-more" data-less hidden>Show less</button>
+                        </div>
                     @endif
 
                     @if($unavailable->isNotEmpty())
@@ -323,6 +326,14 @@
                                 <div class="tkt-summary__sheethead"><b>Your order</b><button type="button" class="tkt-summary__close" data-sheet-close aria-label="Close order details">×</button></div>
                                 <p class="tkt-summary__empty">No tickets selected yet</p>
                                 <div class="tkt-summary__lines" id="summaryLines"></div>
+                                <div class="tkt-summary__clear">
+                                    <button type="button" class="tkt-summary__clear-btn" data-clear-open>Clear selection</button>
+                                    <div class="tkt-summary__confirm" data-clear-confirm role="alertdialog" aria-label="Clear selection" hidden>
+                                        <span>Remove all selected tickets?</span>
+                                        <button type="button" class="tkt-btn tkt-btn--dark tkt-btn--sm" data-clear-yes>Yes, clear</button>
+                                        <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--sm" data-clear-no>Keep</button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="tkt-summary__bar">
                                 <button type="button" class="tkt-summary__total" id="summaryToggle" aria-expanded="false" aria-controls="summarySheet">

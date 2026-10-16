@@ -61,9 +61,10 @@ class CompactTicketSelectorTest extends TestCase
             $this->assertSame("Type $n", end($names));
             $list = substr($html, strpos($html, 'data-ticket-scroll'), strpos($html, 'data-more') - strpos($html, 'data-ticket-scroll'));
             $this->assertSame($n, substr_count($list, 'class="tkt-ticket"'));            // all inside the scroll container
-            $this->assertStringContainsString('data-fold-initial="3"', $html);
+            $this->assertStringContainsString('data-fold-initial="5"', $html);     // 4–5 shown by default
             $this->assertStringContainsString('data-fold-step="5"', $html);
             $this->assertStringContainsString('data-more', $html);
+            $this->assertStringContainsString('data-less', $html);                 // Show less
         }
     }
 
@@ -146,6 +147,23 @@ class CompactTicketSelectorTest extends TestCase
         $card = substr($html, strpos($html, 'tkt-booking__card'));
         $this->assertStringContainsString('id="orderSummary"', substr($card, 0, strpos($card, '</aside>')));   // same card, not a separate column
         $this->assertStringContainsString('viewport-fit=cover', $html);                                        // iOS safe area
+    }
+
+    public function test_clear_selection_asks_first_and_the_copy_promises_no_reservation(): void
+    {
+        $event = $this->makeEvent();
+        $this->many($event, 2);
+
+        $html = $this->show($event)->assertSee('Clear selection')->assertSee('Remove all selected tickets?')->assertSee('Yes, clear')->assertSee('Keep')->getContent();
+
+        $this->assertMatchesRegularExpression('/data-clear-confirm[^>]*hidden/', $html);                       // the confirmation is closed until asked for
+        $card = substr($html, strpos($html, 'tkt-booking__card'));
+        $card = substr($card, 0, strpos($card, '</aside>'));
+        foreach (['reserved', 'held for', 'hold your', 'guarantee'] as $promise) {
+            $this->assertStringNotContainsStringIgnoringCase($promise, $card);                                  // no promise of holding tickets before payment
+        }
+        $js = file_get_contents(public_path('js/tkt-booking.js'));
+        $this->assertStringContainsString('setters[id](0)', $js);                                              // clearing goes through the normal quantity path
     }
 
     public function test_layout_rules_for_internal_scroll_sticky_summary_and_mobile_fold(): void

@@ -22,6 +22,7 @@
     try { fees = JSON.parse(root.dataset.fees || '[]'); } catch (e) { fees = []; }
 
     var cart = {}; // id -> { name, price, qty }
+    var setters = {}; // id -> function(qty), used by Clear selection
 
     function money(n) {
         return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP';
@@ -100,7 +101,7 @@
         if (countEl) countEl.textContent = count > 0 ? count + (count === 1 ? ' ticket' : ' tickets') : 'No tickets selected';
         summary.classList.toggle('has-items', ids.length > 0);
         document.body.classList.toggle('tkt-has-bar', ids.length > 0 && mobile.matches);
-        if (!ids.length) closeSheet();
+        if (!ids.length) { closeSheet(); if (typeof showClear === 'function') showClear(false); }
         updateCheckoutLink(count);
     }
 
@@ -119,6 +120,7 @@
         if (!minus || !plus || !out) return;
 
         function set(qty) {
+            setters[id] = set;
             qty = Math.max(0, Math.min(maxQty, qty));
             if (qty === 0) {
                 delete cart[id];
@@ -153,35 +155,78 @@
         summary.classList.add('is-expanded');
         if (toggleEl) toggleEl.setAttribute('aria-expanded', 'true');
         if (backdrop) backdrop.hidden = false;
+        sheetOpener = document.activeElement;
+        var closeBtn = summary.querySelector('[data-sheet-close]');
+        if (closeBtn) closeBtn.focus();
     }
+    var sheetOpener = null;
     function closeSheet() {
+        var wasOpen = summary.classList.contains('is-expanded');
         summary.classList.remove('is-expanded');
         if (toggleEl) toggleEl.setAttribute('aria-expanded', 'false');
         if (backdrop) backdrop.hidden = true;
+        if (wasOpen && sheetOpener && document.contains(sheetOpener)) { try { sheetOpener.focus(); } catch (e) {} }
+        if (wasOpen) sheetOpener = null;
     }
     if (toggleEl) toggleEl.addEventListener('click', function () { summary.classList.contains('is-expanded') ? closeSheet() : openSheet(); });
     if (backdrop) backdrop.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab' || !summary.classList.contains('is-expanded')) return;
+        var f = Array.prototype.slice.call(summary.querySelectorAll('button, a[href]:not(.is-disabled)')).filter(function (el) { return el.offsetParent !== null && !el.disabled; });
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     Array.prototype.forEach.call(summary.querySelectorAll('[data-sheet-close]'), function (b) { b.addEventListener('click', closeSheet); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && summary.classList.contains('is-expanded')) { closeSheet(); if (toggleEl) toggleEl.focus(); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && summary.classList.contains('is-expanded')) { closeSheet(); } });
 
     /* ---- mobile: show the first few tickets, reveal more step by step (selected tickets are never folded away) ---- */
     var cards = Array.prototype.slice.call(root.querySelectorAll('.tkt-ticket'));
     var moreBtn = root.querySelector('[data-more]');
-    var initial = parseInt(root.dataset.foldInitial || '3', 10);
+    var lessBtn = root.querySelector('[data-less]');
+    var initial = parseInt(root.dataset.foldInitial || '5', 10);
     var stepBy = parseInt(root.dataset.foldStep || '5', 10);
     var shown = initial;
     function applyFold() {
         var folded = 0;
         cards.forEach(function (card, i) {
-            var hide = mobile.matches && i >= shown && !card.classList.contains('is-selected');
+            var hide = i >= shown && !card.classList.contains('is-selected');
             card.classList.toggle('is-folded', hide);
             if (hide) folded++;
         });
-        if (!moreBtn) return;
-        moreBtn.hidden = !(mobile.matches && folded > 0);
-        if (folded > 0) moreBtn.textContent = 'Show ' + Math.min(stepBy, folded) + ' more ticket' + (Math.min(stepBy, folded) === 1 ? '' : 's') + ' (' + folded + ' left)';
+        if (moreBtn) {
+            moreBtn.hidden = folded === 0;
+            if (folded > 0) { var n = Math.min(stepBy, folded); moreBtn.textContent = 'Show ' + n + ' more ticket' + (n === 1 ? '' : 's') + ' (' + folded + ' left)'; }
+        }
+        if (lessBtn) lessBtn.hidden = !(shown > initial && cards.length > initial);
     }
     if (moreBtn) moreBtn.addEventListener('click', function () { shown += stepBy; applyFold(); });
+    if (lessBtn) lessBtn.addEventListener('click', function () {
+        shown = initial; applyFold();
+        var sc = root.querySelector('[data-ticket-scroll]'); if (sc) sc.scrollTop = 0;
+        if (moreBtn && !moreBtn.hidden) moreBtn.focus();
+    });
+
+    /* ---- clear selection (asks first) ---- */
+    var clearOpen = summary.querySelector('[data-clear-open]');
+    var clearBox = summary.querySelector('[data-clear-confirm]');
+    function showClear(on) {
+        if (!clearBox) return;
+        clearBox.hidden = !on;
+        if (clearOpen) clearOpen.hidden = on;
+        if (on) { var y = clearBox.querySelector('[data-clear-yes]'); if (y) y.focus(); } else if (clearOpen && !clearOpen.hidden) clearOpen.focus();
+    }
+    if (clearOpen) clearOpen.addEventListener('click', function () { showClear(true); });
+    var clearNo = summary.querySelector('[data-clear-no]');
+    if (clearNo) clearNo.addEventListener('click', function () { showClear(false); });
+    var clearYes = summary.querySelector('[data-clear-yes]');
+    if (clearYes) clearYes.addEventListener('click', function () {
+        Object.keys(cart).slice().forEach(function (id) { if (setters[id]) setters[id](0); });
+        showClear(false);
+        closeSheet();
+        toast('Selection cleared.');
+    });
 
     /* ---- sold-out accordion ---- */
     var soldToggle = document.getElementById('soldoutToggle');
