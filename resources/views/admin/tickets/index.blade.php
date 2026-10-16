@@ -1,98 +1,74 @@
 @extends('admin.master')
+@section('title', 'Tickets')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<div class="content">
-    @include('admin.partials.flash')
-    <div class="d-flex justify-content-between mb-3">
-        <h1 class="h3 mb-0">Tickets</h1>
-        <div class="d-flex gap-2">
-            @can('scanner.access')
-                <a href="{{ route('admin.tickets.scanner') }}" class="btn btn-alt-info">QR Scanner</a>
-            @endcan
-            @can('tickets.create')
-                <a href="{{ route('admin.tickets.create') }}" class="btn btn-primary">Create Ticket</a>
-            @endcan
-        </div>
-    </div>
+@php($statusOptions = ['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'])
+<x-admin.page-header title="Tickets" subtitle="Every issued ticket with its holder, event and check-in status." :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets']">
+    @can('scanner.access')
+        <a href="{{ route('admin.tickets.scanner') }}" class="a-btn a-btn--outline"><i class="fa fa-qrcode"></i> QR Scanner</a>
+    @endcan
+    @can('tickets.create')
+        <a href="{{ route('admin.tickets.create') }}" class="a-btn a-btn--primary"><i class="fa fa-plus"></i> Create Ticket</a>
+    @endcan
+</x-admin.page-header>
 
-    <div class="block block-rounded mb-3">
-        <div class="block-content py-3">
-            <form method="GET" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / holder">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Event Name</label>
-                    <select name="event_name" class="form-select js-select2">
-                        <option value="">All events</option>
-                        @foreach($eventNames as $eventName)
-                            <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select js-select2">
-                        <option value="">All</option>
-                        @foreach(['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'] as $value => $label)
-                            <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button class="btn btn-primary" type="submit">Filter</button>
-                    <a class="btn btn-alt-secondary" href="{{ route('admin.tickets.index') }}">Reset</a>
-                </div>
-            </form>
-        </div>
-    </div>
+<x-admin.flash />
 
-    <div class="block block-rounded">
-        <div class="block-content p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-vcenter mb-0">
-                    <thead>
-                        <tr>
-                            <th>Ticket Number</th>
-                            <th>Holder</th>
-                            <th>Event</th>
-                            <th>Order</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php($statusLabels = ['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'])
-                        @forelse($tickets as $ticket)
-                            <tr>
-                                <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number ?? '-' }}</a></td>
-                                <td>{{ $ticket->holder_name ?: '-' }}</td>
-                                <td>{{ $ticket->eventLabel() ?: '-' }}</td>
-                                <td>{{ $ticket->order?->order_number ?? '-' }}</td>
-                                <td>{{ $statusLabels[$ticket->status] ?? str($ticket->status)->headline() }}</td>
-                                <td class="text-end">
-                                    <a class="btn btn-sm btn-alt-info" href="{{ route('admin.tickets.show', $ticket) }}"><i class="fa fa-eye"></i></a>
-                                    @can('tickets.update')
-                                        <a class="btn btn-sm btn-alt-primary" href="{{ route('admin.tickets.edit', $ticket) }}"><i class="fa fa-pen"></i></a>
-                                    @endcan
-                                    @can('tickets.delete')
-                                        <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="btn btn-sm btn-alt-danger" type="submit"><i class="fa fa-trash"></i></button>
-                                        </form>
-                                    @endcan
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="text-center py-4 text-muted">No tickets found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="mt-3">{{ $tickets->links() }}</div>
-</div>
+<x-admin.filters :action="route('admin.tickets.index')" :reset="route('admin.tickets.index')">
+    <div class="a-field"><label class="form-label" for="tkSearch">Search</label><input type="text" id="tkSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / holder"></div>
+    <div class="a-field"><label class="form-label" for="tkEvent">Event Name</label>
+        <select id="tkEvent" name="event_name" class="form-select js-select2">
+            <option value="">All events</option>
+            @foreach($eventNames as $eventName)
+                <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
+            @endforeach
+        </select></div>
+    <div class="a-field"><label class="form-label" for="tkStatus">Status</label>
+        <select id="tkStatus" name="status" class="form-select js-select2">
+            <option value="">All</option>
+            @foreach($statusOptions as $value => $label)
+                <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+            @endforeach
+        </select></div>
+</x-admin.filters>
+
+<x-admin.card flush>
+    @if($tickets->isEmpty())
+        <x-admin.empty icon="fa-ticket" title="No tickets found" text="Try a different search or filter. Tickets appear here once orders are paid or invitations are created." />
+    @else
+        <x-admin.table stack caption="Tickets">
+            <thead>
+                <tr><th>Ticket Number</th><th>Holder</th><th>Event</th><th>Order</th><th>Status</th><th class="a-num">Actions</th></tr>
+            </thead>
+            <tbody>
+            @foreach($tickets as $ticket)
+                <tr>
+                    <td data-label="Ticket Number"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number ?? '-' }}</a></td>
+                    <td data-label="Holder" class="a-wrap">{{ $ticket->holder_name ?: '-' }}</td>
+                    <td data-label="Event" class="a-wrap">{{ $ticket->eventLabel() ?: '-' }}</td>
+                    <td data-label="Order">{{ $ticket->order?->order_number ?? '-' }}</td>
+                    <td data-label="Status"><x-admin.status :status="$ticket->status" kind="ticket" /></td>
+                    <td data-label="Actions">
+                        <div class="a-table__actions">
+                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>
+                            @can('tickets.update')
+                                <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.edit', $ticket) }}" aria-label="Edit ticket {{ $ticket->ticket_number }}" title="Edit"><i class="fa fa-pen"></i></a>
+                            @endcan
+                            @can('tickets.delete')
+                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="a-btn a-btn--danger a-btn--sm" type="submit" aria-label="Delete ticket {{ $ticket->ticket_number }}" title="Delete"><i class="fa fa-trash"></i></button>
+                                </form>
+                            @endcan
+                        </div>
+                    </td>
+                </tr>
+            @endforeach
+            </tbody>
+        </x-admin.table>
+        <x-admin.pager :paginator="$tickets" />
+    @endif
+</x-admin.card>
 @endsection

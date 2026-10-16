@@ -1,25 +1,23 @@
 @extends('admin.master')
+@section('title', 'Create Event')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<div class="content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">Create Event</h2>
-        <a href="{{ route('admin.events.index') }}" class="btn btn-alt-secondary btn-sm">Back to Events</a>
-    </div>
+<x-admin.page-header title="Create Event" subtitle="Set up the event details, ticket types, fees and lineup." :crumbs="['Dashboard' => route('admin.dashboard'), 'Events' => route('admin.events.index'), 'Create']">
+    <a href="{{ route('admin.events.index') }}" class="a-btn a-btn--outline">Back to Events</a>
+</x-admin.page-header>
 
-    @include('admin.partials.flash')
+<x-admin.flash />
 
-    <form method="POST" action="{{ route('admin.events.store') }}" enctype="multipart/form-data" class="block block-rounded">
-        @csrf
+<form method="POST" action="{{ route('admin.events.store') }}" enctype="multipart/form-data" data-a-loading>
+    @csrf
+    <x-admin.card>
+        @include('admin.events.form')
 
-        <div class="block-content">
-            @include('admin.events.form')
+        <div class="a-form-actions">
+            <a href="{{ route('admin.events.index') }}" class="a-btn a-btn--ghost">Cancel</a>
+            <button type="submit" class="a-btn a-btn--primary">Create Event</button>
         </div>
-
-        <div class="block-content block-content-full bg-body-light d-flex justify-content-end gap-2">
-            <a href="{{ route('admin.events.index') }}" class="btn btn-alt-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Create Event</button>
-        </div>
-    </form>
-</div>
+    </x-admin.card>
+</form>
 @endsection

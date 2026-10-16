@@ -1,4 +1,16 @@
 @extends('admin.master')
+@section('title', 'Edit Permission')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<div class="content"><h2 class="h4">Edit Permission</h2>@include('admin.partials.flash')<form method="POST" action="{{ route('admin.permissions.update',$permission) }}" class="block block-rounded block-content">@csrf @method('PUT') <div class="mb-3"><label class="form-label">Permission Name</label><input name="name" class="form-control" value="{{ old('name',$permission->name) }}" required></div><button class="btn btn-primary">Update</button></form></div>
+<x-admin.page-header title="Edit Permission" :crumbs="['Dashboard' => route('admin.dashboard'), 'Permissions' => route('admin.permissions.index'), 'Edit']" />
+<x-admin.flash />
+<form method="POST" action="{{ route('admin.permissions.update',$permission) }}" data-a-loading>
+    @csrf @method('PUT')
+    <x-admin.card class="a-m-narrow">
+        <x-admin.form-section title="Permission" cols="1">
+            <x-admin.field label="Permission Name" name="name" for="p-name" required><input id="p-name" name="name" class="form-control" value="{{ old('name',$permission->name) }}" required></x-admin.field>
+        </x-admin.form-section>
+        <div class="a-form-actions"><a class="a-btn a-btn--outline" href="{{ route('admin.permissions.index') }}">Cancel</a><button class="a-btn a-btn--primary" type="submit">Update</button></div>
+    </x-admin.card>
+</form>
 @endsection

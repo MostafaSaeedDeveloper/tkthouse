@@ -1,57 +1,36 @@
 @extends('admin.master')
-
+@section('title', 'Payment Methods')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<div class="content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="h4 mb-1">Payment Methods</h2>
-            <a href="{{ route('admin.settings.edit') }}" class="fs-sm">← Back to General Settings</a>
-        </div>
-        <a href="{{ route('admin.payment-methods.create') }}" class="btn btn-primary">Add Payment Method</a>
-    </div>
-
-    @include('admin.partials.flash')
-
-    <div class="block block-rounded">
-        <div class="block-content table-responsive">
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Code</th>
-                        <th>Checkout</th>
-                        <th>Provider</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($methods as $method)
-                        <tr>
-                            <td>{{ $method->name }}</td>
-                            <td><code>{{ $method->code }}</code></td>
-                            <td>@if($method->checkout_icon_url)<img src="{{ $method->checkout_icon_url }}" alt="icon" style="height:20px;width:20px;object-fit:contain;vertical-align:middle">@else<span>💰</span>@endif <span class="ms-1">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<div class="fs-xs text-muted">{{ $method->checkout_description }}</div>@endif</td>
-                            <td>{{ strtoupper($method->provider) }}</td>
-                            <td>
-                                <span class="badge {{ $method->is_active ? 'bg-success' : 'bg-secondary' }}">
-                                    {{ $method->is_active ? 'Active' : 'Disabled' }}
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                <a href="{{ route('admin.payment-methods.edit', $method) }}" class="btn btn-sm btn-alt-primary">Edit</a>
-                                <form method="POST" action="{{ route('admin.payment-methods.destroy', $method) }}" class="d-inline" onsubmit="return confirm('Delete this payment method?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm btn-alt-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6" class="text-center text-muted">No payment methods found.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+<x-admin.page-header title="Payment Methods" subtitle="Methods customers can choose at checkout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings' => route('admin.settings.edit'), 'Payment Methods']">
+    <a href="{{ route('admin.settings.edit') }}" class="a-btn a-btn--ghost">&larr; Back to General Settings</a>
+    <a href="{{ route('admin.payment-methods.create') }}" class="a-btn a-btn--primary"><i class="fa fa-plus"></i> Add Payment Method</a>
+</x-admin.page-header>
+<x-admin.flash />
+<x-admin.card flush>
+    @if($methods->isEmpty())
+        <x-admin.empty icon="fa-credit-card" title="No payment methods found." text="Add a method to let customers pay.">
+            <a href="{{ route('admin.payment-methods.create') }}" class="a-btn a-btn--primary">Add Payment Method</a>
+        </x-admin.empty>
+    @else
+        <x-admin.table stack caption="Payment methods">
+            <thead><tr><th>Name</th><th>Code</th><th>Checkout</th><th>Provider</th><th>Status</th><th><span class="a-sr-only">Actions</span></th></tr></thead>
+            <tbody>
+            @foreach($methods as $method)
+                <tr>
+                    <td data-label="Name"><span class="a-table__main">{{ $method->name }}</span></td>
+                    <td data-label="Code"><code>{{ $method->code }}</code></td>
+                    <td data-label="Checkout" class="a-wrap">@if($method->checkout_icon_url)<img class="a-m-icon" src="{{ $method->checkout_icon_url }}" alt="">@endif <span class="a-table__main" style="display:inline">{{ $method->checkout_label ?: $method->name }}</span>@if($method->checkout_description)<span class="a-table__sub">{{ $method->checkout_description }}</span>@endif</td>
+                    <td data-label="Provider">{{ strtoupper($method->provider) }}</td>
+                    <td data-label="Status"><x-admin.badge :variant="$method->is_active ? 'success' : 'default'" dot>{{ $method->is_active ? 'Active' : 'Disabled' }}</x-admin.badge></td>
+                    <td data-label="Actions"><div class="a-table__actions">
+                        <a href="{{ route('admin.payment-methods.edit', $method) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>
+                        <form method="POST" action="{{ route('admin.payment-methods.destroy', $method) }}" data-a-confirm="Delete this payment method?" data-a-confirm-title="Delete payment method" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-btn a-btn--danger a-btn--sm" type="submit">Delete</button></form>
+                    </div></td>
+                </tr>
+            @endforeach
+            </tbody>
+        </x-admin.table>
+    @endif
+</x-admin.card>
 @endsection

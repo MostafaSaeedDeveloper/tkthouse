@@ -1,367 +1,230 @@
 @extends('admin.master')
+@section('title', 'Order #'.(preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number))
+
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php
   $displayOrderNumber = preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number;
-  $statusClass = str_replace('approved_pending_payment', 'approved', (string) $order->status);
-  $statusLabel = ucwords(str_replace('_', ' ', (string) $order->status));
   $customerName = $order->customer?->full_name ?: 'N/A';
   $customerInitials = collect(explode(' ', $customerName))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('');
   $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
+  $money = fn ($n) => number_format((float) $n, 2).' EGP';
+  $attempts = $order->paymentAttempts()->latest()->get();
 @endphp
 
-<style>
-.od-wrap { padding: 8px 0 60px; }
-.od-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
-.od-head-left p  { font-size: 13px; color: #5e5e72; margin: 4px 0 0; }
-.od-head-left h1 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: #fff; margin: 0; letter-spacing: -0.3px; }
-.od-head-left h1 span { color: #f5b800; }
-.od-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
-@media (max-width: 900px) { .od-grid { grid-template-columns: 1fr; } }
-.od-card { background: #0d0d10; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
-.od-card-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.07); gap: 10px; }
-.od-card-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #f5b800; display: flex; align-items: center; gap: 8px; }
-.od-card-title::before { content: ''; width: 3px; height: 13px; background: #f5b800; border-radius: 2px; flex-shrink: 0; }
-.od-card-body { padding: 20px; }
-.od-info-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px; gap: 12px; }
-.od-info-row:last-child { border-bottom: none; }
-.od-info-label { color: #5e5e72; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
-.od-info-val   { color: #dddde8; font-weight: 500; text-align: right; }
-.od-pay-link-wrap{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
-.od-pay-copy-btn{border:1px solid rgba(255,255,255,.15);background:#15151b;color:#dddde8;border-radius:6px;padding:4px 10px;font-size:12px;white-space:nowrap;}
-.od-pay-copy-btn:hover{border-color:rgba(245,184,0,.4);color:#f5b800;}
-.od-status { display: inline-flex; align-items: center; gap: 6px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 4px 11px; border-radius: 99px; }
-.od-status.pending,.od-status.pending_payment,.od-status.pending_approval { color: #f5b800; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); }
-.od-status.approved,.od-status.paid { color: #22c55e; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.25); }
-.od-status.rejected { color: #e8445a; background: rgba(232,68,90,0.10); border: 1px solid rgba(232,68,90,0.25); }
-.od-customer,.od-ticket-holder { display: flex; align-items: center; gap: 10px; }
-.od-ticket-holder { margin-top: 6px; }
-.od-avatar,.od-ticket-holder-avatar,.od-note-avatar,.od-hist-icon { width: 34px; height: 34px; border-radius: 50%; background: rgba(245,184,0,0.12); border: 1px solid rgba(245,184,0,0.25); color: #f5b800; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
-.od-btn-approve,.od-btn-back { display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 16px;text-decoration:none;border:0; }
-.od-btn-approve { background:#f5b800;color:#000; }
-.od-btn-back { background:#15151b;color:#5e5e72;border:1px solid rgba(255,255,255,0.07); }
-.od-ticket { background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px;margin-bottom:12px;display:grid;grid-template-columns:1fr auto;gap:12px; }
-.od-ticket-name-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;}
-.od-ticket-name{color:#fff;font-weight:700;font-size:17px;line-height:1.25;}
-.od-ticket-type-badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:700;line-height:1.2;}
-.od-ticket-holder-info{color:#dddde8;font-size:15px;line-height:1.4;}
-.od-ticket-holder-info span{display:block;color:#9ba0bd;font-size:14px;}
-.od-ticket-social{display:inline-flex;align-items:center;gap:6px;margin-top:6px;color:#f5b800;font-size:14px;text-decoration:none;word-break:break-all;}
-.od-ticket-social:hover{color:#ffd24d;text-decoration:underline;}
-.od-ticket-price{color:#f5b800;font-weight:700;text-align:right;font-size:18px;}
-.od-ticket-qty{font-size:13px;color:#9ba0bd;text-align:right}
+<x-admin.page-header :title="'Order #'.$displayOrderNumber" :subtitle="'Placed '.$order->created_at?->format('d M Y, H:i')" :crumbs="['Dashboard' => route('admin.dashboard'), 'Orders' => route('admin.orders.index'), '#'.$displayOrderNumber]">
+  @can('orders.update')
+    @if($order->status === 'pending_approval')
+      <form method="POST" action="{{ route('admin.orders.approve', $order) }}" data-a-confirm="Approve this order and send the payment link?" data-a-confirm-title="Approve order" data-a-confirm-ok="Approve">@csrf
+        <button class="a-btn a-btn--primary" type="submit"><i class="fa fa-check"></i> Approve & Send Payment Link</button>
+      </form>
+      <form method="POST" action="{{ route('admin.orders.reject', $order) }}" data-a-confirm="Reject this order?" data-a-confirm-title="Reject order" data-a-confirm-ok="Reject">@csrf
+        <button class="a-btn a-btn--danger" type="submit"><i class="fa fa-times"></i> Reject</button>
+      </form>
+    @endif
+    <a href="{{ route('admin.orders.edit', $order) }}" class="a-btn a-btn--outline"><i class="fa fa-pen"></i> Edit</a>
+  @endcan
+  @can('update_status')
+    <button type="button" class="a-btn a-btn--outline" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
+  @endcan
+  <a href="{{ route('admin.orders.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back</a>
+</x-admin.page-header>
 
-.od-issued-wrap{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;}
-.od-issued-link{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.35);color:#7df0a8;font-size:12px;text-decoration:none;font-weight:600;}
-.od-issued-link:hover{color:#a7f7c1;border-color:rgba(34,197,94,.55);text-decoration:none;}
-.od-issued-empty{margin-top:10px;font-size:12px;color:#6f748d;}
-.od-total-bar { display:flex;justify-content:space-between;background:rgba(245,184,0,0.06);border:1px solid rgba(245,184,0,0.2);border-radius:10px;padding:14px 20px;margin-top:16px;color:#fff; }
-.od-note-item,.od-hist-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
-.od-note-item:last-child,.od-hist-item:last-child{border-bottom:0}
-.od-note-author,.od-hist-action{color:#dddde8;font-size:12px}.od-note-author span,.od-hist-meta{display:block;color:#5e5e72;font-size:11px}
-.od-note-text{color:#dddde8;font-size:12px}
-.od-note-form textarea{width:100%;background:#15151b;border:1px solid rgba(255,255,255,0.07);border-radius:8px;color:#dddde8;padding:10px;min-height:90px;margin-top:12px}
-.od-note-meta{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.od-note-send-customer{display:inline-flex;align-items:center;gap:8px;color:#b8b8cc;font-size:12px}
-.od-note-send-customer input{accent-color:#f5b800}
-.od-note-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#7df0a8;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;margin-top:6px}
-.od-note-submit{margin-top:10px;background:#f5b800;border:0;border-radius:8px;padding:7px 14px;font-weight:700}
+<x-admin.flash />
 
-.od-timeline { position: relative; margin-left: 6px; }
-.od-timeline::before { content: ''; position: absolute; top: 6px; bottom: 6px; left: 5px; width: 2px; background: rgba(245,184,0,0.18); }
-.od-tl-item { position: relative; padding-left: 24px; margin-bottom: 18px; }
-.od-tl-item:last-child { margin-bottom: 0; }
-.od-tl-dot { position: absolute; top: 4px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: rgba(245,184,0,0.2); border: 2px solid rgba(245,184,0,0.4); }
-.od-tl-item.done .od-tl-dot { background: #f5b800; border-color: #f5b800; box-shadow: 0 0 0 4px rgba(245,184,0,0.12); }
-.od-tl-label { color: #dddde8; font-size: 14px; font-weight: 600; }
-.od-tl-time { color: #5e5e72; font-size: 12px; margin-top: 2px; }
-.od-hist-status { display:inline-flex; align-items:center; gap:6px; margin-top:4px; font-size:11px; color:#9ba0bd; }
-.od-hist-status strong { color:#f5b800; font-weight:700; }
+<div class="a-ord-grid">
+  <div class="a-ord-col">
+    <x-admin.card title="Order Summary">
+      <x-slot:actions><x-admin.status :status="$order->status" kind="order" /></x-slot:actions>
+      <dl class="a-kv">
+        <div><dt>Order #</dt><dd>{{ $displayOrderNumber }}</dd></div>
+        <div><dt>Date</dt><dd>{{ $order->created_at?->format('d M Y, H:i') }}</dd></div>
+        <div><dt>Payment Method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
+        @can('showing_orders')
+          <div><dt>Show in Stats</dt><dd>{{ $order->exclude_from_statistics ? 'No (Excluded)' : 'Yes' }}</dd></div>
+        @endcan
+        <div><dt>Promo Code</dt><dd>{{ $order->promo_code ?: '-' }}</dd></div>
+        <div><dt>Subtotal</dt><dd>{{ $money($order->subtotal_amount ?: $order->total_amount) }}</dd></div>
+        <div><dt>Discount</dt><dd>{{ $money($order->discount_amount) }}</dd></div>
+      </dl>
+      @if($order->status === 'pending_payment' && $paymentLink)
+        <div class="a-field" style="margin-top:16px">
+          <label class="form-label" for="paymentLinkInput">Payment Link</label>
+          <div class="a-ord-linkbox">
+            <input type="text" readonly value="{{ $paymentLink }}" class="form-control" id="paymentLinkInput" onclick="this.select();">
+            <button type="button" class="a-btn a-btn--outline" id="copyPaymentLinkBtn" data-payment-link="{{ $paymentLink }}">Copy</button>
+          </div>
+        </div>
+      @endif
+    </x-admin.card>
 
-.od-status-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1050;padding:16px;}
-.od-status-modal-backdrop.show{display:flex;}
-.od-status-modal{width:100%;max-width:440px;background:#0d0d10;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;}
-.od-status-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
-.od-status-modal-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;}
-.od-status-modal-close{background:transparent;border:0;color:#a2a2b3;font-size:18px;line-height:1;}
-.od-status-modal-body{padding:16px;}
-.od-status-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;}
+    <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
+      <div class="a-ord-who">
+        <div class="a-ord-avatar" aria-hidden="true">{{ $customerInitials ?: 'NA' }}</div>
+        <div style="min-width:0">
+          <div class="a-table__main">
+            @if($order->customer)<a href="{{ route('admin.customers.show', $order->customer) }}">{{ $customerName }}</a>@else{{ $customerName }}@endif
+          </div>
+          <span class="a-table__sub">{{ $order->customer?->email ?: '-' }}</span>
+          <span class="a-table__sub">{{ $order->customer?->phone ?: '-' }}</span>
+        </div>
+      </div>
+    </x-admin.card>
 
-</style>
+    <x-admin.card title="Tickets" :subtitle="$order->items->count().' ticket(s)'">
+      @forelse($order->items as $item)
+        @php
+          $ticketName = trim((string) $item->ticket_name);
+          $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
+          $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
+          $normalizedType = \Illuminate\Support\Str::lower($ticketType);
+          $ticketTypeColor = ['early bird' => '#6c757d', 'regular' => '#0d6efd', 'phase 1' => '#0d6efd', 'phase 2' => '#6f42c1', 'vip' => '#b58900'][$normalizedType] ?? '#6c757d';
+          $socialProfileRaw = trim((string) $item->holder_social_profile);
+          $socialProfileLink = $socialProfileRaw !== ''
+            ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
+            : null;
+        @endphp
+        <div class="a-ord-item">
+          <div style="min-width:0">
+            <div class="a-ord-item__name">{{ $eventName }}
+              @if($ticketType !== '' && $ticketType !== $eventName)<span class="a-ord-tag" style="background-color: {{ $ticketTypeColor }}">{{ $ticketType }}</span>@endif
+            </div>
+            <div class="a-ord-item__meta"><strong>{{ $item->holder_name }}</strong><br>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</div>
+            @if($socialProfileLink)
+              <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="a-ord-item__meta"><i class="fa fa-globe"></i> {{ $socialProfileRaw }}</a>
+            @endif
+            @if($item->issuedTickets->isNotEmpty())
+              <div class="a-ord-issued">
+                @foreach($item->issuedTickets->sortBy('seat_index') as $issuedTicket)
+                  @if($issuedTicket->dashboardTicket)
+                    <a href="{{ route('admin.tickets.show', $issuedTicket->dashboardTicket) }}" target="_blank" rel="noopener noreferrer"><i class="fa fa-ticket"></i> #{{ $issuedTicket->ticket_number }}</a>
+                  @else
+                    <span><i class="fa fa-ticket"></i> #{{ $issuedTicket->ticket_number }}</span>
+                  @endif
+                @endforeach
+              </div>
+            @else
+              <div class="a-ord-item__meta" style="margin-top:8px">No generated ticket numbers yet.</div>
+            @endif
+          </div>
+          <div class="a-ord-item__price">{{ $money($item->line_total) }}<small>Qty × {{ $item->quantity }}</small></div>
+        </div>
+      @empty
+        <x-admin.empty icon="fa-ticket" title="No tickets found" />
+      @endforelse
 
-<div class="content od-wrap">
-  @include('admin.partials.flash')
-
-  <div class="od-head">
-    <div class="od-head-left">
-      <h1>Order <span>#{{ $displayOrderNumber }}</span></h1>
-      <p>{{ $order->created_at?->format('d M Y, H:i') }}</p>
-    </div>
-    <div class="d-flex gap-2">
-      @can('orders.update')
-        @if($order->status === 'pending_approval')
-          <form method="POST" action="{{ route('admin.orders.approve', $order) }}">@csrf
-            <button class="od-btn-approve" type="submit"><i class="fa fa-check"></i> Approve & Send Payment Link</button>
-          </form>
-          <form method="POST" action="{{ route('admin.orders.reject', $order) }}">@csrf
-            <button class="od-btn-back" type="submit"><i class="fa fa-times text-danger"></i> Reject</button>
-          </form>
+      <div class="a-ord-totals">
+        <div><span>Subtotal</span><strong>{{ $money($order->subtotal_amount ?: $order->total_amount) }}</strong></div>
+        @if((float) $order->discount_amount > 0)
+          <div><span>Promo Discount{{ $order->promo_code ? ' ('.$order->promo_code.')' : '' }}</span><strong>- {{ $money($order->discount_amount) }}</strong></div>
         @endif
-        <a href="{{ route('admin.orders.edit', $order) }}" class="od-btn-back"><i class="fa fa-pen"></i> Edit</a>
-      @endcan
-      @can('update_status')
-        <button type="button" class="od-btn-back" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
-      @endcan
-      <a href="{{ route('admin.orders.index') }}" class="od-btn-back"><i class="fa fa-arrow-left"></i> Back</a>
-    </div>
+        <div class="is-grand"><span>Total Amount</span><strong>{{ $money($order->total_amount) }}</strong></div>
+      </div>
+    </x-admin.card>
+
+    <x-admin.card flush title="Payment Attempts" :subtitle="$attempts->count().' attempt(s)'">
+      @if($attempts->isEmpty())
+        <x-admin.empty icon="fa-credit-card" title="No payment attempts" text="Attempts appear when the customer starts paying online." />
+      @else
+        <x-admin.table stack compact caption="Payment attempts">
+          <thead><tr><th>Gateway</th><th>Reference</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>
+          @foreach($attempts as $a)
+            <tr>
+              <td data-label="Gateway">{{ ucfirst((string) $a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
+              <td data-label="Reference" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
+              <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
+              <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
+              <td data-label="Date">{{ $a->created_at?->format('d M Y, H:i') }}</td>
+            </tr>
+          @endforeach
+          </tbody>
+        </x-admin.table>
+      @endif
+    </x-admin.card>
+
+    <x-admin.card title="Internal Notes" :subtitle="$notes->count().' notes'">
+      @forelse($notes as $note)
+        <div class="a-ord-log">
+          <strong>{{ $note->causer?->name ?? 'System' }}</strong>
+          <div>{{ data_get($note->properties, 'body', $note->description) }}</div>
+          @if(data_get($note->properties, 'send_to_customer'))<x-admin.badge variant="success"><i class="fa fa-envelope"></i> Sent to customer</x-admin.badge>@endif
+          <small>{{ $note->created_at?->format('d M Y, H:i') }}</small>
+        </div>
+      @empty
+        <p class="a-muted">No notes yet.</p>
+      @endforelse
+
+      <form class="a-ord-note" method="POST" action="{{ route('admin.orders.notes.store', $order) }}" data-a-loading style="margin-top:16px">
+        @csrf
+        <label class="form-label" for="orderNoteBody">Add a note</label>
+        <textarea id="orderNoteBody" class="form-control" name="body" placeholder="Add an internal note about this order…">{{ old('body') }}</textarea>
+        <div class="form-check" style="margin-top:10px">
+          <input class="form-check-input" id="orderNoteSend" type="checkbox" name="send_to_customer" value="1" {{ old('send_to_customer') ? 'checked' : '' }}>
+          <label class="form-check-label" for="orderNoteSend">Sent to customer by email</label>
+        </div>
+        <button type="submit" class="a-btn a-btn--dark" style="margin-top:12px"><i class="fa fa-paper-plane"></i> Add Note</button>
+      </form>
+    </x-admin.card>
   </div>
 
-  <div class="od-grid">
-    <div>
-      <div class="od-card">
-        <div class="od-card-head">
-          <div class="od-card-title">Order Summary</div>
-          <span class="od-status {{ $statusClass }}">{{ $statusLabel }}</span>
-        </div>
-        <div class="od-card-body">
-          <div class="od-info-row"><span class="od-info-label">Order #</span><span class="od-info-val">{{ $displayOrderNumber }}</span></div>
-          <div class="od-info-row"><span class="od-info-label">Date</span><span class="od-info-val">{{ $order->created_at?->format('d M Y, H:i') }}</span></div>
-          <div class="od-info-row"><span class="od-info-label">Payment Method</span><span class="od-info-val">{{ $paymentMethodLabel }}</span></div>
-          @can('showing_orders')
-            <div class="od-info-row"><span class="od-info-label">Show in Stats</span><span class="od-info-val">{{ $order->exclude_from_statistics ? 'No (Excluded)' : 'Yes' }}</span></div>
-          @endcan
-          <div class="od-info-row"><span class="od-info-label">Promo Code</span><span class="od-info-val">{{ $order->promo_code ?: '-' }}</span></div>
-          <div class="od-info-row"><span class="od-info-label">Subtotal</span><span class="od-info-val">{{ number_format((float) ($order->subtotal_amount ?: $order->total_amount),2) }} EGP</span></div>
-          <div class="od-info-row"><span class="od-info-label">Discount</span><span class="od-info-val">{{ number_format((float) $order->discount_amount,2) }} EGP</span></div>
-          @if($order->status === 'pending_payment' && $paymentLink)
-            <div class="od-info-row">
-              <span class="od-info-label">Payment Link</span>
-              <span class="od-info-val" style="max-width:65%;">
-                <span class="od-pay-link-wrap">
-                  <input type="text" readonly value="{{ $paymentLink }}" class="form-control form-control-sm" id="paymentLinkInput" onclick="this.select();">
-                  <button type="button" class="od-pay-copy-btn" id="copyPaymentLinkBtn" data-payment-link="{{ $paymentLink }}">Copy</button>
-                </span>
-              </span>
-            </div>
+  <div class="a-ord-col">
+    <x-admin.card title="Activity">
+      <ol class="a-ord-timeline">
+        @foreach($activityTimeline as $activity)
+          <li class="{{ $activity['done'] ? 'is-done' : '' }}">
+            <b>{{ $activity['label'] }}</b>
+            <span>{{ $activity['at'] ? $activity['at']->format('d M Y, H:i') : '—' }}</span>
+          </li>
+        @endforeach
+      </ol>
+    </x-admin.card>
+
+    <x-admin.card title="Order History" :subtitle="$history->count().' events'">
+      @forelse($history as $log)
+        <div class="a-ord-log">
+          {{ $log->description }} @if($log->causer)<strong>by {{ $log->causer->name }}</strong>@endif
+          @if(filled(data_get($log->properties, 'from_status')) || filled(data_get($log->properties, 'to_status')))
+            <small>Status: <strong>{{ ucwords(str_replace('_', ' ', (string) data_get($log->properties, 'from_status', 'N/A'))) }}</strong> <i class="fa fa-arrow-right"></i> <strong>{{ ucwords(str_replace('_', ' ', (string) data_get($log->properties, 'to_status', 'N/A'))) }}</strong></small>
           @endif
-        </div>
-      </div>
-
-      <div class="od-card">
-        <div class="od-card-head"><div class="od-card-title">Customer</div></div>
-        <div class="od-card-body">
-          <div class="od-customer">
-            <div class="od-avatar">{{ $customerInitials ?: 'NA' }}</div>
-            <div>
-              <div style="color:#fff;font-weight:600">{{ $customerName }}</div>
-              <div style="font-size:12px;color:#5e5e72">{{ $order->customer?->email ?: '-' }}</div>
-              <div style="font-size:12px;color:#5e5e72">{{ $order->customer?->phone ?: '-' }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="od-card">
-        <div class="od-card-head">
-          <div class="od-card-title">Tickets</div>
-          <span style="font-size:12px;color:#5e5e72;">{{ $order->items->count() }} ticket(s)</span>
-        </div>
-        <div class="od-card-body">
-          @forelse($order->items as $item)
-            <div class="od-ticket">
-              <div>
-                @php
-                  $ticketName = trim((string) $item->ticket_name);
-                  $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
-                  $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
-                  $normalizedType = \Illuminate\Support\Str::lower($ticketType);
-                  $ticketTypeColor = [
-                    'early bird' => '#6c757d',
-                    'regular' => '#0d6efd',
-                    'phase 1' => '#0d6efd',
-                    'phase 2' => '#6f42c1',
-                    'vip' => '#f5b800',
-                  ][$normalizedType] ?? '#6c757d';
-                  $socialProfileRaw = trim((string) $item->holder_social_profile);
-                  $socialProfileLink = $socialProfileRaw !== ''
-                    ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
-                    : null;
-                @endphp
-                <div class="od-ticket-name-wrap">
-                  <div class="od-ticket-name">{{ $eventName }}</div>
-                  @if($ticketType !== '' && $ticketType !== $eventName)
-                    <span class="od-ticket-type-badge" style="background-color: {{ $ticketTypeColor }};">{{ $ticketType }}</span>
-                  @endif
-                </div>
-                <div class="od-ticket-holder">
-                  <div class="od-ticket-holder-avatar">{{ collect(explode(' ', (string)$item->holder_name))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') }}</div>
-                  <div class="od-ticket-holder-info">
-                    {{ $item->holder_name }}
-                    <span>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</span>
-                    @if($socialProfileLink)
-                      <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="od-ticket-social">
-                        <i class="fa fa-globe"></i>
-                        {{ $socialProfileRaw }}
-                      </a>
-                    @endif
-
-                    @if($item->issuedTickets->isNotEmpty())
-                      <div class="od-issued-wrap">
-                        @foreach($item->issuedTickets->sortBy('seat_index') as $issuedTicket)
-                          @if($issuedTicket->dashboardTicket)
-                            <a href="{{ route('admin.tickets.show', $issuedTicket->dashboardTicket) }}" target="_blank" rel="noopener noreferrer" class="od-issued-link">
-                              <i class="fa fa-ticket"></i>
-                              #{{ $issuedTicket->ticket_number }}
-                            </a>
-                          @else
-                            <span class="od-issued-link">
-                              <i class="fa fa-ticket"></i>
-                              #{{ $issuedTicket->ticket_number }}
-                            </span>
-                          @endif
-                        @endforeach
-                      </div>
-                    @else
-                      <div class="od-issued-empty">No generated ticket numbers yet.</div>
-                    @endif
-                  </div>
-                </div>
-              </div>
-              <div><div class="od-ticket-price">{{ number_format((float)$item->line_total,2) }} EGP</div><div class="od-ticket-qty">Qty × {{ $item->quantity }}</div></div>
-            </div>
-          @empty
-            <div class="od-note-text">No tickets found.</div>
-          @endforelse
-
-          <div class="od-total-bar"><span>Subtotal</span><strong>{{ number_format((float) ($order->subtotal_amount ?: $order->total_amount),2) }} EGP</strong></div>
-          @if((float) $order->discount_amount > 0)
-            <div class="od-total-bar" style="margin-top:10px;"><span>Promo Discount{{ $order->promo_code ? ' ('.$order->promo_code.')' : '' }}</span><strong>- {{ number_format((float)$order->discount_amount,2) }} EGP</strong></div>
+          @if(filled(data_get($log->properties, 'transaction_id')) || filled(data_get($log->properties, 'transaction_url')) || filled(data_get($log->properties, 'payment_status')))
+            <small>
+              @if(filled(data_get($log->properties, 'payment_status')))Payment: <strong>{{ strtoupper((string) data_get($log->properties, 'payment_status')) }}</strong> @endif
+              @if(filled(data_get($log->properties, 'transaction_id')))Ref: <strong>{{ data_get($log->properties, 'transaction_id') }}</strong> @endif
+              @if(filled(data_get($log->properties, 'transaction_url')))<a href="{{ data_get($log->properties, 'transaction_url') }}" target="_blank" rel="noopener noreferrer">Open transaction</a>@endif
+            </small>
           @endif
-          <div class="od-total-bar" style="margin-top:10px;"><span>Total Amount</span><strong>{{ number_format((float)$order->total_amount,2) }} EGP</strong></div>
+          <small>{{ $log->created_at?->format('d M Y, H:i') }}</small>
         </div>
-      </div>
-
-      <div class="od-card">
-        <div class="od-card-head">
-          <div class="od-card-title">Internal Notes</div>
-          <span style="font-size:12px;color:#5e5e72;">{{ $notes->count() }} notes</span>
-        </div>
-        <div class="od-card-body">
-          @forelse($notes as $note)
-            <div class="od-note-item">
-              <div class="od-note-avatar">{{ collect(explode(' ', (string)($note->causer?->name ?? 'NA')))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('') ?: 'NA' }}</div>
-              <div>
-                <div class="od-note-author">{{ $note->causer?->name ?? 'System' }}<span>{{ $note->created_at?->format('d M Y, H:i') }}</span></div>
-                <div class="od-note-text">{{ data_get($note->properties, 'body', $note->description) }}</div>
-                @if(data_get($note->properties, 'send_to_customer'))
-                  <span class="od-note-badge"><i class="fa fa-envelope"></i> Sent to customer</span>
-                @endif
-              </div>
-            </div>
-          @empty
-            <div class="od-note-text">No notes yet.</div>
-          @endforelse
-
-          <form class="od-note-form" method="POST" action="{{ route('admin.orders.notes.store', $order) }}">
-            @csrf
-            <textarea name="body" placeholder="Add an internal note about this order…">{{ old('body') }}</textarea>
-            <div class="od-note-meta">
-              <label class="od-note-send-customer">
-                <input type="checkbox" name="send_to_customer" value="1" {{ old('send_to_customer') ? 'checked' : '' }}>
-                Sent to customer by email
-              </label>
-            </div>
-            <button type="submit" class="od-note-submit"><i class="fa fa-paper-plane"></i> Add Note</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="od-card">
-        <div class="od-card-head">
-          <div class="od-card-title">Order History</div>
-          <span style="font-size:12px;color:#5e5e72;">{{ $history->count() }} events</span>
-        </div>
-        <div class="od-card-body">
-          @forelse($history as $log)
-            <div class="od-hist-item">
-              <div class="od-hist-icon"><i class="fa fa-clock"></i></div>
-              <div>
-                <div class="od-hist-action">{{ $log->description }} @if($log->causer)<strong>by {{ $log->causer->name }}</strong>@endif</div>
-                @if(filled(data_get($log->properties, 'from_status')) || filled(data_get($log->properties, 'to_status')))
-                  <div class="od-hist-status">
-                    <span>Status:</span>
-                    <strong>{{ ucwords(str_replace('_', ' ', (string) data_get($log->properties, 'from_status', 'N/A'))) }}</strong>
-                    <i class="fa fa-arrow-right"></i>
-                    <strong>{{ ucwords(str_replace('_', ' ', (string) data_get($log->properties, 'to_status', 'N/A'))) }}</strong>
-                  </div>
-                @endif
-                @if(filled(data_get($log->properties, 'transaction_id')) || filled(data_get($log->properties, 'transaction_url')) || filled(data_get($log->properties, 'payment_status')))
-                  <div class="od-hist-meta" style="margin-top:4px;">
-                    @if(filled(data_get($log->properties, 'payment_status')))
-                      <span style="margin-right:8px;">Payment: <strong>{{ strtoupper((string) data_get($log->properties, 'payment_status')) }}</strong></span>
-                    @endif
-                    @if(filled(data_get($log->properties, 'transaction_id')))
-                      <span style="margin-right:8px;">Ref: <strong>{{ data_get($log->properties, 'transaction_id') }}</strong></span>
-                    @endif
-                    @if(filled(data_get($log->properties, 'transaction_url')))
-                      <a href="{{ data_get($log->properties, 'transaction_url') }}" target="_blank" rel="noopener noreferrer" style="color:#f5b800;">Open transaction</a>
-                    @endif
-                  </div>
-                @endif
-                <div class="od-hist-meta">{{ $log->created_at?->format('d M Y, H:i') }}</div>
-              </div>
-            </div>
-          @empty
-            <div class="od-note-text">No history yet.</div>
-          @endforelse
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="od-card">
-        <div class="od-card-head"><div class="od-card-title">Activity</div></div>
-        <div class="od-card-body">
-          <div class="od-timeline">
-            @foreach($activityTimeline as $activity)
-              <div class="od-tl-item {{ $activity['done'] ? 'done' : '' }}">
-                <div class="od-tl-dot"></div>
-                <div class="od-tl-label">{{ $activity['label'] }}</div>
-                <div class="od-tl-time">{{ $activity['at'] ? $activity['at']->format('d M Y, H:i') : '—' }}</div>
-              </div>
-            @endforeach
-          </div>
-        </div>
-      </div>
-    </div>
+      @empty
+        <p class="a-muted">No history yet.</p>
+      @endforelse
+    </x-admin.card>
   </div>
 </div>
 
-  @can('update_status')
-    <div class="od-status-modal-backdrop" id="statusModal" aria-hidden="true">
-      <div class="od-status-modal" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
-        <div class="od-status-modal-head">
-          <div class="od-status-modal-title" id="statusModalTitle">Update Order Status</div>
-          <button type="button" class="od-status-modal-close" id="closeStatusModalBtn" aria-label="Close">&times;</button>
+@can('update_status')
+  <div class="a-ord-modal" id="statusModal" aria-hidden="true">
+    <div class="a-ord-modal__box" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
+      <h2 id="statusModalTitle">Update Order Status</h2>
+      <form method="POST" action="{{ route('admin.orders.status.update', $order) }}">
+        @csrf
+        <label class="form-label" for="statusModalSelect">Status</label>
+        <select id="statusModalSelect" class="form-select no-select2" name="status">
+          @foreach($statusOptions as $value => $label)
+            <option value="{{ $value }}" {{ $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
+          @endforeach
+        </select>
+        <div class="a-btn-group" style="justify-content:flex-end;margin-top:16px">
+          <button type="button" class="a-btn a-btn--outline" id="cancelStatusModalBtn">Cancel</button>
+          <button type="submit" class="a-btn a-btn--primary">Save Status</button>
         </div>
-        <form method="POST" action="{{ route('admin.orders.status.update', $order) }}">
-          @csrf
-          <div class="od-status-modal-body">
-            <label class="od-info-label" for="statusModalSelect" style="display:block;margin-bottom:8px;">Status</label>
-            <select id="statusModalSelect" class="form-control" name="status">
-              @foreach($statusOptions as $value => $label)
-                <option value="{{ $value }}" {{ $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
-              @endforeach
-            </select>
-            <div class="od-status-modal-actions">
-              <button type="button" class="od-btn-back" id="cancelStatusModalBtn">Cancel</button>
-              <button type="submit" class="od-btn-approve">Save Status</button>
-            </div>
-          </div>
-        </form>
-      </div>
+        <button type="button" id="closeStatusModalBtn" class="a-sr-only">Close</button>
+      </form>
     </div>
-  @endcan
+  </div>
+@endcan
 
 <script>
 (function () {

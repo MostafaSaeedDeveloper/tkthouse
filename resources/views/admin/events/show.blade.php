@@ -1,23 +1,26 @@
 @extends('admin.master')
-@section('content')
-<div class="content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">{{ $event->name }}</h2>
-        <div>
-            <a href="{{ route('admin.events.dashboard', $event) }}" class="btn btn-sm btn-alt-success"><i class="fa fa-gauge me-1"></i>Dashboard</a>
-            <a href="{{ route('admin.events.report', $event) }}" class="btn btn-sm btn-alt-warning"><i class="fa fa-chart-line me-1"></i>Report</a>
-            <a href="{{ route('admin.events.edit', $event) }}" class="btn btn-sm btn-alt-primary"><i class="fa fa-pen me-1"></i>Edit</a>
-            <a href="{{ route('admin.events.index') }}" class="btn btn-sm btn-alt-secondary">Back</a>
-        </div>
-    </div>
+@section('title', $event->name)
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
-    <div class="block block-rounded">
-        <div class="block-content">
-            <p><strong>Status:</strong> {{ str($event->status)->replace('_', ' ')->title() }}</p>
-            <p><strong>Date:</strong> {{ $event->event_date->format('Y-m-d') }} {{ $event->event_time }}</p>
-            <p><strong>Location:</strong> {{ $event->location }}</p>
-            <p><strong>Description:</strong><br>{{ $event->description }}</p>
-        </div>
+@section('content')
+<x-admin.page-header :title="$event->name" subtitle="Event overview" :crumbs="['Dashboard' => route('admin.dashboard'), 'Events' => route('admin.events.index'), $event->name]">
+    <a href="{{ route('admin.events.dashboard', $event) }}" class="a-btn a-btn--outline"><i class="fa fa-gauge"></i> Dashboard</a>
+    <a href="{{ route('admin.events.report', $event) }}" class="a-btn a-btn--outline"><i class="fa fa-chart-line"></i> Report</a>
+    <a href="{{ route('admin.events.edit', $event) }}" class="a-btn a-btn--primary"><i class="fa fa-pen"></i> Edit</a>
+    <a href="{{ route('admin.events.index') }}" class="a-btn a-btn--ghost">Back</a>
+</x-admin.page-header>
+
+<x-admin.flash />
+
+<x-admin.card title="Details">
+    <dl class="a-kv">
+        <div><dt>Status</dt><dd><x-admin.status :status="$event->status" kind="event" /></dd></div>
+        <div><dt>Date</dt><dd>{{ $event->event_date->format('Y-m-d') }} {{ $event->event_time }}</dd></div>
+        <div><dt>Location</dt><dd>{{ $event->location }}</dd></div>
+    </dl>
+    <div class="a-ev-block">
+        <strong>Description</strong>
+        <div class="a-ev-desc">{{ $event->description }}</div>
     </div>
-</div>
+</x-admin.card>
 @endsection

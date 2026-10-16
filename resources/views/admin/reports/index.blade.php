@@ -1,249 +1,114 @@
 @extends('admin.master')
-
+@section('title', $reportTitle ?? 'Reports')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-<link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
+@php $money = fn ($n) => number_format((float) $n, 2).' EGP'; @endphp
+<x-admin.page-header :title="$reportTitle ?? 'Reports'" :subtitle="$reportDescription ?? 'Detailed per-event performance, tickets and revenue.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports']">
+    @if($forcedEvent)
+        <a href="{{ route('admin.events.dashboard', $forcedEvent) }}" class="a-btn a-btn--outline">Event Dashboard</a>
+        <a href="{{ route('admin.reports.index') }}" class="a-btn a-btn--ghost">All Events Reports</a>
+    @endif
+</x-admin.page-header>
 
-<div class="content reports-page">
-    <div class="d-md-flex justify-content-md-between align-items-md-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">{{ $reportTitle ?? 'Reports' }}</h1>
-            <p class="text-muted mb-0">{{ $reportDescription ?? 'Detailed per-event performance, tickets and revenue.' }}</p>
-        </div>
-            @if($forcedEvent)
-            <div class="mt-3 mt-md-0 d-flex gap-2">
-                <a href="{{ route('admin.events.dashboard', $forcedEvent) }}" class="btn btn-sm btn-alt-info">Event Dashboard</a>
-                <a href="{{ route('admin.reports.index') }}" class="btn btn-sm btn-alt-secondary">All Events Reports</a>
+<x-admin.flash />
+
+<x-admin.card title="Period" subtitle="Pick a range or enter custom dates.">
+    <div class="a-m-range a-chips">
+        @foreach($rangeOptions as $key => $label)
+            <a href="{{ $forcedEvent ? route('admin.events.report', ['event' => $forcedEvent, 'range' => $key]) : route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
+               class="a-chip {{ $selectedRange === $key ? 'is-active' : '' }}" @if($selectedRange === $key) aria-current="true" @endif>{{ $label }}</a>
+        @endforeach
+    </div>
+    <form method="GET" action="{{ $forcedEvent ? route('admin.events.report', $forcedEvent) : route('admin.reports.index') }}" class="a-m-range-form">
+        <input type="hidden" name="range" value="custom">
+        <div class="a-field"><label class="form-label" for="rep-from">From</label>
+            <input type="text" id="rep-from" name="from" class="form-control js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date"></div>
+        <div class="a-field"><label class="form-label" for="rep-to">To</label>
+            <input type="text" id="rep-to" name="to" class="form-control js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date"></div>
+        <button type="submit" class="a-btn a-btn--primary">Apply</button>
+    </form>
+</x-admin.card>
+
+<p class="a-muted" style="margin:0 0 18px">
+    Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
+</p>
+
+<section class="a-m-section" aria-labelledby="rep-paid">
+    <h2 class="a-m-section__title" id="rep-paid">Paid sales</h2>
+    <div class="a-grid a-grid--3">
+        <x-admin.kpi label="Tickets sold" :value="number_format($totalTickets)" icon="fa-ticket" hint="Paid, completed orders only" />
+        <x-admin.kpi label="Paid orders" :value="number_format($totalOrders)" icon="fa-receipt" />
+        <x-admin.kpi label="Gross revenue" :value="$money($totalRevenue)" icon="fa-circle-check" />
+    </div>
+    <p class="a-hint">This report counts paid orders only. Pending, failed and refunded orders are not included here; review them under Orders and Payments. Refunds and settlements are handled by the payment provider.</p>
+</section>
+
+<section class="a-m-section" aria-labelledby="rep-events">
+    <h2 class="a-m-section__title" id="rep-events">By event</h2>
+    @forelse($eventReports as $report)
+        @php
+            $malePercent = $report['tickets_sold'] > 0 ? ($report['male_tickets'] / $report['tickets_sold']) * 100 : 0;
+            $femalePercent = $report['tickets_sold'] > 0 ? ($report['female_tickets'] / $report['tickets_sold']) * 100 : 0;
+        @endphp
+        <article class="a-card" aria-label="{{ $report['event_name'] }}">
+            <div class="a-card__head">
+                <h3 class="a-card__title">{{ $report['event_name'] }}</h3>
+                <div class="a-btn-group">
+                    <x-admin.badge variant="info">{{ number_format($report['tickets_sold']) }} sold</x-admin.badge>
+                    <x-admin.badge variant="success">{{ $money($report['gross_revenue']) }}</x-admin.badge>
+                </div>
             </div>
-        @endif
-    </div>
-
-    <div class="reports-toolbar mb-4">
-        <div class="reports-range-buttons">
-            @foreach($rangeOptions as $key => $label)
-                <a href="{{ $forcedEvent ? route('admin.events.report', ['event' => $forcedEvent, 'range' => $key]) : route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
-                   class="reports-range-btn {{ $selectedRange === $key ? 'active' : '' }}">{{ $label }}</a>
-            @endforeach
-        </div>
-        <form method="GET" action="{{ $forcedEvent ? route('admin.events.report', $forcedEvent) : route('admin.reports.index') }}" class="reports-filters-form">
-            <input type="hidden" name="range" value="custom">
-            <input type="text" name="from" class="reports-filter-input js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date">
-            <input type="text" name="to" class="reports-filter-input js-flatpickr" value="{{ optional($endAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="To date">
-            <button type="submit" class="reports-filter-apply">Apply</button>
-        </form>
-    </div>
-
-    <p class="reports-context mb-3">
-        Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
-    </p>
-
-    <div class="reports-grid">
-        @forelse($eventReports as $report)
-            @php
-                $malePercent = $report['tickets_sold'] > 0 ? ($report['male_tickets'] / $report['tickets_sold']) * 100 : 0;
-                $femalePercent = $report['tickets_sold'] > 0 ? ($report['female_tickets'] / $report['tickets_sold']) * 100 : 0;
-            @endphp
-            <article class="report-card">
-                <div class="report-card-top">
-                    <h3>{{ $report['event_name'] }}</h3>
-                    <span class="report-total">{{ number_format($report['tickets_sold']) }} sold</span>
-                </div>
-
-                <div class="report-metrics">
-                    <div>
-                        <small>Male Tickets</small>
-                        <strong>{{ number_format($report['male_tickets']) }}</strong>
+            <div class="a-card__body">
+                <div class="a-m-report__grid">
+                    <div class="a-m-report__block">
+                        <h4>Tickets</h4>
+                        <dl class="a-kv">
+                            <div><dt>Male Tickets</dt><dd>{{ number_format($report['male_tickets']) }}</dd></div>
+                            <div><dt>Female Tickets</dt><dd>{{ number_format($report['female_tickets']) }}</dd></div>
+                            <div><dt>Guest Invitations</dt><dd>{{ number_format($report['guest_invitations']) }}</dd></div>
+                        </dl>
                     </div>
-                    <div>
-                        <small>Female Tickets</small>
-                        <strong>{{ number_format($report['female_tickets']) }}</strong>
+                    <div class="a-m-report__block">
+                        <h4>Check-ins</h4>
+                        <dl class="a-kv">
+                            <div><dt>Paid Checked In</dt><dd>{{ number_format($report['paid_checked_in']) }}</dd></div>
+                            <div><dt>Guest Checked In</dt><dd>{{ number_format($report['guest_checked_in']) }}</dd></div>
+                            <div><dt>Total Checked In</dt><dd>{{ number_format($report['total_checked_in']) }}</dd></div>
+                        </dl>
+                    </div>
+                    <div class="a-m-report__block">
+                        <h4>Gender split</h4>
+                        <div class="a-m-bar"><div class="a-m-bar__label"><span>Male</span><strong>{{ round($malePercent) }}%</strong></div><div class="a-m-bar__track"><div class="a-m-bar__fill" style="width: {{ $malePercent }}%"></div></div></div>
+                        <div class="a-m-bar"><div class="a-m-bar__label"><span>Female</span><strong>{{ round($femalePercent) }}%</strong></div><div class="a-m-bar__track"><div class="a-m-bar__fill a-m-bar__fill--alt" style="width: {{ $femalePercent }}%"></div></div></div>
                     </div>
                 </div>
-
-                <div class="report-metrics">
-                    <div>
-                        <small>Guest Invitations</small>
-                        <strong>{{ number_format($report['guest_invitations']) }}</strong>
+                @if(count($report['ticket_types']))
+                    <div class="a-m-report__block" style="margin-top:20px">
+                        <h4>Ticket types</h4>
+                        <div class="a-m-chips">
+                            @foreach($report['ticket_types'] as $type)
+                                <x-admin.badge>{{ $type['name'] }} <strong>{{ number_format($type['count']) }}</strong></x-admin.badge>
+                            @endforeach
+                        </div>
                     </div>
-                    <div>
-                        <small>Guest Checked In</small>
-                        <strong>{{ number_format($report['guest_checked_in']) }}</strong>
-                    </div>
-                    <div>
-                        <small>Paid Checked In</small>
-                        <strong>{{ number_format($report['paid_checked_in']) }}</strong>
-                    </div>
-                </div>
-
-                <div class="report-metrics">
-                    <div>
-                        <small>Total Checked In</small>
-                        <strong>{{ number_format($report['total_checked_in']) }}</strong>
-                    </div>
-                </div>
-
-                <div class="report-gender-bars">
-                    <div class="report-gender-track">
-                        <div class="report-gender-fill male" style="width: {{ $malePercent }}%"></div>
-                    </div>
-                    <div class="report-gender-track">
-                        <div class="report-gender-fill female" style="width: {{ $femalePercent }}%"></div>
-                    </div>
-                </div>
-
-                <div class="report-ticket-types">
-                    @foreach($report['ticket_types'] as $type)
-                        <span class="report-type-badge">
-                            <span>{{ $type['name'] }}</span>
-                            <strong>{{ number_format($type['count']) }}</strong>
-                        </span>
-                    @endforeach
-                </div>
-            </article>
-        @empty
-            <div class="report-empty">
-                <i class="fa fa-chart-line me-2"></i>
-                No paid completed orders yet, so reports are still empty.
+                @endif
             </div>
-        @endforelse
-    </div>
-</div>
+        </article>
+    @empty
+        <x-admin.card>
+            <x-admin.empty icon="fa-chart-line" title="No paid completed orders yet" text="No paid completed orders yet, so reports are still empty." />
+        </x-admin.card>
+    @endforelse
+</section>
 
-<style>
-.reports-page .reports-toolbar {
-    display: grid;
-    gap: 10px;
-}
-.reports-page .reports-range-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.reports-page .reports-range-btn {
-    text-decoration: none;
-    color: var(--text) !important;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 6px 12px;
-    font-size: 12px;
-    background: var(--surface2);
-}
-.reports-page .reports-range-btn:visited,
-.reports-page .reports-range-btn:focus,
-.reports-page .reports-range-btn:hover {
-    color: var(--text) !important;
-    text-decoration: none;
-}
-.reports-page .reports-range-btn.active {
-    color: #000 !important;
-    background: var(--gold);
-    border-color: var(--gold);
-    font-weight: 700;
-}
-.reports-page .reports-range-btn.active:visited,
-.reports-page .reports-range-btn.active:hover,
-.reports-page .reports-range-btn.active:focus {
-    color: #000 !important;
-}
-.reports-page .reports-filters-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-}
-.reports-page .reports-filter-input {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface2);
-    color: var(--text);
-    padding: 7px 10px;
-    font-size: 12px;
-}
-.reports-page .reports-filters-form .reports-filter-input,
-.reports-page .reports-filters-form .flatpickr-input {
-    width: 220px;
-    min-width: 220px;
-    flex: 0 0 220px;
-}
-.reports-page .reports-filter-input::placeholder {
-    color: var(--muted);
-}
-.reports-page .reports-filter-apply {
-    border: 0;
-    border-radius: 8px;
-    background: var(--gold);
-    color: #111;
-    padding: 7px 12px;
-    font-size: 12px;
-    font-weight: 700;
-}
-.reports-page .reports-context {
-    color: var(--muted);
-    font-size: 13px;
-}
-
-
-.reports-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
-.report-card {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    background: linear-gradient(155deg, var(--surface2), rgba(9, 9, 13, 0.95));
-    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.25);
-}
-.report-card-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 14px; }
-.report-card-top h3 { margin: 0; font-size: 18px; color: #fff; }
-.report-total {
-    background: rgba(59, 130, 246, 0.18);
-    border: 1px solid rgba(59, 130, 246, 0.5);
-    color: #93c5fd;
-    border-radius: 999px;
-    padding: 3px 10px;
-    font-size: 12px;
-    white-space: nowrap;
-}
-.report-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.report-metrics small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
-.report-metrics strong { color: var(--text); font-family: var(--font-num); font-size: 15px; }
-.report-gender-bars { display: grid; gap: 7px; margin-bottom: 12px; }
-.report-gender-track { height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
-.report-gender-fill { height: 100%; border-radius: inherit; }
-.report-gender-fill.male { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-.report-gender-fill.female { background: linear-gradient(90deg, #ec4899, #f472b6); }
-.report-ticket-types { display: flex; flex-wrap: wrap; gap: 8px; }
-.report-type-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border-radius: 999px;
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.04);
-    font-size: 12px;
-}
-.report-type-badge strong { color: var(--gold); font-family: var(--font-num); }
-.report-empty {
-    border: 1px dashed var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    color: var(--muted);
-    text-align: center;
-}
-@media (max-width: 540px) {
-    .report-metrics { grid-template-columns: 1fr; }
-}
-</style>
-
+@push('scripts')
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (window.flatpickr) {
-            flatpickr('.js-flatpickr', {
-                dateFormat: 'Y-m-d',
-                altInput: true,
-                altFormat: 'm/d/Y',
-                allowInput: true,
-            });
+            flatpickr('.js-flatpickr', { dateFormat: 'Y-m-d', altInput: true, altFormat: 'm/d/Y', allowInput: true });
         }
     });
 </script>
+@endpush
 @endsection
