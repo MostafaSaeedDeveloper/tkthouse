@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanner Login — TKT House</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:        #080808;
       --surface:   #111111;
       --border:    #222222;
-      --accent:    #FFC815;
+      --accent:    #FFD200;
       --accent2:   #FF3C3C;
       --text:      #F0F0F0;
       --muted:     #666666;
@@ -30,7 +30,7 @@
       height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       overflow-x: hidden;
       /* overflow-y controlled by JS below */
     }
@@ -39,8 +39,8 @@
     .bg-grid {
       position: fixed; inset: 0; z-index: 0;
       background-image:
-        linear-gradient(rgba(255,200,21,.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,200,21,.04) 1px, transparent 1px);
+        linear-gradient(rgba(255,210,0,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,210,0,.04) 1px, transparent 1px);
       background-size: 60px 60px;
       animation: gridShift 20s linear infinite;
     }
@@ -56,7 +56,7 @@
     }
     .orb-1 {
       width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(255,200,21,.1), transparent 70%);
+      background: radial-gradient(circle, rgba(255,210,0,.1), transparent 70%);
       top: -150px; left: -100px;
       animation: float1 8s ease-in-out infinite alternate;
     }
@@ -109,7 +109,7 @@
     .left-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
     .big-label {
-      font-family: 'Bebas Neue', cursive;
+      font-family: 'Inter', sans-serif; font-weight: 800;
       font-size: clamp(64px, 7vw, 96px);
       line-height: .95;
       letter-spacing: 2px;
@@ -118,7 +118,7 @@
     }
     .big-label .hl { color: var(--accent); }
     .big-label .outline {
-      -webkit-text-stroke: 1px rgba(255,200,21,.3);
+      -webkit-text-stroke: 1px rgba(255,210,0,.3);
       color: transparent;
     }
 
@@ -223,7 +223,7 @@
       background: var(--accent);
     }
     .form-title {
-      font-family: 'Bebas Neue', cursive;
+      font-family: 'Inter', sans-serif; font-weight: 800;
       font-size: 42px; letter-spacing: 2px;
       line-height: 1;
     }
@@ -284,7 +284,7 @@
     .field-input::placeholder { color: #333; }
     .field-input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent), inset 0 0 20px rgba(255,200,21,.04);
+      box-shadow: 0 0 0 1px var(--accent), inset 0 0 20px rgba(255,210,0,.04);
     }
     .field-input:focus + .field-line { transform: scaleX(1); }
 
@@ -294,7 +294,7 @@
       background: var(--accent);
       color: #080808;
       border: none; cursor: pointer;
-      font-family: 'Bebas Neue', cursive;
+      font-family: 'Inter', sans-serif; font-weight: 800;
       font-size: 20px;
       letter-spacing: 3px;
       padding: 16px;
@@ -310,7 +310,7 @@
     }
     .btn-submit:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(255,200,21,.35);
+      box-shadow: 0 8px 30px rgba(255,210,0,.35);
     }
     .btn-submit:hover::before { opacity: 1; }
     .btn-submit:active { transform: translateY(0); }
@@ -342,12 +342,12 @@
       display: flex; align-items: center; gap: 10px;
       margin-top: 28px;
       padding: 12px 16px;
-      background: rgba(255,200,21,.04);
-      border: 1px solid rgba(255,200,21,.12);
+      background: rgba(255,210,0,.04);
+      border: 1px solid rgba(255,210,0,.12);
     }
     .gate-badge-icon {
       width: 32px; height: 32px;
-      border: 1px solid rgba(255,200,21,.3);
+      border: 1px solid rgba(255,210,0,.3);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
@@ -358,7 +358,7 @@
       text-transform: uppercase; color: var(--muted);
       line-height: 1.6;
     }
-    .gate-badge-text strong { color: rgba(255,200,21,.7); display: block; }
+    .gate-badge-text strong { color: rgba(255,210,0,.7); display: block; }
 
     /* Ticker at bottom of form */
     .ticker-wrap {

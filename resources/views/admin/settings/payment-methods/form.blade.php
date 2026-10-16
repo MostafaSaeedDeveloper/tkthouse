@@ -44,7 +44,7 @@
                 <x-admin.field class="is-full" label="Callback URL (Copy & add in Paymob dashboard)" for="paymob-callback-url">
                     <div class="input-group">
                         <input id="paymob-callback-url" type="text" class="form-control" readonly value="{{ route('front.paymob.callback') }}">
-                        <button class="btn btn-alt-secondary" type="button" id="copy-paymob-callback">Copy</button>
+                        <button class="a-btn a-btn--outline" type="button" id="copy-paymob-callback">Copy</button>
                     </div>
                 </x-admin.field>
             </x-admin.form-section>
