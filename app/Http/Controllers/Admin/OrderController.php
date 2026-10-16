@@ -18,6 +18,7 @@ use App\Services\TicketIssuanceService;
 use App\Support\SystemSettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
@@ -42,45 +43,40 @@ class OrderController extends Controller
         'rejected' => 'Rejected',
     ];
 
+    /** Quick-filter groups. They only bundle statuses that already exist; they never add new ones. */
+    private const ORDER_STATUS_GROUPS = [
+        'pending' => ['pending_approval', 'pending_payment', 'on_hold'],
+        'paid' => ['paid'],
+        'canceled' => ['canceled', 'rejected'],
+    ];
+    private const SORTABLE_COLUMNS = [
+        'created_at' => 'id',
+        'order_number' => 'order_number',
+        'total_amount' => 'total_amount',
+        'status' => 'status',
+    ];
+    private const PER_PAGE_OPTIONS = [15, 25, 50, 100];
+
     public function index(Request $request)
     {
         app(PendingPaymentExpiryService::class)->expireDueOrders();
 
         $managedEvents = $request->user()?->managedEvents ?? collect();
 
-        $ordersQuery = Order::query()->visibleTo($request->user())->withCount('items')->with(['customer', 'items:id,order_id,ticket_name']);
+        $ordersQuery = Order::query()->visibleTo($request->user())->with(self::listRelations());
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
-
 
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
 
-        if ($request->filled('status')) {
-            $ordersQuery->where('status', $request->string('status'));
-        }
+        // Summary + quick-filter counts follow every active filter except the status itself, within the same permission scope.
+        $summaryQuery = clone $ordersQuery;
+        $this->applyOrderFilters($summaryQuery, $request, $canFilterByEvent, withStatus: false);
+        $summary = $this->buildSummary($summaryQuery);
 
-        if ($request->filled('payment_method')) {
-            $ordersQuery->where('payment_method', $request->string('payment_method'));
-        }
+        $this->applyOrderFilters($ordersQuery, $request, $canFilterByEvent);
+        [$sortKey, $sortDir] = $this->applySorting($ordersQuery, $request);
 
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $ordersQuery->whereHas('items', function ($query) use ($request) {
-                $query->where('event_id', $request->integer('event_id'));
-            });
-        }
-
-        if ($request->filled('search')) {
-            $search = trim((string) $request->input('search'));
-            $ordersQuery->where(function ($query) use ($search) {
-                $query->where('order_number', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
-                        $customerQuery->where('email', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        $orders = $ordersQuery->orderByDesc('id')->paginate(15)->withQueryString();
+        $orders = $ordersQuery->paginate($this->perPage($request))->withQueryString();
         $canViewDeletedOrders = $request->user()?->can(self::DELETED_ORDERS_PERMISSION) ?? false;
         $deletedOrdersCount = 0;
         if ($canViewDeletedOrders) {
@@ -89,25 +85,18 @@ class OrderController extends Controller
             $deletedOrdersCount = $deletedQuery->count();
         }
 
-        $ticketColorMap = EventTicket::query()
-            ->select('name', 'color')
-            ->get()
-            ->mapWithKeys(fn (EventTicket $ticket) => [mb_strtolower(trim($ticket->name)) => $ticket->color ?: '#0d6efd'])
-            ->all();
-
-        $paymentMethods = PaymentMethod::query()
-            ->where('code', '!=', 'card')
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->get(['code', 'name', 'checkout_label']);
+        $paymentMethods = $this->activePaymentMethods();
+        $paymentMethodLabels = $this->paymentMethodLabels();
 
         $events = $canFilterByEvent
             ? Event::query()->orderBy('name')->get(['id', 'name'])
             : collect();
 
         $canExport = $this->isSuperAdmin($request->user());
+        $statusOptions = self::ORDER_STATUS_OPTIONS;
+        $perPageOptions = self::PER_PAGE_OPTIONS;
 
-        return view('admin.orders.index', compact('orders', 'ticketColorMap', 'paymentMethods', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
+        return view('admin.orders.index', compact('orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
@@ -118,61 +107,40 @@ class OrderController extends Controller
 
         $ordersQuery = Order::onlyTrashed()
             ->visibleTo($request->user())
-            ->withCount('items')
-            ->with(['customer']);
+            ->with(self::listRelations());
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
 
-        if ($request->filled('status')) {
-            $ordersQuery->where('status', $request->string('status'));
-        }
+        $this->applyOrderFilters($ordersQuery, $request, $canFilterByEvent);
 
-        if ($request->filled('payment_method')) {
-            $ordersQuery->where('payment_method', $request->string('payment_method'));
-        }
-
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $ordersQuery->whereHas('items', function ($query) use ($request) {
-                $query->where('event_id', $request->integer('event_id'));
-            });
-        }
-
-        if ($request->filled('search')) {
-            $search = trim((string) $request->input('search'));
-            $ordersQuery->where(function ($query) use ($search) {
-                $query->where('order_number', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
-                        $customerQuery->where('email', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    });
-            });
-        }
+        $sortKey = 'deleted_at';
+        $sortDir = 'desc';
+        $ordersQuery->orderByDesc('deleted_at')->orderByDesc('id');
 
         $orders = $ordersQuery
-            ->orderByDesc('deleted_at')
-            ->paginate(15)
+            ->paginate($this->perPage($request))
             ->withQueryString();
 
-        $paymentMethods = PaymentMethod::query()
-            ->where('code', '!=', 'card')
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->get(['code', 'name', 'checkout_label']);
+        $paymentMethods = $this->activePaymentMethods();
+        $paymentMethodLabels = $this->paymentMethodLabels();
 
         $events = $canFilterByEvent
             ? Event::query()->orderBy('name')->get(['id', 'name'])
             : collect();
 
-        return view('admin.orders.deleted', compact('orders', 'paymentMethods', 'events', 'canFilterByEvent'));
+        $statusOptions = self::ORDER_STATUS_OPTIONS;
+        $perPageOptions = self::PER_PAGE_OPTIONS;
+
+        return view('admin.orders.deleted', compact('orders', 'paymentMethods', 'paymentMethodLabels', 'events', 'canFilterByEvent', 'statusOptions', 'perPageOptions', 'sortKey', 'sortDir'));
     }
 
     public function show(Request $request, Order $order)
     {
         $this->abortIfOrderNotAccessible($request, $order);
 
-        $order->load(['customer', 'items.ticket', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
+        $order->load(['customer', 'items.ticket', 'items.event:id,name,event_date,end_date,event_time,location', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
+        $paymentAttempts = $order->paymentAttempts()->latest()->get();
 
         $paymentMethodLabel = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
@@ -230,7 +198,7 @@ class OrderController extends Controller
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions'));
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts'));
     }
 
     public function edit(Request $request, Order $order)
@@ -605,31 +573,7 @@ class OrderController extends Controller
         $ordersQuery = Order::query()->visibleTo($request->user())->with(['customer', 'items.event']);
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
-        if ($request->filled('status')) {
-            $ordersQuery->where('status', $request->string('status'));
-        }
-
-        if ($request->filled('payment_method')) {
-            $ordersQuery->where('payment_method', $request->string('payment_method'));
-        }
-
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $ordersQuery->whereHas('items', function ($query) use ($request) {
-                $query->where('event_id', $request->integer('event_id'));
-            });
-        }
-
-        if ($request->filled('search')) {
-            $search = trim((string) $request->input('search'));
-            $ordersQuery->where(function ($query) use ($search) {
-                $query->where('order_number', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
-                        $customerQuery->where('email', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    });
-            });
-        }
+        $this->applyOrderFilters($ordersQuery, $request, $canFilterByEvent);
 
         $orders = $ordersQuery->orderByDesc('id')->get();
 
@@ -699,6 +643,165 @@ class OrderController extends Controller
 
             fclose($handle);
         }, 'orders-export-' . now()->format('Y-m-d_H-i') . '.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /** Relations the list/trash tables render (kept narrow so a 100-row page stays cheap). */
+    private static function listRelations(): array
+    {
+        return [
+            'customer:id,first_name,last_name,email,phone',
+            'items:id,order_id,event_id,ticket_name,quantity',
+            'items.event:id,name',
+            'latestPaymentAttempt',
+        ];
+    }
+
+    /**
+     * The single place where list filters are interpreted (index, trash, export and the summary share it).
+     * `withStatus: false` leaves out status/group so the summary can count every status under the other filters.
+     */
+    private function applyOrderFilters(Builder $query, Request $request, bool $canFilterByEvent, bool $withStatus = true): void
+    {
+        if ($withStatus) {
+            if ($request->filled('status')) {
+                $query->where('status', (string) $request->input('status'));
+            }
+
+            $group = (string) $request->input('group', '');
+            if (isset(self::ORDER_STATUS_GROUPS[$group])) {
+                $query->whereIn('status', self::ORDER_STATUS_GROUPS[$group]);
+            }
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', (string) $request->input('payment_method'));
+        }
+
+        if ($canFilterByEvent && $request->filled('event_id')) {
+            $query->whereHas('items', function ($itemsQuery) use ($request) {
+                $itemsQuery->where('event_id', $request->integer('event_id'));
+            });
+        }
+
+        if ($request->filled('reference')) {
+            $reference = trim((string) $request->input('reference'));
+            $query->where('order_number', 'like', '%' . $this->escapeLike($reference) . '%');
+        }
+
+        if ($request->filled('customer')) {
+            $customer = trim((string) $request->input('customer'));
+            $query->whereHas('customer', fn ($customerQuery) => $this->matchCustomer($customerQuery, $customer));
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('order_number', 'like', '%' . $this->escapeLike($search) . '%')
+                    ->orWhereHas('customer', fn ($customerQuery) => $this->matchCustomer($customerQuery, $search));
+            });
+        }
+
+        if ($from = $this->parseDate($request->input('date_from'))) {
+            $query->where('created_at', '>=', $from->startOfDay());
+        }
+
+        if ($to = $this->parseDate($request->input('date_to'))) {
+            $query->where('created_at', '<=', $to->endOfDay());
+        }
+    }
+
+    /** Every word must match the customer's name, e-mail or phone ("jane doe" finds Jane / Doe). */
+    private function matchCustomer($customerQuery, string $text): void
+    {
+        foreach (preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+            $like = '%' . $this->escapeLike($word) . '%';
+            $customerQuery->where(function ($wordQuery) use ($like) {
+                $wordQuery->where('first_name', 'like', $like)
+                    ->orWhere('last_name', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('phone', 'like', $like);
+            });
+        }
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '%_\\');
+    }
+
+    private function parseDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $value) ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** @return array{0: string, 1: string} the applied sort key and direction */
+    private function applySorting(Builder $query, Request $request): array
+    {
+        $key = (string) $request->input('sort', 'created_at');
+        if (! isset(self::SORTABLE_COLUMNS[$key])) {
+            $key = 'created_at';
+        }
+        $dir = strtolower((string) $request->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy(self::SORTABLE_COLUMNS[$key], $dir);
+        if (self::SORTABLE_COLUMNS[$key] !== 'id') {
+            $query->orderByDesc('id');
+        }
+
+        return [$key, $dir];
+    }
+
+    private function perPage(Request $request): int
+    {
+        $perPage = $request->integer('per_page');
+
+        return in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : self::PER_PAGE_OPTIONS[0];
+    }
+
+    /** Real counts per quick-filter group (and paid revenue) for the orders matching the current scope. */
+    private function buildSummary(Builder $query): array
+    {
+        $rows = $query->toBase()
+            ->reorder()
+            ->selectRaw('status, COUNT(*) as orders_count, COALESCE(SUM(total_amount), 0) as amount')
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $count = fn (array $statuses) => (int) collect($statuses)->sum(fn ($status) => $rows->get($status)->orders_count ?? 0);
+
+        return [
+            'all' => (int) $rows->sum('orders_count'),
+            'pending' => $count(self::ORDER_STATUS_GROUPS['pending']),
+            'paid' => $count(self::ORDER_STATUS_GROUPS['paid']),
+            'canceled' => $count(self::ORDER_STATUS_GROUPS['canceled']),
+            'paid_amount' => (float) ($rows->get('paid')->amount ?? 0),
+        ];
+    }
+
+    private function activePaymentMethods()
+    {
+        return PaymentMethod::query()
+            ->where('code', '!=', 'card')
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get(['code', 'name', 'checkout_label']);
+    }
+
+    /** code => human label, including methods that are no longer active, so old orders still read well. */
+    private function paymentMethodLabels(): array
+    {
+        return PaymentMethod::query()->get(['code', 'name', 'checkout_label'])
+            ->mapWithKeys(fn (PaymentMethod $method) => [$method->code => $method->checkout_label ?: $method->name])
+            ->all();
     }
 
     private function isSuperAdmin(?User $user): bool

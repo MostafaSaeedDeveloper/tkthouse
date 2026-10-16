@@ -79,6 +79,11 @@ class Order extends Model
         return $this->hasMany(PaymentAttempt::class);
     }
 
+    public function latestPaymentAttempt()
+    {
+        return $this->hasOne(PaymentAttempt::class)->latestOfMany();
+    }
+
     public function issuedTickets()
     {
         return $this->hasMany(IssuedTicket::class);

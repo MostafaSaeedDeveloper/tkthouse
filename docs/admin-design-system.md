@@ -51,3 +51,10 @@ Legacy Bootstrap classes (`.btn`, `.form-control`, `.form-select`, `.badge`, `.t
 * No demo numbers, no placeholder images: show real data or an empty state.
 * Accessible: labels on every control, `aria-label` on icon buttons, visible focus (provided), keyboard-operable menus/modals, table captions.
 * Responsive 360 → 1440, no horizontal page scroll (tables scroll inside `.a-table-wrap` or use `stack`).
+
+## Orders screens (reference implementation of a dense list)
+`admin/orders/index|deleted.blade.php` + `partials/filters.blade.php`, styles in `public/admin-v2/orders-customers.css` (`a-ord-*`, `a-ordt`), behaviour in `public/admin-v2/orders-list.js`, display helpers in `App\Support\OrderPresenter`.
+* Compact summary strip (`.a-ord-summary`) + quick-filter chips (`.a-chip`, links that keep the other query params) + one search bar with a collapsible advanced-filter panel (empty fields are not sent).
+* Table: fixed layout, long text is `.a-ord-clamp` (2 lines, full text in `title`) or `.a-ord-ellipsis`; sortable headers carry `aria-sort`; primary action visible, secondary actions in `.a-menu.a-menu--fixed` (panel positioned in viewport space because the table wrapper clips overflow). Below 768px each row becomes a card with the same markup.
+* Order status and payment status are separate: `x-admin.status kind="order"` vs `kind="payment"` (latest `PaymentAttempt`).
+* Ticket names are free text: never parse them for a "type"/colour; list pages show counts, Order Details shows the full names.

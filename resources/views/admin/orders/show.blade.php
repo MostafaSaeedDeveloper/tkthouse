@@ -1,16 +1,29 @@
 @extends('admin.master')
-@section('title', 'Order #'.(preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number))
+@section('title', 'Order #'.\App\Support\OrderPresenter::number($order))
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}?v={{ filemtime(public_path('admin-v2/orders-customers.css')) }}">@endpush
 
 @section('content')
 @php
-  $displayOrderNumber = preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number;
+  $displayOrderNumber = \App\Support\OrderPresenter::number($order);
   $customerName = $order->customer?->full_name ?: 'N/A';
   $customerInitials = collect(explode(' ', $customerName))->filter()->map(fn($p)=>mb_substr($p,0,1))->take(2)->implode('');
   $paymentLink = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
   $money = fn ($n) => number_format((float) $n, 2).' EGP';
-  $attempts = $order->paymentAttempts()->latest()->get();
+  $attempts = $paymentAttempts;
+  $latestAttempt = $attempts->first();
+  $ticketCount = \App\Support\OrderPresenter::ticketCount($order);
+  $events = $order->items->pluck('event')->filter()->unique('id')->values();
+  // One row per distinct ticket name + unit price; ticket names are free text, so nothing is inferred from them.
+  $ticketLines = $order->items->groupBy(fn ($i) => trim((string) $i->ticket_name).'|'.(float) $i->ticket_price)->map(fn ($rows) => [
+      'name' => trim((string) $rows->first()->ticket_name) ?: 'Ticket',
+      'unit' => (float) $rows->first()->ticket_price,
+      'qty' => (int) $rows->sum(fn ($i) => max(1, (int) $i->quantity)),
+      'total' => (float) $rows->sum('line_total'),
+  ])->values();
+  $subtotal = (float) ($order->subtotal_amount ?: $order->total_amount);
+  $discount = (float) $order->discount_amount;
+  $extraFees = max(0, round((float) $order->total_amount - max(0, $subtotal - $discount), 2));
 @endphp
 
 <x-admin.page-header :title="'Order #'.$displayOrderNumber" :subtitle="'Placed '.$order->created_at?->format('d M Y, H:i')" :crumbs="['Dashboard' => route('admin.dashboard'), 'Orders' => route('admin.orders.index'), '#'.$displayOrderNumber]">
@@ -33,20 +46,37 @@
 
 <x-admin.flash />
 
+{{-- Order header: the facts people look for first --}}
+<section class="a-ord-summary a-ord-head" aria-label="Order overview">
+  <dl class="a-ord-summary__grid">
+    <div><dt>Order status</dt><dd class="a-ord-head__badge"><x-admin.status :status="$order->status" kind="order" /></dd></div>
+    <div><dt>Payment</dt><dd class="a-ord-head__badge">
+      @if($latestAttempt)<x-admin.status :status="$latestAttempt->status" kind="payment" />
+      @elseif($order->status === 'paid')<x-admin.status status="paid" kind="payment" />
+      @else<span class="a-muted a-ord-head__none">No payment recorded</span>@endif
+    </dd></div>
+    <div><dt>Total</dt><dd>{{ $money($order->total_amount) }}</dd></div>
+    <div><dt>Tickets</dt><dd>{{ $ticketCount }}</dd><small>{{ $order->items->count() }} attendee{{ $order->items->count() === 1 ? '' : 's' }}</small></div>
+  </dl>
+</section>
+
 <div class="a-ord-grid">
   <div class="a-ord-col">
-    <x-admin.card title="Order Summary">
-      <x-slot:actions><x-admin.status :status="$order->status" kind="order" /></x-slot:actions>
+    <x-admin.card title="Order & Payment" subtitle="Order status and payment are tracked separately.">
       <dl class="a-kv">
         <div><dt>Order #</dt><dd>{{ $displayOrderNumber }}</dd></div>
-        <div><dt>Date</dt><dd>{{ $order->created_at?->format('d M Y, H:i') }}</dd></div>
-        <div><dt>Payment Method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
+        <div><dt>Placed</dt><dd>{{ $order->created_at?->format('d M Y, H:i') }}</dd></div>
+        <div><dt>Order status</dt><dd><x-admin.status :status="$order->status" kind="order" /></dd></div>
+        <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
+        @if($latestAttempt)
+          <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->status" kind="payment" /></dd></div>
+        @endif
+        @if($order->paid_at)<div><dt>Paid at</dt><dd>{{ $order->paid_at->format('d M Y, H:i') }}</dd></div>@endif
+        @if($order->requires_approval)<div><dt>Booking approval</dt><dd>{{ $order->approved_at ? 'Approved '.$order->approved_at->format('d M Y, H:i') : 'Required' }}</dd></div>@endif
+        @if($order->status === 'pending_payment' && $order->paymentDeadlineAt())<div><dt>Payment deadline</dt><dd>{{ $order->paymentDeadlineAt()->format('d M Y, H:i') }}</dd></div>@endif
         @can('showing_orders')
           <div><dt>Show in Stats</dt><dd>{{ $order->exclude_from_statistics ? 'No (Excluded)' : 'Yes' }}</dd></div>
         @endcan
-        <div><dt>Promo Code</dt><dd>{{ $order->promo_code ?: '-' }}</dd></div>
-        <div><dt>Subtotal</dt><dd>{{ $money($order->subtotal_amount ?: $order->total_amount) }}</dd></div>
-        <div><dt>Discount</dt><dd>{{ $money($order->discount_amount) }}</dd></div>
       </dl>
       @if($order->status === 'pending_payment' && $paymentLink)
         <div class="a-field" style="margin-top:16px">
@@ -59,27 +89,43 @@
       @endif
     </x-admin.card>
 
-    <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
-      <div class="a-ord-who">
-        <div class="a-ord-avatar" aria-hidden="true">{{ $customerInitials ?: 'NA' }}</div>
-        <div style="min-width:0">
-          <div class="a-table__main">
-            @if($order->customer)<a href="{{ route('admin.customers.show', $order->customer) }}">{{ $customerName }}</a>@else{{ $customerName }}@endif
+    @if($events->isNotEmpty())
+    <x-admin.card title="Event Details" :subtitle="$events->count() > 1 ? $events->count().' events in this order' : null">
+      @foreach($events as $event)
+        <div class="a-ord-event">
+          <div class="a-ord-event__name">{{ $event->name }}</div>
+          <div class="a-ord-item__meta">
+            @if($event->event_date)<span><i class="fa fa-calendar" aria-hidden="true"></i> {{ $event->formatted_date_range }}@if($event->event_time) · {{ \Illuminate\Support\Carbon::parse($event->event_time)->format('H:i') }}@endif</span>@endif
+            @if($event->location)<span><i class="fa fa-location-dot" aria-hidden="true"></i> {{ $event->location }}</span>@endif
           </div>
-          <span class="a-table__sub">{{ $order->customer?->email ?: '-' }}</span>
-          <span class="a-table__sub">{{ $order->customer?->phone ?: '-' }}</span>
         </div>
-      </div>
+      @endforeach
+    </x-admin.card>
+    @endif
+
+    <x-admin.card flush title="Purchased Tickets" :subtitle="$ticketCount.' ticket'.($ticketCount === 1 ? '' : 's').' · '.$ticketLines->count().' ticket '.($ticketLines->count() === 1 ? 'type' : 'types')">
+      @if($ticketLines->isEmpty())
+        <x-admin.empty icon="fa-ticket" title="No tickets found" />
+      @else
+        <x-admin.table stack compact caption="Purchased tickets">
+          <thead><tr><th scope="col" class="a-wrap">Ticket</th><th scope="col" class="a-num">Qty</th><th scope="col" class="a-num">Unit price</th><th scope="col" class="a-num">Total</th></tr></thead>
+          <tbody>
+          @foreach($ticketLines as $line)
+            <tr>
+              <td data-label="Ticket" class="a-wrap"><span class="a-table__main">{{ $line['name'] }}</span></td>
+              <td data-label="Qty" class="a-num">{{ $line['qty'] }}</td>
+              <td data-label="Unit price" class="a-num">{{ $money($line['unit']) }}</td>
+              <td data-label="Total" class="a-num"><strong>{{ $money($line['total']) }}</strong></td>
+            </tr>
+          @endforeach
+          </tbody>
+        </x-admin.table>
+      @endif
     </x-admin.card>
 
-    <x-admin.card title="Tickets" :subtitle="$order->items->count().' ticket(s)'">
+    <x-admin.card title="Attendee Information" :subtitle="$order->items->count().' attendee'.($order->items->count() === 1 ? '' : 's')">
       @forelse($order->items as $item)
         @php
-          $ticketName = trim((string) $item->ticket_name);
-          $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
-          $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
-          $normalizedType = \Illuminate\Support\Str::lower($ticketType);
-          $ticketTypeColor = ['early bird' => '#6c757d', 'regular' => '#0d6efd', 'phase 1' => '#0d6efd', 'phase 2' => '#6f42c1', 'vip' => '#b58900'][$normalizedType] ?? '#6c757d';
           $socialProfileRaw = trim((string) $item->holder_social_profile);
           $socialProfileLink = $socialProfileRaw !== ''
             ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
@@ -87,10 +133,9 @@
         @endphp
         <div class="a-ord-item">
           <div style="min-width:0">
-            <div class="a-ord-item__name">{{ $eventName }}
-              @if($ticketType !== '' && $ticketType !== $eventName)<span class="a-ord-tag" style="background-color: {{ $ticketTypeColor }}">{{ $ticketType }}</span>@endif
-            </div>
-            <div class="a-ord-item__meta"><strong>{{ $item->holder_name }}</strong><br>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</div>
+            <div class="a-ord-item__name">{{ $item->holder_name ?: '—' }}</div>
+            <div class="a-ord-item__meta">{{ $item->ticket_name }}@if((int) $item->quantity > 1) × {{ $item->quantity }}@endif</div>
+            <div class="a-ord-item__meta">{{ $item->holder_email ?: '-' }} — {{ $item->holder_phone ?: '-' }}@if($item->holder_gender) — {{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}@endif</div>
             @if($socialProfileLink)
               <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="a-ord-item__meta"><i class="fa fa-globe"></i> {{ $socialProfileRaw }}</a>
             @endif
@@ -111,16 +156,8 @@
           <div class="a-ord-item__price">{{ $money($item->line_total) }}<small>Qty × {{ $item->quantity }}</small></div>
         </div>
       @empty
-        <x-admin.empty icon="fa-ticket" title="No tickets found" />
+        <p class="a-muted">No attendee details.</p>
       @endforelse
-
-      <div class="a-ord-totals">
-        <div><span>Subtotal</span><strong>{{ $money($order->subtotal_amount ?: $order->total_amount) }}</strong></div>
-        @if((float) $order->discount_amount > 0)
-          <div><span>Promo Discount{{ $order->promo_code ? ' ('.$order->promo_code.')' : '' }}</span><strong>- {{ $money($order->discount_amount) }}</strong></div>
-        @endif
-        <div class="is-grand"><span>Total Amount</span><strong>{{ $money($order->total_amount) }}</strong></div>
-      </div>
     </x-admin.card>
 
     <x-admin.card flush title="Payment Attempts" :subtitle="$attempts->count().' attempt(s)'">
@@ -170,6 +207,34 @@
   </div>
 
   <div class="a-ord-col">
+    <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
+      <div class="a-ord-who">
+        <div class="a-ord-avatar" aria-hidden="true">{{ $customerInitials ?: 'NA' }}</div>
+        <div style="min-width:0">
+          <div class="a-table__main">
+            @if($order->customer)<a href="{{ route('admin.customers.show', $order->customer) }}">{{ $customerName }}</a>@else{{ $customerName }}@endif
+          </div>
+          <span class="a-table__sub">{{ $order->customer?->email ?: '-' }}</span>
+          <span class="a-table__sub">{{ $order->customer?->phone ?: '-' }}</span>
+        </div>
+      </div>
+    </x-admin.card>
+
+    <x-admin.card title="Price Breakdown">
+      <div class="a-ord-totals" style="margin-top:0;padding-top:0;border-top:0">
+        <div><span>Subtotal</span><strong>{{ $money($subtotal) }}</strong></div>
+        @if($discount > 0)
+          <div><span>Promo discount{{ $order->promo_code ? ' ('.$order->promo_code.')' : '' }}</span><strong>- {{ $money($discount) }}</strong></div>
+        @elseif($order->promo_code)
+          <div><span>Promo code</span><strong>{{ $order->promo_code }}</strong></div>
+        @endif
+        @if($extraFees > 0)
+          <div><span>Fees</span><strong>{{ $money($extraFees) }}</strong></div>
+        @endif
+        <div class="is-grand"><span>Total</span><strong>{{ $money($order->total_amount) }}</strong></div>
+      </div>
+    </x-admin.card>
+
     <x-admin.card title="Activity">
       <ol class="a-ord-timeline">
         @foreach($activityTimeline as $activity)
