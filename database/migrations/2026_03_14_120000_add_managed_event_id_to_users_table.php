@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'managed_event_id')) {
+            return; // already present outside the migrations table
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->foreignId('managed_event_id')
                 ->nullable()

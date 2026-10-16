@@ -31,10 +31,11 @@ class PendingPaymentExpiryServiceTest extends TestCase
             'status' => 'pending_payment',
             'payment_method' => 'cash',
             'total_amount' => 120,
-            'created_at' => now()->subMinutes(90),
-            'updated_at' => now()->subMinutes(90),
             'payment_timeout_started_at' => null,
         ]);
+
+        // created_at is not mass-assignable, so backdate it explicitly.
+        $order->forceFill(['created_at' => now()->subMinutes(90), 'updated_at' => now()->subMinutes(90)])->saveQuietly();
 
         $expired = app(PendingPaymentExpiryService::class)->expireDueOrders(60);
 

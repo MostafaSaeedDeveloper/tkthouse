@@ -19,7 +19,7 @@ class AdminOrderUpdateTest extends TestCase
 
     public function test_update_keeps_total_amount_when_items_payload_is_not_sent(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Test',
             'last_name' => 'Customer',
@@ -64,7 +64,7 @@ class AdminOrderUpdateTest extends TestCase
     {
         Mail::fake();
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Status',
             'last_name' => 'Customer',
@@ -103,7 +103,7 @@ class AdminOrderUpdateTest extends TestCase
     {
         Mail::fake();
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Rejected',
             'last_name' => 'Customer',
@@ -139,7 +139,7 @@ class AdminOrderUpdateTest extends TestCase
 
     public function test_update_status_to_pending_payment_restarts_payment_timeout_counter(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Timeout',
             'last_name' => 'Reset',

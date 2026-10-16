@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Support\PaymentEnvironment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -12,6 +13,8 @@ class FawaterakService
 {
     public function createCheckoutData(Order $order): array
     {
+        PaymentEnvironment::assertLiveGatewaysAllowed('fawaterak');
+
         $method = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
             ->where('provider', 'fawaterak')
@@ -139,6 +142,33 @@ class FawaterakService
             'transaction_url' => $this->extractTransactionUrl($json),
             'provider_payload' => $json,
         ];
+    }
+
+    /**
+     * Server-to-server lookup of an invoice. Used to confirm a payment instead of trusting the browser redirect.
+     *
+     * @return array<string, mixed>
+     */
+    public function inquireInvoice(PaymentMethod $method, string $invoiceId): array
+    {
+        PaymentEnvironment::assertLiveGatewaysAllowed('fawaterak');
+
+        $config = is_array($method->config) ? $method->config : [];
+        $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
+
+        if ($apiKey === '') {
+            throw new RuntimeException('Fawaterak API key is not configured.');
+        }
+
+        $path = str_replace('{id}', rawurlencode($invoiceId), (string) config('payments.fawaterak.invoice_status_path'));
+
+        return (array) Http::baseUrl($this->apiBaseUrl())
+            ->timeout(20)
+            ->withToken($apiKey)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->get($path)
+            ->throw()
+            ->json();
     }
 
     private function extractTransactionId(array $payload): ?string

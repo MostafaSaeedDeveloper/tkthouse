@@ -92,6 +92,7 @@ class AffiliateController extends Controller
         $filterDateTo   = $request->input('date_to');
 
         $ordersBaseQuery = $affiliate->affiliateOrders()
+            ->visibleTo($request->user())
             ->when($filterEventId, fn (Builder $q) => $q->whereHas(
                 'items', fn (Builder $iq) => $iq->where('event_id', $filterEventId)
             ))

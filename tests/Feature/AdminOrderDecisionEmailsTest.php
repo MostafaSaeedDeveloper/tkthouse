@@ -20,7 +20,7 @@ class AdminOrderDecisionEmailsTest extends TestCase
     {
         Mail::fake();
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Mail',
             'last_name' => 'Customer',
@@ -65,7 +65,7 @@ class AdminOrderDecisionEmailsTest extends TestCase
     {
         Mail::fake();
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $customer = Customer::create([
             'first_name' => 'Mail',
             'last_name' => 'Customer',

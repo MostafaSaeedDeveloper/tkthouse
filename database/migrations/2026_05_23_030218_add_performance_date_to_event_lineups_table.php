@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('event_lineups', 'performance_date')) {
+            return; // already present outside the migrations table
+        }
+
         Schema::table('event_lineups', function (Blueprint $table) {
             $table->date('performance_date')->nullable()->after('performance_time');
         });

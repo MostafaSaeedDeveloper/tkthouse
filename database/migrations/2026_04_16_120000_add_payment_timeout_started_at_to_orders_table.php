@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('orders', 'payment_timeout_started_at')) {
+            return; // already present outside the migrations table
+        }
+
         Schema::table('orders', function (Blueprint $table) {
             $table->timestamp('payment_timeout_started_at')->nullable()->after('payment_link_token');
         });

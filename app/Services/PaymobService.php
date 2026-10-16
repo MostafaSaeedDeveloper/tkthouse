@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Support\PaymentEnvironment;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -12,6 +13,14 @@ class PaymobService
 {
     public function createCheckoutUrl(Order $order): string
     {
+        return $this->createCheckout($order)['url'];
+    }
+
+    /** @return array{url: string, reference: string, paymob_order_id: int} */
+    public function createCheckout(Order $order): array
+    {
+        PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
+
         $paymobMethod = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
             ->where('provider', 'paymob')
@@ -33,10 +42,83 @@ class PaymobService
         }
 
         $authToken = $this->authenticate($apiKey);
-        $paymobOrderId = $this->registerOrder($authToken, $order, $currency);
-        $paymentKey = $this->createPaymentKey($authToken, $order, $paymobOrderId, $integrationId, $currency);
+        $registered = $this->registerOrder($authToken, $order, $currency);
+        $paymentKey = $this->createPaymentKey($authToken, $order, $registered['id'], $integrationId, $currency);
 
-        return 'https://accept.paymob.com/api/acceptance/iframes/'.$iframeId.'?payment_token='.$paymentKey;
+        return [
+            'url' => 'https://accept.paymob.com/api/acceptance/iframes/'.$iframeId.'?payment_token='.$paymentKey,
+            'reference' => $registered['merchant_order_id'],
+            'paymob_order_id' => $registered['id'],
+        ];
+    }
+
+    /**
+     * Server-to-server lookup of a Paymob transaction. This, not the callback body, decides whether an
+     * order is paid.
+     *
+     * @return array<string, mixed>
+     */
+    public function inquireTransaction(PaymentMethod $method, string $transactionId): array
+    {
+        PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
+
+        $config = $method->config ?? [];
+        $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
+
+        if ($apiKey === '') {
+            throw new RuntimeException('Paymob API key is not configured.');
+        }
+
+        $token = $this->authenticate($apiKey);
+
+        return (array) Http::baseUrl('https://accept.paymob.com/api')
+            ->withToken($token)
+            ->timeout(20)
+            ->get('/acceptance/transactions/'.rawurlencode($transactionId))
+            ->throw()
+            ->json();
+    }
+
+    /**
+     * HMAC check for the browser return (GET): same fields as the processed callback, but flattened query keys
+     * (`order`, `source_data.pan`; PHP turns the dots into underscores).
+     */
+    public static function hmacIsValidFlat(array $query, string $receivedHmac, string $secret): bool
+    {
+        $get = fn (string $key) => $query[$key] ?? $query[str_replace('.', '_', $key)] ?? '';
+
+        $obj = [];
+        foreach (['amount_cents', 'created_at', 'currency', 'error_occured', 'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure',
+            'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment', 'is_voided', 'owner', 'pending', 'success'] as $key) {
+            $obj[$key] = $get($key);
+        }
+        $obj['order'] = ['id' => $get('order')];
+        $obj['source_data'] = ['pan' => $get('source_data.pan'), 'sub_type' => $get('source_data.sub_type'), 'type' => $get('source_data.type')];
+
+        return self::hmacIsValid($obj, $receivedHmac, $secret);
+    }
+
+    /** HMAC-SHA512 check of a "transaction processed" callback (https://developers.paymob.com). */
+    public static function hmacIsValid(array $obj, string $receivedHmac, string $secret): bool
+    {
+        if ($secret === '' || $receivedHmac === '') {
+            return false;
+        }
+
+        $bool = fn ($value) => is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
+        $keys = [
+            'amount_cents', 'created_at', 'currency', 'error_occured', 'has_parent_transaction', 'id',
+            'integration_id', 'is_3d_secure', 'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment',
+            'is_voided', 'order.id', 'owner', 'pending', 'source_data.pan', 'source_data.sub_type',
+            'source_data.type', 'success',
+        ];
+
+        $concatenated = '';
+        foreach ($keys as $key) {
+            $concatenated .= $bool(data_get($obj, $key, ''));
+        }
+
+        return hash_equals(hash_hmac('sha512', $concatenated, $secret), strtolower($receivedHmac));
     }
 
     private function authenticate(string $apiKey): string
@@ -49,7 +131,8 @@ class PaymobService
         return (string) ($response['token'] ?? '');
     }
 
-    private function registerOrder(string $token, Order $order, string $currency): int
+    /** @return array{id: int, merchant_order_id: string} */
+    private function registerOrder(string $token, Order $order, string $currency): array
     {
         $payload = [
             'auth_token' => $token,
@@ -77,7 +160,7 @@ class PaymobService
                 ->json();
         }
 
-        return (int) ($response['id'] ?? 0);
+        return ['id' => (int) ($response['id'] ?? 0), 'merchant_order_id' => (string) $payload['merchant_order_id']];
     }
 
     private function merchantOrderId(Order $order): string

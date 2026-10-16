@@ -13,6 +13,7 @@ class Order extends Model
     protected $fillable = [
         'customer_id',
         'user_id',
+        'owner_unverified',
         'affiliate_user_id',
         'promo_code_id',
         'promo_code',
@@ -36,6 +37,7 @@ class Order extends Model
     {
         return [
             'requires_approval' => 'boolean',
+            'owner_unverified' => 'boolean',
             'exclude_from_statistics' => 'boolean',
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',
@@ -72,6 +74,11 @@ class Order extends Model
         return $this->belongsTo(PromoCode::class);
     }
 
+    public function paymentAttempts()
+    {
+        return $this->hasMany(PaymentAttempt::class);
+    }
+
     public function issuedTickets()
     {
         return $this->hasMany(IssuedTicket::class);
@@ -80,6 +87,20 @@ class Order extends Model
     public function scopeIncludedInStatistics($query)
     {
         return $query->where('exclude_from_statistics', false);
+    }
+
+    /** Permission that unlocks orders flagged "exclude from statistics" in the admin panel. */
+    public const SHOW_HIDDEN_PERMISSION = 'showing_orders';
+
+    /** Back-office visibility: hidden (statistics-excluded) orders need the `showing_orders` permission. */
+    public function scopeVisibleTo($query, ?\App\Models\User $user)
+    {
+        return $user?->can(self::SHOW_HIDDEN_PERMISSION) ? $query : $query->includedInStatistics();
+    }
+
+    public function isVisibleTo(?\App\Models\User $user): bool
+    {
+        return ! $this->exclude_from_statistics || (bool) $user?->can(self::SHOW_HIDDEN_PERMISSION);
     }
 
     public function paymentDeadlineAt(?int $timeoutMinutes = null): ?\Illuminate\Support\Carbon

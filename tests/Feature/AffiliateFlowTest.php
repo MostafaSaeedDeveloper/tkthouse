@@ -19,9 +19,10 @@ class AffiliateFlowTest extends TestCase
 
         $this->get('/?ref=AFFTEST1')->assertOk();
 
-        $response = $this->post(route('front.customer.register.store'), [
+        $response = $this->registerCustomerWithOtp([
             'name' => 'Referral Buyer',
             'email' => 'ref-buyer@example.com',
+            'phone' => '01012345678',
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ]);
@@ -37,7 +38,7 @@ class AffiliateFlowTest extends TestCase
 
     public function test_admin_can_open_create_form_and_generate_affiliate_link_for_selected_customer(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $targetUser = User::factory()->create(['affiliate_code' => null]);
 
         $this->actingAs($admin)
@@ -60,7 +61,7 @@ class AffiliateFlowTest extends TestCase
 
     public function test_affiliate_index_lists_only_users_with_generated_links(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         User::factory()->create(['affiliate_code' => null, 'name' => 'No Link User']);
         User::factory()->create(['affiliate_code' => 'CODE1234', 'affiliate_target_url' => '/events', 'name' => 'With Link User']);
 
@@ -73,7 +74,7 @@ class AffiliateFlowTest extends TestCase
 
     public function test_affiliate_show_stats_match_referred_users_and_orders(): void
     {
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         $affiliate = User::factory()->create([
             'affiliate_code' => 'AFFSTAT1',
             'affiliate_target_url' => '/about',
@@ -127,9 +128,10 @@ class AffiliateFlowTest extends TestCase
 
         Auth::logout();
 
-        $this->post(route('front.customer.register.store'), [
+        $this->registerCustomerWithOtp([
             'name' => 'Checkout Register',
             'email' => 'checkout-register@example.com',
+            'phone' => '01012345678',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'redirect_to' => '/checkout',
@@ -158,13 +160,14 @@ class AffiliateFlowTest extends TestCase
 
     public function test_register_supports_ajax_response_with_redirect(): void
     {
-        $this->postJson(route('front.customer.register.store'), [
+        $this->registerCustomerWithOtp([
             'name' => 'Ajax Register',
             'email' => 'ajax-register@example.com',
+            'phone' => '01012345678',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'redirect_to' => '/checkout',
-        ])->assertOk()
+        ], json: true)->assertOk()
             ->assertJson([
                 'redirect_to' => '/checkout',
             ])

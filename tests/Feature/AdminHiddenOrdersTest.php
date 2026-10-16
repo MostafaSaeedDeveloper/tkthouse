@@ -19,7 +19,7 @@ class AdminHiddenOrdersTest extends TestCase
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         Permission::findOrCreate('dashboard.view', 'web');
         Permission::findOrCreate('reports.view', 'web');
         $admin->givePermissionTo(['dashboard.view', 'reports.view']);
@@ -95,7 +95,7 @@ class AdminHiddenOrdersTest extends TestCase
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         Permission::findOrCreate('dashboard.view', 'web');
         Permission::findOrCreate('reports.view', 'web');
         $admin->givePermissionTo(['dashboard.view', 'reports.view']);
@@ -155,7 +155,7 @@ class AdminHiddenOrdersTest extends TestCase
     {
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
 
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
         Permission::findOrCreate('reports.view', 'web');
         $admin->givePermissionTo(['reports.view']);
 

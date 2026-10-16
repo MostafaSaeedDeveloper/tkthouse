@@ -127,7 +127,7 @@ class PagesController extends Controller
             ->when($when === 'previous', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderBy('event_date')
             ->orderBy('event_time')
-            ->paginate(10)
+            ->paginate(12)
             ->withQueryString();
 
         $previousEvents = Event::query()
@@ -137,8 +137,8 @@ class PagesController extends Controller
             ->when($when === 'upcoming', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
-            ->take(10)
-            ->get();
+            ->paginate(12, ['*'], 'previous_page')
+            ->withQueryString();
 
         return view('front.events.index', compact('events', 'previousEvents', 'search', 'when'));
     }
@@ -149,6 +149,7 @@ class PagesController extends Controller
             'tickets' => fn ($query) => $query->whereIn('status', ['active', 'sold_out'])->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderBy('price'),
             'images',
             'lineups',
+            'fees',
         ]);
 
         return view('front.events.show', compact('event'));
@@ -169,7 +170,7 @@ class PagesController extends Controller
             'comment' => ['required', 'string', 'max:3000'],
         ]);
 
-        $subject = $data['subject'] ?: 'Website Contact Form Message';
+        $subject = ($data['subject'] ?? null) ?: 'Website Contact Form Message';
 
         Mail::raw(
             "New contact message from tkthouse.com\n\n"
@@ -201,10 +202,5 @@ class PagesController extends Controller
     public function cookie()
     {
         return view('front.cookie');
-    }
-
-    public function checkout()
-    {
-        return view('front.checkout');
     }
 }

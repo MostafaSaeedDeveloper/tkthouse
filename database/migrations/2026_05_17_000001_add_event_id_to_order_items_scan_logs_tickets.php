@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('order_items', function (Blueprint $table) {
+        if (! Schema::hasColumn('order_items', 'event_id')) Schema::table('order_items', function (Blueprint $table) {
             $table->foreignId('event_id')->nullable()->after('order_id')->constrained()->nullOnDelete();
         });
 
-        Schema::table('scan_logs', function (Blueprint $table) {
+        if (! Schema::hasColumn('scan_logs', 'event_id')) Schema::table('scan_logs', function (Blueprint $table) {
             $table->foreignId('event_id')->nullable()->after('ticket_id')->constrained()->nullOnDelete();
         });
 
-        Schema::table('tickets', function (Blueprint $table) {
+        if (! Schema::hasColumn('tickets', 'event_id')) Schema::table('tickets', function (Blueprint $table) {
             $table->foreignId('event_id')->nullable()->after('id')->constrained()->nullOnDelete();
         });
     }

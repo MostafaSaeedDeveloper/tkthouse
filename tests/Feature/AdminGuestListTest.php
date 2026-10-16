@@ -17,7 +17,7 @@ class AdminGuestListTest extends TestCase
     public function test_admin_can_create_guest_list_tickets(): void
     {
         Mail::fake();
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
 
         $response = $this->actingAs($admin)->post(route('admin.guest-list.store'), [
             'event_name' => 'My Event',
@@ -43,7 +43,7 @@ class AdminGuestListTest extends TestCase
     public function test_admin_can_import_guest_list_csv(): void
     {
         Mail::fake();
-        $admin = User::factory()->create();
+        $admin = $this->createAdmin();
 
         $csv = implode("\n", [
             'guest_type,name,email,phone,gender',

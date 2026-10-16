@@ -1,0 +1,171 @@
+@extends('front.layout.app')
+
+@section('title', match($state) { 'paid' => 'You\'re in!', 'pending' => 'Payment pending', 'failed' => 'Payment failed', 'review' => 'Request received', default => 'Your order' })
+
+@php
+    $money = fn ($n) => number_format((float) $n, 2).' EGP';
+    $payUrl = $order->payment_link_token ? route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]) : null;
+    $time = $event?->event_time ? \Carbon\Carbon::parse($event->event_time)->format('g:i A') : null;
+    $iconCheck = '<path d="M20 6 9 17l-5-5"/>';
+@endphp
+
+@section('content')
+<div class="tkt-container tkt-checkout">
+    <x-tkt.stepper :current="3" />
+
+    <div class="tkt-result">
+        <section class="tkt-card tkt-result__card" aria-live="polite" @if($state === 'pending') data-autorefresh="12000" @endif>
+            @switch($state)
+                @case('paid')
+                    <div class="tkt-result__icon tkt-result__icon--success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $iconCheck !!}</svg></div>
+                    <h1 class="tkt-result__title">You're in!</h1>
+                    <p class="tkt-result__text">Your payment was confirmed. Your tickets have been sent to {{ $order->customer?->email ?: 'your email' }}.</p>
+                    @break
+                @case('pending')
+                    <div class="tkt-result__icon tkt-result__icon--pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+                    <h1 class="tkt-result__title">Payment pending</h1>
+                    <p class="tkt-result__text">We have not received confirmation from the payment provider yet. This page checks automatically — please don't pay again. If you were charged, your tickets will arrive by email within a few minutes.</p>
+                    @break
+                @case('failed')
+                    <div class="tkt-result__icon tkt-result__icon--failed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+                    <h1 class="tkt-result__title">Payment failed</h1>
+                    <p class="tkt-result__text">The payment was not completed and you have not been charged. Your order is saved — you can safely try again.</p>
+                    @break
+                @case('review')
+                    <div class="tkt-result__icon tkt-result__icon--info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+                    <h1 class="tkt-result__title">Request received</h1>
+                    <p class="tkt-result__text">Your booking is waiting for approval. If it is approved we will email you a secure payment link. You have not been charged.</p>
+                    @break
+                @case('unpaid')
+                    <div class="tkt-result__icon tkt-result__icon--pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+                    <h1 class="tkt-result__title">Complete your payment</h1>
+                    <p class="tkt-result__text">Your order is reserved for you. Finish paying to receive your tickets.</p>
+                    @break
+                @default
+                    <div class="tkt-result__icon tkt-result__icon--failed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+                    <h1 class="tkt-result__title">Order closed</h1>
+                    <p class="tkt-result__text">This order is no longer active ({{ str_replace('_', ' ', $order->status) }}). If you were charged, please contact support with your order reference.</p>
+            @endswitch
+
+            <div class="tkt-result__ref">Order reference <b>{{ $order->order_number }}</b></div>
+
+            @if($event)
+                <div class="tkt-ordersum__event" style="text-align:left;margin-top:24px;border-bottom:0;padding-bottom:0">
+                    @php $thumb = $event->cover_image_url ?: $event->event_banner_url; @endphp
+                    <div class="tkt-media tkt-ordersum__thumb {{ $thumb ? '' : 'is-empty' }}">@if($thumb)<img class="tkt-img" src="{{ $thumb }}" alt="" loading="lazy">@endif</div>
+                    <div style="min-width:0">
+                        <div class="tkt-ordersum__event-name">{{ $event->name }}</div>
+                        <div class="tkt-ordersum__event-meta">{{ $event->formatted_date_range }}@if($time) · {{ $time }}@endif @if($event->location)<br>{{ $event->location }}@endif</div>
+                    </div>
+                </div>
+            @endif
+
+            @if($state === 'paid')
+                <div class="tkt-ticketlist">
+                    @forelse($tickets as $ticket)
+                        <div class="tkt-tkt">
+                            <div class="tkt-tkt__info">
+                                <div class="tkt-tkt__name">{{ $ticket->holder_name }}</div>
+                                <div class="tkt-tkt__meta">{{ $ticket->ticket_name }} · #{{ $ticket->ticket_number }}</div>
+                            </div>
+                            <x-tkt.badge variant="success" :dot="true">Issued</x-tkt.badge>
+                            <div class="tkt-tkt__actions">
+                                @if($isOwnerSignedIn)
+                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View</a>
+                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.download', $ticket) }}">PDF</a>
+                                @elseif(isset($downloads[$ticket->id]))
+                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $downloads[$ticket->id] }}">Download PDF</a>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="tkt-alert tkt-alert--info">Your tickets are being prepared and will appear in My tickets in a moment.</div>
+                    @endforelse
+                </div>
+            @endif
+
+            @if($newAccount && $accountEmail)
+                <div class="tkt-alert tkt-alert--info" style="text-align:left;margin-top:20px">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <div>We created a TKT House account for <strong>{{ $accountEmail }}</strong> so your orders and tickets stay together. There is no password — you sign in with a code sent to that email.
+                        <div style="margin-top:8px"><button type="button" class="tkt-link" id="changeEmailBtn" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline">Wrong email? Fix it</button></div>
+                        <form id="changeEmailForm" hidden style="margin-top:10px" data-url="{{ route('front.checkout.change-email', $order->order_number) }}">
+                            <label class="tkt-label" for="changeEmailInput">Correct email address</label>
+                            <input class="tkt-input" id="changeEmailInput" type="email" autocomplete="email" value="{{ $accountEmail }}" required>
+                            <div class="tkt-field__error" id="changeEmailError" hidden></div>
+                            <button type="submit" class="tkt-btn tkt-btn--primary" style="margin-top:8px">Save and send me a code</button>
+                        </form>
+                    </div>
+                </div>
+            @endif
+
+            @if(! $isOwnerSignedIn && $accountEmail)
+                <div style="margin-top:16px;text-align:left" id="claimWrap">
+                    <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--block" id="claimBtn">Sign in to manage my tickets — email me a code</button>
+                    <div id="claimBox" hidden style="margin-top:14px">
+                        <x-tkt.otp-panel :email="$accountEmail" :email-masked="$accountEmailMasked" :after="route('front.account.tickets')" id-suffix="conf" />
+                    </div>
+                </div>
+            @endif
+
+            <div class="tkt-result__actions">
+                @if($state === 'paid')
+                    @if($isOwnerSignedIn)
+                        <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ route('front.account.tickets') }}">View my tickets</a>
+                    @endif
+                    <a class="tkt-btn {{ $isOwnerSignedIn ? 'tkt-btn--outline' : 'tkt-btn--primary' }} tkt-btn--lg" href="{{ route('front.events') }}">Back to events</a>
+                    @if($canSetPassword)
+                        <a class="tkt-btn tkt-btn--ghost tkt-btn--lg" href="{{ route('front.account.set-password') }}">Set a password (optional)</a>
+                    @endif
+                @elseif($state === 'pending')
+                    <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ route('front.checkout.confirmation', $order->order_number) }}">Check payment status</a>
+                    @if($payUrl)<a class="tkt-btn tkt-btn--outline tkt-btn--lg" href="{{ $payUrl }}">Use another method</a>@endif
+                @elseif(in_array($state, ['failed', 'unpaid'], true) && $payUrl)
+                    <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ $payUrl }}">{{ $state === 'failed' ? 'Try again' : 'Pay now' }}</a>
+                    <a class="tkt-btn tkt-btn--outline tkt-btn--lg" href="{{ route('front.account.orders') }}">My orders</a>
+                @else
+                    <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ route('front.account.orders') }}">My orders</a>
+                    <a class="tkt-btn tkt-btn--outline tkt-btn--lg" href="{{ route('front.events') }}">Browse events</a>
+                @endif
+            </div>
+        </section>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+    <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
+    <script>
+        (function () {
+            var cb = document.getElementById('changeEmailBtn'), cf = document.getElementById('changeEmailForm');
+            if (cb && cf) {
+                cb.addEventListener('click', function () { cf.hidden = !cf.hidden; });
+                cf.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var err = document.getElementById('changeEmailError'); err.hidden = true;
+                    var body = new URLSearchParams({ email: document.getElementById('changeEmailInput').value });
+                    fetch(cf.getAttribute('data-url'), { method: 'POST', credentials: 'same-origin', body: body,
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' } })
+                        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+                        .then(function (res) {
+                            if (!res.ok || !res.d.ok) { err.textContent = (res.d.message || (res.d.errors && res.d.errors.email && res.d.errors.email[0]) || 'Could not change the email. Please try again.'); err.hidden = false; return; }
+                            document.querySelectorAll('.tkt-alert strong').forEach(function (s) { if (s.textContent.indexOf('@') > -1) s.textContent = res.d.email; });
+                            var panel = document.querySelector('#claimBox [data-otp-panel]');
+                            if (panel) { var o = window.TktOtp.init(panel); o.setEmail(res.d.email, res.d.masked); }
+                            cf.hidden = true;
+                            var claim = document.getElementById('claimBtn'); if (claim) { claim.hidden = false; document.getElementById('claimBox').hidden = true; }
+                        });
+                });
+            }
+            var btn = document.getElementById('claimBtn'), box = document.getElementById('claimBox');
+            if (!btn || !box) return;
+            btn.addEventListener('click', function () {
+                box.hidden = false; btn.hidden = true;
+                var panel = box.querySelector('[data-otp-panel]');
+                window.TktOtp.init(panel).send();
+                var c = panel.querySelector('[data-otp-code]'); if (c) c.focus();
+            });
+        })();
+    </script>
+    <script src="{{ asset('js/tkt-checkout.js') }}?v={{ filemtime(public_path('js/tkt-checkout.js')) }}"></script>
+@endpush

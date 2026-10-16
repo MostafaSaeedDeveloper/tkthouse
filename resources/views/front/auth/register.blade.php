@@ -1,154 +1,54 @@
-@extends('front.layout.master')
+@extends('front.layout.app')
+
+@section('title', 'Create account')
 
 @section('content')
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-:root{--bg:#060608;--surface:#0e0e12;--surface2:#16161d;--border:rgba(255,255,255,0.07);--gold:#f5b800;--gold-d:#c99300;--text:#e8e8ef;--muted:#6b6b7e;--red:#e8445a;--radius:14px;--fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;}
-
-.auth-page{background:var(--bg);min-height:100vh;font-family:var(--fb);color:var(--text);padding:64px 0 80px;display:flex;align-items:center;}
-.auth-wrap{max-width:500px;margin:0 auto;width:100%;padding:0 16px;}
-.auth-glow{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(245,184,0,0.06) 0%,transparent 70%);}
-.auth-inner{position:relative;z-index:1;}
-
-.auth-brand{text-align:center;margin-bottom:32px;}
-.auth-brand-icon{width:52px;height:52px;border-radius:14px;background:rgba(245,184,0,.12);border:1px solid rgba(245,184,0,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;}
-.auth-brand-title{font-family:var(--fh);font-size:22px;font-weight:800;color:#fff;letter-spacing:-.3px;}
-.auth-brand-sub{font-size:13px;color:var(--muted);margin-top:4px;}
-
-.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;}
-.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold) 40%,var(--gold-d) 70%,transparent);}
-.auth-card-body{padding:32px 30px 28px;}
-
-.auth-heading{margin-bottom:26px;}
-.auth-heading h2{font-family:var(--fh);font-size:20px;font-weight:800;color:#fff;margin:0 0 5px;letter-spacing:-.3px;}
-.auth-heading p{font-size:13px;color:var(--muted);margin:0;}
-
-.auth-field{margin-bottom:16px;}
-.auth-field label{display:block;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
-.auth-field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--fb);font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;}
-.auth-field input::placeholder{color:#3a3a4a;}
-.auth-field input:focus{border-color:var(--gold-d);box-shadow:0 0 0 3px rgba(245,184,0,.1);}
-.auth-field input.is-invalid{border-color:var(--red);}
-.auth-error{font-size:12px;color:var(--red);margin-top:5px;}
-
-.auth-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-@media(max-width:480px){.auth-grid-2{grid-template-columns:1fr;}}
-
-.auth-submit{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--gold);color:#000;font-family:var(--fh);font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;border:none;border-radius:8px;padding:13px 24px;cursor:pointer;transition:background .2s,transform .1s;margin-top:6px;}
-.auth-submit:hover{background:#ffc820;}
-.auth-submit:active{transform:scale(.99);}
-
-.auth-card-footer{padding:16px 30px;border-top:1px solid var(--border);background:var(--surface2);text-align:center;font-size:13px;color:var(--muted);}
-.auth-card-footer a{color:var(--gold);text-decoration:none;font-weight:500;}
-.auth-card-footer a:hover{text-decoration:underline;}
-
-.auth-alert{background:rgba(232,68,90,.08);border:1px solid rgba(232,68,90,.28);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#f0849a;display:flex;align-items:flex-start;gap:8px;}
-
-.auth-divider{height:1px;background:var(--border);margin:0 0 18px;}
-
-.auth-legal{margin:14px 0 12px;font-size:12px;line-height:1.5;color:var(--muted);}
-.auth-legal a{color:var(--gold);text-decoration:none;font-weight:500;}
-.auth-legal a:hover{text-decoration:underline;}
-</style>
-
-<div class="auth-glow"></div>
-
-<div class="sub-banner"><div class="container"><h6>Create Customer Account</h6></div></div>
-
-<section class="auth-page">
-    <div class="container">
-        <div class="auth-wrap">
-            <div class="auth-inner">
-
-                <div class="auth-brand">
-                    <div class="auth-brand-icon">🎫</div>
-                    <div class="auth-brand-title">Join TKTHouse</div>
-                    <div class="auth-brand-sub">Create your account and start booking tickets</div>
-                </div>
-
-                <div class="auth-card">
-                    <div class="auth-card-body">
-
-                        <div class="auth-heading">
-                            <h2>Create Account</h2>
-                            <p>Fill in your details to get started</p>
-                        </div>
-
-                        @if($errors->any())
-                            <div class="auth-alert">
-                                <i class="fa fa-circle-exclamation" style="margin-top:1px;flex-shrink:0;"></i>
-                                <div>{{ $errors->first() }}</div>
-                            </div>
-                        @endif
-
-                        <form method="POST" action="{{ route('front.customer.register.store') }}">
-                            @csrf
-                            <input type="hidden" name="redirect_to" value="{{ request('redirect') }}">
-
-                            <div class="auth-field">
-                                <label>Full Name</label>
-                                <input type="text" name="name" value="{{ old('name') }}"
-                                    placeholder="John Doe"
-                                    class="{{ $errors->has('name') ? 'is-invalid' : '' }}" required>
-                                @error('name')<div class="auth-error">{{ $message }}</div>@enderror
-                            </div>
-
-                            <div class="auth-field">
-                                <label>Email Address</label>
-                                <input type="email" name="email" value="{{ old('email') }}"
-                                    placeholder="you@example.com"
-                                    class="{{ $errors->has('email') ? 'is-invalid' : '' }}" required>
-                                @error('email')<div class="auth-error">{{ $message }}</div>@enderror
-                            </div>
-
-                            <div class="auth-field">
-                                <label>Phone Number</label>
-                                <input type="tel" name="phone" data-phone-intl value="{{ old('phone') }}"
-                                    placeholder="01XXXXXXXXX"
-                                    class="{{ $errors->has('phone') ? 'is-invalid' : '' }}" required>
-                                @error('phone')<div class="auth-error">{{ $message }}</div>@enderror
-                            </div>
-
-                            <div class="auth-divider"></div>
-
-                            <div class="auth-grid-2">
-                                <div class="auth-field" style="margin-bottom:0;">
-                                    <label>Password</label>
-                                    <input type="password" name="password"
-                                        placeholder="••••••••"
-                                        class="{{ $errors->has('password') ? 'is-invalid' : '' }}" required>
-                                    @error('password')<div class="auth-error">{{ $message }}</div>@enderror
-                                </div>
-                                <div class="auth-field" style="margin-bottom:0;">
-                                    <label>Confirm Password</label>
-                                    <input type="password" name="password_confirmation"
-                                        placeholder="••••••••" required>
-                                </div>
-                            </div>
-
-
-                            <p class="auth-legal">
-                                By creating an account, you agree to our
-                                <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a>
-                                and confirm that you have read our
-                                <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
-                            </p>
-
-                            <button class="auth-submit" type="submit">
-                                Create Account →
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="auth-card-footer">
-                        Already have an account? <a href="{{ route('front.customer.login', ['redirect' => request('redirect')]) }}">Sign in</a>
-                    </div>
-                </div>
-
+<section class="tkt-container tkt-auth-page">
+    <div class="tkt-auth-card">
+        <div class="tkt-auth-card__body">
+            <div class="tkt-auth__heading">
+                <h1 class="tkt-h2">Create your account</h1>
+                <p>Fill in your details to get started.</p>
             </div>
+
+            <div class="tkt-alert" data-auth-message="register" style="display:none" role="alert"></div>
+
+            {{-- Same AJAX + email OTP flow as the sign-up modal (the register endpoint answers JSON). --}}
+            <form method="POST" action="{{ route('front.customer.register.store') }}" data-auth-ajax-form data-auth-type="register" data-otp-request-url="{{ route('front.customer.register.request-otp') }}" data-otp-verify-url="{{ route('front.customer.register.verify-otp') }}" novalidate>
+                @csrf
+                <input type="hidden" name="redirect_to" value="{{ request('redirect') }}" data-redirect-target>
+                <div class="auth-field tkt-field">
+                    <label class="tkt-label" for="reg-name">Full name</label>
+                    <input class="tkt-input" id="reg-name" type="text" name="name" value="{{ old('name') }}" placeholder="John Doe" autocomplete="name" required>
+                </div>
+                <div class="auth-field tkt-field">
+                    <label class="tkt-label" for="reg-email">Email address</label>
+                    <input class="tkt-input" id="reg-email" type="email" name="email" value="{{ old('email') }}" placeholder="you@example.com" autocomplete="email" required>
+                </div>
+                <div class="auth-field tkt-field">
+                    <label class="tkt-label" for="reg-phone">Phone number</label>
+                    <input class="tkt-input" id="reg-phone" type="tel" name="phone" data-phone-intl value="{{ old('phone') }}" placeholder="01XXXXXXXXX" required>
+                </div>
+                <div class="tkt-auth__grid">
+                    <div class="auth-field tkt-field">
+                        <label class="tkt-label" for="reg-pass">Password</label>
+                        <input class="tkt-input" id="reg-pass" type="password" name="password" placeholder="At least 8 characters" autocomplete="new-password" required>
+                    </div>
+                    <div class="auth-field tkt-field">
+                        <label class="tkt-label" for="reg-pass2">Confirm password</label>
+                        <input class="tkt-input" id="reg-pass2" type="password" name="password_confirmation" placeholder="Repeat password" autocomplete="new-password" required>
+                    </div>
+                </div>
+                <div class="auth-field tkt-field tkt-otp" style="display:none" data-otp-field-wrap>
+                    <label class="tkt-label" for="reg-otp">Email verification code</label>
+                    <input class="tkt-input tkt-otp__input" id="reg-otp" type="text" name="otp" placeholder="······" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
+                    <div class="tkt-field__hint">We sent a 6-digit code to your email. Your account is created only after it is verified.</div>
+                </div>
+                <p class="tkt-auth__legal">By creating an account, you agree to our <a href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms and Conditions</a> and confirm that you have read our <a href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+                <button class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block auth-submit" type="submit">Create account</button>
+            </form>
         </div>
+        <div class="tkt-auth-card__foot">Already have an account? <a href="{{ route('front.customer.login', ['redirect' => request('redirect')]) }}">Log in</a></div>
     </div>
 </section>
-
 @endsection
