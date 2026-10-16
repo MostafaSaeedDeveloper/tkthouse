@@ -12,6 +12,9 @@
     var linesEl = document.getElementById('summaryLines');
     var totalEl = document.getElementById('summaryTotal');
     var toggleEl = document.getElementById('summaryToggle');
+    var countEl = document.getElementById('summaryCount');
+    var backdrop = document.getElementById('sheetBackdrop');
+    var mobile = window.matchMedia('(max-width: 991px)');
     if (!checkoutBtn || !summary) return; // finished event: nothing to select
 
     var bookingClosed = root.dataset.bookingClosed === '1';
@@ -94,12 +97,10 @@
         }
 
         totalEl.textContent = money(subtotal + feeTotal);
+        if (countEl) countEl.textContent = count > 0 ? count + (count === 1 ? ' ticket' : ' tickets') : 'No tickets selected';
         summary.classList.toggle('has-items', ids.length > 0);
-        document.body.classList.toggle('tkt-has-bar', ids.length > 0 && window.matchMedia('(max-width: 991px)').matches);
-        if (!ids.length) {
-            summary.classList.remove('is-expanded');
-            if (toggleEl) toggleEl.setAttribute('aria-expanded', 'false');
-        }
+        document.body.classList.toggle('tkt-has-bar', ids.length > 0 && mobile.matches);
+        if (!ids.length) closeSheet();
         updateCheckoutLink(count);
     }
 
@@ -129,6 +130,7 @@
             plus.disabled = qty >= maxQty;
             card.classList.toggle('is-selected', qty > 0);
             render();
+            applyFold();
         }
 
         minus.addEventListener('click', function () {
@@ -145,16 +147,58 @@
         });
     });
 
-    if (toggleEl) {
-        toggleEl.addEventListener('click', function () {
-            var open = summary.classList.toggle('is-expanded');
-            toggleEl.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
+    /* ---- order details sheet (mobile bottom bar) ---- */
+    function openSheet() {
+        if (!mobile.matches || !summary.classList.contains('has-items')) return;
+        summary.classList.add('is-expanded');
+        if (toggleEl) toggleEl.setAttribute('aria-expanded', 'true');
+        if (backdrop) backdrop.hidden = false;
     }
+    function closeSheet() {
+        summary.classList.remove('is-expanded');
+        if (toggleEl) toggleEl.setAttribute('aria-expanded', 'false');
+        if (backdrop) backdrop.hidden = true;
+    }
+    if (toggleEl) toggleEl.addEventListener('click', function () { summary.classList.contains('is-expanded') ? closeSheet() : openSheet(); });
+    if (backdrop) backdrop.addEventListener('click', closeSheet);
+    Array.prototype.forEach.call(summary.querySelectorAll('[data-sheet-close]'), function (b) { b.addEventListener('click', closeSheet); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && summary.classList.contains('is-expanded')) { closeSheet(); if (toggleEl) toggleEl.focus(); } });
 
-    window.addEventListener('resize', function () {
-        document.body.classList.toggle('tkt-has-bar', Object.keys(cart).length > 0 && window.matchMedia('(max-width: 991px)').matches);
+    /* ---- mobile: show the first few tickets, reveal more step by step (selected tickets are never folded away) ---- */
+    var cards = Array.prototype.slice.call(root.querySelectorAll('.tkt-ticket'));
+    var moreBtn = root.querySelector('[data-more]');
+    var initial = parseInt(root.dataset.foldInitial || '3', 10);
+    var stepBy = parseInt(root.dataset.foldStep || '5', 10);
+    var shown = initial;
+    function applyFold() {
+        var folded = 0;
+        cards.forEach(function (card, i) {
+            var hide = mobile.matches && i >= shown && !card.classList.contains('is-selected');
+            card.classList.toggle('is-folded', hide);
+            if (hide) folded++;
+        });
+        if (!moreBtn) return;
+        moreBtn.hidden = !(mobile.matches && folded > 0);
+        if (folded > 0) moreBtn.textContent = 'Show ' + Math.min(stepBy, folded) + ' more ticket' + (Math.min(stepBy, folded) === 1 ? '' : 's') + ' (' + folded + ' left)';
+    }
+    if (moreBtn) moreBtn.addEventListener('click', function () { shown += stepBy; applyFold(); });
+
+    /* ---- sold-out accordion ---- */
+    var soldToggle = document.getElementById('soldoutToggle');
+    var soldList = document.getElementById('soldoutList');
+    if (soldToggle && soldList) soldToggle.addEventListener('click', function () {
+        var open = soldList.hidden;
+        soldList.hidden = !open;
+        soldToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
+    var onBreakpoint = function () {
+        document.body.classList.toggle('tkt-has-bar', Object.keys(cart).length > 0 && mobile.matches);
+        if (!mobile.matches) closeSheet();
+        applyFold();
+    };
+    if (mobile.addEventListener) mobile.addEventListener('change', onBreakpoint); else window.addEventListener('resize', onBreakpoint);
+
     render();
+    applyFold();
 })();
