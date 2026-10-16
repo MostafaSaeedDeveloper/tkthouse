@@ -13,29 +13,32 @@
 @endphp
 
 <x-admin.page-header :title="'Ticket #'.($ticket->ticket_number ?? 'N/A')" :subtitle="$ticket->eventLabel() ?: 'No event assigned'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), $ticket->ticket_number ?? 'Ticket']">
-    <a href="{{ route('admin.tickets.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back</a>
-    <a href="{{ route('admin.tickets.download', $ticket) }}" class="a-btn a-btn--outline"><i class="fa fa-download"></i> PDF</a>
     @can('tickets.update')
         <a href="{{ route('admin.tickets.edit', $ticket) }}" class="a-btn a-btn--primary"><i class="fa fa-pen"></i> Edit</a>
     @endcan
-    @can('tickets.delete')
-        <form method="POST" action="{{ route('admin.tickets.destroy', $ticket) }}" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete" style="display:inline">
-            @csrf @method('DELETE')
-            <button class="a-btn a-btn--danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
-        </form>
-    @endcan
+    <a href="{{ route('admin.tickets.download', $ticket) }}" class="a-btn a-btn--outline"><i class="fa fa-download"></i> PDF</a>
+    <x-admin.dropdown label="" aria-label="More actions">
+        <a class="a-menu__item" href="{{ route('admin.tickets.index') }}"><i class="fa fa-arrow-left"></i> Back to tickets</a>
+        @can('tickets.delete')
+            <div class="a-menu__sep"></div>
+            <form method="POST" action="{{ route('admin.tickets.destroy', $ticket) }}" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
+                @csrf @method('DELETE')
+                <button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
+            </form>
+        @endcan
+    </x-admin.dropdown>
 </x-admin.page-header>
 
 <x-admin.flash />
 
 <div class="a-grid a-grid--main-side">
-  <div class="a-tk-stack">
+  <div class="a-stack">
 
     <x-admin.card title="Ticket Info">
       <x-slot:actions><x-admin.status :status="$ticket->status" kind="ticket" /></x-slot:actions>
       <div class="a-tk-holder">
         <div class="a-tk-avatar" aria-hidden="true">{{ $initials ?: 'NA' }}</div>
-        <div style="min-width:0">
+        <div class="a-tk-holder__text">
           <div class="a-tk-holder__name">{{ $ticket->holder_name ?: 'Unknown Holder' }}</div>
           <div class="a-tk-holder__sub">{{ $ticket->holder_email ?: '-' }}</div>
         </div>
@@ -85,7 +88,7 @@
         <x-admin.field label="Email Address" for="send_email" name="email">
           <input type="email" id="send_email" name="email" class="form-control" value="{{ old('email', $ticket->holder_email) }}" placeholder="recipient@example.com" required>
         </x-admin.field>
-        <div style="margin-top:14px"><button class="a-btn a-btn--primary" type="submit"><i class="fa fa-envelope"></i> Send Email</button></div>
+        <div class="a-tk-send"><button class="a-btn a-btn--primary" type="submit"><i class="fa fa-envelope"></i> Send Email</button></div>
       </form>
     </x-admin.card>
 
@@ -96,7 +99,7 @@
         <x-admin.field label="WhatsApp Number" for="send_phone" name="phone">
           <input type="tel" id="send_phone" name="phone" data-phone-intl class="form-control" value="{{ old('phone', $ticket->holder_phone) }}" placeholder="1003770730" required>
         </x-admin.field>
-        <div style="margin-top:14px"><button class="a-btn a-btn--success" type="submit"><i class="fa-brands fa-whatsapp"></i> Send WhatsApp</button></div>
+        <div class="a-tk-send"><button class="a-btn a-btn--success" type="submit"><i class="fa-brands fa-whatsapp"></i> Send WhatsApp</button></div>
       </form>
     </x-admin.card>
     @endif
@@ -104,7 +107,7 @@
 
   </div>
 
-  <div class="a-tk-side">
+  <div class="a-stack">
     <x-admin.card title="QR Code">
       <div class="a-tk-qr">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ urlencode($ticket->qr_payload ?: $ticket->ticket_number) }}" alt="QR Code for {{ $ticket->ticket_number }}">

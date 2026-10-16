@@ -18,7 +18,7 @@
         <div class="a-form-grid a-form-grid--3">
             <div class="a-field">
                 <label class="form-label" for="gcEvent">Event</label>
-                <select class="form-select" id="gcEvent" disabled>
+                <select class="form-select no-select2" id="gcEvent" disabled>
                     @foreach($eventNames as $eventName)
                         <option value="{{ $eventName }}" @selected($eventName === $selectedEventName)>{{ $eventName }}</option>
                     @endforeach
@@ -29,7 +29,7 @@
                 <input class="form-control" id="gcType" value="{{ $selectedGuestType }}" disabled>
             </div>
             <x-admin.field label="Status" for="gcStatus" name="status">
-                <select name="status" id="gcStatus" class="form-select">
+                <select name="status" id="gcStatus" class="form-select no-select2">
                     @foreach(['not_checked_in' => 'Not Checked In', 'checked_in' => 'Checked In', 'canceled' => 'Canceled'] as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
@@ -38,7 +38,7 @@
         </div>
     </x-admin.card>
 
-    <x-admin.card flush title="Guest List" subtitle="Name is required. Add one row per guest." style="margin-top:20px">
+    <x-admin.card flush title="Guest List" subtitle="Name is required. Add one row per guest.">
         <x-slot:actions><button type="button" id="addInvitationRow" class="a-btn a-btn--outline a-btn--sm"><i class="fa fa-plus"></i> Add Invitation</button></x-slot:actions>
         <x-admin.table stack id="rowsTable" class="a-tk-rows" caption="Guests to invite">
             <thead>
@@ -53,7 +53,7 @@
             <tbody></tbody>
         </x-admin.table>
         <x-slot:footer>
-            <div class="a-btn-group" style="justify-content:flex-end">
+            <div class="a-btn-group a-tk-foot">
                 <a href="{{ route('admin.guest-list.index') }}" class="a-btn a-btn--ghost">Cancel</a>
                 <button type="submit" class="a-btn a-btn--primary">Create Tickets</button>
             </div>
@@ -79,7 +79,7 @@
             <td data-label="Email"><input type="email" aria-label="Guest email" name="guests[${rowIndex}][email]" class="form-control" value="${email}"></td>
             <td data-label="Phone"><input type="tel" aria-label="Guest phone" name="guests[${rowIndex}][phone]" data-phone-intl class="form-control" value="${phone}"></td>
             <td data-label="Gender">
-                <select aria-label="Guest gender" name="guests[${rowIndex}][gender]" class="form-select">
+                <select aria-label="Guest gender" name="guests[${rowIndex}][gender]" class="form-select no-select2">
                     <option value="" ${normalizedGender === '' ? 'selected' : ''}>-</option>
                     <option value="male" ${normalizedGender === 'male' ? 'selected' : ''}>Male</option>
                     <option value="female" ${normalizedGender === 'female' ? 'selected' : ''}>Female</option>

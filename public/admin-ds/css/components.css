@@ -220,3 +220,9 @@
 .a-toast { padding: var(--a-s-3) var(--a-s-4); border-radius: var(--a-radius-sm); background: #111; color: #fff; font-size: var(--a-fs-base); box-shadow: var(--a-shadow-pop); transition: opacity .25s, transform .25s; }
 .a-toast--success { border-left: 4px solid var(--a-success); } .a-toast--error { border-left: 4px solid var(--a-danger); } .a-toast--info { border-left: 4px solid var(--a-yellow); }
 .a-toast.is-out { opacity: 0; transform: translateY(6px); }
+
+/* a cell whose content is several stacked lines (main + sub): keeps them one block in the stacked mobile layout */
+.a-cell { min-width: 0; }
+.a-cell > .a-table__main, .a-cell > .a-table__sub { max-width: 100%; }
+@media (max-width: 767px) { .a-table--stack tbody td > .a-cell { text-align: right; } .a-table--stack .a-trunc { max-width: 100%; } }
+.a-table .a-table__main.a-num, .a-table .a-table__main { text-align: left; }

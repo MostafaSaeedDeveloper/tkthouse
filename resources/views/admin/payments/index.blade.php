@@ -1,20 +1,20 @@
 @extends('admin.master')
 @section('title', 'Payments')
 
-@php $money = fn ($n) => number_format((float) $n, 2).' EGP'; @endphp
+@php $money = fn ($n) => number_format((float) $n, 2); @endphp
 
 @section('content')
-<x-admin.page-header title="Payments" subtitle="Every payment attempt with its gateway status. Read-only: refunds and settlements are handled by the payment provider.">
+<x-admin.page-header title="Payments" subtitle="Every payment attempt with its gateway status. Read-only: refunds and settlements are handled by the payment provider." :crumbs="['Dashboard' => route('admin.dashboard'), 'Payments']">
     @can('payment-methods.view')<a class="a-btn a-btn--outline" href="{{ route('admin.payment-methods.index') }}"><i class="fa fa-gear"></i> Payment methods</a>@endcan
 </x-admin.page-header>
 
 <x-admin.flash />
 
-<div class="a-grid a-grid--4" style="margin-bottom:20px">
-    <x-admin.kpi label="Collected (paid attempts)" :value="$money($stats['paid'])" icon="fa-circle-check" :hint="$stats['paid_count'].' paid attempts'" />
-    <x-admin.kpi label="Processing" :value="number_format($stats['processing'])" icon="fa-hourglass-half" hint="Waiting for the gateway" />
-    <x-admin.kpi label="Failed attempts" :value="number_format($stats['failed'])" icon="fa-circle-xmark" hint="Customers can retry" />
-    <x-admin.kpi label="Needs review" :value="number_format($stats['review'])" icon="fa-flag" :hint="$stats['refunded'].' refunded orders'" />
+<div class="a-grid a-grid--4">
+    <x-admin.kpi class="a-m-kpi--success" label="Paid" :value="$money($stats['paid']).' EGP'" icon="fa-circle-check" :hint="number_format($stats['paid_count']).' paid attempts'" />
+    <x-admin.kpi class="a-m-kpi--warning" label="Pending" :value="number_format($stats['processing'])" icon="fa-hourglass-half" :hint="$stats['review'] > 0 ? 'Waiting for the gateway · '.number_format($stats['review']).' need review' : 'Waiting for the gateway'" />
+    <x-admin.kpi class="a-m-kpi--danger" label="Failed" :value="number_format($stats['failed'])" icon="fa-circle-xmark" hint="Customers can retry" />
+    <x-admin.kpi class="a-m-kpi--info" label="Refunded" :value="number_format($stats['refunded'])" icon="fa-rotate-left" hint="Orders refunded (handled by the provider)" />
 </div>
 
 @if(! $liveGateways || $fakeAllowed)
@@ -26,30 +26,32 @@
 @endif
 
 <x-admin.filters :action="route('admin.payments.index')" :reset="route('admin.payments.index')">
-    <div class="a-field"><label class="form-label" for="pq">Search</label><input class="form-control" id="pq" name="q" value="{{ $search }}" placeholder="Order, reference or transaction id"></div>
-    <div class="a-field"><label class="form-label" for="pstatus">Status</label>
-        <select class="form-select no-select2" id="pstatus" name="status">@foreach($filters as $k => $label)<option value="{{ $k }}" @selected($filter === $k)>{{ $label }}</option>@endforeach</select></div>
-    <div class="a-field"><label class="form-label" for="pprov">Gateway</label>
-        <select class="form-select no-select2" id="pprov" name="provider"><option value="">All gateways</option>@foreach($providers as $p)<option value="{{ $p }}" @selected($provider === $p)>{{ ucfirst($p) }}</option>@endforeach</select></div>
+    <x-admin.search name="q" :value="$search" placeholder="Order, reference or transaction id" />
+    <x-admin.select label="Status" name="status" :options="$filters" :value="$filter" class="no-select2" />
+    <x-admin.select label="Gateway" name="provider" :options="$providers->mapWithKeys(fn ($p) => [$p => ucfirst($p)])->all()" :value="$provider" placeholder="All gateways" class="no-select2" />
 </x-admin.filters>
 
-<x-admin.card flush>
+<x-admin.card flush title="Payment attempts" :subtitle="$attempts->total().' total'">
     @if($attempts->isEmpty())
-        <x-admin.empty icon="fa-credit-card" title="No payment attempts found" text="Attempts appear here when customers start paying." />
+        <x-admin.empty icon="fa-credit-card" title="No payment attempts found" text="Attempts appear here when customers start paying. Try resetting the filters." />
     @else
         <x-admin.table stack caption="Payment attempts">
-            <thead><tr><th>Order</th><th>Customer</th><th>Gateway</th><th>Reference</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <thead><tr><th>Order</th><th>Customer</th><th>Gateway &amp; reference</th><th class="a-num">Amount</th><th>Status</th></tr></thead>
             <tbody>
             @foreach($attempts as $a)
-                @php $review = (bool) data_get($a->meta, 'needs_review'); @endphp
+                @php
+                    $review = (bool) data_get($a->meta, 'needs_review');
+                    $customerName = trim(($a->order->customer?->first_name ?? '').' '.($a->order->customer?->last_name ?? '')) ?: '—';
+                    $reference = $a->transaction_id ?: ($a->reference ?: '—');
+                @endphp
                 <tr>
-                    <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $a->order) }}">#{{ $a->order->order_number }}</a>@if($review)<x-admin.badge variant="warning">Needs review</x-admin.badge>@endif</td>
-                    <td data-label="Customer"><span class="a-table__main">{{ trim(($a->order->customer?->first_name ?? '').' '.($a->order->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub">{{ $a->order->customer?->email }}</span></td>
-                    <td data-label="Gateway">{{ ucfirst($a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
-                    <td data-label="Reference"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
-                    <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
-                    <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
-                    <td data-label="Date">{{ $a->created_at->format('d M Y, H:i') }}</td>
+                    <td data-label="Order"><a class="a-table__main a-num" href="{{ route('admin.orders.show', $a->order) }}">#{{ $a->order->order_number }}</a><span class="a-table__sub">{{ $a->created_at->format('d M Y, H:i') }}</span></td>
+                    <td data-label="Customer"><span class="a-table__main a-trunc">{{ $customerName }}</span><span class="a-table__sub a-trunc" title="{{ $a->order->customer?->email }}">{{ $a->order->customer?->email }}</span></td>
+                    <td data-label="Gateway &amp; reference"><span class="a-table__main">{{ ucfirst($a->provider) }} <span class="a-muted a-m-mono">{{ $a->method_code }}</span></span>
+                        <span class="a-table__sub a-trunc a-m-mono" title="{{ $reference }}">{{ $reference }}</span>
+                        @if($a->failure_reason)<span class="a-table__sub a-trunc" title="{{ $a->failure_reason }}">{{ $a->failure_reason }}</span>@endif</td>
+                    <td data-label="Amount" class="a-num"><b>{{ $money($a->amount) }}</b> <span class="a-muted">EGP</span></td>
+                    <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" />@if($review)<span class="a-table__sub"><x-admin.badge variant="warning">Needs review</x-admin.badge></span>@endif</td>
                 </tr>
             @endforeach
             </tbody>

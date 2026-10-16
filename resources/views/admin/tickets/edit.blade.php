@@ -22,45 +22,39 @@
   @method('PUT')
 
   <div class="a-grid a-grid--main-side">
-    <div class="a-tk-stack">
-      <x-admin.card title="Holder Information">
-        <div class="a-form-grid">
-          <x-admin.field label="Holder Name" for="holder_name" name="holder_name">
-            <input class="form-control" id="holder_name" type="text" name="holder_name" value="{{ old('holder_name', $ticket->holder_name) }}" placeholder="Full name…">
-          </x-admin.field>
-          <div class="a-form-grid a-form-grid--2">
-            <x-admin.field label="Email" for="holder_email" name="holder_email">
-              <input class="form-control" id="holder_email" type="email" name="holder_email" value="{{ old('holder_email', $ticket->holder_email) }}" placeholder="email@example.com">
-            </x-admin.field>
-            <x-admin.field label="Phone" for="holder_phone" name="holder_phone">
-              <input class="form-control" id="holder_phone" type="tel" name="holder_phone" data-phone-intl value="{{ old('holder_phone', $ticket->holder_phone) }}" placeholder="1003770730">
-            </x-admin.field>
-          </div>
-        </div>
-      </x-admin.card>
+    <x-admin.card>
+      <x-admin.form-section title="Holder information" description="Who the ticket is issued to." :cols="3">
+        <x-admin.field label="Holder Name" for="holder_name" name="holder_name">
+          <input class="form-control" id="holder_name" type="text" name="holder_name" value="{{ old('holder_name', $ticket->holder_name) }}" placeholder="Full name…">
+        </x-admin.field>
+        <x-admin.field label="Email" for="holder_email" name="holder_email">
+          <input class="form-control" id="holder_email" type="email" name="holder_email" value="{{ old('holder_email', $ticket->holder_email) }}" placeholder="email@example.com">
+        </x-admin.field>
+        <x-admin.field label="Phone" for="holder_phone" name="holder_phone">
+          <input class="form-control" id="holder_phone" type="tel" name="holder_phone" data-phone-intl value="{{ old('holder_phone', $ticket->holder_phone) }}" placeholder="1003770730">
+        </x-admin.field>
+      </x-admin.form-section>
 
-      <x-admin.card title="Ticket Settings">
-        <div class="a-form-grid a-form-grid--2">
-          <x-admin.field label="Status" for="ticket_status" name="status">
-            <select class="form-select" id="ticket_status" name="status">
-              @foreach($statusOptions as $val => $label)
-                <option value="{{ $val }}" {{ old('status', $ticket->status) === $val ? 'selected' : '' }}>{{ $label }}</option>
-              @endforeach
-            </select>
-          </x-admin.field>
-          <x-admin.field label="Ticket Number" for="ticket_number_ro" hint="Read-only">
-            <input class="form-control a-tk-readonly" id="ticket_number_ro" type="text" value="{{ $ticket->ticket_number ?? 'N/A' }}" readonly>
-          </x-admin.field>
-        </div>
+      <x-admin.form-section title="Ticket settings" :cols="2">
+        <x-admin.field label="Status" for="ticket_status" name="status">
+          <select class="form-select no-select2" id="ticket_status" name="status">
+            @foreach($statusOptions as $val => $label)
+              <option value="{{ $val }}" {{ old('status', $ticket->status) === $val ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
+          </select>
+        </x-admin.field>
+        <x-admin.field label="Ticket Number" for="ticket_number_ro" hint="Read-only">
+          <input class="form-control" id="ticket_number_ro" type="text" value="{{ $ticket->ticket_number ?? 'N/A' }}" readonly>
+        </x-admin.field>
+      </x-admin.form-section>
 
-        <div class="a-form-actions">
-          <a href="{{ route('admin.tickets.show', $ticket) }}" class="a-btn a-btn--ghost">Cancel</a>
-          <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-save"></i> Save Changes</button>
-        </div>
-      </x-admin.card>
-    </div>
+      <div class="a-form-actions">
+        <a href="{{ route('admin.tickets.show', $ticket) }}" class="a-btn a-btn--ghost">Cancel</a>
+        <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-save"></i> Save Changes</button>
+      </div>
+    </x-admin.card>
 
-    <div class="a-tk-side">
+    <div class="a-stack">
       <x-admin.card title="QR Code">
         <div class="a-tk-qr">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->qr_payload ?: $ticket->ticket_number) }}" alt="QR Code for {{ $ticket->ticket_number }}">

@@ -15,52 +15,46 @@
 <x-admin.flash />
 
 <x-admin.filters :action="route('admin.tickets.index')" :reset="route('admin.tickets.index')">
-    <div class="a-field"><label class="form-label" for="tkSearch">Search</label><input type="text" id="tkSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / holder"></div>
-    <div class="a-field"><label class="form-label" for="tkEvent">Event Name</label>
-        <select id="tkEvent" name="event_name" class="form-select js-select2">
-            <option value="">All events</option>
-            @foreach($eventNames as $eventName)
-                <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="tkStatus">Status</label>
-        <select id="tkStatus" name="status" class="form-select js-select2">
-            <option value="">All</option>
-            @foreach($statusOptions as $value => $label)
-                <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
-            @endforeach
-        </select></div>
+    <x-admin.search name="search" :value="request('search')" placeholder="Ticket # / holder" />
+    <x-admin.select label="Event" name="event_name" id="tkEvent" class="no-select2" placeholder="All events" :options="collect($eventNames)->mapWithKeys(fn ($n) => [$n => $n])->all()" :value="request('event_name')" />
+    <x-admin.select label="Status" name="status" id="tkStatus" class="no-select2" placeholder="All" :options="$statusOptions" :value="request('status')" />
 </x-admin.filters>
 
-<x-admin.card flush>
+<x-admin.card flush title="All Tickets" :subtitle="number_format($tickets->total()).' total'">
     @if($tickets->isEmpty())
         <x-admin.empty icon="fa-ticket" title="No tickets found" text="Try a different search or filter. Tickets appear here once orders are paid or invitations are created." />
     @else
         <x-admin.table stack caption="Tickets">
             <thead>
-                <tr><th>Ticket Number</th><th>Holder</th><th>Event</th><th>Order</th><th>Status</th><th class="a-num">Actions</th></tr>
+                <tr><th>Ticket</th><th>Holder</th><th>Event</th><th>Status</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr>
             </thead>
             <tbody>
             @foreach($tickets as $ticket)
                 <tr>
-                    <td data-label="Ticket Number"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number ?? '-' }}</a></td>
-                    <td data-label="Holder" class="a-wrap">{{ $ticket->holder_name ?: '-' }}</td>
-                    <td data-label="Event" class="a-wrap">{{ $ticket->eventLabel() ?: '-' }}</td>
-                    <td data-label="Order">{{ $ticket->order?->order_number ?? '-' }}</td>
+                    <td data-label="Ticket"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number ?? '-' }}</a>
+                        <span class="a-table__sub">Order {{ $ticket->order?->order_number ?? '-' }}</span></td>
+                    <td data-label="Holder"><span class="a-table__main a-trunc a-tk-cell" title="{{ $ticket->holder_name }}">{{ $ticket->holder_name ?: '-' }}</span>
+                        @if($ticket->holder_email)<span class="a-table__sub a-trunc a-tk-cell" title="{{ $ticket->holder_email }}">{{ $ticket->holder_email }}</span>@endif</td>
+                    <td data-label="Event"><span class="a-table__main a-trunc a-tk-cell" title="{{ $ticket->eventLabel() }}">{{ $ticket->eventLabel() ?: '-' }}</span>
+                        @if($ticket->ticketTypeLabel() && $ticket->ticketTypeLabel() !== $ticket->eventLabel())<span class="a-table__sub a-trunc a-tk-cell" title="{{ $ticket->ticketTypeLabel() }}">{{ $ticket->ticketTypeLabel() }}</span>@endif</td>
                     <td data-label="Status"><x-admin.status :status="$ticket->status" kind="ticket" /></td>
-                    <td data-label="Actions">
+                    <td data-label="">
                         <div class="a-table__actions">
-                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>
-                            @can('tickets.update')
-                                <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.edit', $ticket) }}" aria-label="Edit ticket {{ $ticket->ticket_number }}" title="Edit"><i class="fa fa-pen"></i></a>
-                            @endcan
-                            @can('tickets.delete')
-                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="a-btn a-btn--danger a-btn--sm" type="submit" aria-label="Delete ticket {{ $ticket->ticket_number }}" title="Delete"><i class="fa fa-trash"></i></button>
-                                </form>
-                            @endcan
+                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}">View</a>
+                            @canany(['tickets.update', 'tickets.delete'])
+                            <x-admin.dropdown label="" aria-label="More actions">
+                                @can('tickets.update')
+                                    <a class="a-menu__item" href="{{ route('admin.tickets.edit', $ticket) }}"><i class="fa fa-pen"></i> Edit</a>
+                                @endcan
+                                @can('tickets.delete')
+                                    <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
+                                    </form>
+                                @endcan
+                            </x-admin.dropdown>
+                            @endcanany
                         </div>
                     </td>
                 </tr>

@@ -9,7 +9,7 @@
 
 <x-admin.flash />
 
-<div class="a-grid a-grid--4" style="margin-bottom:20px">
+<div class="a-grid a-grid--4 a-cus-kpis">
     <x-admin.kpi label="Customer since" :value="$customer->created_at->format('M d, Y')" icon="fa-calendar" />
     <x-admin.kpi label="Total orders" :value="number_format($customer->orders->count())" icon="fa-receipt" />
     <x-admin.kpi label="Total spent" :value="number_format($customer->orders->sum('total_amount'), 2).' EGP'" icon="fa-wallet" />
@@ -21,17 +21,15 @@
         <x-admin.empty icon="fa-receipt" title="No orders for this customer" />
     @else
     <x-admin.table stack caption="Customer orders">
-        <thead><tr><th>Order</th><th class="a-num">Items</th><th class="a-num">Total</th><th>Date</th><th>Status</th><th class="a-num">Actions</th></tr></thead>
+        <thead><tr><th>Order</th><th class="a-num">Total</th><th>Status</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
         <tbody>
         @foreach($customer->orders as $order)
             <tr>
-                <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a></td>
-                <td data-label="Items" class="a-num">{{ $order->items_count }}</td>
-                <td data-label="Total" class="a-num">{{ number_format($order->total_amount, 2) }} EGP</td>
-                <td data-label="Date">{{ $order->created_at->format('M d, Y H:i') }}</td>
-                <td data-label="Status"><x-admin.status :status="$order->status" kind="order" /></td>
-                <td data-label="Actions"><div class="a-table__actions">
-                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" aria-label="View order"><i class="fa fa-eye"></i></a>
+                <td data-label="Order"><div class="a-cell"><a class="a-table__main a-num-tab" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a><span class="a-table__sub">{{ $order->created_at->format('d M Y, H:i') }} · {{ $order->items_count }} {{ Str::plural('ticket', $order->items_count) }}</span></div></td>
+                <td data-label="Total" class="a-num"><div class="a-cell"><b>{{ number_format($order->total_amount, 2) }}</b> <span class="a-muted">EGP</span></div></td>
+                <td data-label="Status"><div class="a-cell"><x-admin.status :status="$order->status" kind="order" /></div></td>
+                <td data-label=""><div class="a-table__actions">
+                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}">View</a>
                 </div></td>
             </tr>
         @endforeach

@@ -25,7 +25,7 @@
     <a href="{{ route('admin.orders.edit', $order) }}" class="a-btn a-btn--outline"><i class="fa fa-pen"></i> Edit</a>
   @endcan
   @can('update_status')
-    <button type="button" class="a-btn a-btn--outline" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
+    <button type="button" class="a-btn a-btn--outline" id="openStatusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal"><i class="fa fa-refresh"></i> Change Status</button>
   @endcan
   <a href="{{ route('admin.orders.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back</a>
 </x-admin.page-header>
@@ -36,7 +36,7 @@
   <div class="a-ord-col">
     <x-admin.card title="Order Summary">
       <x-slot:actions><x-admin.status :status="$order->status" kind="order" /></x-slot:actions>
-      <dl class="a-kv">
+      <dl class="a-kv a-kv--cols">
         <div><dt>Order #</dt><dd>{{ $displayOrderNumber }}</dd></div>
         <div><dt>Date</dt><dd>{{ $order->created_at?->format('d M Y, H:i') }}</dd></div>
         <div><dt>Payment Method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
@@ -48,7 +48,7 @@
         <div><dt>Discount</dt><dd>{{ $money($order->discount_amount) }}</dd></div>
       </dl>
       @if($order->status === 'pending_payment' && $paymentLink)
-        <div class="a-field" style="margin-top:16px">
+        <div class="a-field a-ord-gap">
           <label class="form-label" for="paymentLinkInput">Payment Link</label>
           <div class="a-ord-linkbox">
             <input type="text" readonly value="{{ $paymentLink }}" class="form-control" id="paymentLinkInput" onclick="this.select();">
@@ -61,7 +61,7 @@
     <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
       <div class="a-ord-who">
         <div class="a-ord-avatar" aria-hidden="true">{{ $customerInitials ?: 'NA' }}</div>
-        <div style="min-width:0">
+        <div class="a-ord-who__text">
           <div class="a-table__main">
             @if($order->customer)<a href="{{ route('admin.customers.show', $order->customer) }}">{{ $customerName }}</a>@else{{ $customerName }}@endif
           </div>
@@ -77,17 +77,15 @@
           $ticketName = trim((string) $item->ticket_name);
           $eventName = str_contains($ticketName, ' - ') ? trim((string) str($ticketName)->before(' - ')) : $ticketName;
           $ticketType = trim((string) \Illuminate\Support\Str::afterLast($ticketName, ' - '));
-          $normalizedType = \Illuminate\Support\Str::lower($ticketType);
-          $ticketTypeColor = ['early bird' => '#6c757d', 'regular' => '#0d6efd', 'phase 1' => '#0d6efd', 'phase 2' => '#6f42c1', 'vip' => '#b58900'][$normalizedType] ?? '#6c757d';
           $socialProfileRaw = trim((string) $item->holder_social_profile);
           $socialProfileLink = $socialProfileRaw !== ''
             ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
             : null;
         @endphp
         <div class="a-ord-item">
-          <div style="min-width:0">
+          <div class="a-ord-item__main">
             <div class="a-ord-item__name">{{ $eventName }}
-              @if($ticketType !== '' && $ticketType !== $eventName)<span class="a-ord-tag" style="background-color: {{ $ticketTypeColor }}">{{ $ticketType }}</span>@endif
+              @if($ticketType !== '' && $ticketType !== $eventName)<x-admin.badge class="a-ord-type">{{ $ticketType }}</x-admin.badge>@endif
             </div>
             <div class="a-ord-item__meta"><strong>{{ $item->holder_name }}</strong><br>{{ $item->holder_email }} — {{ $item->holder_phone ?: '-' }} — {{ ucwords(str_replace('_', ' ', (string) ($item->holder_gender ?: '-'))) }}</div>
             @if($socialProfileLink)
@@ -104,7 +102,7 @@
                 @endforeach
               </div>
             @else
-              <div class="a-ord-item__meta" style="margin-top:8px">No generated ticket numbers yet.</div>
+              <div class="a-ord-item__meta a-ord-gap-sm">No generated ticket numbers yet.</div>
             @endif
           </div>
           <div class="a-ord-item__price">{{ $money($item->line_total) }}<small>Qty × {{ $item->quantity }}</small></div>
@@ -132,7 +130,7 @@
           @foreach($attempts as $a)
             <tr>
               <td data-label="Gateway">{{ ucfirst((string) $a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
-              <td data-label="Reference" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
+              <td data-label="Reference" class="a-wrap"><span class="a-table__sub a-ord-ref">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
               <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
               <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
               <td data-label="Date">{{ $a->created_at?->format('d M Y, H:i') }}</td>
@@ -155,15 +153,15 @@
         <p class="a-muted">No notes yet.</p>
       @endforelse
 
-      <form class="a-ord-note" method="POST" action="{{ route('admin.orders.notes.store', $order) }}" data-a-loading style="margin-top:16px">
+      <form class="a-ord-note a-ord-gap" method="POST" action="{{ route('admin.orders.notes.store', $order) }}" data-a-loading>
         @csrf
         <label class="form-label" for="orderNoteBody">Add a note</label>
         <textarea id="orderNoteBody" class="form-control" name="body" placeholder="Add an internal note about this order…">{{ old('body') }}</textarea>
-        <div class="form-check" style="margin-top:10px">
+        <div class="form-check a-ord-gap-sm">
           <input class="form-check-input" id="orderNoteSend" type="checkbox" name="send_to_customer" value="1" {{ old('send_to_customer') ? 'checked' : '' }}>
           <label class="form-check-label" for="orderNoteSend">Sent to customer by email</label>
         </div>
-        <button type="submit" class="a-btn a-btn--dark" style="margin-top:12px"><i class="fa fa-paper-plane"></i> Add Note</button>
+        <button type="submit" class="a-btn a-btn--dark a-ord-gap-sm"><i class="fa fa-paper-plane"></i> Add Note</button>
       </form>
     </x-admin.card>
   </div>
@@ -204,25 +202,21 @@
 </div>
 
 @can('update_status')
-  <div class="a-ord-modal" id="statusModal" aria-hidden="true">
-    <div class="a-ord-modal__box" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
-      <h2 id="statusModalTitle">Update Order Status</h2>
-      <form method="POST" action="{{ route('admin.orders.status.update', $order) }}">
-        @csrf
-        <label class="form-label" for="statusModalSelect">Status</label>
-        <select id="statusModalSelect" class="form-select no-select2" name="status">
-          @foreach($statusOptions as $value => $label)
-            <option value="{{ $value }}" {{ $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
-          @endforeach
-        </select>
-        <div class="a-btn-group" style="justify-content:flex-end;margin-top:16px">
-          <button type="button" class="a-btn a-btn--outline" id="cancelStatusModalBtn">Cancel</button>
-          <button type="submit" class="a-btn a-btn--primary">Save Status</button>
-        </div>
-        <button type="button" id="closeStatusModalBtn" class="a-sr-only">Close</button>
-      </form>
-    </div>
-  </div>
+  <x-admin.modal id="statusModal" title="Update Order Status">
+    <form method="POST" action="{{ route('admin.orders.status.update', $order) }}" id="statusForm" data-a-loading>
+      @csrf
+      <label class="form-label" for="statusModalSelect">Status</label>
+      <select id="statusModalSelect" class="form-select no-select2" name="status">
+        @foreach($statusOptions as $value => $label)
+          <option value="{{ $value }}" {{ $order->status === $value ? 'selected' : '' }}>{{ $label }}</option>
+        @endforeach
+      </select>
+    </form>
+    <x-slot:footer>
+      <button type="button" class="a-btn a-btn--outline" data-bs-dismiss="modal">Cancel</button>
+      <button type="submit" form="statusForm" class="a-btn a-btn--primary">Save Status</button>
+    </x-slot:footer>
+  </x-admin.modal>
 @endcan
 
 <script>
@@ -242,39 +236,6 @@
       }, 1300);
     });
   }
-
-  const statusModal = document.getElementById('statusModal');
-  const openStatusModalBtn = document.getElementById('openStatusModalBtn');
-  const closeStatusModalBtn = document.getElementById('closeStatusModalBtn');
-  const cancelStatusModalBtn = document.getElementById('cancelStatusModalBtn');
-
-  if (!statusModal || !openStatusModalBtn) {
-    return;
-  }
-
-  const closeModal = () => {
-    statusModal.classList.remove('show');
-    statusModal.setAttribute('aria-hidden', 'true');
-  };
-
-  openStatusModalBtn.addEventListener('click', () => {
-    statusModal.classList.add('show');
-    statusModal.setAttribute('aria-hidden', 'false');
-  });
-
-  [closeStatusModalBtn, cancelStatusModalBtn].forEach((btn) => {
-    if (!btn) {
-      return;
-    }
-
-    btn.addEventListener('click', closeModal);
-  });
-
-  statusModal.addEventListener('click', (event) => {
-    if (event.target === statusModal) {
-      closeModal();
-    }
-  });
 })();
 </script>
 @endsection

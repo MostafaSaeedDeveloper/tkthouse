@@ -60,20 +60,20 @@
                 $secondsLeft = $order->paymentSecondsRemaining();
             @endphp
             <tr>
-                <td data-label="Order"><a class="a-table__main" style="font-variant-numeric:tabular-nums" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a>
-                    <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></td>
-                <td data-label="Customer"><span class="a-table__main a-trunc" style="max-width:220px">{{ $order->customer?->full_name }}</span><span class="a-table__sub a-trunc" style="max-width:220px" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
-                <td data-label="Event &amp; tickets">
-                    <span class="a-table__main a-trunc" style="max-width:260px" title="{{ $eventNames->implode(', ') }}">{{ $eventNames->first() ?? '—' }}@if($eventNames->count() > 1) <span class="a-muted">+{{ $eventNames->count() - 1 }}</span>@endif</span>
+                <td data-label="Order"><div class="a-cell"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a>
+                    <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></div></td>
+                <td data-label="Customer"><div class="a-cell"><span class="a-table__main a-trunc">{{ $order->customer?->full_name }}</span><span class="a-table__sub a-trunc" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></div></td>
+                <td data-label="Event &amp; tickets"><div class="a-cell">
+                    <span class="a-table__main a-trunc" title="{{ $eventNames->implode(', ') }}">{{ $eventNames->first() ?? '—' }}@if($eventNames->count() > 1) <span class="a-muted">+{{ $eventNames->count() - 1 }}</span>@endif</span>
                     <span class="a-table__sub"><x-admin.more :items="$ticketTypes" /> · {{ $order->items_count }} {{ \Illuminate\Support\Str::plural('ticket', $order->items_count) }}</span>
-                </td>
+                </div></td>
                 <td data-label="Total" class="a-num"><b>{{ number_format($order->total_amount, 2) }}</b> <span class="a-muted">EGP</span></td>
-                <td data-label="Status"><x-admin.status :status="$order->status" kind="order" />
+                <td data-label="Status"><div class="a-cell"><x-admin.status :status="$order->status" kind="order" />
                     @if($order->payment_method)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</span>@endif
                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
                         <span class="a-table__sub">Expires in <span class="a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? '…' : 'Expired' }}</span></span>
                     @endif
-                </td>
+                </div></td>
                 <td data-label=""><div class="a-table__actions">
                     <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}">View</a>
                     @canany(['orders.update', 'orders.delete'])

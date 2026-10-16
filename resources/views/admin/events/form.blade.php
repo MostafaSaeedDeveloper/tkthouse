@@ -63,9 +63,9 @@
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section class="a-ev-block" title="Availability &amp; checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
+<x-admin.form-section title="Availability &amp; checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
     <x-admin.field label="Status" for="event_status" name="status">
-        <select name="status" id="event_status" class="form-select">
+        <select name="status" id="event_status" class="form-select no-select2">
             <option value="active" @selected(old('status', $event->status ?? 'active') === 'active')>Active</option>
             <option value="inactive" @selected(old('status', $event->status ?? '') === 'inactive')>Inactive</option>
             <option value="draft" @selected(old('status', $event->status ?? '') === 'draft')>Draft</option>
@@ -73,14 +73,14 @@
         </select>
     </x-admin.field>
     <x-admin.field label="Checkout Flow" for="event_checkout_flow" name="requires_booking_approval">
-        <select name="requires_booking_approval" id="event_checkout_flow" class="form-select">
+        <select name="requires_booking_approval" id="event_checkout_flow" class="form-select no-select2">
             <option value="1" @selected((int) old('requires_booking_approval', $event->requires_booking_approval ?? 1) === 1)>Require admin approval before payment</option>
             <option value="0" @selected((int) old('requires_booking_approval', $event->requires_booking_approval ?? 1) === 0)>Allow direct payment at checkout</option>
         </select>
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section class="a-ev-block" title="Media" description="Cover, home page banner, venue map and gallery images." :cols="1">
+<x-admin.form-section title="Media" description="Cover, home page banner, venue map and gallery images." :cols="1">
     <div class="a-ev-media">
         <x-admin.field label="Event Image (Optional)" for="cover_image" name="cover_image" hint="Upload an image to be shown as the event cover.">
             <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
@@ -135,7 +135,7 @@
     @endif
 </x-admin.form-section>
 
-<x-admin.form-section class="a-ev-block" title="Content" description="Shown to attendees on the event page." :cols="1">
+<x-admin.form-section title="Content" description="Shown to attendees on the event page." :cols="1">
     <x-admin.field label="Description (Optional)" for="event_description" name="description" hint="You can leave this empty if you don't need a description.">
         <textarea name="description" id="event_description" class="form-control js-ckeditor-description" rows="3" placeholder="Add event details for attendees...">{{ old('description', $event->description ?? '') }}</textarea>
     </x-admin.field>
@@ -145,11 +145,11 @@
 </x-admin.form-section>
 
 {{-- Ticket types: fully dynamic, add as many as needed --}}
-<div class="a-ev-block">
-    <div class="a-ev-section-head">
+<section class="a-form-section">
+    <div class="a-form-section__head a-ev-head">
         <div>
-            <h3>Ticket Types</h3>
-            <p class="a-ev-block__desc">Add as many ticket types as you need, each with its own price, availability and limits.</p>
+            <h3 class="a-form-section__title">Ticket Types</h3>
+            <p class="a-form-section__desc">Add as many ticket types as you need, each with its own price, availability and limits.</p>
         </div>
         <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-ticket-row"><i class="fa fa-plus"></i> Add Ticket Type</button>
     </div>
@@ -158,8 +158,8 @@
             <div class="a-ev-row a-ev-row--ticket ticket-row">
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-name">Ticket Name</label><input class="form-control" id="tickets-{{ $index }}-name" name="tickets[{{ $index }}][name]" value="{{ $ticket['name'] ?? '' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-price">Price</label><input type="number" step="0.01" class="form-control" id="tickets-{{ $index }}-price" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
-                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-status">Status</label><select class="form-select" id="tickets-{{ $index }}-status" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
-                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control form-control-color w-100" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-status">Status</label><select class="form-select no-select2" id="tickets-{{ $index }}-status" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max/Order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-label">Label</label><input class="form-control" id="tickets-{{ $index }}-label" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
                 <div class="a-field a-ev-span-3"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
@@ -175,13 +175,13 @@
             </div>
         @endforeach
     </div>
-</div>
+</section>
 
-<div class="a-ev-block">
-    <div class="a-ev-section-head">
+<section class="a-form-section">
+    <div class="a-form-section__head a-ev-head">
         <div>
-            <h3>Event Fees</h3>
-            <p class="a-ev-block__desc">Optional service fees added at checkout, as a percentage or a fixed amount.</p>
+            <h3 class="a-form-section__title">Event Fees</h3>
+            <p class="a-form-section__desc">Optional service fees added at checkout, as a percentage or a fixed amount.</p>
         </div>
         <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-fee-row"><i class="fa fa-plus"></i> Add Fee</button>
     </div>
@@ -189,20 +189,20 @@
         @foreach($feeRows as $index => $fee)
             <div class="a-ev-row a-ev-row--fee fee-row">
                 <div class="a-field"><label class="form-label" for="fees-{{ $index }}-name">Fee Name</label><input class="form-control" id="fees-{{ $index }}-name" name="fees[{{ $index }}][name]" value="{{ $fee['name'] ?? '' }}"></div>
-                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-type">Fee Type</label><select class="form-select" id="fees-{{ $index }}-type" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-type">Fee Type</label><select class="form-select no-select2" id="fees-{{ $index }}-type" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
                 <div class="a-field"><label class="form-label" for="fees-{{ $index }}-value">Value</label><input type="number" step="0.01" class="form-control" id="fees-{{ $index }}-value" name="fees[{{ $index }}][value]" value="{{ $fee['value'] ?? '' }}"></div>
                 <div class="a-field"><label class="form-label" for="fees-{{ $index }}-description">Description</label><input class="form-control" id="fees-{{ $index }}-description" name="fees[{{ $index }}][description]" value="{{ $fee['description'] ?? '' }}"></div>
                 <div class="a-ev-row__tools"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove fee"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
         @endforeach
     </div>
-</div>
+</section>
 
-<div class="a-ev-block">
-    <div class="a-ev-section-head">
+<section class="a-form-section">
+    <div class="a-form-section__head a-ev-head">
         <div>
-            <h3>Lineup Artists</h3>
-            <p class="a-ev-block__desc">Performers shown on the event page, ordered by the Order field.</p>
+            <h3 class="a-form-section__title">Lineup Artists</h3>
+            <p class="a-form-section__desc">Performers shown on the event page, ordered by the Order field.</p>
         </div>
         <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-lineup-row"><i class="fa fa-plus"></i> Add Artist</button>
     </div>
@@ -248,7 +248,7 @@
             </div>
         @endforeach
     </div>
-</div>
+</section>
 
 <template id="lineup-row-template">
     <div class="a-ev-row a-ev-row--lineup lineup-row">
@@ -290,8 +290,8 @@
     <div class="a-ev-row a-ev-row--ticket ticket-row">
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-name">Ticket Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
         <div class="a-field"><label class="form-label" for="__ID__-price">Price</label><input type="number" step="0.01" class="form-control" id="__ID__-price" name="__NAME__[price]"></div>
-        <div class="a-field"><label class="form-label" for="__ID__-status">Status</label><select class="form-select" id="__ID__-status" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
-        <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control form-control-color w-100" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-status">Status</label><select class="form-select no-select2" id="__ID__-status" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
+        <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
         <div class="a-field"><label class="form-label" for="__ID__-max">Max/Order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-label">Label</label><input class="form-control" id="__ID__-label" name="__NAME__[label]"></div>
         <div class="a-field a-ev-span-3"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
@@ -310,7 +310,7 @@
 <template id="fee-row-template">
     <div class="a-ev-row a-ev-row--fee fee-row">
         <div class="a-field"><label class="form-label" for="__ID__-name">Fee Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
-        <div class="a-field"><label class="form-label" for="__ID__-type">Fee Type</label><select class="form-select" id="__ID__-type" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
+        <div class="a-field"><label class="form-label" for="__ID__-type">Fee Type</label><select class="form-select no-select2" id="__ID__-type" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
         <div class="a-field"><label class="form-label" for="__ID__-value">Value</label><input type="number" step="0.01" class="form-control" id="__ID__-value" name="__NAME__[value]"></div>
         <div class="a-field"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
         <div class="a-ev-row__tools"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove fee"><i class="fa fa-trash"></i> Remove</button></div>

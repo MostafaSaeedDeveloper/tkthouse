@@ -12,16 +12,9 @@
 <x-admin.flash />
 
 <x-admin.filters :action="route('admin.customers.index')" :reset="route('admin.customers.index')">
-    <div class="a-field"><label class="form-label" for="cSearch">Search</label>
-        <input type="text" id="cSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Name / phone"></div>
+    <x-admin.search name="search" :value="request('search')" placeholder="Name / phone" />
     @if($canFilterByEvent ?? false)
-    <div class="a-field"><label class="form-label" for="cEvent">Event</label>
-        <select name="event_id" id="cEvent" class="form-select no-select2">
-            <option value="">All Events</option>
-            @foreach($events as $event)
-                <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
-            @endforeach
-        </select></div>
+        <x-admin.select label="Event" name="event_id" id="cEvent" class="no-select2" placeholder="All Events" :value="request('event_id')" :options="$events->mapWithKeys(fn ($e) => [$e->id => $e->name])->all()" />
     @endif
 </x-admin.filters>
 
@@ -30,16 +23,15 @@
         <x-admin.empty icon="fa-users" title="No customers found" text="Customers appear here after their first order." />
     @else
     <x-admin.table stack caption="Customers">
-        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th class="a-num">Orders</th><th class="a-num">Actions</th></tr></thead>
+        <thead><tr><th>Customer</th><th>Phone</th><th class="a-num">Orders</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
         <tbody>
         @foreach($customers as $customer)
             <tr>
-                <td data-label="Name"><a class="a-table__main" href="{{ route('admin.customers.show', $customer) }}">{{ $customer->full_name }}</a></td>
-                <td data-label="Email" class="a-wrap">{{ $customer->email }}</td>
-                <td data-label="Phone">{{ $customer->phone }}</td>
-                <td data-label="Orders" class="a-num">{{ $customer->orders_count }}</td>
-                <td data-label="Actions"><div class="a-table__actions">
-                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.customers.show', $customer) }}" aria-label="View customer"><i class="fa fa-eye"></i></a>
+                <td data-label="Customer"><div class="a-cell"><a class="a-table__main a-trunc" href="{{ route('admin.customers.show', $customer) }}" title="{{ $customer->full_name }}">{{ $customer->full_name }}</a><span class="a-table__sub a-trunc" title="{{ $customer->email }}">{{ $customer->email }}</span></div></td>
+                <td data-label="Phone"><div class="a-cell">{{ $customer->phone ?: '—' }}</div></td>
+                <td data-label="Orders" class="a-num"><div class="a-cell">{{ $customer->orders_count }}</div></td>
+                <td data-label=""><div class="a-table__actions">
+                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.customers.show', $customer) }}">View</a>
                 </div></td>
             </tr>
         @endforeach
