@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Support\PaymentEnvironment;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -18,6 +19,8 @@ class PaymobService
     /** @return array{url: string, reference: string, paymob_order_id: int} */
     public function createCheckout(Order $order): array
     {
+        PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
+
         $paymobMethod = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
             ->where('provider', 'paymob')
@@ -57,6 +60,8 @@ class PaymobService
      */
     public function inquireTransaction(PaymentMethod $method, string $transactionId): array
     {
+        PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
+
         $config = $method->config ?? [];
         $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
 
@@ -72,6 +77,25 @@ class PaymobService
             ->get('/acceptance/transactions/'.rawurlencode($transactionId))
             ->throw()
             ->json();
+    }
+
+    /**
+     * HMAC check for the browser return (GET): same fields as the processed callback, but flattened query keys
+     * (`order`, `source_data.pan`; PHP turns the dots into underscores).
+     */
+    public static function hmacIsValidFlat(array $query, string $receivedHmac, string $secret): bool
+    {
+        $get = fn (string $key) => $query[$key] ?? $query[str_replace('.', '_', $key)] ?? '';
+
+        $obj = [];
+        foreach (['amount_cents', 'created_at', 'currency', 'error_occured', 'has_parent_transaction', 'id', 'integration_id', 'is_3d_secure',
+            'is_auth', 'is_capture', 'is_refunded', 'is_standalone_payment', 'is_voided', 'owner', 'pending', 'success'] as $key) {
+            $obj[$key] = $get($key);
+        }
+        $obj['order'] = ['id' => $get('order')];
+        $obj['source_data'] = ['pan' => $get('source_data.pan'), 'sub_type' => $get('source_data.sub_type'), 'type' => $get('source_data.type')];
+
+        return self::hmacIsValid($obj, $receivedHmac, $secret);
     }
 
     /** HMAC-SHA512 check of a "transaction processed" callback (https://developers.paymob.com). */

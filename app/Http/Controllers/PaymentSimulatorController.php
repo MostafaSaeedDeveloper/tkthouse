@@ -11,7 +11,7 @@ class PaymentSimulatorController extends Controller
 {
     private function authorizeAttempt(Request $request, PaymentAttempt $attempt): void
     {
-        abort_unless(config('payments.fake.enabled'), 404);
+        abort_unless(\App\Support\PaymentEnvironment::fakeGatewayAllowed(), 404);
         abort_unless($attempt->provider === 'fake', 404);
         abort_unless($request->user() && (int) $attempt->order->user_id === (int) $request->user()->id, 403);
     }

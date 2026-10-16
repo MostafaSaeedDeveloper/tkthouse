@@ -7,6 +7,7 @@ use App\Services\PaymobService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PaymentService;
 use App\Services\PendingPaymentExpiryService;
+use App\Support\PaymentEnvironment;
 use App\Support\SystemSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -87,14 +88,35 @@ class PaymentController extends Controller
         $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
         $isGet = $request->isMethod('get');
 
-        // Signed server-to-server callback: reject forged bodies early when the HMAC secret is configured.
         $secret = (string) (config('payments.paymob.hmac_secret') ?: '');
-        if (! $isGet && $secret !== '' && is_array(data_get($payload, 'obj'))
-            && ! PaymobService::hmacIsValid($payload['obj'], (string) $request->query('hmac', ''), $secret)) {
+        $hmac = (string) ($request->query('hmac') ?: data_get($payload, 'hmac', ''));
+        $signatureRequired = PaymentEnvironment::paymobSignatureRequired();
+
+        if ($signatureRequired && $secret === '') {
+            // Fail closed: in production an unconfigured secret means NOTHING is accepted (and ops must hear about it).
+            Log::critical('Paymob callback rejected: PAYMOB_HMAC_SECRET is not configured but signatures are mandatory.');
+
+            return $isGet
+                ? redirect()->route('front.account.orders')->with('error', 'Payment confirmation is temporarily unavailable. If you were charged, contact support.')
+                : response()->json(['received' => false, 'updated' => false], 503);
+        }
+
+        $signed = $secret !== '' && (
+            $isGet
+                ? PaymobService::hmacIsValidFlat($request->query(), $hmac, $secret)
+                : (is_array(data_get($payload, 'obj')) && PaymobService::hmacIsValid($payload['obj'], $hmac, $secret))
+        );
+
+        // Server-to-server webhook: a missing/invalid signature is refused outright whenever a secret exists.
+        if (! $isGet && $secret !== '' && ! $signed) {
             Log::warning('Paymob callback rejected: invalid HMAC.', ['merchant_order_id' => $merchantOrderId]);
 
             return response()->json(['received' => false, 'updated' => false], 403);
         }
+
+        // Browser return: the id in the URL is only used as a lookup key when the URL is signed (or signatures are
+        // optional in this environment). Settlement itself always goes through the server-to-server inquiry.
+        $hintAllowed = $signed || ($secret === '' && ! $signatureRequired);
 
         $order = $merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null;
 
@@ -106,7 +128,7 @@ class PaymentController extends Controller
                 : response()->json(['received' => true, 'updated' => false]);
         }
 
-        $outcome = $payments->refresh($order, $transactionId !== '' ? $transactionId : null, 'paymob');
+        $outcome = $payments->refresh($order, $hintAllowed && $transactionId !== '' ? $transactionId : null, 'paymob');
         Log::info('Paymob callback processed.', ['order_id' => $order->id, 'outcome' => $outcome]);
 
         if ($isGet) {

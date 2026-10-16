@@ -2,10 +2,13 @@
 
 namespace App\Services\Payments;
 
+use App\Models\Event;
+use App\Models\EventTicket;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentMethod;
 use App\Services\TicketIssuanceService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
@@ -27,6 +30,7 @@ class PaymentService
     public const OUTCOME_PENDING = 'pending';
     public const OUTCOME_MISMATCH = 'mismatch';
     public const OUTCOME_CLOSED_ORDER = 'closed_order';
+    public const OUTCOME_REVIEW_REQUIRED = 'review_required';
 
     public function __construct(
         private readonly PaymentGatewayManager $gateways,
@@ -68,6 +72,11 @@ class PaymentService
         }
 
         $gateway = $this->gateways->for((string) $method->provider);
+
+        // Defence in depth: never open a payment through a method this environment must not use.
+        if (! $gateway->isConfigured($method)) {
+            throw new \RuntimeException("Payment method [{$method->code}] is not available in this environment.");
+        }
 
         $attempt = PaymentAttempt::create([
             'order_id' => $order->id,
@@ -157,22 +166,39 @@ class PaymentService
     public function settle(PaymentAttempt $attempt, GatewayResult $result): string
     {
         if (in_array($result->status, [GatewayResult::PENDING, GatewayResult::UNKNOWN], true)) {
-            if ($result->transactionId && ! $attempt->transaction_id) {
-                $attempt->update(['transaction_id' => $result->transactionId]);
-            }
-
             return self::OUTCOME_PENDING;
         }
 
         $issueFor = null;
 
-        $outcome = DB::transaction(function () use ($attempt, $result, &$issueFor) {
+        try {
+            $outcome = $this->settleInTransaction($attempt, $result, $issueFor);
+        } catch (\App\Services\Payments\TransactionReused) {
+            $attempt->refresh()->update(['status' => PaymentAttempt::FAILED, 'failure_reason' => 'transaction_reused']);
+            Log::critical('Gateway transaction already bound to another payment attempt.', ['attempt_id' => $attempt->id, 'transaction_id' => $result->transactionId]);
+
+            return self::OUTCOME_MISMATCH;
+        }
+
+        if ($issueFor) {
+            // After commit, so a slow mail server never holds row locks. A failure here must not hide the successful
+            // payment: it is logged and retried by `orders:retry-ticket-issuance`.
+            $this->issueSafely($issueFor->fresh());
+        }
+
+        return $outcome;
+    }
+
+    private function settleInTransaction(PaymentAttempt $attempt, GatewayResult $result, ?Order &$issueFor): string
+    {
+        return DB::transaction(function () use ($attempt, $result, &$issueFor) {
             /** @var PaymentAttempt $locked */
             $locked = PaymentAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             /** @var Order $order */
             $order = Order::withTrashed()->lockForUpdate()->findOrFail($locked->order_id);
 
             if ($locked->status === PaymentAttempt::PAID) {
+                $issueFor = $order->status === 'paid' ? $order : null; // lets a duplicate callback repair a failed issuance
                 return self::OUTCOME_ALREADY_PAID;
             }
 
@@ -181,7 +207,6 @@ class PaymentService
                     $locked->update([
                         'status' => PaymentAttempt::FAILED,
                         'failure_reason' => mb_substr((string) ($result->message ?: 'Payment was not completed.'), 0, 250),
-                        'transaction_id' => $locked->transaction_id ?: $result->transactionId,
                     ]);
                     $this->log($order, 'Payment failed', $locked, ['payment_status' => 'failed']);
                 }
@@ -189,39 +214,66 @@ class PaymentService
                 return self::OUTCOME_FAILED;
             }
 
-            // Verified as paid by the gateway. The amount must match what the server priced.
-            if ($result->amount !== null && abs($result->amount - (float) $order->total_amount) > 0.009) {
-                $locked->update(['status' => PaymentAttempt::FAILED, 'failure_reason' => 'amount_mismatch']);
-                $this->log($order, 'Payment amount mismatch', $locked, [
-                    'payment_status' => 'mismatch', 'expected' => (float) $order->total_amount, 'received' => $result->amount,
+            // ---- The gateway says "paid": every fact must match what the server created. Anything unknown is rejected. ----
+            if ($reason = $this->mismatch($locked, $order, $result)) {
+                $locked->update(['status' => PaymentAttempt::FAILED, 'failure_reason' => $reason]);
+                $this->log($order, 'Payment rejected: '.$reason, $locked, [
+                    'payment_status' => 'mismatch', 'reason' => $reason,
+                    'expected_amount' => (float) $locked->amount, 'received_amount' => $result->amount,
+                    'expected_currency' => $locked->currency, 'received_currency' => $result->currency,
+                    'received_transaction_id' => $result->transactionId,
                 ]);
 
                 return self::OUTCOME_MISMATCH;
             }
 
-            $locked->update([
-                'status' => PaymentAttempt::PAID,
-                'settled_at' => now(),
-                'transaction_id' => $locked->transaction_id ?: $result->transactionId,
-            ]);
+            // Bind the paying transaction to this attempt (a retry inside the same gateway session pays under a new id).
+            try {
+                $meta = $locked->meta ?? [];
+                if ($locked->transaction_id && $locked->transaction_id !== $result->transactionId) {
+                    $meta['previous_transaction_ids'] = array_values(array_unique(array_merge($meta['previous_transaction_ids'] ?? [], [$locked->transaction_id])));
+                }
+                $locked->update([
+                    'status' => PaymentAttempt::PAID,
+                    'settled_at' => now(),
+                    'transaction_id' => $result->transactionId,
+                    'meta' => $meta,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // Lost a race: the same transaction id was just bound to another attempt.
+                throw new \App\Services\Payments\TransactionReused();
+            }
 
             if ($order->status === 'paid') {
                 // A second, different payment for an order that is already paid: keep the record for a refund.
+                $this->flagForReview($locked, 'duplicate_payment');
                 $this->log($order, 'Duplicate payment received', $locked, ['payment_status' => 'duplicate']);
 
                 return self::OUTCOME_ALREADY_PAID;
             }
 
-            if ($order->status === 'pending_payment' || $this->wasExpired($order)) {
-                $wasExpired = $order->status !== 'pending_payment';
-                $from = $order->status;
+            $expiredCancel = $this->wasExpired($order);
 
+            if ($order->status === 'pending_payment' || $expiredCancel) {
+                // Policy: an order that is still pending is honoured unless its event has already ended. A *reinstated*
+                // (auto-expired) order must be fully bookable again: event on sale, not ended, every ticket still active.
+                if ($blocker = $this->fulfillmentBlocker($order, strict: $expiredCancel)) {
+                    $this->flagForReview($locked, $blocker);
+                    $this->log($order, 'Payment received but the order can no longer be fulfilled — refund review required', $locked, [
+                        'payment_status' => 'review_required', 'reason' => $blocker, 'order_status' => $order->status,
+                    ]);
+                    Log::critical('Paid order cannot be fulfilled: refund review required.', ['order_id' => $order->id, 'attempt_id' => $locked->id, 'reason' => $blocker]);
+
+                    return self::OUTCOME_REVIEW_REQUIRED;
+                }
+
+                $from = $order->status;
                 $order->forceFill(['status' => 'paid', 'paid_at' => now()])->saveQuietly();
                 if ($order->trashed()) {
                     $order->restore();
                 }
 
-                $this->log($order, $wasExpired ? 'Payment received after the deadline; order reinstated' : 'Payment completed successfully', $locked, [
+                $this->log($order, $expiredCancel ? 'Payment received after the deadline; order reinstated' : 'Payment completed successfully', $locked, [
                     'payment_status' => 'paid', 'from_status' => $from, 'to_status' => 'paid',
                 ]);
 
@@ -230,18 +282,116 @@ class PaymentService
                 return self::OUTCOME_PAID;
             }
 
-            // Canceled by an admin / rejected / awaiting approval: money arrived for an order that must not be fulfilled automatically.
+            // Canceled by staff / rejected / awaiting approval: the money is recorded but the order is never fulfilled automatically.
+            $this->flagForReview($locked, 'order_closed');
             $this->log($order, 'Payment received on a closed order', $locked, ['payment_status' => 'needs_review', 'order_status' => $order->status]);
 
             return self::OUTCOME_CLOSED_ORDER;
         });
+    }
 
-        if ($issueFor) {
-            // After commit, so a slow mail server never holds the row locks.
-            $this->issuance->issueIfPaid($issueFor->fresh());
+    /** Returns why a "paid" result must not be accepted, or null when everything matches. */
+    private function mismatch(PaymentAttempt $attempt, Order $order, GatewayResult $result): ?string
+    {
+        if (blank($result->transactionId)) {
+            return 'missing_transaction_id';
         }
 
-        return $outcome;
+        if ($attempt->reference !== null && $attempt->reference !== '' && $result->reference !== $attempt->reference) {
+            return 'reference_mismatch';
+        }
+
+        // The attempt must belong to the stored invoice/transaction when one was recorded at initiation.
+        if ($attempt->provider === 'fawaterak' && (string) $attempt->transaction_id !== (string) $result->transactionId) {
+            return 'transaction_mismatch';
+        }
+
+        if ($result->amount === null) {
+            return 'unknown_amount';
+        }
+
+        if (abs($result->amount - (float) $attempt->amount) > 0.009 || abs($result->amount - (float) $order->total_amount) > 0.009) {
+            return 'amount_mismatch';
+        }
+
+        if ($result->currency === null || $result->currency === '') {
+            return 'unknown_currency';
+        }
+
+        if (strtoupper($result->currency) !== strtoupper((string) $attempt->currency)) {
+            return 'currency_mismatch';
+        }
+
+        // One gateway transaction can settle one attempt, ever.
+        $boundElsewhere = PaymentAttempt::query()
+            ->where('provider', $attempt->provider)
+            ->where('transaction_id', $result->transactionId)
+            ->where('id', '!=', $attempt->id)
+            ->exists();
+
+        return $boundElsewhere ? 'transaction_reused' : null;
+    }
+
+    /**
+     * Why an order that just got paid can't be (re)fulfilled, or null if it can.
+     * strict = reinstating an auto-expired order: the event must be on sale and every ticket still active.
+     */
+    private function fulfillmentBlocker(Order $order, bool $strict): ?string
+    {
+        $order->loadMissing('items');
+        $eventIds = $order->items->pluck('event_id')->filter()->unique();
+
+        if ($eventIds->isEmpty()) {
+            return null; // nothing to evaluate (e.g. legacy items): behave as before
+        }
+
+        $events = Event::query()->whereIn('id', $eventIds)->get()->keyBy('id');
+
+        foreach ($eventIds as $eventId) {
+            $event = $events->get($eventId);
+
+            if (! $event) {
+                return 'event_missing';
+            }
+            if ($event->event_date && $event->event_date->lt(now()->startOfDay())) {
+                return 'event_ended';
+            }
+            if ($strict && $event->status !== 'active') {
+                return 'event_not_on_sale';
+            }
+        }
+
+        if ($strict) {
+            foreach ($order->items as $item) {
+                $event = $events->get($item->event_id);
+                $prefix = $event ? $event->name.' - ' : '';
+                $ticketName = trim(str_starts_with((string) $item->ticket_name, $prefix) ? substr((string) $item->ticket_name, strlen($prefix)) : (string) $item->ticket_name);
+
+                $ticket = EventTicket::query()->where('event_id', $item->event_id)->where('name', $ticketName)->first();
+                if (! $ticket || $ticket->status !== 'active') {
+                    return 'ticket_unavailable';
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function flagForReview(PaymentAttempt $attempt, string $reason): void
+    {
+        $attempt->update(['meta' => array_merge($attempt->meta ?? [], ['needs_review' => $reason, 'flagged_at' => now()->toIso8601String()])]);
+    }
+
+    private function issueSafely(Order $order): void
+    {
+        try {
+            $this->issuance->issueIfPaid($order);
+        } catch (\Throwable $e) {
+            Log::critical('Ticket issuance failed after a confirmed payment; it will be retried.', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+
+            activity('orders')->performedOn($order)->withProperties(['error' => mb_substr($e->getMessage(), 0, 250)])
+                ->log('Ticket issuance failed after payment (will retry)');
+        }
     }
 
     private function wasExpired(Order $order): bool

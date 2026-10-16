@@ -164,6 +164,7 @@ class PaymentSettlementTest extends TestCase
 
     public function test_payment_after_the_deadline_reinstates_an_expired_order_once(): void
     {
+        $this->makeTicket(\App\Models\Event::find($this->order->items()->first()->event_id)); // still on sale
         $attempt = $this->openGateway();
         $this->order->update(['payment_timeout_started_at' => now()->subHours(5), 'payment_timeout_minutes' => 60]);
         app(PendingPaymentExpiryService::class)->expireDueOrders();

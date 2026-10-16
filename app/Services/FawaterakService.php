@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Support\PaymentEnvironment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -12,6 +13,8 @@ class FawaterakService
 {
     public function createCheckoutData(Order $order): array
     {
+        PaymentEnvironment::assertLiveGatewaysAllowed('fawaterak');
+
         $method = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
             ->where('provider', 'fawaterak')
@@ -148,6 +151,8 @@ class FawaterakService
      */
     public function inquireInvoice(PaymentMethod $method, string $invoiceId): array
     {
+        PaymentEnvironment::assertLiveGatewaysAllowed('fawaterak');
+
         $config = is_array($method->config) ? $method->config : [];
         $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
 

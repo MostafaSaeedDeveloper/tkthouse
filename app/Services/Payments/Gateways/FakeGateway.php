@@ -7,6 +7,7 @@ use App\Models\PaymentAttempt;
 use App\Models\PaymentMethod;
 use App\Services\Payments\GatewayResult;
 use App\Services\Payments\PaymentGateway;
+use App\Support\PaymentEnvironment;
 
 /**
  * Local simulator for tests and dev/staging walkthroughs. The "customer" picks the outcome on a
@@ -22,12 +23,12 @@ class FakeGateway implements PaymentGateway
 
     public function isConfigured(PaymentMethod $method): bool
     {
-        return (bool) config('payments.fake.enabled');
+        return PaymentEnvironment::fakeGatewayAllowed();
     }
 
     public function initiate(Order $order, PaymentMethod $method, PaymentAttempt $attempt): array
     {
-        if (! config('payments.fake.enabled')) {
+        if (! PaymentEnvironment::fakeGatewayAllowed()) {
             throw new \RuntimeException('The fake payment gateway is disabled.');
         }
 
@@ -46,7 +47,7 @@ class FakeGateway implements PaymentGateway
 
     public function inquire(PaymentAttempt $attempt, ?string $hintTransactionId = null): GatewayResult
     {
-        if (! config('payments.fake.enabled')) {
+        if (! PaymentEnvironment::fakeGatewayAllowed()) {
             return GatewayResult::unknown('Fake gateway disabled.');
         }
 

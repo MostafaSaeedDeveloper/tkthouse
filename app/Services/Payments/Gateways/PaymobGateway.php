@@ -8,6 +8,7 @@ use App\Models\PaymentMethod;
 use App\Services\Payments\GatewayResult;
 use App\Services\Payments\PaymentGateway;
 use App\Services\PaymobService;
+use App\Support\PaymentEnvironment;
 use Illuminate\Support\Facades\Log;
 
 class PaymobGateway implements PaymentGateway
@@ -23,6 +24,10 @@ class PaymobGateway implements PaymentGateway
 
     public function isConfigured(PaymentMethod $method): bool
     {
+        if (! PaymentEnvironment::liveGatewaysAllowed()) {
+            return false;
+        }
+
         $config = $method->config ?? [];
 
         return filled($config['api_key'] ?? config('services.paymob.api_key'))
@@ -32,6 +37,8 @@ class PaymobGateway implements PaymentGateway
 
     public function initiate(Order $order, PaymentMethod $method, PaymentAttempt $attempt): array
     {
+        PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
+
         $checkout = $this->paymob->createCheckout($order);
 
         return ['url' => $checkout['url'], 'transaction_id' => null, 'reference' => $checkout['reference']];
@@ -39,6 +46,10 @@ class PaymobGateway implements PaymentGateway
 
     public function inquire(PaymentAttempt $attempt, ?string $hintTransactionId = null): GatewayResult
     {
+        if (! PaymentEnvironment::liveGatewaysAllowed()) {
+            return GatewayResult::unknown('Live gateways are disabled in this environment.');
+        }
+
         $transactionId = $hintTransactionId ?: $attempt->transaction_id;
         if (! $transactionId) {
             // Nothing to look up yet (customer has not reached the payment step, or the callback is still on its way).

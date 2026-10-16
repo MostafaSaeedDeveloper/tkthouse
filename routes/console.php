@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('orders:expire-pending-payments')->everyMinute();
 Schedule::command('orders:reconcile-payments')->everyTwoMinutes()->withoutOverlapping();
+Schedule::command('orders:retry-ticket-issuance')->everyFiveMinutes()->withoutOverlapping();

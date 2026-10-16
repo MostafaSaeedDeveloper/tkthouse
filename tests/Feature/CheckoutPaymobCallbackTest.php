@@ -225,6 +225,14 @@ class CheckoutPaymobCallbackTest extends TestCase
         ]);
     }
 
+    /** Shape of the official "Get Transaction Data" example response (fawaterak-api.readme.io). */
+    private function invoice(array $data = []): array
+    {
+        return ['status' => 'success', 'data' => array_merge([
+            'invoice_id' => 'INV-77', 'invoice_key' => 'abc', 'currency' => 'EGP', 'total' => 300, 'paid' => 1, 'paid_at' => '2026-10-16 10:00:00',
+        ], $data)];
+    }
+
     private function fawaterakUrl(string $result = 'success', array $extra = []): string
     {
         return route('front.fawaterak.callback', ['order' => $this->order, 'token' => $this->order->payment_link_token, 'result' => $result] + $extra);
@@ -233,7 +241,7 @@ class CheckoutPaymobCallbackTest extends TestCase
     public function test_fawaterak_success_url_alone_does_not_pay_the_order(): void
     {
         $this->fawaterakOrder();
-        Http::fake(['app.fawaterk.com/*' => Http::response(['status' => 'success', 'data' => ['paid' => 0, 'total' => 300]])]);
+        Http::fake(['app.fawaterk.com/*' => Http::response($this->invoice(['paid' => 0, 'paid_at' => null]))]);
 
         $this->get($this->fawaterakUrl('success'))->assertRedirect(route('front.checkout.confirmation', $this->order->order_number));
 
@@ -244,7 +252,7 @@ class CheckoutPaymobCallbackTest extends TestCase
     public function test_fawaterak_payment_is_settled_only_when_the_invoice_is_paid(): void
     {
         $this->fawaterakOrder();
-        Http::fake(['app.fawaterk.com/*' => Http::response(['status' => 'success', 'data' => ['paid' => 1, 'total' => 300]])]);
+        Http::fake(['app.fawaterk.com/*' => Http::response($this->invoice())]);
 
         $this->get($this->fawaterakUrl('success'));
         $this->get($this->fawaterakUrl('success')); // duplicate redirect
@@ -258,7 +266,7 @@ class CheckoutPaymobCallbackTest extends TestCase
     public function test_fawaterak_ignores_a_browser_supplied_invoice_id_when_one_is_stored(): void
     {
         $this->fawaterakOrder();
-        Http::fake(['app.fawaterk.com/*' => Http::response(['data' => ['paid' => 0]])]);
+        Http::fake(['app.fawaterk.com/*' => Http::response($this->invoice(['paid' => 0, 'paid_at' => null]))]);
 
         $this->get($this->fawaterakUrl('success', ['invoice_id' => 'SOMEONE-ELSES-PAID-INVOICE']));
 
@@ -269,7 +277,7 @@ class CheckoutPaymobCallbackTest extends TestCase
     public function test_fawaterak_amount_mismatch_never_pays(): void
     {
         $this->fawaterakOrder();
-        Http::fake(['app.fawaterk.com/*' => Http::response(['data' => ['paid' => 1, 'total' => 5]])]);
+        Http::fake(['app.fawaterk.com/*' => Http::response($this->invoice(['total' => 5]))]);
 
         $this->get($this->fawaterakUrl());
 

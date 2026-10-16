@@ -19,6 +19,14 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="PAYMENTS_LIVE_GATEWAYS" value="true"/>
+        <env name="PAYMENTS_FAKE_ENABLED" value="false"/>
+        <env name="PAYMOB_HMAC_SECRET" value=""/>
+        <env name="PAYMOB_REQUIRE_HMAC" value="false"/>
+        <env name="PAYMENTS_FAWATERAK_VERIFIED" value="false"/>
+        <env name="NOTIFY_MAIL_ALLOWLIST" value=""/>
+        <env name="NOTIFY_PHONE_ALLOWLIST" value=""/>
+        <env name="NOTIFY_WHATSAPP_ENABLED" value="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
