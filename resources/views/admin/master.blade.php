@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="color-scheme" content="light">
+<script>/* Admin V2 is a light-content design: keep Dashmix from switching to its dark theme when the OS prefers dark */(function(){var h=document.documentElement;function f(){if(h.classList.contains('dark'))h.classList.remove('dark');if(h.hasAttribute('data-bs-theme'))h.removeAttribute('data-bs-theme');}f();new MutationObserver(f).observe(h,{attributes:true,attributeFilter:['class','data-bs-theme']});})();</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
