@@ -64,9 +64,14 @@
             </section>
 
             {{-- Attendees --}}
-            <section class="tkt-card tkt-section-card" aria-labelledby="attendeesTitle">
+            <section class="tkt-card tkt-section-card" aria-labelledby="attendeesTitle" id="attendeesSection" @if($wizard) data-attendee-wizard @endif>
                 <h2 class="tkt-section-card__title" id="attendeesTitle">Who is attending?</h2>
-                <p class="tkt-section-card__sub">One form per ticket — all fields are required. Entry is checked against these names.</p>
+                <p class="tkt-section-card__sub">{{ $wizard ? 'Fill in one ticket at a time — all fields are required. Entry is checked against these names.' : 'One form per ticket — all fields are required. Entry is checked against these names.' }}</p>
+                @if($canCompare)
+                    <p class="tkt-text-sm tkt-text-muted" style="margin:-6px 0 12px" data-dev-compare>Dev compare:
+                        <a class="tkt-link" style="display:inline;{{ $wizard ? 'font-weight:800' : '' }}" href="{{ route('front.checkout', ['wizard' => 1]) }}">Wizard</a> ·
+                        <a class="tkt-link" style="display:inline;{{ $wizard ? '' : 'font-weight:800' }}" href="{{ route('front.checkout', ['wizard' => 0]) }}">Classic</a></p>
+                @endif
 
                 @if($errors->has('attendees'))
                     <div class="tkt-alert tkt-alert--danger tkt-inline-alert" role="alert">{{ $errors->first('attendees') }}</div>
@@ -81,7 +86,7 @@
                         </div>
 
                         @foreach($group['indexes'] as $pos => $i)
-                            <div class="tkt-attendee" data-attendee="{{ $i }}">
+                            <div class="tkt-attendee" data-attendee="{{ $i }}" data-ticket-name="{{ $group['name'] }}" data-couple="{{ $group['is_couple'] ? 1 : 0 }}" data-person="{{ $pos + 1 }}" data-persons="{{ count($group['indexes']) }}">
                                 <div class="tkt-attendee__head">
                                     <div class="tkt-attendee__title">
                                         {{ $group['is_couple'] ? 'Person '.($pos + 1).' of 2' : 'Ticket '.($pos + 1).' of '.count($group['indexes']) }}
@@ -181,6 +186,7 @@
         <aside class="tkt-checkout__aside" aria-label="Order summary">
             @include('front.checkout._summary', ['event' => $event, 'quote' => $quote])
             <button type="submit" form="expressForm" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block" style="margin-top:12px" data-loading-target data-pay-label @disabled(! $canPay)>{{ $payLabel }}</button>
+            @if($wizard)<p class="tkt-text-sm tkt-text-muted" style="margin:10px 0 0;text-align:center" data-wiz-hint hidden></p>@endif
             <p class="tkt-ordersum__note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure payment · fees included in the total</p>
         </aside>
     </div>
@@ -212,5 +218,6 @@
 @push('scripts')
     <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
     <script src="{{ asset('js/tkt-checkout.js') }}?v={{ filemtime(public_path('js/tkt-checkout.js')) }}"></script>
+    @if($wizard)<script src="{{ asset('js/tkt-wizard.js') }}?v={{ filemtime(public_path('js/tkt-wizard.js')) }}"></script>@endif
     <script src="{{ asset('js/tkt-express.js') }}?v={{ filemtime(public_path('js/tkt-express.js')) }}"></script>
 @endpush

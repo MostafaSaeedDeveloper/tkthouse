@@ -30,6 +30,7 @@
     function clearErrors() {
         $$('.tkt-field__error[data-js]', form).forEach(function (el) { el.remove(); });
         $$('.is-invalid', form).forEach(function (el) { el.classList.remove('is-invalid'); });
+        if (window.TktWizard) window.TktWizard.clearErrors();
         // server-rendered errors from a previous full page load
         $$('.tkt-field__error:not([data-js])', form).forEach(function (el) { el.remove(); });
         showAlert('');
@@ -45,11 +46,13 @@
     function showFieldErrors(errors) {
         var first = null;
         var general = [];
+        var cardInputs = [];
         Object.keys(errors).forEach(function (key) {
             var msg = [].concat(errors[key])[0];
             var input = fieldFor(key);
             if (!input) { general.push(msg); return; }
 
+            if (input.closest('[data-attendee]')) cardInputs.push(input);
             var host = input.closest('.tkt-field') || input.closest('#methodGroup') || input.parentElement;
             if (input.type === 'radio' && input.name === 'payment_method') host = $('#methodGroup');
             var gender = input.closest('.tkt-gender');
@@ -62,8 +65,15 @@
                 div.textContent = msg;
                 host.appendChild(div);
             }
-            if (!first) first = gender || input;
+            if (!first && !input.closest('[data-attendee]')) first = gender || input;
+            else if (!first && !window.TktWizard) first = gender || input;
         });
+
+        // Wizard: open the ticket that has the error (and mark every affected ticket) before scrolling to it.
+        if (window.TktWizard && cardInputs.length) {
+            var inCard = window.TktWizard.revealErrors(cardInputs);
+            if (!first && inCard) first = inCard.closest('.tkt-gender') || inCard;
+        }
 
         if (general.length) showAlert(general[0]);
         else showAlert('Please check the highlighted fields and try again.');
@@ -149,8 +159,28 @@
         });
     }
 
+    // Wizard mode turns native validation off (hidden tickets would block it silently), so check here, in page order:
+    // buyer fields, then every ticket, then the payment method.
+    function wizardGate() {
+        var wiz = window.TktWizard;
+        var attendees = $('[data-attendee-wizard]');
+        var fields = $$('input, select, textarea', form).filter(function (el) { return el.type !== 'hidden' && !el.disabled && !el.closest('[data-attendee]'); });
+        var before = fields.filter(function (el) { return !(attendees.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING); });
+        var after = fields.filter(function (el) { return attendees.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING; });
+        var bad = function (list) {
+            for (var i = 0; i < list.length; i++) { if (!list[i].checkValidity()) { list[i].reportValidity(); return true; } }
+            return false;
+        };
+        if (bad(before)) return false;
+        var r = wiz.ensureComplete();
+        if (!r.ok) { showAlert('Please complete the details for ticket ' + r.ticket + ' before paying.'); return false; }
+        if (bad(after)) return false;
+        return true;
+    }
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
+        if (window.TktWizard && !wizardGate()) return;
         submit();
     });
 

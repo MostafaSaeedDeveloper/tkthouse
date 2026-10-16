@@ -75,3 +75,21 @@ in production without a valid HMAC), `PAYMENTS_FAKE_ENABLED` (never in productio
 2. (Mitigated) Orders placed by a guest are flagged `owner_unverified`: they stay out of account pages, ticket pages and account-owner access until the mailbox is proven *by the browser that placed them* (or via the order's payment link + code). Someone typing a victim's e-mail therefore cannot push orders/tickets into the victim's account. Trade-off: an owner who bought on one device and confirms on another sees that order only after using its payment link or confirmation email.
 3. Staff e-mails are blocked from the flow (they sign in with a password).
 4. Guests reach orders via the browser session only; a different browser needs the e-mail code.
+
+## Attendee wizard (one ticket at a time)
+Only the *Who is attending?* part of the express checkout changes; Buyer, Promo, Order summary, Payment, Pay now, account creation, OTP,
+gateways, issuance and all server rules are untouched.
+* **UI**: "Ticket 2 of 4" + horizontal progress bar + numbered chips (done = yellow, current = black, error = red); one card with ticket
+  number, type/category (couple passes show "Couple pass · Person 1 of 2"), name, email, phone, gender, social profile, *Same as buyer*
+  (ticket 1), Back / Next ticket (last: Finish tickets). After the last ticket a summary lists every ticket with *Edit*.
+* **Behaviour**: all tickets' fields stay in the same `<form>` (so nothing is lost on Back/Next or edits) and navigation makes no request
+  — the order is created only by the final Pay submit. Next validates the current ticket; chips let you revisit completed tickets but not skip
+  an incomplete one; Enter moves to the next ticket (never submits payment); Pay is blocked until every ticket is complete (opens the first
+  incomplete one); a server validation error opens the ticket that has it (chip marked red). Refresh restores the saved draft exactly as before
+  (draft saved on submit); the wizard opens on the first incomplete ticket, or the summary if all are filled.
+* **Flag**: `CHECKOUT_ATTENDEE_WIZARD` (config `checkout.attendee_wizard`, default `true`). Outside production `/checkout?wizard=0|1` switches
+  design (remembered in the session) and shows "Dev compare: Wizard · Classic" links; production always follows the flag. Without JS the
+  classic stacked forms are used.
+* **Verification**: `tests/Feature/AttendeeWizardTest.php` (markup, flag, couple, drafts, server rules) plus a Playwright run at 390 and 1440
+  with the Fake Gateway (47 checks: Next/Back, data kept, Enter, pay gate, summary/edit, server error reveal, refresh, OTP, payment) — screenshots in
+  `docs/screenshots/attendee-wizard/`.

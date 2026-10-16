@@ -101,6 +101,8 @@ class CheckoutController extends Controller
         return view('front.checkout.express', [
             'event' => $event,
             'groups' => $this->groups($units),
+            'wizard' => $this->wizardEnabled($request),
+            'canCompare' => ! app()->isProduction(),
             'quote' => $quote,
             'buyer' => $buyer,
             'attendees' => (array) ($draft['attendees'] ?? []),
@@ -553,6 +555,23 @@ class CheckoutController extends Controller
         $order = $number ? Order::query()->where('order_number', $number)->first() : null;
 
         return $order && GuestOrderAccess::can($request, $order) ? $order : null;
+    }
+
+    /** Feature flag for the one-ticket-at-a-time attendee form; outside production ?wizard=0|1 switches for comparison. */
+    private function wizardEnabled(Request $request): bool
+    {
+        $enabled = (bool) config('checkout.attendee_wizard');
+
+        if (! app()->isProduction()) {
+            if ($request->query->has('wizard')) {
+                session(['checkout.wizard' => filter_var($request->query('wizard'), FILTER_VALIDATE_BOOLEAN)]);
+            }
+            if (session()->has('checkout.wizard')) {
+                $enabled = (bool) session('checkout.wizard');
+            }
+        }
+
+        return $enabled;
     }
 
     /** @param \Illuminate\Support\Collection<int, array<string, mixed>> $units */
