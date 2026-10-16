@@ -68,7 +68,7 @@ class OrderPlacementService
                 $order->items()->create([
                     'event_id' => $event->id,
                     'ticket_id' => null,
-                    'ticket_name' => $unit['event_name'].' - '.$unit['ticket_name'],
+                    'ticket_name' => self::snapshotName((string) $unit['event_name'], (string) $unit['ticket_name']),
                     'ticket_price' => $unit['ticket_price'],
                     'quantity' => 1,
                     'line_total' => (float) $unit['ticket_price'],
@@ -156,5 +156,14 @@ class OrderPlacementService
         }
 
         return Customer::firstOrCreate(['email' => $buyer['email']], $values);
+    }
+
+    /**
+     * "Event - Ticket" as stored on the order item (a varchar(255) column). Event and ticket names may each be up to 255 characters in the
+     * admin, so the combined text is capped here instead of letting MySQL reject the whole order ("data too long"). Normal names are untouched.
+     */
+    public static function snapshotName(string $event, string $ticket): string
+    {
+        return mb_substr($event.' - '.$ticket, 0, 255);
     }
 }

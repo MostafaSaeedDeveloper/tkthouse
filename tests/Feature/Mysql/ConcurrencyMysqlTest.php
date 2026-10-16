@@ -116,8 +116,9 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertSame(5, collect($out)->filter(fn ($l) => $l === 'DUP')->count(), implode(' / ', $out));
     }
 
-    private function paidAttempt(float $amount = 300): array
+    private function paidAttempt(float $amount = 300, bool $approvalPolicy = false): array
     {
+        SystemSettings::set('refund_approval_required', $approvalPolicy);
         \Spatie\Permission\Models\Permission::findOrCreate('payments.refunds.create', 'web');
         $staff = User::factory()->create();
         $staff->givePermissionTo('payments.refunds.create');
@@ -159,6 +160,36 @@ class ConcurrencyMysqlTest extends TestCase
 
         $ids = collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->map(fn ($l) => substr($l, 3))->unique();
         $this->assertCount(1, $ids, implode(' / ', $out));
+        $this->assertSame(1, \App\Models\PaymentRefund::count());
+    }
+
+    public function test_parallel_approvals_and_submits_send_exactly_once_and_never_before_a_second_person_approves(): void
+    {
+        [$a, $staff] = $this->paidAttempt(300, true);
+        \Spatie\Permission\Models\Permission::findOrCreate('payments.refunds.approve', 'web');
+        $approver = User::factory()->create();
+        $approver->givePermissionTo('payments.refunds.approve');
+
+        $refund = app(\App\Services\Payments\Refunds\RefundService::class)->request($a, $staff, 'partial', '100', 'parallel approval probe', 'pa-1');
+        $this->assertTrue((bool) $refund->awaiting_approval);
+
+        // 1) reconciliation-style submits racing each other BEFORE approval: nothing may be sent
+        $early = $this->spawn(array_map(fn () => ['submit', (string) $refund->id], range(1, 6)));
+        $this->assertSame('requested', $refund->fresh()->status, implode(' / ', $early));
+        $this->assertCount(0, array_filter((array) $refund->fresh()->meta['timeline'], fn ($t) => ($t['event'] ?? '') === 'accepted'));
+
+        // 2) approvals and submits racing together: one approval wins, exactly one provider send
+        $out = $this->spawn(array_merge(
+            array_map(fn () => ['approve', (string) $refund->id, (string) $approver->id], range(1, 6)),
+            array_map(fn () => ['submit', (string) $refund->id], range(1, 4)),
+        ));
+
+        $fresh = $refund->fresh();
+        $this->assertSame(1, collect($out)->filter(fn ($l) => str_starts_with($l, 'INVALID:'))->count() >= 5 ? 1 : 0, 'losing approvers are refused: '.implode(' / ', $out));
+        $this->assertSame($approver->id, $fresh->approved_by);
+        $this->assertContains($fresh->status, ['processing', 'succeeded']);
+        $accepted = array_filter((array) $fresh->meta['timeline'], fn ($t) => ($t['event'] ?? '') === 'accepted');
+        $this->assertCount(1, $accepted, 'exactly one provider send: '.implode(' / ', $out));
         $this->assertSame(1, \App\Models\PaymentRefund::count());
     }
 }

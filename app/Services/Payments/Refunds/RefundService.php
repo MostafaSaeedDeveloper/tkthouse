@@ -114,7 +114,8 @@ class RefundService
                 $fail('The refund amount exceeds the refundable balance ('.PaymentRefund::minorToDecimal($bal['available']).' '.$locked->currency.').');
             }
 
-            $needsApproval = (bool) SystemSettings::get('refund_approval_required', false) && ! $by->can('payments.refunds.approve');
+            // Four-eyes: when the policy is on, EVERY refund (whoever asks, approver or not) waits for a second person.
+            $needsApproval = $this->approvalRequired();
 
             do {
                 $ref = 'REF-'.strtoupper(Str::random(10));
@@ -141,10 +142,45 @@ class RefundService
         return $refund->fresh();
     }
 
-    public function approve(PaymentRefund $refund, User $by): PaymentRefund
+    /** The second-person policy. Default ON; read at the moment of every send / confirmation, never cached on the refund. */
+    public function approvalRequired(): bool
+    {
+        return (bool) SystemSettings::get('refund_approval_required', true);
+    }
+
+    /**
+     * True when this refund may leave the building: either no approval is required, or a DIFFERENT person approved it.
+     * Evaluated live, so turning the policy on later also gates refunds that were created while it was off.
+     */
+    private function approvalSatisfied(PaymentRefund $r): bool
+    {
+        if (! $this->approvalRequired()) {
+            return ! $r->awaiting_approval; // a refund already waiting stays waiting: switching the policy off never auto-approves
+        }
+
+        return ! $r->awaiting_approval && $r->approved_by !== null && (int) $r->approved_by !== (int) $r->requested_by;
+    }
+
+    /** Puts a not-yet-approved refund back into the approval queue (policy switched on after it was created). */
+    private function enforceApprovalFlag(PaymentRefund $refund): void
+    {
+        DB::transaction(function () use ($refund) {
+            $r = PaymentRefund::query()->lockForUpdate()->find($refund->id);
+            if ($r && $r->status === PaymentRefund::REQUESTED && ! $this->approvalSatisfied($r) && ! $r->awaiting_approval) {
+                $r->awaiting_approval = true;
+                $this->note($r, 'approval_required', null, 'The approval policy is on: a second person must approve before anything is sent.');
+                $r->save();
+            }
+        });
+    }
+
+    public function approve(PaymentRefund $refund, User $by, ?string $note = null): PaymentRefund
     {
         $fail = fn (string $m) => throw ValidationException::withMessages(['refund' => $m]);
-        DB::transaction(function () use ($refund, $by, $fail) {
+        if ($this->approvalRequired()) {
+            $this->enforceApprovalFlag($refund);
+        }
+        DB::transaction(function () use ($refund, $by, $note, $fail) {
             $r = PaymentRefund::query()->lockForUpdate()->findOrFail($refund->id);
             if (! $r->awaiting_approval || $r->status !== PaymentRefund::REQUESTED) {
                 $fail('This refund is not waiting for approval.');
@@ -152,8 +188,11 @@ class RefundService
             if ((int) $r->requested_by === (int) $by->id) {
                 $fail('A refund must be approved by someone other than the requester.');
             }
-            $r->forceFill(['awaiting_approval' => false, 'approved_by' => $by->id])->save();
-            $this->note($r, 'approved', $by);
+            if (! $by->can('payments.refunds.approve')) {
+                $fail('You are not allowed to approve refunds.');
+            }
+            $r->forceFill(['awaiting_approval' => false, 'approved_by' => $by->id, 'approved_at' => now()])->save();
+            $this->note($r, 'approved', $by, $note);
         });
 
         $fresh = $refund->fresh();
@@ -166,13 +205,18 @@ class RefundService
 
     public function reject(PaymentRefund $refund, User $by, string $note): PaymentRefund
     {
-        return $this->transition($refund, $by, [PaymentRefund::REQUESTED], PaymentRefund::REJECTED, 'rejected', $note, requireAwaiting: true);
+        return $this->transition($refund, $by, [PaymentRefund::REQUESTED], PaymentRefund::REJECTED, 'rejected', $note);
     }
 
     /** Sends the API request exactly once: the claim is an atomic conditional update. */
     public function submit(PaymentRefund $refund): void
     {
+        $required = $this->approvalRequired();
+        if ($required) {
+            $this->enforceApprovalFlag($refund);
+        }
         $claimed = PaymentRefund::query()->whereKey($refund->id)->where('status', PaymentRefund::REQUESTED)->where('awaiting_approval', false)->where('mode', 'api')
+            ->when($required, fn ($q) => $q->whereNotNull('approved_by')->whereColumn('approved_by', '!=', 'requested_by'))
             ->update(['status' => PaymentRefund::PROCESSING, 'submitted_at' => now()]);
         if ($claimed !== 1) {
             return; // someone else already sent it (or it is not sendable)
@@ -276,6 +320,9 @@ class RefundService
             $fail('The provider\'s refund reference is required to record a completed refund.');
         }
 
+        if ($blockAwaiting) {
+            $this->enforceApprovalFlag($refund);
+        }
         DB::transaction(function () use ($refund, $by, $from, $to, $event, $note, $providerReference, $mode, $requireAwaiting, $blockAwaiting, $fail) {
             $r = PaymentRefund::query()->lockForUpdate()->findOrFail($refund->id);
             if ($mode && $r->mode !== $mode) {
@@ -287,7 +334,7 @@ class RefundService
             if ($requireAwaiting && ! $r->awaiting_approval) {
                 $fail('Only refunds waiting for approval can be rejected here.');
             }
-            if ($blockAwaiting && $r->awaiting_approval) {
+            if ($blockAwaiting && $r->status === PaymentRefund::REQUESTED && ! $this->approvalSatisfied($r)) {
                 $fail('This refund is still waiting for approval.');
             }
             $r->status = $to;
@@ -321,6 +368,8 @@ class RefundService
         }
         activity('payments')->performedOn($r)->causedBy($by)->withProperties([
             'event' => $event, 'source' => $source, 'status' => $r->status, 'amount_minor' => $r->amount_minor, 'attempt_id' => $r->payment_attempt_id, 'provider' => $r->provider,
+            'reason' => $r->reason, 'note' => $note ? mb_substr($note, 0, 300) : null, 'requested_by' => $r->requested_by, 'requested_at' => $r->requested_at?->toIso8601String(),
+            'approved_by' => $r->approved_by, 'approved_at' => $r->approved_at?->toIso8601String(), 'approval_required' => $this->approvalRequired(),
         ])->log('Refund '.str_replace('_', ' ', $event));
     }
 }

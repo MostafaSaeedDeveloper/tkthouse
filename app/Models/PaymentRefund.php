@@ -20,7 +20,7 @@ class PaymentRefund extends Model
 
     protected $fillable = [
         'internal_reference', 'payment_attempt_id', 'order_id', 'integration_account_id', 'provider', 'mode', 'type', 'status', 'awaiting_approval',
-        'currency', 'amount_minor', 'reason', 'idempotency_key', 'provider_refund_id', 'provider_reference', 'requested_by', 'approved_by',
+        'currency', 'amount_minor', 'reason', 'idempotency_key', 'provider_refund_id', 'provider_reference', 'requested_by', 'approved_by', 'approved_at',
         'requested_at', 'submitted_at', 'completed_at', 'last_checked_at', 'failure_reason', 'meta',
     ];
 
@@ -28,7 +28,7 @@ class PaymentRefund extends Model
     {
         return [
             'awaiting_approval' => 'boolean', 'amount_minor' => 'integer', 'meta' => 'array',
-            'requested_at' => 'datetime', 'submitted_at' => 'datetime', 'completed_at' => 'datetime', 'last_checked_at' => 'datetime',
+            'requested_at' => 'datetime', 'approved_at' => 'datetime', 'submitted_at' => 'datetime', 'completed_at' => 'datetime', 'last_checked_at' => 'datetime',
         ];
     }
 

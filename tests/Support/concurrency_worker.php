@@ -48,6 +48,12 @@ try {
     } elseif ($mode === 'refund') {            // refund request race: attempt, user, type, amount, idempotency key
         $r = app(\App\Services\Payments\Refunds\RefundService::class)->request(\App\Models\PaymentAttempt::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b), $c, $d === '-' ? null : $d, 'concurrency probe refund', $e);
         echo 'OK:'.$r->id;
+    } elseif ($mode === 'approve') {           // approval race: refund id, approver user id
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->approve(\App\Models\PaymentRefund::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b));
+        echo 'OK:'.$r->status;
+    } elseif ($mode === 'submit') {            // reconciliation / retry racing the approval: must never send before it
+        app(\App\Services\Payments\Refunds\RefundService::class)->submit(\App\Models\PaymentRefund::findOrFail((int) $a));
+        echo 'OK:'.\App\Models\PaymentRefund::findOrFail((int) $a)->status;
     } elseif ($mode === 'tx') {                // many workers race to bind the same gateway transaction id
         PaymentAttempt::create(['order_id' => (int) $a, 'provider' => 'paymob', 'method_code' => 'paymob_card', 'amount' => 100, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => $b]);
         echo 'OK';

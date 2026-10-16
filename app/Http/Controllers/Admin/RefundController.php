@@ -96,8 +96,9 @@ class RefundController extends Controller
     public function approve(Request $request, PaymentRefund $refund)
     {
         $this->authorizeRefund($request, $refund);
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:300']]);
 
-        return $this->guard(fn () => $this->refunds->approve($refund, $request->user()), 'Refund approved.');
+        return $this->guard(fn () => $this->refunds->approve($refund, $request->user(), $data['note'] ?? null), 'Refund approved.');
     }
 
     public function reject(Request $request, PaymentRefund $refund)

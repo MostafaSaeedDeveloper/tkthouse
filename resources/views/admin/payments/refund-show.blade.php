@@ -25,9 +25,16 @@
     @if(! $refund->isFinal() && ($canCreate || $canApprove))
     <x-admin.card title="Actions">
         <div class="a-btn-group" style="flex-wrap:wrap;gap:12px;align-items:flex-start">
-            @if($refund->awaiting_approval && $canApprove)
-                <form method="POST" action="{{ route('admin.payments.refunds.approve', $refund) }}" data-a-confirm="Approve this refund{{ $refund->mode === 'api' ? ' and send it to the provider' : '' }}?" data-a-confirm-ok="Approve">@csrf<button class="a-btn a-btn--primary" type="submit">Approve</button></form>
+            @if($refund->awaiting_approval && $canApprove && (int) $refund->requested_by !== (int) auth()->id())
+                <form method="POST" action="{{ route('admin.payments.refunds.approve', $refund) }}" data-a-confirm="Approve this refund{{ $refund->mode === 'api' ? ' and send it to the provider' : '' }}?" data-a-confirm-ok="Approve" style="display:grid;gap:6px">@csrf
+                    <input class="form-control" name="note" placeholder="Approval note (optional)" maxlength="300" aria-label="Approval note">
+                    <button class="a-btn a-btn--primary" type="submit">Approve</button></form>
                 <form method="POST" action="{{ route('admin.payments.refunds.reject', $refund) }}" class="a-btn-group">@csrf<input class="form-control" name="note" placeholder="Reason for rejecting" minlength="5" required aria-label="Rejection reason"><button class="a-btn a-btn--outline" type="submit">Reject request</button></form>
+            @elseif($refund->awaiting_approval)
+                <x-admin.alert type="info">Waiting for approval by a <strong>different</strong> person with the refund-approval permission. {{ (int) $refund->requested_by === (int) auth()->id() ? 'You requested this refund, so you cannot approve it.' : '' }} Nothing is sent to the provider until then.</x-admin.alert>
+                @if($canApprove || $canCreate)
+                <form method="POST" action="{{ route('admin.payments.refunds.reject', $refund) }}" class="a-btn-group">@csrf<input class="form-control" name="note" placeholder="Reason for withdrawing / rejecting" minlength="5" required aria-label="Rejection reason"><button class="a-btn a-btn--outline" type="submit">Withdraw request</button></form>
+                @endif
             @elseif(! $refund->awaiting_approval)
                 @if($refund->mode === 'manual' && $refund->status === 'requested')
                     <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">Mark as submitted to the provider</button></form>
@@ -58,6 +65,7 @@
             <div><dt>Provider refund ID</dt><dd>{{ $refund->provider_refund_id ?: '—' }}</dd></div>
             @if($refund->provider_reference)<div><dt>Provider reference</dt><dd>{{ $refund->provider_reference }}</dd></div>@endif
             <div><dt>Reason</dt><dd>{{ $refund->reason }}</dd></div>
+            @if($refund->approved_by)<div><dt>Approved by</dt><dd>{{ \App\Models\User::find($refund->approved_by)?->name ?? '—' }} · {{ $refund->approved_at?->format('d M Y, H:i') }}</dd></div>@endif
             <div><dt>Requested by</dt><dd>{{ $refund->requester?->name ?? '—' }} · {{ $refund->requested_at->format('d M Y, H:i') }}</dd></div>
             <div><dt>Completed</dt><dd>{{ $refund->completed_at?->format('d M Y, H:i') ?? '—' }}</dd></div>
             <div><dt>Last checked</dt><dd>{{ $refund->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>

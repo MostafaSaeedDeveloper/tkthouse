@@ -9,7 +9,9 @@ use Spatie\Permission\Models\Permission;
 /**
  * Phase 1 of the unified payment management. Additive only: existing payment methods keep their codes/names; sort_order defaults
  * to 0 (the previous implicit order was by id, which stays the tie-breaker). New permissions are copied only to roles/users that
- * already hold the equivalent Stage E permission, so nobody gains or loses access on upgrade (super-admin roles get everything).
+ * already hold the equivalent payment-account permission (so the pages that moved keep working for the same people). Nothing is
+ * granted because of a GENERAL view permission such as orders.view: new financial permissions reach other roles only through
+ * `php artisan payments:sync-permissions --apply` (the production policy) or explicitly in Admin → Roles.
  */
 return new class extends Migration
 {
@@ -39,7 +41,6 @@ return new class extends Migration
         $map = [
             'settings.payment-accounts.view' => ['payments.accounts.view', 'payments.transactions.view', 'payments.webhooks.view'],
             'settings.payment-accounts.manage' => ['payments.accounts.manage'],
-            'orders.view' => ['payments.transactions.view'], // the old Payments page was visible to orders.view
         ];
         $id = fn (string $n) => Permission::where('name', $n)->where('guard_name', 'web')->value('id');
         foreach ($map as $old => $news) {

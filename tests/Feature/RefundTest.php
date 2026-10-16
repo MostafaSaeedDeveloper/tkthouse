@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\Support\BuildsMerchantAccounts;
 use Tests\Support\BuildsOrders;
 use Tests\TestCase;
@@ -36,6 +37,7 @@ class RefundTest extends TestCase
         Mail::fake();
         $this->fakeProviders();
         config(['payments.refunds.live_api_enabled' => true, 'payments.fake.enabled' => true]);
+        SystemSettings::set('refund_approval_required', false); // these tests cover the send/inquiry mechanics; RefundApprovalTest covers the (default-on) policy
         $this->svc = app(RefundService::class);
         $this->makeMethod('paymob', 'paymob_card', ['api_key' => 'L', 'iframe_id' => '1', 'integration_id' => '1']);
         $this->makeMethod('fawaterak', 'fawaterak_card', ['api_key' => 'L', 'provider_key' => 'FAWATERAK.1']);
@@ -442,5 +444,265 @@ class RefundTest extends TestCase
         $this->actingAs($this->staff)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual refund');
         $r = $this->request($legacy, 'partial', '50');
         $this->assertSame(['manual', null], [$r->mode, $r->integration_account_id]);
+    }
+
+    /* ---------------------------------------------------------------- second-person approval policy (default ON) */
+
+    private function refundCalls(): int
+    {
+        return count(array_filter($this->httpLog, fn ($l) => isset($l['refund_call'])));
+    }
+
+    public function test_the_policy_is_on_by_default_and_create_permission_alone_never_reaches_the_provider(): void
+    {
+        \App\Models\SystemSetting::query()->where('key', 'refund_approval_required')->delete();
+        app(\App\Settings\SettingsService::class)->flush(); // no stored value: the registry default applies
+        $this->assertTrue($this->svc->approvalRequired());
+
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $r = $this->request($a, 'partial', '100');
+
+        $this->assertSame(['requested', true, null], [$r->status, (bool) $r->awaiting_approval, $r->approved_by]);
+        $this->assertSame(0, $this->refundCalls());
+
+        // repeated submits / retries / reconciliation cannot push it out
+        $this->svc->submit($r);
+        $this->svc->submit($r->fresh());
+        $this->assertSame(0, $this->refundCalls());
+        $this->assertSame('requested', $r->fresh()->status);
+    }
+
+    public function test_a_requester_who_also_holds_the_approve_permission_still_needs_a_second_person(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $both = $this->user(['payments.refunds.create', 'payments.refunds.approve']);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $r = $this->request($a, 'partial', '100', $both);
+
+        $this->assertTrue((bool) $r->awaiting_approval, 'approvers are not exempt');
+        try {
+            $this->svc->approve($r, $both);
+            $this->fail('self approval must fail');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('someone other', $e->errors()['refund'][0]);
+        }
+        $this->assertSame(0, $this->refundCalls());
+
+        // the same refusal over HTTP
+        $this->actingAs($both)->post(route('admin.payments.refunds.approve', $r))->assertSessionHasErrors('refund');
+        $this->assertSame(0, $this->refundCalls());
+        $this->assertTrue((bool) $r->fresh()->awaiting_approval);
+    }
+
+    public function test_a_second_person_approves_once_and_the_audit_trail_names_both_with_time_and_reason(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $r = $this->request($a, 'partial', '100');
+        $approver = $this->user(['payments.refunds.approve', 'payments.refunds.view', 'orders.view']);
+
+        $this->actingAs($approver)->post(route('admin.payments.refunds.approve', $r), ['note' => 'verified with the customer'])->assertRedirect();
+        $this->actingAs($approver)->post(route('admin.payments.refunds.approve', $r))->assertSessionHasErrors('refund'); // double click / replay
+
+        $r = $r->fresh();
+        $this->assertSame(1, $this->refundCalls(), 'sent exactly once');
+        $this->assertSame(['processing', $approver->id, $this->staff->id], [$r->status, $r->approved_by, $r->requested_by]);
+        $this->assertNotNull($r->approved_at);
+
+        $log = \Spatie\Activitylog\Models\Activity::query()->where('log_name', 'payments')->where('subject_id', $r->id)->where('description', 'Refund approved')->first();
+        $this->assertNotNull($log);
+        $this->assertSame($approver->id, $log->causer_id);
+        $p = $log->properties;
+        $this->assertSame([$this->staff->id, $approver->id, 'customer cancelled the event', 'verified with the customer'], [$p['requested_by'], $p['approved_by'], $p['reason'], $p['note']]);
+        $this->assertNotNull($p['approved_at']);
+        $this->assertNotNull($p['requested_at']);
+    }
+
+    public function test_users_without_the_approve_permission_cannot_approve_or_reject(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $r = $this->request($a, 'partial', '100');
+        $other = $this->user(['payments.refunds.create', 'payments.refunds.view', 'orders.view']);
+
+        $this->actingAs($other)->post(route('admin.payments.refunds.approve', $r))->assertForbidden();
+        $this->actingAs($other)->post(route('admin.payments.refunds.reject', $r), ['note' => 'not allowed to reject'])->assertForbidden();
+        try {
+            $this->svc->approve($r, $other);
+            $this->fail('service must refuse as well');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('not allowed', $e->errors()['refund'][0]);
+        }
+        $this->assertTrue((bool) $r->fresh()->awaiting_approval);
+    }
+
+    public function test_switching_the_policy_on_later_also_gates_refunds_created_while_it_was_off(): void
+    {
+        SystemSettings::set('refund_approval_required', false);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $fa = $this->refundable($this->account('fawaterak', 'FA'), 'fawaterak_card');
+        $this->httpLog = [];
+        // a manual refund and an API refund both created with the policy off, but a send/confirmation attempt happens after it is on
+        $manual = $this->request($fa, 'partial', '50');
+        $this->assertFalse((bool) $manual->awaiting_approval);
+        $api = PaymentRefund::create(['internal_reference' => 'REF-LATE', 'payment_attempt_id' => $a->id, 'order_id' => $a->order_id, 'integration_account_id' => $a->integration_account_id, 'provider' => 'paymob', 'mode' => 'api',
+            'type' => 'partial', 'status' => 'requested', 'awaiting_approval' => false, 'currency' => 'EGP', 'amount_minor' => 10000, 'reason' => 'created before policy', 'idempotency_key' => 'late-key', 'requested_by' => $this->staff->id, 'meta' => ['timeline' => []]]);
+
+        SystemSettings::set('refund_approval_required', true);
+
+        $this->svc->submit($api);
+        $this->assertSame(0, $this->refundCalls());
+        $this->assertSame(['requested', true], [$api->fresh()->status, (bool) $api->fresh()->awaiting_approval]);
+
+        try {
+            $this->svc->confirmSucceeded($manual, $this->staff, 'FA-REF-1', 'portal shows the refund');
+            $this->fail('manual confirmation must wait for approval');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('waiting for approval', $e->errors()['refund'][0]);
+        }
+        $this->assertSame('requested', $manual->fresh()->status);
+
+        // after a second person approves, both proceed
+        $approver = $this->user(['payments.refunds.approve']);
+        $this->svc->approve($api, $approver);
+        $this->assertSame(1, $this->refundCalls());
+        $this->svc->approve($manual, $approver);
+        $this->assertSame('succeeded', $this->svc->confirmSucceeded($manual->fresh(), $this->staff, 'FA-REF-1', 'portal shows the refund')->status);
+    }
+
+    public function test_switching_the_policy_off_never_auto_approves_a_waiting_refund(): void
+    {
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        SystemSettings::set('refund_approval_required', true);
+        $this->httpLog = [];
+        $r = $this->request($a, 'partial', '100');
+
+        SystemSettings::set('refund_approval_required', false);
+        $this->svc->submit($r);
+        $this->assertSame(0, $this->refundCalls());
+        $this->assertSame('requested', $r->fresh()->status);
+        $this->assertTrue((bool) $r->fresh()->awaiting_approval);
+
+        $this->svc->approve($r, $this->user(['payments.refunds.approve'])); // explicit approval still works and sends
+        $this->assertSame(1, $this->refundCalls());
+    }
+
+    public function test_resubmitting_the_same_request_cannot_create_a_second_refund_or_skip_approval(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $first = $this->request($a, 'partial', '100', null, 'same-key');
+        $again = $this->request($a, 'partial', '100', null, 'same-key');
+
+        $this->assertSame($first->id, $again->id);
+        $this->assertSame(1, PaymentRefund::query()->where('payment_attempt_id', $a->id)->count());
+        $this->assertSame(0, $this->refundCalls());
+        // a different key while the first is still waiting is refused (one in-flight refund per payment)
+        $this->expectException(ValidationException::class);
+        $this->request($a, 'partial', '100', null, 'other-key');
+    }
+
+    public function test_a_rejected_request_sends_nothing_and_frees_the_balance(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $r = $this->request($a, 'partial', '100');
+        $approver = $this->user(['payments.refunds.approve', 'payments.refunds.view', 'orders.view']);
+
+        $this->actingAs($approver)->post(route('admin.payments.refunds.reject', $r), ['note' => 'customer withdrew the request'])->assertRedirect();
+        $this->assertSame('rejected', $r->fresh()->status);
+        $this->assertSame(0, $this->refundCalls());
+        $this->assertSame(30000, $this->svc->balance($a)['available']);
+        $this->svc->submit($r->fresh());
+        $this->assertSame(0, $this->refundCalls(), 'a rejected refund can never be sent');
+    }
+
+    /* ---------------------------------------------------------------- production role policy end to end */
+
+    private function roleUser(string $role, array $extra = []): User
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+        foreach (['orders.view', 'orders.view_all', 'orders.view_assigned', 'orders.manage_assigned', 'orders.update'] as $p) {
+            Permission::findOrCreate($p, 'web');
+        }
+        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['orders.view', 'orders.view_all', 'orders.update']);
+        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['orders.view', 'orders.view_assigned', 'orders.manage_assigned', 'orders.update']);
+        $this->artisan('payments:sync-permissions', ['--apply' => true])->assertExitCode(0);
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $u = User::factory()->create();
+        $u->assignRole($role);
+        foreach ($extra as $p) {
+            Permission::findOrCreate($p, 'web');
+            $u->givePermissionTo($p);
+        }
+
+        return $u->fresh();
+    }
+
+    public function test_order_manager_policy_can_request_but_not_approve_and_cannot_manage_accounts(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $manager = $this->roleUser('Order Manager');
+        $payload = ['type' => 'partial', 'amount' => '50', 'reason' => 'because of reasons', 'idempotency_key' => 'mgr-1', 'confirm' => 1];
+
+        $this->actingAs($manager)->post(route('admin.payments.refunds.store', $a), $payload)->assertRedirect();
+        $r = PaymentRefund::firstOrFail();
+        $this->assertTrue((bool) $r->awaiting_approval);
+        $this->assertSame(0, $this->refundCalls());
+
+        $this->actingAs($manager)->post(route('admin.payments.refunds.approve', $r))->assertForbidden();
+        $this->actingAs($manager)->get(route('admin.payments.providers'))->assertForbidden();
+        $this->actingAs($manager)->get(route('admin.payments.webhooks'))->assertForbidden();
+
+        // explicit grant makes them an approver, but never for their own request
+        $manager->givePermissionTo('payments.refunds.approve');
+        $this->actingAs($manager->fresh())->post(route('admin.payments.refunds.approve', $r))->assertSessionHasErrors('refund');
+        $this->assertSame(0, $this->refundCalls());
+    }
+
+    public function test_order_agent_policy_sees_own_transactions_only_and_has_no_refund_rights_until_granted(): void
+    {
+        SystemSettings::set('order_assignment_enabled', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $b = $this->refundable($this->account('paymob', 'B'), 'paymob_card');
+        $agent = $this->roleUser('Order Agent');
+        $a->order->forceFill(['assigned_user_id' => $agent->id])->saveQuietly();
+        $payload = ['type' => 'partial', 'amount' => '50', 'reason' => 'because of reasons', 'idempotency_key' => 'ag-1', 'confirm' => 1];
+
+        $this->actingAs($agent)->get(route('admin.payments.transactions.show', $a))->assertOk();
+        $this->actingAs($agent)->get(route('admin.payments.transactions.show', $b))->assertNotFound(); // someone else's order
+        $this->actingAs($agent)->post(route('admin.payments.refunds.store', $a), $payload)->assertForbidden(); // no create right by default
+
+        $agent->givePermissionTo('payments.refunds.create'); // explicit later grant
+        $this->actingAs($agent->fresh())->post(route('admin.payments.refunds.store', $a), $payload)->assertRedirect();
+        $this->actingAs($agent->fresh())->post(route('admin.payments.refunds.store', $b), ['idempotency_key' => 'ag-2'] + $payload)->assertNotFound();
+        $this->assertSame(1, PaymentRefund::count());
+    }
+
+    public function test_production_refund_gate_is_off_by_default_and_blocks_the_provider_api_even_after_approval(): void
+    {
+        $this->assertStringContainsString("env('PAYMENTS_REFUNDS_LIVE', false)", file_get_contents(base_path('config/payments.php')), 'the shipped default is OFF');
+        foreach (['.env.example', 'phpunit.xml'] as $f) {
+            $this->assertDoesNotMatchRegularExpression('/PAYMENTS_REFUNDS_LIVE\s*[=\"]+\s*\"?(true|1)/i', (string) @file_get_contents(base_path($f)), $f.' must not enable live refunds');
+        }
+
+        config(['payments.refunds.live_api_enabled' => false]);
+        SystemSettings::set('refund_approval_required', true);
+        $a = $this->refundable($this->account('paymob', 'A'), 'paymob_card');
+        $this->httpLog = [];
+        $r = $this->request($a, 'partial', '100');
+        $r = $this->svc->approve($r, $this->user(['payments.refunds.approve']));
+
+        $this->assertSame('manual', $r->mode, 'with the gate off a Paymob refund is a manual/external workflow');
+        $this->assertSame('requested', $r->status);
+        $this->assertSame(0, $this->refundCalls(), 'nothing reaches the provider API');
     }
 }

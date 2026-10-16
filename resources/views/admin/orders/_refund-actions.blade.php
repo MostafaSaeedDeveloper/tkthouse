@@ -6,6 +6,7 @@
     $canCreate = $user->can('payments.refunds.create') && \App\Orders\OrderAccess::canManage($order, $user);
     $minorToDec = fn (int $m) => \App\Models\PaymentRefund::minorToDecimal($m);
     $uid = 'rf'.$attempt->id;
+    $needsApproval = $svc->approvalRequired();
 @endphp
 @if($canCreate && $cap->mode !== 'none' && $bal['available'] > 0 && $attempt->status === 'paid')
     <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}"><i class="fa fa-rotate-left"></i> {{ $cap->isApi() ? 'Refund' : 'Record manual refund' }}</button>
@@ -36,7 +37,7 @@
                     <div class="a-m-switch form-check form-switch"><input class="form-check-input" type="checkbox" id="{{ $uid }}ok" name="confirm" value="1" required><label class="form-check-label" for="{{ $uid }}ok"><strong>I confirm this refund</strong><span class="a-hint d-block">{{ $cap->isApi() ? 'The request is sent through the original merchant account. It is not complete until the provider confirms it. The order and tickets are not changed.' : 'Nothing is sent from here. Do the refund in the provider portal, then confirm it on the refund page. The order and tickets are not changed.' }}</span></label></div>
                     @error('refund')<div class="a-error" role="alert">{{ $message }}</div>@enderror
                 </div>
-                <div class="modal-footer"><button type="button" class="a-btn a-btn--ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="a-btn a-btn--danger">{{ $cap->isApi() ? 'Send refund' : 'Record refund request' }}</button></div>
+                <div class="modal-footer"><button type="button" class="a-btn a-btn--ghost" data-bs-dismiss="modal">Cancel</button><button type="submit" class="a-btn a-btn--danger">{{ $needsApproval ? 'Submit for approval' : ($cap->isApi() ? 'Send refund' : 'Record refund request') }}</button></div>
             </form>
         </div></div>
     </div>

@@ -193,8 +193,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.view',
         ]);
 
-        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats']);
-        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned']);
+        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats', ...\App\Support\PaymentPermissionPolicy::forRole('Order Manager')]);
+        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned', ...\App\Support\PaymentPermissionPolicy::forRole('Order Agent')]);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
