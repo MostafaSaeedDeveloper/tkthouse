@@ -35,5 +35,44 @@ Nothing here has been executed: no sandbox credentials were available. Automated
 3. Run cases P1, P3, P4, P5, P8–P12 with the Fawaterak equivalents (there is no HMAC: authenticity is the server-to-server inquiry + the order/token in the return URL). Add: **F1** an invoice paid under account B must never settle an attempt of account A (inquiry with A's key returns not found).
 4. On success a person records "Sandbox verification" on each account (Integrations → Record sandbox verification, with the run reference). Production additionally requires `PAYMENTS_FAWATERAK_VERIFIED=true` set by an operator.
 
-## 3. Evidence & sign-off
-Keep a table per provider (cases, result, evidence link, tester, date). Approver signs: ☐ Paymob ☐ Fawaterak. Only then plan Production (see the rollout plan in `docs/v2-stage-e-report.md`).
+## 3. Webhooks (Payments V2) — verify, do not assume
+**Configured ≠ Verified.** A URL being pasted into a portal proves nothing. An account's webhook is "Verified" only after a real, authenticated event has been received for it (Settings → Payments → Webhooks shows the event log and the last verified event per account). "Mark configured" is a human statement, recorded with who/when; it never turns the account green.
+
+| Provider | URL to register | Authentication | Notes |
+|---|---|---|---|
+| Paymob | `https://<host>/payments/paymob/callback` (processed + response callback) | HMAC-SHA512 over the documented field list, with **that account's** HMAC secret | The attempt's own account is used to verify; a body signed with another account's secret is rejected (P6). Event type is derived from `is_voided` / `is_refunded` / `has_parent_transaction` / `pending` / `success`. |
+| Fawaterak | `https://<host>/payments/fawaterak/webhook_json` | Paid / cancel: HMAC-SHA256 hash with the account's **vendor key** (set the "Vendor key" secret on the account). Failed / refund webhooks carry **no documented hash** | Unauthenticated types are recorded as informational only. No webhook can mark an order paid by itself: authenticated or not, the server-to-server inquiry decides (`PaymentService::settle`). |
+
+Cases to run per account and record:
+| # | Case | Expected |
+|---|---|---|
+| W1 | Real success callback | event `processed`, signature `valid`, attempt settled, "Last verified webhook" set on the account |
+| W2 | Replay the same body 3× | one stored event (unique dedupe), `duplicate` on replays, no second ticket |
+| W3 | Wrong/missing signature | HTTP 403 (Paymob) / event stored as `rejected` (Fawaterak), nothing changes |
+| W4 | Callback for a different account's attempt | rejected; inquiry uses the attempt's own account |
+| W5 | Provider retries after our 5xx | still idempotent; Webhooks screen → Retry re-processes a stored event |
+| W6 | Unknown reference | stored as `unmatched`, no state change |
+Payloads are stored encrypted with a safe-key whitelist (no PAN/CVV/tokens); verify in the DB that no card data appears.
+
+## 4. Refunds — sandbox only; production stays OFF until sign-off
+Refund calls are blocked unless **all** are true: `PAYMENTS_REFUNDS_LIVE=true` (default false), the account is usable, and a person has recorded **"Confirm refunds verified"** on the account (Settings → Payments → Providers) with the sandbox run reference. Changing the account's credentials resets that confirmation.
+
+**Paymob** (API refund/void, `POST /api/acceptance/void_refund/refund`, `Authorization: Token <secret_key>`): run on each account, with real sandbox card payments.
+| # | Case | Expected |
+|---|---|---|
+| R1 | Full refund of a settled card payment | `requested → processing → succeeded` after the refund callback / inquiry; refund transaction id stored |
+| R2 | Partial refund, then a second partial | balance decreases; sum can never exceed captured (minor units) |
+| R3 | Try to refund more than the balance | refused before any API call |
+| R4 | Two clicks / two tabs at once | one in-flight refund per payment; second refused |
+| R5 | Same-day card payment | Void offered (card only, pre-settlement); void fails after settlement → `failed`, not silently converted |
+| R6 | Wallet / non-card payment | Refund capability shown as manual/unsupported per the capabilities matrix — confirm against the provider's real response and update the matrix |
+| R7 | Provider timeout / 5xx | status `unknown`, **never re-sent automatically**; staff use "Check status" (inquiry) or record evidence |
+| R8 | Refund callback replay | no change after the first |
+Record the exact request/response shapes (secrets redacted) and correct `PaymobRefundGateway` first if any field differs.
+
+**Fawaterak**: no refund-creation API is documented, so it is a **manual / external** workflow only: staff refund in the Fawaterak dashboard, then record the refund with evidence (reference, who, when). The refund webhook is a hint only (no documented signature) and never completes a refund. If Fawaterak confirms a refund API in writing, add a gateway under the same interface and flag it per account — do not infer endpoints.
+
+`payments:validate` (read-only) before and after any run reports orphaned/inconsistent payment rows; `--backfill-references` fills only missing `internal_reference` values.
+
+## 5. Evidence & sign-off
+Keep a table per provider (cases, result, evidence link, tester, date). Approver signs: ☐ Paymob payments ☐ Paymob webhooks ☐ Paymob refunds ☐ Fawaterak payments ☐ Fawaterak webhooks (☐ Fawaterak refunds = manual workflow only). Only then plan Production (see the rollout plan in `docs/v2-stage-e-report.md`).
