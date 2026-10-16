@@ -100,7 +100,11 @@
         var promoMsg = $('#promoMsg');
         var promoHidden = $('#promoHidden');
         var expected = $('#expectedTotal');
-        var csrf = $('#placeOrderForm input[name="_token"]').value;
+        // Read at call time: the token rotates when the customer signs in with an e-mail code.
+        var csrfToken = function () {
+            var f = $('#expressForm input[name="_token"]') || $('#placeOrderForm input[name="_token"]');
+            return f ? f.value : '';
+        };
 
         var say = function (text, kind) {
             promoMsg.textContent = text || '';
@@ -131,7 +135,7 @@
             promoHidden.value = q.promo_code || '';
             promoRemove.hidden = !q.promo_code;
             $$('[data-pay-label]').forEach(function (btn) {
-                if (/^Pay /.test(btn.textContent) && btn.textContent.trim() !== 'Pay now') btn.textContent = 'Pay ' + money(q.total);
+                if (/^Pay now — /.test(btn.textContent.trim())) btn.textContent = 'Pay now — ' + money(q.total);
             });
         };
 
@@ -139,7 +143,7 @@
             promoApply.classList.add('is-loading'); promoApply.disabled = true;
             return fetch(promoInput.getAttribute('data-promo-url'), {
                 method: 'POST',
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf, 'Content-Type': 'application/json' },
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken(), 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
                 credentials: 'same-origin'
             }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data }; }); })

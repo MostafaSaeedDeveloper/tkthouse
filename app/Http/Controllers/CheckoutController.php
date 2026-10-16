@@ -5,32 +5,41 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\PaymentMethod;
+use App\Services\Auth\GuestOrderAccess;
+use App\Services\Checkout\CheckoutIdentity;
 use App\Services\Checkout\CheckoutPricing;
 use App\Services\Checkout\CheckoutSelection;
+use App\Services\Checkout\EmailVerificationRequired;
 use App\Services\Checkout\OrderPlacementService;
+use App\Services\Checkout\StaffEmailNotAllowed;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PaymentService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Checkout V2.  Step 1 (tickets) lives on the event page; this controller runs
- *   Step 2  details   GET /checkout            + POST /checkout/details
- *   Step 3  review    GET /checkout/review     + POST /checkout/promo, POST /checkout (place order)
- *   Step 4  result    GET /checkout/confirmation/{order}
- * The selection, prices, fees and promo are always recomputed on the server; the session only remembers
- * which tickets were chosen and what the customer typed.
+ * Express Checkout. Step 1 (tickets) lives on the event page; everything else is ONE page:
+ *   GET  /checkout                 contact + attendees + promo + payment + summary
+ *   POST /checkout                 places the order (AJAX or plain form), no login required
+ *   POST /checkout/promo           server-side promo preview
+ *   GET  /checkout/confirmation/N  result, rendered from the order's real status
+ *
+ * No login is needed, but a typed e-mail is never proof of an account: see CheckoutIdentity.
+ * Prices, fees and discounts are always recomputed on the server.
  */
 class CheckoutController extends Controller
 {
     private const SELECTION = 'checkout.event_selection';
-    private const DETAILS = 'checkout.details';
+    private const DRAFT = 'checkout.draft';
     private const PROMO = 'checkout.promo';
     private const SELECTION_ID = 'checkout.selection_id';
+    private const NEW_ACCOUNT_ORDERS = 'checkout.new_account_orders';
 
     public function __construct(
         private readonly CheckoutSelection $selection,
@@ -38,9 +47,9 @@ class CheckoutController extends Controller
     ) {
     }
 
-    /* ------------------------------------------------------------------ Step 2: details */
+    /* ------------------------------------------------------------------ the page */
 
-    public function index(Request $request)
+    public function index(Request $request, PaymentGatewayManager $gateways)
     {
         if ($request->filled('event') || $request->filled('cart')) {
             if (! $request->filled('event') || ! $request->filled('cart')) {
@@ -57,75 +66,24 @@ class CheckoutController extends Controller
 
             $this->startSelection($selection);
 
-            return redirect()->route('front.checkout'); // clean URL; refresh and back stay on the same step
+            return redirect()->route('front.checkout'); // clean URL: refresh/back stay on this page
         }
 
-        if (! $context = $this->context($request)) {
+        if (! $context = $this->context()) {
+            // Back button from the payment page right after ordering: continue that payment instead of losing it.
+            if ($recent = $this->recentUnpaidOrder($request)) {
+                return redirect()->route('front.orders.payment', ['order' => $recent, 'token' => $recent->payment_link_token]);
+            }
+
             return $this->invalidContextRedirect();
         }
 
         [$event, $selection] = $context;
         $units = collect($selection['units']);
-
-        $details = session(self::DETAILS, []);
-        $buyer = array_merge($this->buyerDefaults($request), array_filter((array) ($details['buyer'] ?? []), fn ($v) => $v !== null && $v !== ''));
-
-        return view('front.checkout.details', [
-            'event' => $event,
-            'groups' => $this->groups($units),
-            'buyer' => $buyer,
-            'attendees' => (array) ($details['attendees'] ?? []),
-            'quote' => $this->pricing->quote($event, $units),
-            'step' => 2,
-        ]);
-    }
-
-    public function saveDetails(Request $request)
-    {
-        if (! $context = $this->context($request)) {
-            return $this->invalidContextRedirect();
-        }
-
-        $units = collect($context[1]['units']);
-
-        // Validate everything first so the customer sees all problems at once.
-        $errors = [];
-        $buyer = $attendees = null;
-        try {
-            $buyer = $this->validateBuyer($request);
-        } catch (ValidationException $e) {
-            $errors = $e->errors();
-        }
-        try {
-            $attendees = $this->validateAttendees((array) $request->input('attendees', []), $units->count());
-        } catch (ValidationException $e) {
-            $errors = array_merge($errors, $e->errors());
-        }
-        if ($errors) {
-            throw ValidationException::withMessages($errors);
-        }
-
-        session([self::DETAILS => ['buyer' => $buyer, 'attendees' => $attendees]]);
-
-        return redirect()->route('front.checkout.review');
-    }
-
-    /* ------------------------------------------------------------------ Step 3: review & payment */
-
-    public function review(Request $request, PaymentGatewayManager $gateways)
-    {
-        if (! $context = $this->context($request)) {
-            return $this->invalidContextRedirect();
-        }
-
-        [$event, $selection] = $context;
-        $details = session(self::DETAILS);
-
-        if (! $this->detailsMatch($details, count($selection['units']))) {
-            return redirect()->route('front.checkout')->with('error', 'Please complete your details first.');
-        }
-
-        $units = collect($selection['units']);
+        $draft = (array) session(self::DRAFT, []);
+        $user = $request->user();
+        $defaults = $user ? $this->buyerDefaults($user) : [];
+        $buyer = array_merge($defaults, array_filter((array) ($draft['buyer'] ?? []), fn ($v) => $v !== null && $v !== ''));
         $promoCode = (string) session(self::PROMO, '');
         $promoNotice = null;
 
@@ -138,24 +96,27 @@ class CheckoutController extends Controller
             $quote = $this->pricing->quote($event, $units);
         }
 
-        return view('front.checkout.review', [
+        return view('front.checkout.express', [
             'event' => $event,
-            'quote' => $quote,
             'groups' => $this->groups($units),
-            'buyer' => $details['buyer'],
-            'attendees' => $details['attendees'],
+            'quote' => $quote,
+            'buyer' => $buyer,
+            'attendees' => (array) ($draft['attendees'] ?? []),
             'methods' => $gateways->available(),
+            'selectedMethod' => (string) ($draft['payment_method'] ?? ''),
             'requiresApproval' => (bool) $event->requires_booking_approval,
             'promoCode' => $promoCode,
             'promoNotice' => $promoNotice,
-            'step' => 3,
+            'signedIn' => (bool) $user,
+            'verifyEmail' => session('checkout_verify_email'),
+            'step' => 2,
         ]);
     }
 
     /** Previews a promo code. The discount is computed here, never in the browser. */
     public function applyPromo(Request $request)
     {
-        if (! $context = $this->context($request)) {
+        if (! $context = $this->context()) {
             return $request->expectsJson()
                 ? response()->json(['ok' => false, 'message' => 'Your checkout session expired.'], 409)
                 : $this->invalidContextRedirect();
@@ -170,7 +131,7 @@ class CheckoutController extends Controller
 
             return $request->expectsJson()
                 ? response()->json(['ok' => true, 'message' => 'Promo code removed.', 'quote' => $quote->toArray()])
-                : redirect()->route('front.checkout.review');
+                : redirect()->route('front.checkout');
         }
 
         $code = strtoupper(trim((string) $request->input('promo_code')));
@@ -182,121 +143,157 @@ class CheckoutController extends Controller
 
             return $request->expectsJson()
                 ? response()->json(['ok' => false, 'message' => $message], 422)
-                : redirect()->route('front.checkout.review')->withErrors(['promo_code' => $message])->withInput();
+                : redirect()->route('front.checkout')->withErrors(['promo_code' => $message])->withInput();
         }
 
         session([self::PROMO => $code]);
 
         return $request->expectsJson()
             ? response()->json(['ok' => true, 'message' => "Promo code {$code} applied.", 'quote' => $quote->toArray()])
-            : redirect()->route('front.checkout.review');
+            : redirect()->route('front.checkout');
     }
 
-    /** Places the order. Safe against double clicks, refreshes and parallel submissions. */
-    public function store(Request $request, PaymentGatewayManager $gateways, OrderPlacementService $placement)
+    /* ------------------------------------------------------------------ placing the order */
+
+    public function store(Request $request, PaymentGatewayManager $gateways, OrderPlacementService $placement, CheckoutIdentity $identity)
     {
-        if (! $context = $this->context($request)) {
-            // Back button / second tab right after a successful submit: take the customer to the order just created.
+        if (! $context = $this->context()) {
+            // Resubmit / back button right after a successful submit: take the customer to the order just created.
             if ($recent = $this->recentOrder($request)) {
-                return $this->afterPlacement($recent, $gateways);
+                return $this->respondWith($request, $this->afterPlacementUrl($recent, $gateways));
             }
 
-            return $this->invalidContextRedirect();
+            return $this->respondInvalid($request);
         }
 
         [$event, $selection] = $context;
-        $user = $request->user();
         $selectionId = (string) session(self::SELECTION_ID, '');
-        $doneKey = "checkout-done:{$user->id}:{$selectionId}";
+        $units = collect($selection['units']);
 
-        // Already placed from this very selection (double click, back button, second tab): go to that order.
-        if ($selectionId !== '' && ($existing = $this->findDoneOrder($user->id, $doneKey))) {
-            return $this->afterPlacement($existing, $gateways);
+        // What the customer typed is kept (refresh, validation error, coming back from the payment page).
+        session([self::DRAFT => [
+            'buyer' => $this->buyerInput($request),
+            'attendees' => array_values((array) $request->input('attendees', [])),
+            'payment_method' => (string) $request->input('payment_method', ''),
+        ]]);
+
+        $doneKey = "checkout-done:{$selectionId}";
+        if ($selectionId !== '' && ($existing = $this->findDoneOrder($request, $doneKey))) {
+            return $this->respondWith($request, $this->afterPlacementUrl($existing, $gateways));
         }
 
-        $lock = Cache::lock("checkout-lock:{$user->id}", 20);
+        $lock = Cache::lock('checkout-lock:'.$request->session()->getId(), 20);
         try {
             $lock->block(8);
         } catch (LockTimeoutException) {
-            return back()->with('error', 'Your order is already being processed. Please wait a moment.');
+            return $this->respondError($request, 'Your order is already being processed. Please wait a moment.', 429);
         }
 
         try {
-            if ($selectionId !== '' && ($existing = $this->findDoneOrder($user->id, $doneKey))) {
-                return $this->afterPlacement($existing, $gateways);
+            if ($selectionId !== '' && ($existing = $this->findDoneOrder($request, $doneKey))) {
+                return $this->respondWith($request, $this->afterPlacementUrl($existing, $gateways));
             }
 
-            $details = $this->resolveDetails($request, count($selection['units']));
-            $requiresApproval = (bool) $event->requires_booking_approval;
+            // Validate everything first so the customer sees all problems at once.
+            $errors = [];
+            $buyer = $attendees = null;
+            try {
+                $buyer = $this->validateBuyer($request);
+            } catch (ValidationException $e) {
+                $errors = $e->errors();
+            }
+            try {
+                $attendees = $this->validateAttendees((array) $request->input('attendees', []), $units->count());
+            } catch (ValidationException $e) {
+                $errors = array_merge($errors, $e->errors());
+            }
 
+            $requiresApproval = (bool) $event->requires_booking_approval;
             $methodCode = null;
             if (! $requiresApproval) {
-                $methodCode = (string) $request->validate([
-                    'payment_method' => ['required', 'string'],
-                ], ['payment_method.required' => 'Please choose a payment method.'])['payment_method'];
-
-                if (! $gateways->available()->contains('code', $methodCode)) {
-                    throw ValidationException::withMessages(['payment_method' => 'The selected payment method is not available.']);
+                $methodCode = trim((string) $request->input('payment_method', ''));
+                if ($methodCode === '') {
+                    $errors['payment_method'] = ['Please choose a payment method.'];
+                } elseif (! $gateways->available()->contains('code', $methodCode)) {
+                    $errors['payment_method'] = ['The selected payment method is not available.'];
                 }
             }
 
+            if ($errors) {
+                throw ValidationException::withMessages($errors);
+            }
+
+            // A stale price must not leave a new account behind: check it before the identity step
+            // (OrderPlacementService repeats the check inside its transaction).
             $promo = trim((string) $request->input('promo_code', session(self::PROMO, '')));
             $expected = $request->filled('expected_total') ? (float) $request->input('expected_total') : null;
+            if ($expected !== null) {
+                try {
+                    $current = $this->pricing->quote($event, collect($this->selection->revalidate($event, $units)['units']), $promo !== '' ? $promo : null);
+                    if (abs($current->total - $expected) > 0.009) {
+                        throw ValidationException::withMessages(['price_changed' => 'The price changed while you were checking out. Please review your order again.']);
+                    }
+                } catch (ValidationException $e) {
+                    return $this->handlePlacementError($request, $e, $event);
+                }
+            }
+
+            // Who does this order belong to? Never decided by a typed e-mail alone.
+            try {
+                [$user, $newAccount] = $identity->resolve($request, $buyer);
+            } catch (EmailVerificationRequired $e) {
+                return $this->respondVerification($request, $e->email);
+            } catch (StaffEmailNotAllowed $e) {
+                throw ValidationException::withMessages(['email' => $e->getMessage()]);
+            }
 
             try {
                 $order = $placement->place(
-                    $user, $event, collect($selection['units']), $details['buyer'], $details['attendees'],
-                    $promo !== '' ? $promo : null, $methodCode, $expected, $this->affiliateUserId($request)
+                    $user, $event, $units, $buyer, $attendees,
+                    $promo !== '' ? $promo : null, $methodCode, $expected, $this->affiliateUserId($request, $user)
                 );
             } catch (ValidationException $e) {
-                if (isset($e->errors()['price_changed'])) {
-                    return redirect()->route('front.checkout.review')->with('error', $this->firstError($e, 'Prices changed. Please review your order.'));
-                }
-                if (isset($e->errors()['cart']) || isset($e->errors()['tickets'])) {
-                    return redirect()->route('front.events.show', $event)->with('error', $this->firstError($e, 'Your selection is no longer available.'));
-                }
-                if (isset($e->errors()['promo_code'])) {
-                    session()->forget(self::PROMO);
-                    return redirect()->route('front.checkout.review')->withErrors(['promo_code' => $this->firstError($e, 'Promo code is invalid.')]);
-                }
-
-                throw $e;
+                return $this->handlePlacementError($request, $e, $event);
             }
 
+            GuestOrderAccess::grant($order);
+            if ($newAccount) {
+                session([self::NEW_ACCOUNT_ORDERS => array_values(array_unique(array_merge((array) session(self::NEW_ACCOUNT_ORDERS, []), [$order->id])))]);
+            }
             if ($selectionId !== '') {
                 Cache::put($doneKey, $order->order_number, now()->addHour());
             }
             $this->clearCheckoutSession();
             session(['checkout.last_order' => $order->order_number]);
 
-            return $this->afterPlacement($order, $gateways);
+            return $this->respondWith($request, $this->afterPlacementUrl($order, $gateways));
         } finally {
             $lock->release();
         }
     }
 
-    /* ------------------------------------------------------------------ Step 4: confirmation */
+    /* ------------------------------------------------------------------ confirmation */
 
     /** Legacy URL (older emails / gateway return links): resolve to the real, status-driven confirmation page. */
     public function thankYou(Request $request)
     {
         $orderNumber = trim((string) $request->query('order'));
+        $order = $orderNumber !== '' ? Order::query()->where('order_number', $orderNumber)->first() : null;
 
-        if ($orderNumber !== '' && Order::query()->where('order_number', $orderNumber)->where('user_id', $request->user()->id)->exists()) {
+        if ($order && GuestOrderAccess::can($request, $order)) {
             return redirect()->route('front.checkout.confirmation', $orderNumber);
         }
 
-        return redirect()->route('front.account.orders');
+        return redirect()->route($request->user() ? 'front.account.orders' : 'front.events');
     }
 
     /** What is shown comes from the order's real status, never from a query string, so a URL can not fake a payment. */
     public function confirmation(Request $request, string $orderNumber, PaymentService $payments)
     {
-        $order = Order::query()
-            ->where('order_number', $orderNumber)
-            ->where('user_id', $request->user()->id)
-            ->with(['items', 'customer'])
-            ->firstOrFail();
+        $order = Order::query()->where('order_number', $orderNumber)->with(['items', 'customer', 'user'])->first();
+
+        // Only the owner (signed in) or the browser session that placed the order may see it; otherwise it does not exist.
+        abort_unless($order && GuestOrderAccess::can($request, $order), 404);
 
         if ($order->status === 'pending_payment' && $order->paymentAttempts()->exists() && Cache::add('order-refresh:'.$order->id, 1, 5)) {
             // The customer may be back before the gateway callback: ask the gateway instead of guessing.
@@ -324,15 +321,34 @@ class CheckoutController extends Controller
         $event = Event::query()->find($order->items->pluck('event_id')->filter()->first());
         $tickets = $state === 'paid' && $order->tickets_generated_at ? $order->issuedTickets()->orderBy('id')->get() : collect();
 
+        $isOwnerSignedIn = $request->user() && (int) $request->user()->id === (int) $order->user_id;
+
+        // Signed-in owners use their account pages; a browser that only holds the order gets short-lived signed PDF links.
+        $downloads = [];
+        if (! $isOwnerSignedIn) {
+            foreach ($tickets as $ticket) {
+                $downloads[$ticket->id] = URL::temporarySignedRoute('front.tickets.public-download', now()->addHour(), ['ticketNumber' => $ticket->ticket_number]);
+            }
+        }
+
         return view('front.checkout.confirmation', [
-            'order' => $order, 'state' => $state, 'event' => $event, 'tickets' => $tickets, 'attempt' => $latest, 'step' => 4,
+            'order' => $order, 'state' => $state, 'event' => $event, 'tickets' => $tickets, 'attempt' => $latest, 'step' => 3,
+            'isOwnerSignedIn' => $isOwnerSignedIn,
+            'downloads' => $downloads,
+            'newAccount' => in_array($order->id, (array) session(self::NEW_ACCOUNT_ORDERS, []), true),
+            'accountEmail' => $order->user?->email,
+            'accountEmailMasked' => $order->user ? GuestOrderAccess::mask($order->user->email) : null,
+            'passwordless' => $order->user?->passwordless_since !== null,
+            'canSetPassword' => $isOwnerSignedIn
+                && $order->user?->passwordless_since !== null
+                && (int) session('auth.otp_verified_at', 0) >= now()->subMinutes(15)->timestamp,
         ]);
     }
 
     /* ------------------------------------------------------------------ helpers */
 
     /** @return array{0: Event, 1: array<string, mixed>}|null the event and a freshly re-validated selection, or null */
-    private function context(Request $request): ?array
+    private function context(): ?array
     {
         $stored = session(self::SELECTION);
         if (! is_array($stored) || empty($stored['units'])) {
@@ -360,20 +376,6 @@ class CheckoutController extends Controller
         return [$event, $fresh];
     }
 
-    private function invalidContextRedirect()
-    {
-        if ($slug = session('checkout_event')) {
-            return redirect()->route('front.events.show', $slug);
-        }
-
-        return $this->backToEvents('Please choose an event and tickets first.');
-    }
-
-    private function backToEvents(string $message)
-    {
-        return redirect()->route('front.events')->with('error', $message);
-    }
-
     private function startSelection(array $selection): void
     {
         $previous = session(self::SELECTION);
@@ -383,44 +385,127 @@ class CheckoutController extends Controller
         session()->forget(self::PROMO);
 
         // Keep what the customer typed if the selection did not change; otherwise only the buyer block is reusable.
-        $details = session(self::DETAILS);
-        if (! $sameShape && is_array($details)) {
-            session([self::DETAILS => ['buyer' => $details['buyer'] ?? [], 'attendees' => []]]);
+        $draft = session(self::DRAFT);
+        if (! $sameShape && is_array($draft)) {
+            session([self::DRAFT => ['buyer' => $draft['buyer'] ?? [], 'attendees' => [], 'payment_method' => $draft['payment_method'] ?? '']]);
         }
     }
 
     private function clearCheckoutSession(): void
     {
-        session()->forget([self::SELECTION, self::DETAILS, self::PROMO, self::SELECTION_ID]);
+        session()->forget([self::SELECTION, self::DRAFT, self::PROMO, self::SELECTION_ID, 'checkout_verify_email']);
     }
 
-    /** The order this customer placed in the last few minutes, if any (used to make re-submits harmless). */
-    private function recentOrder(Request $request): ?Order
+    private function backToEvents(string $message)
     {
-        $number = session('checkout.last_order');
-
-        return $number
-            ? Order::query()->where('order_number', $number)->where('user_id', $request->user()->id)->where('created_at', '>=', now()->subMinutes(15))->first()
-            : null;
+        return redirect()->route('front.events')->with('error', $message);
     }
 
-    private function findDoneOrder(int $userId, string $key): ?Order
+    private function invalidContextRedirect()
     {
-        $number = Cache::get($key);
+        if ($slug = session('checkout_event')) {
+            return redirect()->route('front.events.show', $slug);
+        }
 
-        return $number ? Order::query()->where('order_number', $number)->where('user_id', $userId)->first() : null;
+        return $this->backToEvents('Please choose an event and tickets first.');
     }
 
-    private function afterPlacement(Order $order, PaymentGatewayManager $gateways)
+    private function respondInvalid(Request $request)
+    {
+        $message = (string) (session('error') ?: 'Please choose an event and tickets first.');
+        $url = ($slug = session('checkout_event')) ? route('front.events.show', $slug) : route('front.events');
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => false, 'message' => $message, 'redirect' => $url], 409);
+        }
+
+        return redirect($url)->with('error', $message);
+    }
+
+    private function respondWith(Request $request, string $url)
+    {
+        return $request->expectsJson() ? response()->json(['ok' => true, 'redirect' => $url]) : redirect()->to($url);
+    }
+
+    private function respondError(Request $request, string $message, int $status = 422)
+    {
+        return $request->expectsJson()
+            ? response()->json(['ok' => false, 'message' => $message], $status)
+            : back()->with('error', $message);
+    }
+
+    private function respondVerification(Request $request, string $email)
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => false, 'needs_verification' => true, 'email' => $email,
+                'message' => 'This email already has an account. Enter the code we just emailed to continue — your booking details are kept.',
+            ], 409);
+        }
+
+        return back()->withInput()->with('checkout_verify_email', $email);
+    }
+
+    private function handlePlacementError(Request $request, ValidationException $e, Event $event)
+    {
+        $errors = $e->errors();
+
+        if (isset($errors['price_changed'])) {
+            $message = $this->firstError($e, 'The price changed. Please review your order.');
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'price_changed' => true, 'message' => $message], 409)
+                : redirect()->route('front.checkout')->with('error', $message);
+        }
+        if (isset($errors['cart']) || isset($errors['tickets'])) {
+            $url = route('front.events.show', $event);
+            session()->flash('error', $this->firstError($e, 'Your selection is no longer available.'));
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $this->firstError($e, 'Your selection is no longer available.'), 'redirect' => $url], 409)
+                : redirect($url);
+        }
+        if (isset($errors['promo_code'])) {
+            session()->forget(self::PROMO);
+        }
+
+        throw $e;
+    }
+
+    private function afterPlacementUrl(Order $order, PaymentGatewayManager $gateways): string
     {
         if ($order->status === 'pending_payment' && $order->payment_link_token) {
-            $method = \App\Models\PaymentMethod::query()->where('code', $order->payment_method)->first();
+            $method = PaymentMethod::query()->where('code', $order->payment_method)->first();
             if ($method && $gateways->isOnline($method)) {
-                return redirect()->route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token, 'method' => $method->code]);
+                return route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token, 'method' => $method->code]);
             }
         }
 
-        return redirect()->route('front.checkout.confirmation', $order->order_number);
+        return route('front.checkout.confirmation', $order->order_number);
+    }
+
+    /** Order placed by THIS browser session in the last few minutes (makes re-submits and the back button harmless). */
+    private function recentOrder(Request $request): ?Order
+    {
+        $number = session('checkout.last_order');
+        $order = $number ? Order::query()->where('order_number', $number)->where('created_at', '>=', now()->subMinutes(15))->first() : null;
+
+        return $order && GuestOrderAccess::can($request, $order) ? $order : null;
+    }
+
+    private function recentUnpaidOrder(Request $request): ?Order
+    {
+        $order = $this->recentOrder($request);
+
+        return $order && $order->status === 'pending_payment' && $order->payment_link_token ? $order : null;
+    }
+
+    private function findDoneOrder(Request $request, string $key): ?Order
+    {
+        $number = Cache::get($key);
+        $order = $number ? Order::query()->where('order_number', $number)->first() : null;
+
+        return $order && GuestOrderAccess::can($request, $order) ? $order : null;
     }
 
     /** @param \Illuminate\Support\Collection<int, array<string, mixed>> $units */
@@ -437,27 +522,12 @@ class CheckoutController extends Controller
         return array_values($groups);
     }
 
-    private function detailsMatch($details, int $count): bool
+    /** The buyer block as typed (not validated): used to keep the draft. */
+    private function buyerInput(Request $request): array
     {
-        return is_array($details) && count((array) ($details['attendees'] ?? [])) === $count && ! empty($details['buyer']['email']);
-    }
+        $full = trim((string) $request->input('full_name', trim($request->input('first_name', '').' '.$request->input('last_name', ''))));
 
-    /** Details from the form being posted (single-step clients) or, by default, from Step 2. */
-    private function resolveDetails(Request $request, int $count): array
-    {
-        if ($request->has('attendees')) {
-            return [
-                'buyer' => $this->validateBuyer($request),
-                'attendees' => $this->validateAttendees((array) $request->input('attendees'), $count),
-            ];
-        }
-
-        $details = session(self::DETAILS);
-        if (! $this->detailsMatch($details, $count)) {
-            throw ValidationException::withMessages(['attendees' => 'Please fill attendee data for all selected tickets.']);
-        }
-
-        return $details;
+        return ['full_name' => $full, 'email' => trim((string) $request->input('email', '')), 'phone' => trim((string) $request->input('phone', ''))];
     }
 
     /** @return array{first_name: string, last_name: string, email: string, phone: ?string} */
@@ -538,31 +608,30 @@ class CheckoutController extends Controller
         return $clean;
     }
 
-    private function affiliateUserId(Request $request): ?int
+    private function affiliateUserId(Request $request, $user): ?int
     {
         $fromSession = (int) $request->session()->get('affiliate.referrer_id', 0);
         if ($fromSession > 0) {
             return $fromSession;
         }
 
-        $fallback = (int) ($request->user()->referred_by_user_id ?? 0);
+        $fallback = (int) ($user->referred_by_user_id ?? 0);
 
         return $fallback > 0 ? $fallback : null;
     }
 
-    private function buyerDefaults(Request $request): array
+    private function buyerDefaults($user): array
     {
-        $user = $request->user();
         $customer = Customer::query()->where('email', $user->email)->first();
         $parts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
 
         $first = trim((string) ($parts[0] ?? ''));
         $last = trim((string) ($parts[1] ?? ''));
         $phone = trim((string) ($user->phone ?? ''));
+        $name = trim(($first !== '' ? $first : ($customer?->first_name ?? '')).' '.($last !== '' ? $last : ($customer?->last_name ?? '')));
 
         return [
-            'first_name' => $first !== '' ? $first : ($customer?->first_name ?? ''),
-            'last_name' => $last !== '' ? $last : ($customer?->last_name ?? ''),
+            'full_name' => $name,
             'email' => $user->email,
             'phone' => $phone !== '' ? $phone : ($customer?->phone ?? ''),
         ];

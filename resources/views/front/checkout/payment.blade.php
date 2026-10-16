@@ -11,7 +11,7 @@
 
 @section('content')
 <div class="tkt-container tkt-checkout">
-    <x-tkt.stepper :current="3" />
+    <x-tkt.stepper :current="2" />
 
     <div class="tkt-checkout__head">
         <h1 class="tkt-checkout__title">Complete your payment</h1>

@@ -67,7 +67,6 @@ class CheckoutPromoCodeTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('front.checkout.store'), $this->payload(1, ['promo_code' => 'BAD']));
 
-        $response->assertRedirect(route('front.checkout.review'));
         $response->assertSessionHasErrors('promo_code');
         $this->assertDatabaseCount('orders', 0);
     }

@@ -302,11 +302,11 @@
                             <span>Total<button type="button" class="tkt-summary__toggle" id="summaryToggle" aria-expanded="false">Details</button></span>
                             <b id="summaryTotal">0.00 EGP</b>
                         </div>
-                        <a href="{{ route('front.checkout') }}" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block tkt-checkout-btn is-disabled" id="checkoutBtn" aria-disabled="true" tabindex="-1">
-                            {{ $isBookingClosed ? 'Booking closed' : 'Continue to checkout' }}
+                        <a href="{{ route('front.checkout') }}" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block tkt-checkout-btn is-disabled" id="checkoutBtn" data-express-checkout aria-disabled="true" tabindex="-1">
+                            {{ $isBookingClosed ? 'Booking closed' : 'Continue' }}
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                         </a>
-                        <p class="tkt-summary__note">{{ $isBookingClosed ? 'This event is sold out, so checkout is disabled.' : 'Secure checkout · Final amount is confirmed at the next step' }}</p>
+                        <p class="tkt-summary__note">{{ $isBookingClosed ? 'This event is sold out, so checkout is disabled.' : 'No account needed · Final amount shown at checkout' }}</p>
                     </div>
                 @endif
             </div>

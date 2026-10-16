@@ -13,7 +13,7 @@ class PaymentSimulatorController extends Controller
     {
         abort_unless(\App\Support\PaymentEnvironment::fakeGatewayAllowed(), 404);
         abort_unless($attempt->provider === 'fake', 404);
-        abort_unless($request->user() && (int) $attempt->order->user_id === (int) $request->user()->id, 403);
+        abort_unless(\App\Services\Auth\GuestOrderAccess::can($request, $attempt->order), 403);
     }
 
     public function show(Request $request, PaymentAttempt $attempt)

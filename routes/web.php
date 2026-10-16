@@ -17,7 +17,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemSettingController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PromoCodeController;
+use App\Http\Controllers\AccountPasswordController;
 use App\Http\Controllers\AffiliateRedirectController;
+use App\Http\Controllers\AuthOtpController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerDashboardController;
@@ -58,6 +60,23 @@ Route::get('/ref/{affiliateCode}', AffiliateRedirectController::class)->name('fr
 
 Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])->name('front.customer.register');
 
+// ---- Express checkout: no login required. Access to an order is decided inside the controllers
+//      (signed-in owner, or the browser session that placed it) — a typed e-mail is never proof.
+Route::group([], function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:12,1')->name('front.checkout.store');
+    Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->middleware('throttle:30,1')->name('front.checkout.promo');
+    Route::redirect('/checkout/review', '/checkout');
+    Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
+    Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
+    Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
+    Route::post('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'complete'])->name('front.payments.fake.complete');
+    Route::get('/orders/{order}/payment/{token}', [PaymentController::class, 'show'])->name('front.orders.payment');
+    Route::get('/orders/{order}/payment/{token}/gateway', [PaymentController::class, 'gateway'])->name('front.orders.payment.gateway');
+    Route::post('/auth/otp/send', [AuthOtpController::class, 'send'])->middleware('throttle:20,1')->name('front.auth.otp.send');
+    Route::post('/auth/otp/verify', [AuthOtpController::class, 'verify'])->middleware('throttle:20,1')->name('front.auth.otp.verify');
+});
+
 Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
     Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
@@ -65,17 +84,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/account/profile', [CustomerDashboardController::class, 'updateProfile'])->name('front.account.profile.update');
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');
     Route::get('/account/tickets', [CustomerDashboardController::class, 'tickets'])->name('front.account.tickets');
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
-    Route::post('/checkout/details', [CheckoutController::class, 'saveDetails'])->name('front.checkout.details');
-    Route::get('/checkout/review', [CheckoutController::class, 'review'])->name('front.checkout.review');
-    Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->name('front.checkout.promo');
-    Route::post('/checkout', [CheckoutController::class, 'store'])->name('front.checkout.store');
-    Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
-    Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
-    Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
-    Route::post('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'complete'])->name('front.payments.fake.complete');
-    Route::get('/orders/{order}/payment/{token}', [PaymentController::class, 'show'])->name('front.orders.payment');
-    Route::get('/orders/{order}/payment/{token}/gateway', [PaymentController::class, 'gateway'])->name('front.orders.payment.gateway');
+    Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
+    Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
 });

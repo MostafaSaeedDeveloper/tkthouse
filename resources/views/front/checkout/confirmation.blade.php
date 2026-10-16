@@ -11,7 +11,7 @@
 
 @section('content')
 <div class="tkt-container tkt-checkout">
-    <x-tkt.stepper :current="4" />
+    <x-tkt.stepper :current="3" />
 
     <div class="tkt-result">
         <section class="tkt-card tkt-result__card" aria-live="polite" @if($state === 'pending') data-autorefresh="12000" @endif>
@@ -70,8 +70,12 @@
                             </div>
                             <x-tkt.badge variant="success" :dot="true">Issued</x-tkt.badge>
                             <div class="tkt-tkt__actions">
-                                <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View</a>
-                                <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.download', $ticket) }}">PDF</a>
+                                @if($isOwnerSignedIn)
+                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View</a>
+                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.download', $ticket) }}">PDF</a>
+                                @elseif(isset($downloads[$ticket->id]))
+                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $downloads[$ticket->id] }}">Download PDF</a>
+                                @endif
                             </div>
                         </div>
                     @empty
@@ -80,10 +84,31 @@
                 </div>
             @endif
 
+            @if($newAccount && $accountEmail)
+                <div class="tkt-alert tkt-alert--info" style="text-align:left;margin-top:20px">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <div>We created a TKT House account for <strong>{{ $accountEmail }}</strong> so your orders and tickets stay together. There is no password — you sign in with a code sent to that email.</div>
+                </div>
+            @endif
+
+            @if(! $isOwnerSignedIn && $accountEmail)
+                <div style="margin-top:16px;text-align:left" id="claimWrap">
+                    <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--block" id="claimBtn">Sign in to manage my tickets — email me a code</button>
+                    <div id="claimBox" hidden style="margin-top:14px">
+                        <x-tkt.otp-panel :email="$accountEmail" :email-masked="$accountEmailMasked" :after="route('front.account.tickets')" id-suffix="conf" />
+                    </div>
+                </div>
+            @endif
+
             <div class="tkt-result__actions">
                 @if($state === 'paid')
-                    <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ route('front.account.tickets') }}">View my tickets</a>
-                    <a class="tkt-btn tkt-btn--outline tkt-btn--lg" href="{{ route('front.events') }}">Back to events</a>
+                    @if($isOwnerSignedIn)
+                        <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ route('front.account.tickets') }}">View my tickets</a>
+                    @endif
+                    <a class="tkt-btn {{ $isOwnerSignedIn ? 'tkt-btn--outline' : 'tkt-btn--primary' }} tkt-btn--lg" href="{{ route('front.events') }}">Back to events</a>
+                    @if($canSetPassword)
+                        <a class="tkt-btn tkt-btn--ghost tkt-btn--lg" href="{{ route('front.account.set-password') }}">Set a password (optional)</a>
+                    @endif
                 @elseif($state === 'pending')
                     <a class="tkt-btn tkt-btn--primary tkt-btn--lg" href="{{ route('front.checkout.confirmation', $order->order_number) }}">Check payment status</a>
                     @if($payUrl)<a class="tkt-btn tkt-btn--outline tkt-btn--lg" href="{{ $payUrl }}">Use another method</a>@endif
@@ -101,5 +126,18 @@
 @endsection
 
 @push('scripts')
+    <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
+    <script>
+        (function () {
+            var btn = document.getElementById('claimBtn'), box = document.getElementById('claimBox');
+            if (!btn || !box) return;
+            btn.addEventListener('click', function () {
+                box.hidden = false; btn.hidden = true;
+                var panel = box.querySelector('[data-otp-panel]');
+                window.TktOtp.init(panel).send();
+                var c = panel.querySelector('[data-otp-code]'); if (c) c.focus();
+            });
+        })();
+    </script>
     <script src="{{ asset('js/tkt-checkout.js') }}?v={{ filemtime(public_path('js/tkt-checkout.js')) }}"></script>
 @endpush

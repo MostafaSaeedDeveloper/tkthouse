@@ -46,8 +46,28 @@ Never run seeders against the copied data.
 2. **Late payments on admin-canceled orders** are only flagged ("Payment received on a closed order"); refunds are manual.
 3. **Guest checkout** — see proposal below.
 
-## Guest checkout proposal (not implemented)
-* `orders.user_id` and the customer account pages assume a user. Safest path: create a *passwordless account* from the buyer e-mail
-  (email-verified by a magic link or OTP, reusing `RegisterOtpMail`) at the review step, so orders, tickets and the dashboard keep working.
-* Alternative: nullable `user_id` + signed order links — larger change to scanner/dashboard/permissions; not recommended first.
-* Risks to design for: e-mail ownership (account takeover via guessed e-mail), duplicate customers, ticket access links.
+## Express checkout (implemented)
+One page at `/checkout` (no login, no wizard, no review step; `/checkout/review` redirects). Event page *Continue* goes straight there.
+* **New e-mail** → passwordless account (`users.passwordless_since`, random unknown password, never mailed). No login session is created;
+  the order is bound to the account and the buying browser gets session access to its order/confirmation/payment pages (`GuestOrderAccess`)
+  plus short-lived signed PDF links. After buying, the customer can claim the account with an e-mail code and optionally set a password
+  (`/account/password`, needs a code verified in the last 15 minutes).
+* **Existing e-mail** → HTTP 409 `needs_verification`; a modal asks for a 6-digit code (single use, 10 min, bound to the browser session,
+  5 attempts, 30 s cooldown, 5/hour per address). After verification the same form is resubmitted as the verified owner. Nothing is created,
+  linked or edited before the code. Typed e-mail is never proof of ownership.
+* **Signed-in** users buy directly; the contact on the order may differ and never changes the account.
+* **Staff accounts** (admin/staff roles) cannot be used through this flow (checkout refuses the e-mail; codes never log them in).
+* Unpaid orders reached from an emailed payment link by someone without a session get a verification page (code goes to the order's
+  account address; the address is only shown masked).
+* Idempotency: selection id + done-record, per-session lock, per-email account lock with unique-violation fallback, recent-order redirect,
+  `expected_total` price check performed *before* any account is created.
+
+### Environment flags to review before go-live
+`PAYMENTS_LIVE_GATEWAYS`, `PAYMENTS_FAWATERAK_VERIFIED`, `PAYMOB_HMAC_SECRET` (webhook `payments/paymob/callback` is CSRF-exempt and rejected
+in production without a valid HMAC), `PAYMENTS_FAKE_ENABLED` (never in production), `NOTIFY_MAIL_ALLOWLIST` / `NOTIFY_WHATSAPP_ENABLED` on staging.
+
+### Decisions needing approval
+1. Account enumeration is inherent to express checkout (the 409 reveals an e-mail has an account). The OTP *send* endpoint itself answers identically.
+2. An unverified passwordless account created with someone else's e-mail could later show that pending order to the real owner after their code login.
+3. Staff e-mails are blocked from the flow (they sign in with a password).
+4. Guests reach orders via the browser session only; a different browser needs the e-mail code.

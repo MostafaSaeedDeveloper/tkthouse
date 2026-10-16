@@ -1,6 +1,6 @@
 @props(['current' => 2])
 @php
-    $steps = [1 => 'Tickets', 2 => 'Your details', 3 => 'Payment', 4 => 'Confirmation'];
+    $steps = [1 => 'Tickets', 2 => 'Checkout', 3 => 'Confirmation'];
 @endphp
 <ol class="tkt-stepper-nav" aria-label="Checkout progress">
     @foreach($steps as $n => $label)

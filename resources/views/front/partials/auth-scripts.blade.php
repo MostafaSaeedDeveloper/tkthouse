@@ -183,7 +183,8 @@
 
                 document.addEventListener('click', function (event) {
                     var link = event.target.closest('a.tkt-checkout-btn');
-                    if (!link) {
+                    // Express checkout needs no login: only legacy links are routed through the sign-in modal.
+                    if (!link || link.hasAttribute('data-express-checkout')) {
                         return;
                     }
 
