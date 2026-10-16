@@ -69,6 +69,7 @@ Route::group([], function () {
     Route::redirect('/checkout/review', '/checkout');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
     Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
+    Route::post('/checkout/confirmation/{orderNumber}/email', [CheckoutController::class, 'changeEmail'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:6,1')->name('front.checkout.change-email');
     Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
     Route::post('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'complete'])->name('front.payments.fake.complete');
     Route::get('/orders/{order}/payment/{token}', [PaymentController::class, 'show'])->name('front.orders.payment');

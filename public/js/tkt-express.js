@@ -84,13 +84,23 @@
     var modal = window.jQuery ? window.jQuery('#otpModal') : null;
     var panel = $('#otpModal [data-otp-panel]');
 
-    function openVerification(email) {
-        if (!panel || !modal) { showAlert('This email already has an account. Please sign in to continue.'); return; }
+    function openVerification(email, masked) {
+        if (!panel || !modal) { showAlert('Please confirm your email to continue.'); return; }
         var otp = window.TktOtp.init(panel);
-        otp.setEmail(email);
+        otp.setEmail(email, masked || email);
         modal.modal('show');
         otp.send();
         setTimeout(function () { var c = panel.querySelector('[data-otp-code]'); if (c) c.focus(); }, 400);
+    }
+
+    // "Wrong email?": back to the form with everything kept, focus on the email field.
+    var editBtn = $('[data-otp-edit-email]');
+    if (editBtn) {
+        editBtn.addEventListener('click', function () {
+            if (modal) modal.modal('hide');
+            var f = $('#buyer_email');
+            if (f) { setTimeout(function () { f.focus(); f.select(); }, 350); }
+        });
     }
 
     if (panel) {
@@ -125,7 +135,7 @@
             submitting = false;
             setLoading(false);
 
-            if (res.status === 409 && d.needs_verification) { openVerification(d.email); return; }
+            if (res.status === 409 && d.needs_verification) { openVerification(((form.querySelector('#buyer_email') || {}).value || '').trim(), d.masked); return; }
             if (res.status === 409 && d.redirect) { window.location.href = d.redirect; return; }
             if (res.status === 409 && d.price_changed) { showAlert(d.message); setTimeout(function () { window.location.reload(); }, 1800); return; }
             if (res.status === 422 && d.errors) { showFieldErrors(d.errors); return; }

@@ -23,11 +23,30 @@ class GuestOrderAccess
     {
         $user = $request->user();
 
-        if ($user && (int) $order->user_id === (int) $user->id) {
+        // An order placed before the mailbox was proven belongs to the buying browser only, even for the account's own login.
+        if ($user && (int) $order->user_id === (int) $user->id && ! $order->owner_unverified) {
             return true;
         }
 
         return in_array($order->id, (array) $request->session()->get(self::KEY, []), true);
+    }
+
+    /**
+     * The owner proved the mailbox (e-mail code): orders this browser placed before that moment become part of the account.
+     * Orders placed by other browsers stay unclaimed, so a stranger can't push orders into someone else's account.
+     */
+    public static function claim(Request $request, \App\Models\User $user, ?Order $extra = null): int
+    {
+        $ids = (array) $request->session()->get(self::KEY, []);
+        if ($extra && (int) $extra->user_id === (int) $user->id) {
+            $ids[] = $extra->id;
+        }
+
+        if ($ids === []) {
+            return 0;
+        }
+
+        return Order::query()->where('user_id', $user->id)->where('owner_unverified', true)->whereIn('id', $ids)->update(['owner_unverified' => false]);
     }
 
     public static function mask(string $email): string

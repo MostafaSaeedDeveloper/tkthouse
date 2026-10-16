@@ -64,6 +64,9 @@ class FrontTicketController extends Controller
 
         $ticket->loadMissing('order.customer');
 
+        // Unclaimed guest orders are not part of any account yet (the buying browser uses signed links).
+        abort_if($ticket->order?->owner_unverified, 403);
+
         $orderUserId = $ticket->order?->user_id;
         $orderCustomerEmail = $ticket->order?->customer?->email;
         $holderEmail = $ticket->holder_email;

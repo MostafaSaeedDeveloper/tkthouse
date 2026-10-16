@@ -67,7 +67,11 @@ One page at `/checkout` (no login, no wizard, no review step; `/checkout/review`
 in production without a valid HMAC), `PAYMENTS_FAKE_ENABLED` (never in production), `NOTIFY_MAIL_ALLOWLIST` / `NOTIFY_WHATSAPP_ENABLED` on staging.
 
 ### Decisions needing approval
-1. Account enumeration is inherent to express checkout (the 409 reveals an e-mail has an account). The OTP *send* endpoint itself answers identically.
-2. An unverified passwordless account created with someone else's e-mail could later show that pending order to the real owner after their code login.
+1. Account enumeration is reduced, not eliminated: the code-send endpoint answers identically for every address, and the checkout 409 says only "confirm this email with a code" (masked address, throttled to 8/hour per client), but the *existence* of the extra step still leaks. Full neutrality would require not binding orders to accounts at purchase time.
+
+### Typos and resending codes
+* Before paying: fix the e-mail field and resubmit — the account this browser just created is renamed (no orphan account on the typo). In the code modal, "Edit my email" returns to the form with everything kept.
+* After ordering: "Wrong email? Fix it" on the confirmation page changes the address of the still-unconfirmed account (buying browser only, never to an existing/staff address — one generic refusal), then the code is sent to the corrected address. Resend is rate limited (30 s cooldown, 5/hour per address) and a new code invalidates the previous one.
+2. (Mitigated) Orders placed by a guest are flagged `owner_unverified`: they stay out of account pages, ticket pages and account-owner access until the mailbox is proven *by the browser that placed them* (or via the order's payment link + code). Someone typing a victim's e-mail therefore cannot push orders/tickets into the victim's account. Trade-off: an owner who bought on one device and confirms on another sees that order only after using its payment link or confirmation email.
 3. Staff e-mails are blocked from the flow (they sign in with a password).
 4. Guests reach orders via the browser session only; a different browser needs the e-mail code.

@@ -76,7 +76,7 @@ class CustomerDashboardController extends Controller
 
     private function ordersQuery($user)
     {
-        return Order::query()->where(function ($query) use ($user) {
+        return Order::query()->where('owner_unverified', false)->where(function ($query) use ($user) {
             $query->where('user_id', $user->id)
                 ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
         });
@@ -85,8 +85,10 @@ class CustomerDashboardController extends Controller
     private function ticketsQuery($user)
     {
         return IssuedTicket::query()->whereHas('order', function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
+            $query->where('owner_unverified', false)->where(function ($inner) use ($user) {
+                $inner->where('user_id', $user->id)
+                    ->orWhereHas('customer', fn ($q) => $q->where('email', $user->email));
+            });
         });
     }
 }

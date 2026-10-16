@@ -13,6 +13,7 @@ class Order extends Model
     protected $fillable = [
         'customer_id',
         'user_id',
+        'owner_unverified',
         'affiliate_user_id',
         'promo_code_id',
         'promo_code',
@@ -36,6 +37,7 @@ class Order extends Model
     {
         return [
             'requires_approval' => 'boolean',
+            'owner_unverified' => 'boolean',
             'exclude_from_statistics' => 'boolean',
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',

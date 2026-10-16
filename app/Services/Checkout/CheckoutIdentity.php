@@ -55,6 +55,18 @@ class CheckoutIdentity
                 throw new EmailVerificationRequired($existing->email);
             }
 
+            // A typo fixed before the mailbox was ever confirmed: the account this very browser created a moment ago
+            // simply gets the corrected address (no orphan account on the wrong e-mail).
+            if ($mine = $this->sessionCreatedAccount($request)) {
+                $mine->forceFill([
+                    'email' => $email,
+                    'name' => trim($buyer['first_name'].' '.$buyer['last_name']),
+                    'phone' => $buyer['phone'] ?? $mine->phone,
+                ])->save();
+
+                return [$mine, false];
+            }
+
             try {
                 $user = User::create([
                     'name' => trim($buyer['first_name'].' '.$buyer['last_name']),
@@ -82,6 +94,15 @@ class CheckoutIdentity
     public function isStaff(User $user): bool
     {
         return method_exists($user, 'hasAnyRole') && $user->hasAnyRole(self::STAFF_ROLES);
+    }
+
+    /** The still-unconfirmed passwordless account this browser created in the last two hours, if any. */
+    public function sessionCreatedAccount(Request $request): ?User
+    {
+        $marker = $request->session()->get(self::CREATED_KEY);
+        $user = is_array($marker) ? User::query()->find((int) ($marker['id'] ?? 0)) : null;
+
+        return $user && $this->createdByThisSession($request, $user) && ! $this->isStaff($user) ? $user : null;
     }
 
     private function createdByThisSession(Request $request, User $user): bool

@@ -18,6 +18,8 @@ use App\Services\Payments\PaymentService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -256,6 +258,10 @@ class CheckoutController extends Controller
                 return $this->handlePlacementError($request, $e, $event);
             }
 
+            if (! $request->user()) {
+                // The mailbox is not proven: keep this order out of account pages until the owner confirms it with a code.
+                $order->forceFill(['owner_unverified' => true])->saveQuietly();
+            }
             GuestOrderAccess::grant($order);
             if ($newAccount) {
                 session([self::NEW_ACCOUNT_ORDERS => array_values(array_unique(array_merge((array) session(self::NEW_ACCOUNT_ORDERS, []), [$order->id])))]);
@@ -273,6 +279,38 @@ class CheckoutController extends Controller
     }
 
     /* ------------------------------------------------------------------ confirmation */
+
+    /**
+     * "Wrong email?": the browser that just placed a guest order may correct the address of the account it created,
+     * as long as nobody proved that mailbox yet. Existing/staff addresses are refused with one generic answer.
+     */
+    public function changeEmail(Request $request, string $orderNumber, CheckoutIdentity $identity)
+    {
+        $order = Order::query()->where('order_number', $orderNumber)->with('user', 'customer')->first();
+        abort_unless($order && GuestOrderAccess::can($request, $order) && $order->owner_unverified, 404);
+
+        $account = $identity->sessionCreatedAccount($request);
+        abort_unless($account && (int) $account->id === (int) $order->user_id, 403);
+
+        $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
+        $email = \App\Services\Auth\EmailOtpService::normalize($data['email']);
+
+        $taken = \App\Services\Auth\EmailOtpService::findUser($email);
+        if ($taken && (int) $taken->id !== (int) $account->id) {
+            return response()->json(['ok' => false, 'message' => 'This address can\'t be used for this booking. Please use a different email.'], 422);
+        }
+
+        DB::transaction(function () use ($account, $email, $order) {
+            $account->forceFill(['email' => $email, 'email_verified_at' => null])->save();
+            $customer = \App\Models\Customer::query()->firstOrCreate(['email' => $email], [
+                'first_name' => $order->customer?->first_name, 'last_name' => $order->customer?->last_name, 'phone' => $order->customer?->phone,
+            ]);
+            Order::query()->where('user_id', $account->id)->where('owner_unverified', true)
+                ->whereIn('id', (array) session('checkout.my_orders', []))->update(['customer_id' => $customer->id]);
+        });
+
+        return response()->json(['ok' => true, 'email' => $email, 'masked' => GuestOrderAccess::mask($email)]);
+    }
 
     /** Legacy URL (older emails / gateway return links): resolve to the real, status-driven confirmation page. */
     public function thankYou(Request $request)
@@ -321,7 +359,7 @@ class CheckoutController extends Controller
         $event = Event::query()->find($order->items->pluck('event_id')->filter()->first());
         $tickets = $state === 'paid' && $order->tickets_generated_at ? $order->issuedTickets()->orderBy('id')->get() : collect();
 
-        $isOwnerSignedIn = $request->user() && (int) $request->user()->id === (int) $order->user_id;
+        $isOwnerSignedIn = $request->user() && (int) $request->user()->id === (int) $order->user_id && ! $order->owner_unverified;
 
         // Signed-in owners use their account pages; a browser that only holds the order gets short-lived signed PDF links.
         $downloads = [];
@@ -436,10 +474,19 @@ class CheckoutController extends Controller
 
     private function respondVerification(Request $request, string $email)
     {
+        // Probing e-mails through this step is throttled per client; the wording never says "account exists".
+        $key = 'checkout-verify:'.($request->ip() ?? 'x');
+        if (RateLimiter::tooManyAttempts($key, 8)) {
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => 'Too many attempts. Please wait a while and try again.'], 429)
+                : back()->withInput()->with('error', 'Too many attempts. Please wait a while and try again.');
+        }
+        RateLimiter::hit($key, 3600);
+
         if ($request->expectsJson()) {
             return response()->json([
-                'ok' => false, 'needs_verification' => true, 'email' => $email,
-                'message' => 'This email already has an account. Enter the code we just emailed to continue — your booking details are kept.',
+                'ok' => false, 'needs_verification' => true, 'masked' => GuestOrderAccess::mask($email),
+                'message' => 'To keep your booking safe, confirm this email with a code. Your booking details are kept.',
             ], 409);
         }
 

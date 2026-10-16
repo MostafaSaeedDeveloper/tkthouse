@@ -256,7 +256,7 @@ class ExpressCheckoutTest extends TestCase
         $this->begin($this->ticketRows(1));
 
         $this->place($this->payload(1, ['full_name' => 'Attacker']))
-            ->assertStatus(409)->assertJson(['needs_verification' => true, 'email' => 'nour@example.test']);
+            ->assertStatus(409)->assertJson(['needs_verification' => true, 'masked' => 'n•••@example.test'])->assertJsonMissingPath('email');
 
         $this->assertGuest();
         $this->assertSame(0, Order::count());

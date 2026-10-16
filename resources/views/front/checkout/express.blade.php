@@ -200,9 +200,9 @@
                 <h4 class="modal-title" id="otpTitle">Confirm your email</h4>
             </div>
             <div class="modal-body">
-                <p class="tkt-text-sm" style="margin-bottom:12px">This email already has a TKT House account, so we need to check it's you. Your booking details are saved — nothing is lost.</p>
+                <p class="tkt-text-sm" style="margin-bottom:12px">To keep your booking safe we need to confirm this email. We've sent a code if it can receive one. Your booking details are saved — nothing is lost.</p>
                 <x-tkt.otp-panel email="" id-suffix="modal" />
-                <p class="tkt-text-muted tkt-text-sm" style="margin-top:14px">Not you? Close this and use a different email address.</p>
+                <p class="tkt-text-muted tkt-text-sm" style="margin-top:14px">Typed it wrong? <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-otp-edit-email>Edit my email</button> — your tickets and details stay as they are.</p>
             </div>
         </div>
     </div>

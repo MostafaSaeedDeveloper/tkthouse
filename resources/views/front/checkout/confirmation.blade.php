@@ -87,7 +87,15 @@
             @if($newAccount && $accountEmail)
                 <div class="tkt-alert tkt-alert--info" style="text-align:left;margin-top:20px">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                    <div>We created a TKT House account for <strong>{{ $accountEmail }}</strong> so your orders and tickets stay together. There is no password — you sign in with a code sent to that email.</div>
+                    <div>We created a TKT House account for <strong>{{ $accountEmail }}</strong> so your orders and tickets stay together. There is no password — you sign in with a code sent to that email.
+                        <div style="margin-top:8px"><button type="button" class="tkt-link" id="changeEmailBtn" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline">Wrong email? Fix it</button></div>
+                        <form id="changeEmailForm" hidden style="margin-top:10px" data-url="{{ route('front.checkout.change-email', $order->order_number) }}">
+                            <label class="tkt-label" for="changeEmailInput">Correct email address</label>
+                            <input class="tkt-input" id="changeEmailInput" type="email" autocomplete="email" value="{{ $accountEmail }}" required>
+                            <div class="tkt-field__error" id="changeEmailError" hidden></div>
+                            <button type="submit" class="tkt-btn tkt-btn--primary" style="margin-top:8px">Save and send me a code</button>
+                        </form>
+                    </div>
                 </div>
             @endif
 
@@ -129,6 +137,26 @@
     <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
     <script>
         (function () {
+            var cb = document.getElementById('changeEmailBtn'), cf = document.getElementById('changeEmailForm');
+            if (cb && cf) {
+                cb.addEventListener('click', function () { cf.hidden = !cf.hidden; });
+                cf.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var err = document.getElementById('changeEmailError'); err.hidden = true;
+                    var body = new URLSearchParams({ email: document.getElementById('changeEmailInput').value });
+                    fetch(cf.getAttribute('data-url'), { method: 'POST', credentials: 'same-origin', body: body,
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || '' } })
+                        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+                        .then(function (res) {
+                            if (!res.ok || !res.d.ok) { err.textContent = (res.d.message || (res.d.errors && res.d.errors.email && res.d.errors.email[0]) || 'Could not change the email. Please try again.'); err.hidden = false; return; }
+                            document.querySelectorAll('.tkt-alert strong').forEach(function (s) { if (s.textContent.indexOf('@') > -1) s.textContent = res.d.email; });
+                            var panel = document.querySelector('#claimBox [data-otp-panel]');
+                            if (panel) { var o = window.TktOtp.init(panel); o.setEmail(res.d.email, res.d.masked); }
+                            cf.hidden = true;
+                            var claim = document.getElementById('claimBtn'); if (claim) { claim.hidden = false; document.getElementById('claimBox').hidden = true; }
+                        });
+                });
+            }
             var btn = document.getElementById('claimBtn'), box = document.getElementById('claimBox');
             if (!btn || !box) return;
             btn.addEventListener('click', function () {

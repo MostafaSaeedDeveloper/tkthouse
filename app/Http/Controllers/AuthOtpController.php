@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\Auth\EmailOtpService;
+use App\Services\Auth\GuestOrderAccess;
 use App\Services\Checkout\CheckoutIdentity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,10 +60,12 @@ class AuthOtpController extends Controller
         ]);
 
         $email = (string) ($data['email'] ?? '');
+        $linkedOrder = null;
         if (! empty($data['order'])) {
             $order = Order::query()->where('order_number', $data['order'])->with('user')->first();
             abort_unless($order && $order->payment_link_token && hash_equals($order->payment_link_token, (string) ($data['token'] ?? '')) && $order->user, 404);
             $email = $order->user->email;
+            $linkedOrder = $order;
         }
 
         $user = $otp->verify($email, trim($data['code']), $request->session()->getId());
@@ -82,6 +85,7 @@ class AuthOtpController extends Controller
         Auth::login($user);
         $request->session()->regenerate(); // keeps the checkout selection, rotates the session id
         $request->session()->put('auth.otp_verified_at', now()->timestamp);
+        GuestOrderAccess::claim($request, $user, $linkedOrder); // this browser's own pre-verification orders join the account
         $user->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->save();
 
         return response()->json([
