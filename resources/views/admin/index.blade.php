@@ -152,12 +152,12 @@
                     @foreach($recentOrders as $o)
                         <tr>
                             <td data-label="Order">@can('orders.view')<a class="a-table__main" href="{{ route('admin.orders.show', $o) }}">#{{ $o->order_number }}</a>@else #{{ $o->order_number }} @endcan</td>
-                            <td data-label="Customer"><span class="a-table__main">{{ trim(($o->customer?->first_name ?? '').' '.($o->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub">{{ $o->customer?->email }}</span></td>
-                            <td data-label="Event">{{ $o->items->pluck('event.name')->filter()->first() ?? '—' }}</td>
+                            <td data-label="Customer"><span class="a-table__main">{{ trim(($o->customer?->first_name ?? '').' '.($o->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub a-trunc">{{ $o->customer?->email }}</span></td>
+                            <td data-label="Event"><span class="a-trunc">{{ $o->items->pluck('event.name')->filter()->first() ?? '—' }}</span></td>
                             <td data-label="Tickets" class="a-num">{{ (int) $o->items->sum('quantity') }}</td>
                             <td data-label="Amount" class="a-num">{{ $moneyShort($o->total_amount) }}</td>
                             <td data-label="Status"><x-admin.status :status="$o->status" /></td>
-                            <td data-label="Date">{{ $o->created_at->format('d M Y, H:i') }}</td>
+                            <td data-label="Date">{{ $o->created_at->format('d M, H:i') }}</td>
                         </tr>
                     @endforeach
                     </tbody>
