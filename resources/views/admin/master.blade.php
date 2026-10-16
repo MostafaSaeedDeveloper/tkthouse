@@ -28,7 +28,6 @@
   <link rel="stylesheet" href="{{ asset('admin/assets/css/dashmix.min.css') }}">
   <link rel="stylesheet" href="{{ asset('admin-v2/admin-v2.css') }}?v={{ filemtime(public_path('admin-v2/admin-v2.css')) }}">
   <link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
   @stack('styles')
 </head>
@@ -103,11 +102,11 @@
 {{-- Scripts --}}
 <script src="{{ asset('admin/assets/js/dashmix.app.min.js') }}"></script>
 <script src="{{ asset('admin-v2/admin-v2.js') }}?v={{ filemtime(public_path('admin-v2/admin-v2.js')) }}"></script>
+<script src="{{ asset('admin-v2/custom-select.js') }}?v={{ filemtime(public_path('admin-v2/custom-select.js')) }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 (() => {
   if (typeof ClassicEditor === 'undefined') return;
@@ -151,19 +150,6 @@
 })();
 </script>
 
-
-<script>
-(() => {
-  if (typeof window.jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
-  jQuery('select').not('.no-select2, .swal2-select, .js-modal-select2').filter(function () {
-    return jQuery(this).closest('.swal2-container').length === 0;
-  }).each(function () {
-    const $el = jQuery(this);
-    if ($el.data('select2')) return;
-    $el.addClass('js-select2').select2({ width: '100%' });
-  });
-})();
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/intlTelInput.min.js"></script>
 <script>

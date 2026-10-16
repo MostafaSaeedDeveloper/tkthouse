@@ -15,14 +15,14 @@
     <div class="a-field"><label class="form-label" for="dSearch">Search</label>
         <input type="text" id="dSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer"></div>
     <div class="a-field"><label class="form-label" for="dStatus">Status</label>
-        <select name="status" id="dStatus" class="form-select no-select2">
+        <select name="status" id="dStatus" class="form-select">
             <option value="">All</option>
             @foreach($statusList as $status)
                 <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
             @endforeach
         </select></div>
     <div class="a-field"><label class="form-label" for="dPay">Payment method</label>
-        <select name="payment_method" id="dPay" class="form-select no-select2">
+        <select name="payment_method" id="dPay" class="form-select">
             <option value="">All</option>
             @foreach($paymentMethods as $method)
                 <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
@@ -30,7 +30,7 @@
         </select></div>
     @if($canFilterByEvent)
     <div class="a-field"><label class="form-label" for="dEvent">Event</label>
-        <select name="event_id" id="dEvent" class="form-select no-select2">
+        <select name="event_id" id="dEvent" class="form-select">
             <option value="">All Events</option>
             @foreach($events as $event)
                 <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>

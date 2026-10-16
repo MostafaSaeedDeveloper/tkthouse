@@ -100,7 +100,7 @@
       <x-admin.card title="Order Settings">
         <div class="a-field">
           <label class="form-label" for="statusSelect">Status</label>
-          <select class="form-select no-select2" name="status" id="statusSelect">
+          <select class="form-select" name="status" id="statusSelect">
             @foreach($statusOptions as $val => $label)
               <option value="{{ $val }}" {{ old('status', $order->status) === $val ? 'selected' : '' }}>{{ $label }}</option>
             @endforeach
@@ -108,7 +108,7 @@
         </div>
         <div class="a-field" style="margin-top:14px">
           <label class="form-label" for="editPaymentMethod">Payment Method</label>
-          <select class="form-select no-select2" name="payment_method" id="editPaymentMethod">
+          <select class="form-select" name="payment_method" id="editPaymentMethod">
             @foreach($paymentMethods as $method)
               <option value="{{ $method->code }}" {{ old('payment_method', $order->payment_method) === $method->code ? 'selected' : '' }}>{{ $method->name }}{{ $method->is_active ? '' : ' (Inactive)' }}</option>
             @endforeach
@@ -116,7 +116,7 @@
         </div>
         <div class="a-field" style="margin-top:14px">
           <label class="form-label" for="editPromoCode">Promo Code</label>
-          <select class="form-select no-select2" name="promo_code" id="editPromoCode">
+          <select class="form-select" name="promo_code" id="editPromoCode">
             <option value="">No Promo Code</option>
             @foreach($promoCodes as $promo)
               <option value="{{ $promo->code }}" {{ old('promo_code', $order->promo_code) === $promo->code ? 'selected' : '' }}>

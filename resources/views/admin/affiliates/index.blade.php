@@ -13,7 +13,7 @@
 
 <x-admin.filters :action="route('admin.affiliates.index')" :reset="route('admin.affiliates.index')">
     <div class="a-field"><label class="form-label" for="afEvent">Event</label>
-        <select name="event_id" id="afEvent" class="form-select no-select2">
+        <select name="event_id" id="afEvent" class="form-select">
             <option value="">All Events</option>
             @foreach($events as $event)
                 <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
