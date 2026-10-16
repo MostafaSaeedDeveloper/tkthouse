@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\EventInsightsController;
 use App\Http\Controllers\Admin\GuestListController;
+use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController;
@@ -185,6 +186,19 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
 
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
+
+    Route::get('settings/integrations', [IntegrationController::class, 'index'])->middleware('permission:settings.integrations.view')->name('integrations.index');
+    Route::post('settings/integrations/{provider}', [IntegrationController::class, 'store'])->middleware('permission:settings.integrations.manage')->name('integrations.store');
+    Route::put('settings/integrations/accounts/{account}', [IntegrationController::class, 'update'])->middleware('permission:settings.integrations.manage')->name('integrations.update');
+    Route::post('settings/integrations/accounts/{account}/test', [IntegrationController::class, 'test'])->middleware('permission:settings.integrations.test')->name('integrations.test');
+    Route::post('settings/integrations/accounts/{account}/enable', [IntegrationController::class, 'enable'])->middleware('permission:settings.integrations.manage')->name('integrations.enable');
+    Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:settings.integrations.manage')->name('integrations.disable');
+    Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:settings.integrations.manage')->name('integrations.destroy');
+
+    Route::post('settings/notifications/test', [SystemSettingController::class, 'testNotification'])->middleware('permission:settings.integrations.test')->name('settings.notifications.test');
+
+    Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|notifications|security')->name('settings.section');
+    Route::put('settings/{section}', [SystemSettingController::class, 'save'])->where('section', 'general|branding|events|orders|notifications|security')->name('settings.section.update');
 
     Route::resource('payment-methods', PaymentMethodController::class)->except('show')
         ->middlewareFor('index', 'permission:payment-methods.view')

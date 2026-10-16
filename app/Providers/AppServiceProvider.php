@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Settings\SettingsService::class);
     }
 
     /**
@@ -28,7 +28,29 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         Order::observe(OrderObserver::class);
 
+        $this->applyManagedMailSettings();
         $this->guardOutboundMail();
+    }
+
+    /** A verified + enabled "E-mail delivery" account from the Settings Center overrides the .env SMTP settings. */
+    private function applyManagedMailSettings(): void
+    {
+        $account = \App\Integrations\IntegrationManager::runtimeAccount('email');
+        if (! $account) {
+            return;
+        }
+
+        $enc = (string) ($account->field('encryption') ?: 'tls');
+        config([
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => $account->field('host'),
+            'mail.mailers.smtp.port' => (int) $account->field('port'),
+            'mail.mailers.smtp.scheme' => $enc === 'ssl' ? 'smtps' : 'smtp',
+            'mail.mailers.smtp.username' => $account->field('username'),
+            'mail.mailers.smtp.password' => $account->secret('password'),
+            'mail.from.address' => $account->field('from_address'),
+            'mail.from.name' => $account->field('from_name') ?: config('mail.from.name'),
+        ]);
     }
 
     /** Dev/staging safety net: only allow-listed recipients ever receive mail (see config/notifications.php). */

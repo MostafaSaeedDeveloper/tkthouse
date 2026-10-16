@@ -31,7 +31,8 @@
     ]));
 
     $settings = array_values(array_filter([
-        $can('settings.view') ? ['General', 'admin.settings.edit', ['admin.settings.*']] : null,
+        $can('settings.view') ? ['Settings Center', 'admin.settings.edit', ['admin.settings.*']] : null,
+        $can('settings.integrations.view') ? ['Integrations', 'admin.integrations.index', ['admin.integrations.*']] : null,
         $can('payment-methods.view') ? ['Payment methods', 'admin.payment-methods.index', ['admin.payment-methods.*']] : null,
     ]));
     $settingsOpen = collect($settings)->contains(fn ($s) => $on(...$s[2]));

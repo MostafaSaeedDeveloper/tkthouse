@@ -24,7 +24,7 @@ class CheckoutSelection
 
     public function maxAllowedQuantity(EventTicket $ticket): int
     {
-        return (bool) ($ticket->is_couple ?? false) ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
+        return (bool) ($ticket->is_couple ?? false) ? 2 : max(1, (int) ($ticket->max_per_order ?? \App\Support\SystemSettings::get('default_max_tickets_per_order', 10)));
     }
 
     /** @return array{event_id: int, event_name: string, requires_approval: bool, units: array<int, array<string, mixed>>} */
