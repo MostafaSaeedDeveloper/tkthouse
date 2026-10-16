@@ -74,3 +74,6 @@
 
 .a-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .a-timeline li { border-left: 3px solid var(--a-yellow); padding-left: 12px; font-size: 14px; }
+
+.a-m-switch.form-switch { padding-left: 16px; }
+.a-m-switch.form-switch .form-check-input { margin-left: 0; float: none; }

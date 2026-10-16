@@ -87,6 +87,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'attendees.export',
 
             'activity-logs.view',
+
+            // Settings Center + Order Assignment (V2). Kept here because this seeder truncates the permission tables.
+            'settings.orders',
+            'settings.integrations.view',
+            'settings.integrations.manage',
+            'settings.integrations.test',
+            'settings.security.view',
+            'orders.assign',
+            'orders.reassign',
+            'orders.view_all',
+            'orders.view_assigned',
+            'orders.manage_assigned',
+            'orders.view_unassigned',
+            'orders.view_agent_stats',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -164,6 +178,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'scanner.access',
             'orders.view',
         ]);
+
+        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats']);
+        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned']);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

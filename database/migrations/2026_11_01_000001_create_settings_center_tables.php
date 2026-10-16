@@ -69,6 +69,12 @@ return new class extends Migration
             foreach (self::PERMISSIONS as $name) {
                 Permission::findOrCreate($name, 'web');
             }
+            // Super-admin roles (any spelling) get the new permissions; every other role stays opt-in.
+            foreach (\Spatie\Permission\Models\Role::query()->get() as $role) {
+                if (strtolower((string) preg_replace('/[^a-z0-9]/i', '', $role->name)) === 'superadmin') {
+                    $role->givePermissionTo(self::PERMISSIONS);
+                }
+            }
             app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         }
     }

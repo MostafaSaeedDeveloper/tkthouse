@@ -111,7 +111,7 @@ On: a single `Order::scopeAssignableVisibleTo($user)` is added to **every** admi
 Assignment is performed by `OrderAssignmentService::assignOnCreate()` called from the end of `OrderPlacementService::place()` **inside its transaction but wrapped so a failure can never fail checkout** (log + leave unassigned).
 
 ### 4.5 UI / stats
-Orders list: Assigned To column, assignee + "Unassigned" filter, row action Assign/Reassign, bulk assign (checkbox selection; reuses V2 menu/modal). Order details: assignee card, assigned by/at, change-assignee modal with reason, history timeline. Agent dashboard = same Dashboard page scoped (My Orders / Pending / Paid / Canceled / My Sales / My Tickets Sold) computed from `DashboardMetrics` with the scope applied; Manager dashboard section (Unassigned, per-agent table: assigned, pending, paid, canceled, collected sales, tickets sold, **conversion = paid ÷ (paid+pending+canceled)**, so the "number of assigned orders" is never the sole KPI).
+Orders list: Assigned To column, assignee + "Unassigned" filter, row action Assign/Reassign, bulk assign (checkbox selection; reuses V2 menu/modal). Order details: assignee card, assigned by/at, change-assignee modal with reason, history timeline. Agent dashboard = same Dashboard page scoped (My Orders / Pending / Paid / Canceled / My Sales / My Tickets Sold) computed from `DashboardMetrics` with the scope applied; Manager dashboard section (Unassigned, per-agent table: assigned, pending, paid, canceled, collected sales, tickets sold, **win rate = paid ÷ (paid + canceled), closed outcomes only**, so the "number of assigned orders" is never the sole KPI).
 
 ---
 

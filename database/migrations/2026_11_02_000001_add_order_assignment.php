@@ -70,6 +70,12 @@ return new class extends Migration
             }
             Role::findOrCreate('Order Manager', 'web')->givePermissionTo(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats']);
             Role::findOrCreate('Order Agent', 'web')->givePermissionTo(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned']);
+            // Super-admin roles (any spelling) get the new permissions; every other role stays opt-in.
+            foreach (\Spatie\Permission\Models\Role::query()->get() as $role) {
+                if (strtolower((string) preg_replace('/[^a-z0-9]/i', '', $role->name)) === 'superadmin') {
+                    $role->givePermissionTo(self::PERMISSIONS);
+                }
+            }
             app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         }
     }
