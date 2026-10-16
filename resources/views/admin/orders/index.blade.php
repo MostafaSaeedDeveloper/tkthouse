@@ -1,10 +1,27 @@
 @extends('admin.master')
 @section('title', 'Orders')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}?v={{ filemtime(public_path('admin-v2/orders-customers.css')) }}">@endpush
 
 @section('content')
-@php $statusList = ['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded']; @endphp
+@php
+    $sortUrl = function (string $key) use ($sortKey, $sortDir) {
+        $dir = ($sortKey === $key && $sortDir === 'desc') ? 'asc' : 'desc';
+        return request()->fullUrlWithQuery(['sort' => $key, 'dir' => $dir, 'page' => null]);
+    };
+    $ariaSort = fn (string $key) => $sortKey === $key ? ($sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+    $sortIcon = fn (string $key) => $sortKey === $key ? ($sortDir === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down') : 'fa-sort';
+    $chipUrl = fn (?string $group) => request()->fullUrlWithQuery(['group' => $group, 'status' => null, 'page' => null]);
+    $activeGroup = in_array(request('group'), ['pending', 'paid', 'canceled'], true) ? request('group') : null;
+    $rangeFrom = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) request('date_from')) ? \Illuminate\Support\Carbon::parse(request('date_from')) : null;
+    $rangeTo = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) request('date_to')) ? \Illuminate\Support\Carbon::parse(request('date_to')) : null;
+    $rangeLabel = match (true) {
+        $rangeFrom && $rangeTo => $rangeFrom->format('d M Y').' – '.$rangeTo->format('d M Y'),
+        (bool) $rangeFrom => 'From '.$rangeFrom->format('d M Y'),
+        (bool) $rangeTo => 'Until '.$rangeTo->format('d M Y'),
+        default => 'All dates',
+    };
+@endphp
 <x-admin.page-header title="Orders" subtitle="Search, filter and manage every order." :crumbs="['Dashboard' => route('admin.dashboard'), 'Orders']">
     @can('orders.deleted.view')
         <a class="a-btn a-btn--outline" href="{{ route('admin.orders.deleted') }}"><i class="fa fa-trash-can"></i> Deleted Orders <x-admin.badge variant="dark">{{ $deletedOrdersCount ?? 0 }}</x-admin.badge></a>
@@ -16,93 +33,115 @@
 
 <x-admin.flash />
 
-<x-admin.filters :action="route('admin.orders.index')" :reset="route('admin.orders.index')">
-    <div class="a-field"><label class="form-label" for="oSearch">Search</label>
-        <input type="text" id="oSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Order # / customer"></div>
-    <div class="a-field"><label class="form-label" for="oStatus">Status</label>
-        <select name="status" id="oStatus" class="form-select">
-            <option value="">All</option>
-            @foreach($statusList as $status)
-                <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="oPay">Payment method</label>
-        <select name="payment_method" id="oPay" class="form-select">
-            <option value="">All</option>
-            @foreach($paymentMethods as $method)
-                <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
-            @endforeach
-        </select></div>
-    @if($canFilterByEvent)
-    <div class="a-field"><label class="form-label" for="oEvent">Event</label>
-        <select name="event_id" id="oEvent" class="form-select">
-            <option value="">All Events</option>
-            @foreach($events as $event)
-                <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
-            @endforeach
-        </select></div>
-    @endif
-</x-admin.filters>
+<section class="a-ord-summary" aria-label="Orders summary">
+    <dl class="a-ord-summary__grid">
+        <div><dt>All orders</dt><dd>{{ number_format($summary['all']) }}</dd></div>
+        <div><dt>Pending</dt><dd>{{ number_format($summary['pending']) }}</dd><small>Approval, payment or on hold</small></div>
+        <div><dt>Paid</dt><dd>{{ number_format($summary['paid']) }}</dd><small>{{ number_format($summary['paid_amount'], 2) }} EGP</small></div>
+        <div><dt>Canceled</dt><dd>{{ number_format($summary['canceled']) }}</dd><small>Canceled or rejected</small></div>
+    </dl>
+    <p class="a-ord-summary__scope"><i class="fa fa-calendar" aria-hidden="true"></i> {{ $rangeLabel }} <span aria-hidden="true">·</span> follows your search and filters</p>
+</section>
 
-<x-admin.card flush title="All Orders" :subtitle="$orders->total().' total'">
+<nav class="a-ord-quick" aria-label="Quick status filters">
+    <a href="{{ $chipUrl(null) }}" class="a-chip {{ $activeGroup === null ? 'is-active' : '' }}" @if($activeGroup === null) aria-current="true" @endif>All <span>{{ number_format($summary['all']) }}</span></a>
+    <a href="{{ $chipUrl('pending') }}" class="a-chip {{ $activeGroup === 'pending' ? 'is-active' : '' }}" @if($activeGroup === 'pending') aria-current="true" @endif>Pending <span>{{ number_format($summary['pending']) }}</span></a>
+    <a href="{{ $chipUrl('paid') }}" class="a-chip {{ $activeGroup === 'paid' ? 'is-active' : '' }}" @if($activeGroup === 'paid') aria-current="true" @endif>Paid <span>{{ number_format($summary['paid']) }}</span></a>
+    <a href="{{ $chipUrl('canceled') }}" class="a-chip {{ $activeGroup === 'canceled' ? 'is-active' : '' }}" @if($activeGroup === 'canceled') aria-current="true" @endif>Canceled <span>{{ number_format($summary['canceled']) }}</span></a>
+</nav>
+
+@include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o'])
+
+<x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
     @if($orders->isEmpty())
-        <x-admin.empty icon="fa-receipt" title="No orders found" text="Try changing or resetting the filters." />
+        <x-admin.empty icon="fa-receipt" title="No orders found" text="No order matches the current search and filters.">
+            @if(request()->hasAny(['search','status','group','payment_method','event_id','reference','customer','date_from','date_to']))
+                <a class="a-btn a-btn--outline" href="{{ route('admin.orders.index') }}">Clear filters</a>
+            @endif
+        </x-admin.empty>
     @else
-    <x-admin.table stack caption="Orders">
+    <x-admin.table stack class="a-ordt" caption="Orders">
         <thead>
-            <tr><th>Order</th><th>Customer</th><th class="a-num">Items</th><th>Event</th><th>Ticket types</th><th class="a-num">Total</th><th>Status</th><th>Payment deadline</th><th class="a-num">Actions</th></tr>
+            <tr>
+                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}"><a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
+                <th scope="col" class="c-customer">Customer</th>
+                <th scope="col" class="c-event">Event</th>
+                <th scope="col" class="c-tickets a-num">Tickets</th>
+                <th scope="col" class="c-total a-num" aria-sort="{{ $ariaSort('total_amount') }}"><a class="a-ordt__sort" href="{{ $sortUrl('total_amount') }}">Total <i class="fa {{ $sortIcon('total_amount') }}" aria-hidden="true"></i></a></th>
+                <th scope="col" class="c-status" aria-sort="{{ $ariaSort('status') }}"><a class="a-ordt__sort" href="{{ $sortUrl('status') }}">Status <i class="fa {{ $sortIcon('status') }}" aria-hidden="true"></i></a></th>
+                <th scope="col" class="c-actions"><span class="a-sr-only">Actions</span></th>
+            </tr>
         </thead>
         <tbody>
         @foreach($orders as $order)
             @php
-                $names = $order->items->pluck('ticket_name');
-                $eventNames = $names->map(fn ($n) => str_contains((string) $n, ' - ') ? trim((string) str($n)->before(' - ')) : null)->filter()->unique();
-                $ticketTypes = $names->map(fn ($n) => trim((string) \Illuminate\Support\Str::afterLast((string) $n, ' - ')))->unique();
+                $number = \App\Support\OrderPresenter::number($order);
+                $eventNames = \App\Support\OrderPresenter::eventNames($order);
+                $ticketCount = \App\Support\OrderPresenter::ticketCount($order);
+                $typeCount = \App\Support\OrderPresenter::ticketTypeCount($order);
                 $secondsLeft = $order->paymentSecondsRemaining();
+                $attempt = $order->latestPaymentAttempt;
+                $showAttempt = $attempt && ($order->status !== 'paid' || $attempt->status !== 'paid');
+                $methodLabel = $order->payment_method ? ($paymentMethodLabels[$order->payment_method] ?? ucwords(str_replace('_', ' ', $order->payment_method))) : null;
+                $customerName = $order->customer?->full_name ?: 'Unknown customer';
             @endphp
             <tr>
-                <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number }}</a>
+                <td data-label="Order" class="c-order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
                     <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></td>
-                <td data-label="Customer" class="a-wrap"><span class="a-table__main">{{ $order->customer?->full_name }}</span><span class="a-table__sub">{{ $order->customer?->email }}</span></td>
-                <td data-label="Items" class="a-num">{{ $order->items_count }}</td>
-                <td data-label="Event" class="a-wrap"><div class="a-ord-tags">@foreach($eventNames as $eventName)<span class="a-ord-tag a-ord-tag--event">{{ $eventName }}</span>@endforeach</div></td>
-                <td data-label="Ticket types" class="a-wrap"><div class="a-ord-tags">
-                    @foreach($ticketTypes as $ticketType)
-                        @php $ticketColor = $ticketColorMap[\Illuminate\Support\Str::lower(trim($ticketType))] ?? '#6c757d'; @endphp
-                        <span class="a-ord-tag" style="background-color: {{ $ticketColor }}">{{ $ticketType }}</span>
-                    @endforeach</div></td>
-                <td data-label="Total" class="a-num">{{ number_format($order->total_amount, 2) }} EGP</td>
-                <td data-label="Status"><x-admin.status :status="$order->status" kind="order" />
-                    @if($order->payment_method)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $order->payment_method)) }}</span>@endif</td>
-                <td data-label="Payment deadline">
-                    @if($order->status === 'pending_payment' && $secondsLeft !== null)
-                        <span class="badge bg-warning text-dark a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? 'Loading timer...' : 'Expired' }}</span>
-                    @else
+                <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
+                <td data-label="Event" class="c-event">
+                    @if($eventNames->isEmpty())
                         <span class="a-muted">—</span>
+                    @else
+                        <span class="a-ord-clamp" title="{{ $eventNames->implode(' · ') }}">{{ $eventNames->first() }}</span>
+                        @if($eventNames->count() > 1)<span class="a-table__sub">+{{ $eventNames->count() - 1 }} more {{ \Illuminate\Support\Str::plural('event', $eventNames->count() - 1) }}</span>@endif
+                    @endif
+                    <span class="a-table__sub a-ord-inline-tix">{{ $ticketCount }} {{ \Illuminate\Support\Str::plural('ticket', $ticketCount) }}@if($typeCount > 1) · {{ $typeCount }} types @endif</span>
+                </td>
+                <td data-label="Tickets" class="c-tickets a-num"><span class="a-table__main">{{ $ticketCount }}</span>@if($typeCount > 1)<span class="a-table__sub">{{ $typeCount }} types</span>@endif</td>
+                <td data-label="Total" class="c-total a-num"><span class="a-table__main">{{ number_format((float) $order->total_amount, 2) }}</span><span class="a-table__sub">EGP</span></td>
+                <td data-label="Status" class="c-status">
+                    <x-admin.status :status="$order->status" kind="order" />
+                    @if($showAttempt)<span class="a-ord-pay">Payment: <x-admin.status :status="$attempt->status" kind="payment" /></span>@endif
+                    @if($methodLabel)<span class="a-table__sub">{{ $methodLabel }}</span>@endif
+                    @if($order->status === 'pending_payment' && $secondsLeft !== null)
+                        <span class="a-table__sub a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? 'Expires soon' : 'Expired' }}</span>
                     @endif
                 </td>
-                <td data-label="Actions"><div class="a-table__actions">
+                <td data-label="" class="c-actions"><div class="a-table__actions">
                     @can('orders.update')
                         @if($order->status === 'pending_approval')
                             <form method="POST" action="{{ route('admin.orders.approve', $order) }}" data-a-confirm="Approve this order and send the payment link?" data-a-confirm-title="Approve order" data-a-confirm-ok="Approve">@csrf
-                                <button class="a-btn a-btn--success a-btn--sm" type="submit" title="Approve" aria-label="Approve order"><i class="fa fa-check"></i></button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.orders.reject', $order) }}" data-a-confirm="Reject this order?" data-a-confirm-title="Reject order" data-a-confirm-ok="Reject">@csrf
-                                <button class="a-btn a-btn--danger a-btn--sm" type="submit" title="Reject" aria-label="Reject order"><i class="fa fa-times"></i></button>
+                                <button class="a-btn a-btn--success a-btn--sm" type="submit" title="Approve" aria-label="Approve order {{ $number }}"><i class="fa fa-check"></i><span class="a-ord-btn-text">Approve</span></button>
                             </form>
                         @endif
                     @endcan
-                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order"><i class="fa fa-eye"></i></a>
-                    @can('orders.update')
-                        <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.edit', $order) }}" title="Edit" aria-label="Edit order"><i class="fa fa-pen"></i></a>
-                    @endcan
-                    @can('orders.delete')
-                        <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" data-a-confirm="Delete this order? It can be restored from Deleted Orders." data-a-confirm-title="Delete order" data-a-confirm-ok="Delete">
-                            @csrf
-                            @method('DELETE')
-                            <button class="a-btn a-btn--danger a-btn--sm" type="submit" title="Delete" aria-label="Delete order"><i class="fa fa-trash"></i></button>
-                        </form>
-                    @endcan
+                    <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order {{ $number }}"><i class="fa fa-eye"></i><span class="a-ord-btn-text">View</span></a>
+                    @canany(['orders.update', 'update_status', 'orders.delete'])
+                    <div class="a-menu a-menu--fixed">
+                        <button type="button" class="a-btn a-btn--outline a-btn--sm" data-a-menu-toggle aria-haspopup="true" aria-expanded="false" aria-label="More actions for order {{ $number }}" title="More actions"><i class="fa fa-ellipsis-vertical"></i></button>
+                        <div class="a-menu__panel" role="menu">
+                            @can('orders.update')
+                                <a class="a-menu__item" role="menuitem" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen" aria-hidden="true"></i> Edit order</a>
+                            @endcan
+                            @can('update_status')
+                                <button type="button" class="a-menu__item" role="menuitem" data-ord-status-open data-action="{{ route('admin.orders.status.update', $order) }}" data-current="{{ $order->status }}" data-number="{{ $number }}"><i class="fa fa-arrows-rotate" aria-hidden="true"></i> Change status</button>
+                            @endcan
+                            @can('orders.update')
+                                @if($order->status === 'pending_approval')
+                                    <form method="POST" action="{{ route('admin.orders.reject', $order) }}" data-a-confirm="Reject this order?" data-a-confirm-title="Reject order" data-a-confirm-ok="Reject">@csrf
+                                        <button type="submit" class="a-menu__item a-menu__item--danger" role="menuitem"><i class="fa fa-xmark" aria-hidden="true"></i> Reject order</button>
+                                    </form>
+                                @endif
+                            @endcan
+                            @can('orders.delete')
+                                <form method="POST" action="{{ route('admin.orders.destroy', $order) }}" data-a-confirm="Delete this order? It can be restored from Deleted Orders." data-a-confirm-title="Delete order" data-a-confirm-ok="Delete">@csrf @method('DELETE')
+                                    <button type="submit" class="a-menu__item a-menu__item--danger" role="menuitem"><i class="fa fa-trash" aria-hidden="true"></i> Delete order</button>
+                                </form>
+                            @endcan
+                        </div>
+                    </div>
+                    @endcanany
                 </div></td>
             </tr>
         @endforeach
@@ -112,37 +151,26 @@
     @endif
 </x-admin.card>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const timers = document.querySelectorAll('.js-admin-order-timer');
-    if (!timers.length) return;
+@can('update_status')
+<div class="a-ord-modal" id="ordStatusModal" aria-hidden="true">
+    <div class="a-ord-modal__box" role="dialog" aria-modal="true" aria-labelledby="ordStatusTitle">
+        <h2 id="ordStatusTitle">Change status · <span id="ordStatusNumber"></span></h2>
+        <form method="POST" action="#" id="ordStatusForm" data-a-loading>
+            @csrf
+            <label class="form-label" for="ordStatusSelect">Order status</label>
+            <select id="ordStatusSelect" class="form-select" name="status">
+                @foreach($statusOptions as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
+            </select>
+            <div class="a-btn-group" style="justify-content:flex-end;margin-top:16px">
+                <button type="button" class="a-btn a-btn--outline" data-ord-status-close>Cancel</button>
+                <button type="submit" class="a-btn a-btn--primary">Save status</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endcan
 
-    const render = (el, seconds) => {
-        if (seconds <= 0) {
-            el.textContent = 'Expired';
-            el.classList.remove('bg-warning', 'text-dark');
-            el.classList.add('bg-danger');
-            return;
-        }
-
-        const days = Math.floor(seconds / 86400);
-        const hours = Math.floor((seconds % 86400) / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = seconds % 60;
-        const dd = days > 0 ? `${days}d ` : '';
-        el.textContent = `${dd}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    };
-
-    timers.forEach((el) => {
-        let remaining = parseInt(el.dataset.secondsLeft || '0', 10);
-        render(el, remaining);
-        setInterval(() => {
-            remaining -= 1;
-            render(el, remaining);
-        }, 1000);
-    });
-});
-</script>
+<script src="{{ asset('admin-v2/orders-list.js') }}?v={{ filemtime(public_path('admin-v2/orders-list.js')) }}" defer></script>
 
 {{-- Export Orders Modal --}}
 <div class="modal fade" id="exportOrdersModal" tabindex="-1" aria-labelledby="exportOrdersModalLabel" aria-hidden="true">
@@ -166,8 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select" id="exportStatusSelect">
                                 <option value="">All Statuses</option>
-                                @foreach(['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded'] as $s)
-                                    <option value="{{ $s }}">{{ str($s)->headline() }}</option>
+                                @foreach($statusOptions as $s => $statusLabel)
+                                    <option value="{{ $s }}">{{ $statusLabel }}</option>
                                 @endforeach
                             </select>
                         </div>
