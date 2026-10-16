@@ -64,18 +64,20 @@ Route::get('/account/register', [CustomerAuthController::class, 'showRegister'])
 //      (signed-in owner, or the browser session that placed it) — a typed e-mail is never proof.
 Route::group([], function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
-    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:12,1')->name('front.checkout.store');
-    Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->middleware('throttle:30,1')->name('front.checkout.promo');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:12,1,checkout-store')->name('front.checkout.store');
+    Route::post('/checkout/buyer', [CheckoutController::class, 'preflight'])->middleware('throttle:20,1,checkout-preflight')->name('front.checkout.preflight');
+    Route::post('/checkout/draft', [CheckoutController::class, 'draft'])->middleware('throttle:90,1,checkout-draft')->name('front.checkout.draft');
+    Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->middleware('throttle:30,1,checkout-promo')->name('front.checkout.promo');
     Route::redirect('/checkout/review', '/checkout');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
     Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
-    Route::post('/checkout/confirmation/{orderNumber}/email', [CheckoutController::class, 'changeEmail'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:6,1')->name('front.checkout.change-email');
+    Route::post('/checkout/confirmation/{orderNumber}/email', [CheckoutController::class, 'changeEmail'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:6,1,checkout-email')->name('front.checkout.change-email');
     Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
     Route::post('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'complete'])->name('front.payments.fake.complete');
     Route::get('/orders/{order}/payment/{token}', [PaymentController::class, 'show'])->name('front.orders.payment');
     Route::get('/orders/{order}/payment/{token}/gateway', [PaymentController::class, 'gateway'])->name('front.orders.payment.gateway');
-    Route::post('/auth/otp/send', [AuthOtpController::class, 'send'])->middleware('throttle:20,1')->name('front.auth.otp.send');
-    Route::post('/auth/otp/verify', [AuthOtpController::class, 'verify'])->middleware('throttle:20,1')->name('front.auth.otp.verify');
+    Route::post('/auth/otp/send', [AuthOtpController::class, 'send'])->middleware('throttle:20,1,otp-send')->name('front.auth.otp.send');
+    Route::post('/auth/otp/verify', [AuthOtpController::class, 'verify'])->middleware('throttle:20,1,otp-verify')->name('front.auth.otp.verify');
 });
 
 Route::middleware('auth')->group(function () {

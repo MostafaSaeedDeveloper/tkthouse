@@ -91,6 +91,30 @@ class CheckoutIdentity
         }
     }
 
+    /**
+     * Read-only twin of resolve(): says whether this buyer e-mail could be used right now, without creating
+     * or changing anything. Used by the wizard's first step so the code box appears there instead of at payment.
+     *
+     * @throws EmailVerificationRequired|StaffEmailNotAllowed
+     */
+    public function inspect(Request $request, array $buyer): void
+    {
+        if ($request->user()) {
+            return;
+        }
+
+        $existing = EmailOtpService::findUser(EmailOtpService::normalize($buyer['email']));
+        if (! $existing || $this->createdByThisSession($request, $existing)) {
+            return;
+        }
+
+        if ($this->isStaff($existing)) {
+            throw new StaffEmailNotAllowed();
+        }
+
+        throw new EmailVerificationRequired($existing->email);
+    }
+
     public function isStaff(User $user): bool
     {
         return method_exists($user, 'hasAnyRole') && $user->hasAnyRole(self::STAFF_ROLES);

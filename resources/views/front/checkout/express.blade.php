@@ -15,8 +15,8 @@
 @endphp
 
 @section('content')
-<div class="tkt-container tkt-checkout" data-express>
-    <x-tkt.stepper :current="2" />
+<div class="tkt-container tkt-checkout {{ $wizard ? 'tkt-wz' : '' }}" data-express @if($wizard) data-wz data-signed-in="{{ $signedIn ? 1 : 0 }}" data-preflight-email="{{ $preflightEmail }}" data-preflight-url="{{ route('front.checkout.preflight') }}" data-draft-url="{{ route('front.checkout.draft') }}" @endif>
+    @unless($wizard)<x-tkt.stepper :current="2" />@endunless
 
     <div class="tkt-checkout__head">
         <a class="tkt-back" style="color:var(--tkt-muted);margin:0 0 8px;display:inline-flex" href="{{ route('front.events.show', $event) }}">
@@ -24,6 +24,11 @@
             Change tickets
         </a>
         <h1 class="tkt-checkout__title">Checkout</h1>
+        @if($canCompare)
+            <p class="tkt-text-sm tkt-text-muted" style="margin:6px 0 0" data-dev-compare>Dev compare:
+                <a class="tkt-link" style="display:inline;{{ $wizard ? 'font-weight:800' : '' }}" href="{{ route('front.checkout', ['experience' => 'wizard']) }}">Wizard</a> ·
+                <a class="tkt-link" style="display:inline;{{ $wizard ? '' : 'font-weight:800' }}" href="{{ route('front.checkout', ['experience' => 'one-page']) }}">One-page</a></p>
+        @endif
     </div>
 
     <div class="tkt-checkout__layout">
@@ -32,13 +37,25 @@
             <input type="hidden" name="promo_code" id="promoHidden" value="{{ $promoCode }}">
             <input type="hidden" name="expected_total" id="expectedTotal" value="{{ number_format($quote->total, 2, '.', '') }}">
 
+            @if($wizard)
+                <nav class="tkt-wz__progress" data-wz-progress aria-label="Checkout progress"></nav>
+                {{-- Mobile: collapsible order summary that stays at the top for the whole journey --}}
+                <div class="tkt-wz__msum" data-wz-msum>
+                    <button type="button" class="tkt-wz__msum-btn" data-wz-msum-toggle aria-expanded="false">
+                        <span>Order summary</span><b data-sum-total-bar>{{ $money($quote->total) }}</b>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div class="tkt-wz__msum-body" data-wz-msum-body hidden>@include('front.checkout._summary', ['event' => $event, 'quote' => $quote])</div>
+                </div>
+            @endif
+
             <div class="tkt-alert tkt-alert--danger" role="alert" id="formAlert" @if(! $errors->any() && ! session('error')) hidden @endif>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
                 <div data-form-alert-text>@if($errors->any())Please check the highlighted fields and try again.@else{{ session('error') }}@endif</div>
             </div>
 
             {{-- Buyer --}}
-            <section class="tkt-card tkt-section-card" aria-labelledby="buyerTitle">
+            <section class="tkt-card tkt-section-card" aria-labelledby="buyerTitle" @if($wizard) data-wz-step="buyer" @endif>
                 <h2 class="tkt-section-card__title" id="buyerTitle">Your contact details</h2>
                 <p class="tkt-section-card__sub">
                     @if($signedIn)Signed in as {{ auth()->user()->email }}. These details apply to this order only.
@@ -61,17 +78,20 @@
                         @error('phone')<div class="tkt-field__error">{{ $message }}</div>@enderror
                     </div>
                 </div>
+                @if($wizard)
+                    {{-- Confirm the mailbox right here when this e-mail already has an account (no separate page) --}}
+                    <div class="tkt-wz__otp" data-wz-otp hidden>
+                        <h3 class="tkt-wz__otp-title">Confirm your email</h3>
+                        <x-tkt.otp-panel email="" id-suffix="inline" />
+                        <p class="tkt-text-muted tkt-text-sm" style="margin-top:12px">Typed it wrong? <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-otp-edit-email>Edit my email</button> — everything you entered stays.</p>
+                    </div>
+                @endif
             </section>
 
             {{-- Attendees --}}
-            <section class="tkt-card tkt-section-card" aria-labelledby="attendeesTitle" id="attendeesSection" @if($wizard) data-attendee-wizard @endif>
+            <section class="tkt-card tkt-section-card" aria-labelledby="attendeesTitle" id="attendeesSection" @if($wizard) data-wz-step="attendees" @endif>
                 <h2 class="tkt-section-card__title" id="attendeesTitle">Who is attending?</h2>
-                <p class="tkt-section-card__sub">{{ $wizard ? 'Fill in one ticket at a time — all fields are required. Entry is checked against these names.' : 'One form per ticket — all fields are required. Entry is checked against these names.' }}</p>
-                @if($canCompare)
-                    <p class="tkt-text-sm tkt-text-muted" style="margin:-6px 0 12px" data-dev-compare>Dev compare:
-                        <a class="tkt-link" style="display:inline;{{ $wizard ? 'font-weight:800' : '' }}" href="{{ route('front.checkout', ['wizard' => 1]) }}">Wizard</a> ·
-                        <a class="tkt-link" style="display:inline;{{ $wizard ? '' : 'font-weight:800' }}" href="{{ route('front.checkout', ['wizard' => 0]) }}">Classic</a></p>
-                @endif
+                <p class="tkt-section-card__sub">{{ $wizard ? 'All fields are required. Entry is checked against these names.' : 'One form per ticket — all fields are required. Entry is checked against these names.' }}</p>
 
                 @if($errors->has('attendees'))
                     <div class="tkt-alert tkt-alert--danger tkt-inline-alert" role="alert">{{ $errors->first('attendees') }}</div>
@@ -133,6 +153,15 @@
                 @endforeach
             </section>
 
+            <div @if($wizard) data-wz-step="review" @endif>
+            @if($wizard)
+                <section class="tkt-card tkt-section-card" data-wz-recap aria-labelledby="recapTitle">
+                    <h2 class="tkt-section-card__title" id="recapTitle">Review your booking</h2>
+                    <p class="tkt-section-card__sub">Check the details below. You can edit any of them before paying.</p>
+                    <div data-wz-recap-body></div>
+                </section>
+            @endif
+
             {{-- Promo --}}
             <section class="tkt-card tkt-section-card">
                 <h2 class="tkt-section-card__title">Promo code</h2>
@@ -147,7 +176,7 @@
             </section>
 
             {{-- Price breakdown (mobile; desktop shows it in the sticky sidebar) --}}
-            <div class="tkt-mobile-summary">@include('front.checkout._summary', ['event' => $event, 'quote' => $quote])</div>
+            @unless($wizard)<div class="tkt-mobile-summary">@include('front.checkout._summary', ['event' => $event, 'quote' => $quote])</div>@endunless
 
             {{-- Payment --}}
             <section class="tkt-card tkt-section-card">
@@ -181,22 +210,23 @@
             </section>
 
             <p class="tkt-text-muted tkt-text-sm" style="padding:0 4px">By continuing you agree to our <a class="tkt-link" style="display:inline" href="{{ route('front.terms') }}" target="_blank" rel="noopener">Terms</a> and <a class="tkt-link" style="display:inline" href="{{ route('front.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+            </div>
         </form>
 
         <aside class="tkt-checkout__aside" aria-label="Order summary">
             @include('front.checkout._summary', ['event' => $event, 'quote' => $quote])
-            <button type="submit" form="expressForm" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block" style="margin-top:12px" data-loading-target data-pay-label @disabled(! $canPay)>{{ $payLabel }}</button>
-            @if($wizard)<p class="tkt-text-sm tkt-text-muted" style="margin:10px 0 0;text-align:center" data-wiz-hint hidden></p>@endif
-            <p class="tkt-ordersum__note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure payment · fees included in the total</p>
+            <button type="submit" form="expressForm" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block" style="margin-top:12px" data-loading-target data-pay-label @if($wizard) data-wz-pay @endif @disabled(! $canPay)>{{ $payLabel }}</button>
+                        <p class="tkt-ordersum__note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline;vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure payment · fees included in the total</p>
         </aside>
     </div>
 </div>
 
 <div class="tkt-bottombar" data-bottombar>
     <div class="tkt-bottombar__total"><small>Total</small><b data-sum-total-bar>{{ $money($quote->total) }}</b></div>
-    <button type="submit" form="expressForm" class="tkt-btn tkt-btn--primary" data-loading-target data-pay-label @disabled(! $canPay)>{{ $requiresApproval ? 'Submit request' : 'Pay now' }}</button>
+    <button type="submit" form="expressForm" class="tkt-btn tkt-btn--primary" data-loading-target data-pay-label @if($wizard) data-wz-pay @endif @disabled(! $canPay)>{{ $requiresApproval ? 'Submit request' : 'Pay now' }}</button>
 </div>
 
+@unless($wizard)
 {{-- Small modal: confirm the mailbox of an existing account without leaving checkout --}}
 <div class="modal fade tkt-modal" id="otpModal" tabindex="-1" role="dialog" aria-labelledby="otpTitle">
     <div class="modal-dialog" style="max-width:460px">
@@ -213,11 +243,12 @@
         </div>
     </div>
 </div>
+@endunless
 @endsection
 
 @push('scripts')
     <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
     <script src="{{ asset('js/tkt-checkout.js') }}?v={{ filemtime(public_path('js/tkt-checkout.js')) }}"></script>
-    @if($wizard)<script src="{{ asset('js/tkt-wizard.js') }}?v={{ filemtime(public_path('js/tkt-wizard.js')) }}"></script>@endif
+    @if($wizard)<script src="{{ asset('js/tkt-checkout-wizard.js') }}?v={{ filemtime(public_path('js/tkt-checkout-wizard.js')) }}"></script>@endif
     <script src="{{ asset('js/tkt-express.js') }}?v={{ filemtime(public_path('js/tkt-express.js')) }}"></script>
 @endpush

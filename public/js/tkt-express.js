@@ -32,7 +32,7 @@
         $$('.is-invalid', form).forEach(function (el) { el.classList.remove('is-invalid'); });
         if (window.TktWizard) window.TktWizard.clearErrors();
         // server-rendered errors from a previous full page load
-        $$('.tkt-field__error:not([data-js])', form).forEach(function (el) { el.remove(); });
+        $$('.tkt-field__error:not([data-js])', form).forEach(function (el) { if (!el.closest('[data-otp-panel]')) el.remove(); }); // the code box keeps its own message element
         showAlert('');
     }
 
@@ -46,13 +46,13 @@
     function showFieldErrors(errors) {
         var first = null;
         var general = [];
-        var cardInputs = [];
+        var allInputs = [];
         Object.keys(errors).forEach(function (key) {
             var msg = [].concat(errors[key])[0];
             var input = fieldFor(key);
             if (!input) { general.push(msg); return; }
 
-            if (input.closest('[data-attendee]')) cardInputs.push(input);
+            allInputs.push(input);
             var host = input.closest('.tkt-field') || input.closest('#methodGroup') || input.parentElement;
             if (input.type === 'radio' && input.name === 'payment_method') host = $('#methodGroup');
             var gender = input.closest('.tkt-gender');
@@ -65,14 +65,13 @@
                 div.textContent = msg;
                 host.appendChild(div);
             }
-            if (!first && !input.closest('[data-attendee]')) first = gender || input;
-            else if (!first && !window.TktWizard) first = gender || input;
+            if (!first) first = gender || input;
         });
 
-        // Wizard: open the ticket that has the error (and mark every affected ticket) before scrolling to it.
-        if (window.TktWizard && cardInputs.length) {
-            var inCard = window.TktWizard.revealErrors(cardInputs);
-            if (!first && inCard) first = inCard.closest('.tkt-gender') || inCard;
+        // Wizard: open the earliest step that has an error (and flag every affected step) before scrolling to it.
+        if (window.TktWizard && allInputs.length) {
+            var inStep = window.TktWizard.revealErrors(allInputs);
+            if (inStep) first = inStep.closest('.tkt-gender') || inStep;
         }
 
         if (general.length) showAlert(general[0]);
@@ -92,38 +91,96 @@
     }
 
     var modal = window.jQuery ? window.jQuery('#otpModal') : null;
-    var panel = $('#otpModal [data-otp-panel]');
+    var modalPanel = $('#otpModal [data-otp-panel]');
+    var inlineBox = $('[data-wz-otp]');
+    var inlinePanel = inlineBox ? $('[data-otp-panel]', inlineBox) : null;
+    var verifyOrigin = 'submit';
+    var lastMasked = '';
 
+    // Classic page: the code box is a small modal. Wizard: it is shown inline in step 1 (see tkt-checkout-wizard.js).
     function openVerification(email, masked) {
-        if (!panel || !modal) { showAlert('Please confirm your email to continue.'); return; }
-        var otp = window.TktOtp.init(panel);
+        lastMasked = masked || '';
+        if (window.TktWizard && inlinePanel) { window.TktExpress.lastMasked = lastMasked; window.TktWizard.needsCode(); return; }
+        if (!modalPanel || !modal) { showAlert('Please confirm your email to continue.'); return; }
+        var otp = window.TktOtp.init(modalPanel);
         otp.setEmail(email, masked || email);
         modal.modal('show');
         otp.send();
-        setTimeout(function () { var c = panel.querySelector('[data-otp-code]'); if (c) c.focus(); }, 400);
+        setTimeout(function () { var c = modalPanel.querySelector('[data-otp-code]'); if (c) c.focus(); }, 400);
     }
 
     // "Wrong email?": back to the form with everything kept, focus on the email field.
-    var editBtn = $('[data-otp-edit-email]');
-    if (editBtn) {
+    $$('[data-otp-edit-email]').forEach(function (editBtn) {
         editBtn.addEventListener('click', function () {
+            if (window.TktWizard) { window.TktWizard.editEmail(); return; }
             if (modal) modal.modal('hide');
             var f = $('#buyer_email');
             if (f) { setTimeout(function () { f.focus(); f.select(); }, 350); }
         });
-    }
+    });
 
-    if (panel) {
-        panel.addEventListener('tkt:otp-verified', function (e) {
+    if (modalPanel) {
+        modalPanel.addEventListener('tkt:otp-verified', function (e) {
             setCsrf(e.detail && e.detail.csrf);
             modal.modal('hide');
             submit(); // same details, now as the verified account owner
         });
     }
+    if (inlinePanel) {
+        inlinePanel.addEventListener('tkt:otp-verified', function (e) {
+            setCsrf(e.detail && e.detail.csrf);
+            window.TktWizard.verified();
+            if (verifyOrigin === 'submit') submit(); else window.TktWizard.advanceFromDetails();
+        });
+    }
+
+    // Wizard step 1: validate the buyer block and learn whether the code box is needed now. Creates nothing.
+    function buyerData() {
+        var fd = new FormData(form);
+        Array.from(fd.keys()).forEach(function (k) { if (!/^(_token|full_name|email|phone)/.test(k)) fd.delete(k); });
+        return fd;
+    }
+
+    function preflight() {
+        verifyOrigin = 'preflight';
+        clearErrors();
+        return fetch((document.querySelector('[data-wz]') || form).getAttribute('data-preflight-url') || '/checkout/buyer', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': ($('meta[name="csrf-token"]') || {}).content || '' },
+            body: buyerData(),
+            credentials: 'same-origin'
+        }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, ok: r.ok, d: d || {} }; });
+        }).then(function (res) {
+            var d = res.d;
+            if (res.ok && d.ok) return 'ok';
+            if (res.status === 409 && d.needs_verification) { window.TktExpress.lastMasked = d.masked || ''; return 'verify'; }
+            if (res.status === 409 && d.redirect) { window.location.href = d.redirect; return 'error'; }
+            if (res.status === 422 && d.errors) { showFieldErrors(d.errors); return 'error'; }
+            if (res.status === 419) { showAlert('Your session expired. Please reload the page — your selection is still saved.'); return 'error'; }
+            showAlert(d.message || 'Something went wrong. Please try again.');
+            return 'error';
+        }).catch(function () { showAlert('Could not reach the server. Check your connection and try again.'); return 'error'; });
+    }
+
+    // Wizard: keep what was typed (session only) so a refresh restores it. Nothing is validated or created here.
+    function saveDraft() {
+        var url = root0 && root0.getAttribute('data-draft-url');
+        if (!url || submitting) return;
+        var fd = new FormData(form);
+        Array.from(fd.keys()).forEach(function (k) { if (!/^(_token|full_name|email|phone|attendees|payment_method)/.test(k)) fd.delete(k); });
+        try {
+            fetch(url, { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': ($('meta[name="csrf-token"]') || {}).content || '' }, body: fd, credentials: 'same-origin', keepalive: true }).catch(function () {});
+        } catch (e) {}
+    }
+    var root0 = document.querySelector('[data-wz]');
+
+    window.TktExpress = { preflight: preflight, saveDraft: saveDraft, lastMasked: '' };
 
     function submit() {
         if (submitting) return;
         submitting = true;
+        verifyOrigin = 'submit';
         setLoading(true);
         clearErrors();
 
@@ -159,28 +216,13 @@
         });
     }
 
-    // Wizard mode turns native validation off (hidden tickets would block it silently), so check here, in page order:
-    // buyer fields, then every ticket, then the payment method.
-    function wizardGate() {
-        var wiz = window.TktWizard;
-        var attendees = $('[data-attendee-wizard]');
-        var fields = $$('input, select, textarea', form).filter(function (el) { return el.type !== 'hidden' && !el.disabled && !el.closest('[data-attendee]'); });
-        var before = fields.filter(function (el) { return !(attendees.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING); });
-        var after = fields.filter(function (el) { return attendees.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING; });
-        var bad = function (list) {
-            for (var i = 0; i < list.length; i++) { if (!list[i].checkValidity()) { list[i].reportValidity(); return true; } }
-            return false;
-        };
-        if (bad(before)) return false;
-        var r = wiz.ensureComplete();
-        if (!r.ok) { showAlert('Please complete the details for ticket ' + r.ticket + ' before paying.'); return false; }
-        if (bad(after)) return false;
-        return true;
-    }
-
     form.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (window.TktWizard && !wizardGate()) return;
+        if (window.TktWizard) {
+            // Every step must be complete before anything is sent; the first incomplete one opens with its errors.
+            var gate = window.TktWizard.ensureComplete();
+            if (!gate.ok) { showAlert('Please complete ' + gate.label + ' before paying.'); return; }
+        }
         submit();
     });
 

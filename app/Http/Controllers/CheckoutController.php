@@ -101,7 +101,8 @@ class CheckoutController extends Controller
         return view('front.checkout.express', [
             'event' => $event,
             'groups' => $this->groups($units),
-            'wizard' => $this->wizardEnabled($request),
+            'wizard' => $this->experience($request) === 'wizard',
+            'preflightEmail' => (string) session('checkout.preflight_email', ''),
             'canCompare' => ! app()->isProduction(),
             'quote' => $quote,
             'buyer' => $buyer,
@@ -177,7 +178,7 @@ class CheckoutController extends Controller
         // What the customer typed is kept (refresh, validation error, coming back from the payment page).
         session([self::DRAFT => [
             'buyer' => $this->buyerInput($request),
-            'attendees' => array_values((array) $request->input('attendees', [])),
+            'attendees' => $this->attendeeInput($request),
             'payment_method' => (string) $request->input('payment_method', ''),
         ]]);
 
@@ -433,7 +434,7 @@ class CheckoutController extends Controller
 
     private function clearCheckoutSession(): void
     {
-        session()->forget([self::SELECTION, self::DRAFT, self::PROMO, self::SELECTION_ID, 'checkout_verify_email']);
+        session()->forget([self::SELECTION, self::DRAFT, self::PROMO, self::SELECTION_ID, 'checkout_verify_email', 'checkout.preflight_email']);
     }
 
     private function backToEvents(string $message)
@@ -557,21 +558,80 @@ class CheckoutController extends Controller
         return $order && GuestOrderAccess::can($request, $order) ? $order : null;
     }
 
-    /** Feature flag for the one-ticket-at-a-time attendee form; outside production ?wizard=0|1 switches for comparison. */
-    private function wizardEnabled(Request $request): bool
+    /** Only the known fields, as short strings: what the customer typed, kept for a refresh (never validated here). */
+    private function attendeeInput(Request $request): array
     {
-        $enabled = (bool) config('checkout.attendee_wizard');
+        $rows = [];
+        foreach (array_slice(array_values((array) $request->input('attendees', [])), 0, 50) as $row) {
+            $row = (array) $row;
+            $rows[] = collect(['name', 'email', 'phone', 'gender', 'social_profile'])
+                ->mapWithKeys(fn ($key) => [$key => mb_substr(trim((string) ($row[$key] ?? '')), 0, 255)])->all();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Wizard step 1 → 2. Validates the buyer block with the same rules as the final submit and tells the page whether
+     * this e-mail needs the code box now. It creates nothing: no account, no order (those only happen at payment).
+     */
+    public function preflight(Request $request, CheckoutIdentity $identity)
+    {
+        if (! $this->context()) {
+            return $this->respondInvalid($request);
+        }
+
+        $buyer = $this->validateBuyer($request);
+
+        $draft = (array) session(self::DRAFT, []);
+        session([self::DRAFT => array_merge(['attendees' => [], 'payment_method' => ''], $draft, ['buyer' => $this->buyerInput($request)])]);
+
+        try {
+            $identity->inspect($request, $buyer);
+        } catch (EmailVerificationRequired $e) {
+            session()->forget('checkout.preflight_email');
+
+            return $this->respondVerification($request, $e->email);
+        } catch (StaffEmailNotAllowed $e) {
+            throw ValidationException::withMessages(['email' => $e->getMessage()]);
+        }
+
+        session(['checkout.preflight_email' => \App\Services\Auth\EmailOtpService::normalize($buyer['email'])]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Wizard: keeps what has been typed so far (session only) so a refresh restores it. Nothing is validated or created. */
+    public function draft(Request $request)
+    {
+        if (! $this->context()) {
+            return response()->json(['ok' => false], 409);
+        }
+
+        session([self::DRAFT => [
+            'buyer' => $this->buyerInput($request),
+            'attendees' => $this->attendeeInput($request),
+            'payment_method' => mb_substr((string) $request->input('payment_method', ''), 0, 80),
+        ]]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Which checkout experience to render; outside production ?experience=wizard|one-page switches it for comparison. */
+    private function experience(Request $request): string
+    {
+        $value = (string) config('checkout.experience');
 
         if (! app()->isProduction()) {
-            if ($request->query->has('wizard')) {
-                session(['checkout.wizard' => filter_var($request->query('wizard'), FILTER_VALIDATE_BOOLEAN)]);
+            if (in_array($request->query('experience'), ['wizard', 'one-page'], true)) {
+                session(['checkout.experience' => $request->query('experience')]);
             }
-            if (session()->has('checkout.wizard')) {
-                $enabled = (bool) session('checkout.wizard');
+            if (in_array(session('checkout.experience'), ['wizard', 'one-page'], true)) {
+                $value = session('checkout.experience');
             }
         }
 
-        return $enabled;
+        return $value;
     }
 
     /** @param \Illuminate\Support\Collection<int, array<string, mixed>> $units */

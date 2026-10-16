@@ -38,7 +38,7 @@ class ExpressCheckoutTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['payments.fake.enabled' => true]);
+        config(['payments.fake.enabled' => true, 'checkout.experience' => 'one-page']); // the original one-page design
         Mail::fake();
         Http::preventStrayRequests();
 

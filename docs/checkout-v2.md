@@ -76,20 +76,28 @@ in production without a valid HMAC), `PAYMENTS_FAKE_ENABLED` (never in productio
 3. Staff e-mails are blocked from the flow (they sign in with a password).
 4. Guests reach orders via the browser session only; a different browser needs the e-mail code.
 
-## Attendee wizard (one ticket at a time)
-Only the *Who is attending?* part of the express checkout changes; Buyer, Promo, Order summary, Payment, Pay now, account creation, OTP,
-gateways, issuance and all server rules are untouched.
-* **UI**: "Ticket 2 of 4" + horizontal progress bar + numbered chips (done = yellow, current = black, error = red); one card with ticket
-  number, type/category (couple passes show "Couple pass · Person 1 of 2"), name, email, phone, gender, social profile, *Same as buyer*
-  (ticket 1), Back / Next ticket (last: Finish tickets). After the last ticket a summary lists every ticket with *Edit*.
-* **Behaviour**: all tickets' fields stay in the same `<form>` (so nothing is lost on Back/Next or edits) and navigation makes no request
-  — the order is created only by the final Pay submit. Next validates the current ticket; chips let you revisit completed tickets but not skip
-  an incomplete one; Enter moves to the next ticket (never submits payment); Pay is blocked until every ticket is complete (opens the first
-  incomplete one); a server validation error opens the ticket that has it (chip marked red). Refresh restores the saved draft exactly as before
-  (draft saved on submit); the wizard opens on the first incomplete ticket, or the summary if all are filled.
-* **Flag**: `CHECKOUT_ATTENDEE_WIZARD` (config `checkout.attendee_wizard`, default `true`). Outside production `/checkout?wizard=0|1` switches
-  design (remembered in the session) and shows "Dev compare: Wizard · Classic" links; production always follows the flag. Without JS the
-  classic stacked forms are used.
-* **Verification**: `tests/Feature/AttendeeWizardTest.php` (markup, flag, couple, drafts, server rules) plus a Playwright run at 390 and 1440
-  with the Fake Gateway (47 checks: Next/Back, data kept, Enter, pay gate, summary/edit, server error reveal, refresh, OTP, payment) — screenshots in
-  `docs/screenshots/attendee-wizard/`.
+## Sequential checkout wizard (`/checkout`, one step at a time)
+Presentation only. Steps: **Your details → Ticket 1 … Ticket N → Review & payment**, all on the same `/checkout` page without reloads.
+Account creation, passwordless/OTP, ownership checks, promo/fees/couple/availability rules, idempotency, gateways and issuance are untouched
+and still enforced by `CheckoutController@store` / `OrderPlacementService`.
+* **Progress**: `Your details → Attendees → Payment` (clickable once reachable) + a thin bar + "Ticket 2 of 4"; no row of big ticket boxes.
+* **Step 1**: full name, email, phone (country code). *Continue* calls `POST /checkout/buyer` (preflight): same validation as the final submit and a
+  read-only e-mail check — it creates **no** account/customer/order. An e-mail that needs a code opens the code box **inline in this step**
+  (resend, "Edit my email", wrong-code handling, then it continues automatically). The 409 answer is masked/neutral and shares the 8/hour probing throttle.
+* **Ticket steps**: one card per ticket (number, type, name, email, phone, gender, social profile; *Same as buyer* on ticket 1; couple passes show
+  "Couple pass · Person 1 of 2"). Back / Next ticket validate only the current ticket; data is never cleared.
+* **Review & payment**: recap of details and every ticket with *Edit* (Save returns straight to review), promo code, discounts/fees/total (desktop
+  sidebar, collapsible summary on mobile), payment methods and **Pay now — amount**. Payment methods and the Pay buttons are not shown before this step.
+* **Safety nets**: Enter means "continue" (never submits payment); the Pay gate re-validates every step before any request and opens the first incomplete
+  one; a server validation error opens the earliest step that has it; a pay-time "needs code" (e.g. a refresh landed directly on payment) sends the
+  customer back to step 1's code box; repeated clicks on Pay create one order (selection id + lock, as before).
+* **Refresh**: `POST /checkout/draft` (session only, known fields, truncated, throttled separately) autosaves while typing and on each step change; after
+  a refresh the page resumes at the first incomplete step with everything restored. The server still verifies the e-mail at payment.
+* **Throttles** are per route (`checkout-store`, `checkout-preflight`, `checkout-draft`, …). Without prefixes Laravel shares one counter per IP, which let
+  autosaves exhaust the payment limit ("Too Many Attempts") — found by the browser run and covered by a test.
+* **Flag**: `CHECKOUT_EXPERIENCE=wizard|one-page` (config `checkout.experience`, default `wizard`). Outside production `/checkout?experience=wizard|one-page`
+  switches design (remembered in the session) and shows "Dev compare: Wizard · One-page"; production always follows the setting. Both use the same endpoints
+  and rules; the flag cannot skip validation (`test_the_experience_flag_never_changes_what_the_server_accepts`). Without JavaScript the one-page markup is used.
+* **Verification**: `tests/Feature/CheckoutWizardTest.php` + Playwright with the Fake Gateway at 360 / 390 / 768 / 1024 / 1440 (156 checks: step visibility, blocked
+  Continue/Next, Same as buyer, Enter, Back/progress jumps, couple, promo, server error → step, double-click Pay, failure/retry, confirmation + 4 tickets, account
+  notice, mobile summary, single/two tickets, refresh restore, inline OTP with wrong code/resend/edit email, one-page flag). Screenshots: `docs/screenshots/checkout-wizard/`.

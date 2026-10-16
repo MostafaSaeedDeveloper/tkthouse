@@ -3,12 +3,13 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Attendee wizard (one ticket at a time)
+    | Checkout experience
     |--------------------------------------------------------------------------
-    | true  → the attendee part of the express checkout shows one ticket at a time with Back / Next.
-    | false → the original stacked list of every attendee form.
-    | Outside production the page also accepts ?wizard=1 / ?wizard=0 (remembered in the session) so the two
-    | designs can be compared side by side. Production always follows this flag.
+    | wizard   → one step at a time on /checkout: Your details → each ticket holder → Review & payment.
+    | one-page → the original single page with every section stacked.
+    | Both talk to the same endpoints and the same server-side rules; the choice only changes presentation.
+    | Outside production /checkout?experience=wizard|one-page switches (remembered in the session) so the two can be
+    | compared on staging. Production always follows this setting.
     */
-    'attendee_wizard' => filter_var(env('CHECKOUT_ATTENDEE_WIZARD', true), FILTER_VALIDATE_BOOLEAN),
+    'experience' => in_array(env('CHECKOUT_EXPERIENCE', 'wizard'), ['wizard', 'one-page'], true) ? env('CHECKOUT_EXPERIENCE', 'wizard') : 'wizard',
 ];
