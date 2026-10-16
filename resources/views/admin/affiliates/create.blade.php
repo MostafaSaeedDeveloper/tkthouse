@@ -11,8 +11,8 @@
 
 <form method="POST" action="{{ route('admin.affiliates.store') }}" data-a-loading>
     @csrf
-    <x-admin.card title="Generate New Link">
-        <div class="a-form-grid">
+    <x-admin.card class="a-m-narrow" title="Generate New Link">
+        <div class="a-form-grid a-form-grid--2">
             <x-admin.field label="User" name="user_id" for="user_id" hint="Portal user accounts, not checkout customer records.">
                 <select class="form-select @error('user_id') is-invalid @enderror" id="user_id" name="user_id" required>
                     <option value="">Choose user</option>

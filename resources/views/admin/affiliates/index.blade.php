@@ -11,17 +11,9 @@
 <x-admin.flash />
 
 <x-admin.filters :action="route('admin.affiliates.index')" :reset="route('admin.affiliates.index')">
-    <div class="a-field"><label class="form-label" for="afEvent">Event</label>
-        <select name="event_id" id="afEvent" class="form-select no-select2">
-            <option value="">All Events</option>
-            @foreach($events as $event)
-                <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
-            @endforeach
-        </select></div>
-    <div class="a-field"><label class="form-label" for="afFrom">From</label>
-        <input type="date" id="afFrom" name="date_from" class="form-control" value="{{ $filters['date_from'] }}"></div>
-    <div class="a-field"><label class="form-label" for="afTo">To</label>
-        <input type="date" id="afTo" name="date_to" class="form-control" value="{{ $filters['date_to'] }}"></div>
+    <x-admin.select label="Event" name="event_id" id="afEvent" :options="$events->pluck('name', 'id')->all()" :value="$filters['event_id']" placeholder="All Events" class="no-select2" />
+    <x-admin.input label="From" name="date_from" id="afFrom" type="date" :value="$filters['date_from']" />
+    <x-admin.input label="To" name="date_to" id="afTo" type="date" :value="$filters['date_to']" />
 </x-admin.filters>
 
 <x-admin.card flush title="Affiliate links" :subtitle="$affiliates->total().' total'">
@@ -31,22 +23,21 @@
         </x-admin.empty>
     @else
     <x-admin.table stack caption="Affiliates">
-        <thead><tr><th>#</th><th>User</th><th>Affiliate Link</th><th class="a-num">Referred Users</th><th class="a-num">Orders</th><th class="a-num">Paid Revenue</th><th class="a-num">Actions</th></tr></thead>
+        <thead><tr><th>User</th><th>Affiliate link</th><th class="a-num">Referred</th><th class="a-num">Orders</th><th class="a-num">Paid revenue</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
         <tbody>
         @foreach($affiliates as $affiliate)
             @php $paidRevenue = (float) ($affiliate->affiliate_paid_revenue ?? 0); @endphp
             <tr>
-                <td data-label="#">{{ $affiliate->id }}</td>
-                <td data-label="User" class="a-wrap"><span class="a-table__main">{{ $affiliate->name }}</span><span class="a-table__sub">{{ $affiliate->email }}</span></td>
-                <td data-label="Affiliate Link" class="a-wrap"><div class="a-cus-link">
-                    <a href="{{ $affiliate->generated_short_affiliate_link }}" target="_blank" rel="noopener">{{ $affiliate->generated_short_affiliate_link }}</a>
+                <td data-label="User"><a class="a-table__main a-trunc" href="{{ route('admin.affiliates.show', $affiliate) }}">{{ $affiliate->name }}</a><span class="a-table__sub a-trunc" title="{{ $affiliate->email }}">{{ $affiliate->email }}</span></td>
+                <td data-label="Affiliate link"><div class="a-cus-link">
+                    <a class="a-trunc a-m-trunc-lg" href="{{ $affiliate->generated_short_affiliate_link }}" target="_blank" rel="noopener" title="{{ $affiliate->generated_short_affiliate_link }}">{{ $affiliate->generated_short_affiliate_link }}</a>
                     <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $affiliate->generated_short_affiliate_link }}">Copy</button>
                 </div></td>
-                <td data-label="Referred Users" class="a-num">{{ $affiliate->referred_users_count }}</td>
-                <td data-label="Orders" class="a-num">{{ $affiliate->affiliate_orders_count }}</td>
-                <td data-label="Paid Revenue" class="a-num">{{ number_format($paidRevenue, 2) }} EGP</td>
-                <td data-label="Actions"><div class="a-table__actions">
-                    <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="a-btn a-btn--outline a-btn--sm" aria-label="View affiliate"><i class="fa fa-eye"></i></a>
+                <td data-label="Referred" class="a-num">{{ number_format($affiliate->referred_users_count) }}</td>
+                <td data-label="Orders" class="a-num">{{ number_format($affiliate->affiliate_orders_count) }}</td>
+                <td data-label="Paid revenue" class="a-num"><b>{{ number_format($paidRevenue, 2) }}</b> <span class="a-muted">EGP</span></td>
+                <td data-label=""><div class="a-table__actions">
+                    <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="a-btn a-btn--outline a-btn--sm">View</a>
                 </div></td>
             </tr>
         @endforeach

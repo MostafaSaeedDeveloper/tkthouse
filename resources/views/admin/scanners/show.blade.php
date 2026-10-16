@@ -25,16 +25,15 @@
         <x-admin.empty icon="fa-list" title="No logs found for this scanner." />
     @else
         <x-admin.table stack caption="Scanner logs">
-            <thead><tr><th>Time</th><th>Action</th><th>Ticket #</th><th>Event</th><th>Status Change</th><th>IP</th></tr></thead>
+            <thead><tr><th>Time</th><th>Action</th><th>Ticket</th><th>Event</th></tr></thead>
             <tbody>
             @foreach($scanLogs as $log)
+                @php $change = ($log->previous_status || $log->new_status) ? ((str($log->previous_status ?? '-')->replace('_',' ')->title()) . ' → ' . (str($log->new_status ?? '-')->replace('_',' ')->title())) : null; @endphp
                 <tr>
-                    <td data-label="Time">{{ $log->scanned_at?->format('d M Y, h:i A') ?? '-' }}</td>
-                    <td data-label="Action"><x-admin.badge variant="dark">{{ str($log->action)->replace('_',' ')->title() }}</x-admin.badge></td>
-                    <td data-label="Ticket #">{{ $log->ticket_number ?? '-' }}</td>
-                    <td data-label="Event">{{ $log->event_name ?? '-' }}</td>
-                    <td data-label="Status Change">{{ ($log->previous_status || $log->new_status) ? ((str($log->previous_status ?? '-')->replace('_',' ')->title()) . ' → ' . (str($log->new_status ?? '-')->replace('_',' ')->title())) : '-' }}</td>
-                    <td data-label="IP">{{ $log->ip_address ?? '-' }}</td>
+                    <td data-label="Time">{{ $log->scanned_at?->format('d M Y, h:i A') ?? '-' }}@if($log->ip_address)<span class="a-table__sub">{{ $log->ip_address }}</span>@endif</td>
+                    <td data-label="Action"><x-admin.badge variant="dark">{{ str($log->action)->replace('_',' ')->title() }}</x-admin.badge>@if($change)<span class="a-table__sub">{{ $change }}</span>@endif</td>
+                    <td data-label="Ticket" class="a-num">{{ $log->ticket_number ?? '-' }}</td>
+                    <td data-label="Event"><span class="a-trunc a-m-trunc-lg" title="{{ $log->event_name }}">{{ $log->event_name ?? '-' }}</span></td>
                 </tr>
             @endforeach
             </tbody>

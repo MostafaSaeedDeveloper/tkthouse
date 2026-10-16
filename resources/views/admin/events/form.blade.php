@@ -63,7 +63,7 @@
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section title="Availability &amp; checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
+<x-admin.form-section title="Availability & checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
     <x-admin.field label="Status" for="event_status" name="status">
         <select name="status" id="event_status" class="form-select no-select2">
             <option value="active" @selected(old('status', $event->status ?? 'active') === 'active')>Active</option>

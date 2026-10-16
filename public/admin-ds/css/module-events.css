@@ -3,7 +3,8 @@
 
 /* ---- lists ---- */
 .a-ev-cell { max-width: 300px; }
-.a-tk-cell { max-width: 150px; }
+.a-tk-cell { max-width: 115px; }
+@media (min-width: 1200px) { .a-tk-cell { max-width: 170px; } }
 @media (min-width: 1280px) { .a-tk-cell { max-width: 240px; } }
 
 /* ---- event form: repeatable rows (ticket types, fees, lineup) ---- */
