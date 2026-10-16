@@ -2,8 +2,7 @@
 @section('title', $reportTitle ?? 'Reports')
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
-@php $money = fn ($n) => number_format((float) $n, 2).' EGP'; @endphp
-<x-admin.page-header :title="$reportTitle ?? 'Reports'" :subtitle="$reportDescription ?? 'Detailed per-event performance, tickets and revenue.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports']">
+<x-admin.page-header :title="$reportTitle ?? 'Reports'" :subtitle="$reportDescription ?? 'Detailed per-event performance, tickets and check-ins.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports']">
     @if($forcedEvent)
         <a href="{{ route('admin.events.dashboard', $forcedEvent) }}" class="a-btn a-btn--outline">Event Dashboard</a>
         <a href="{{ route('admin.reports.index') }}" class="a-btn a-btn--ghost">All Events Reports</a>
@@ -38,7 +37,7 @@
     <div class="a-grid a-grid--3">
         <x-admin.kpi label="Tickets sold" :value="number_format($totalTickets)" icon="fa-ticket" hint="Paid, completed orders only" />
         <x-admin.kpi label="Paid orders" :value="number_format($totalOrders)" icon="fa-receipt" />
-        <x-admin.kpi label="Gross revenue" :value="$money($totalRevenue)" icon="fa-circle-check" />
+        <x-admin.kpi label="Checked in" :value="number_format($eventReports->sum('total_checked_in'))" icon="fa-circle-check" hint="Paid and guest check-ins" />
     </div>
     <p class="a-hint">This report counts paid orders only. Pending, failed and refunded orders are not included here; review them under Orders and Payments. Refunds and settlements are handled by the payment provider.</p>
 </section>
@@ -55,7 +54,6 @@
                 <h3 class="a-card__title">{{ $report['event_name'] }}</h3>
                 <div class="a-btn-group">
                     <x-admin.badge variant="info">{{ number_format($report['tickets_sold']) }} sold</x-admin.badge>
-                    <x-admin.badge variant="success">{{ $money($report['gross_revenue']) }}</x-admin.badge>
                 </div>
             </div>
             <div class="a-card__body">

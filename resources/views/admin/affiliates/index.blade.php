@@ -32,20 +32,20 @@
         </x-admin.empty>
     @else
     <x-admin.table stack caption="Affiliates">
-        <thead><tr><th>#</th><th>User</th><th>Affiliate link</th><th class="a-num">Referred users</th><th class="a-num">Orders</th><th class="a-num">Paid revenue</th><th class="a-num">Actions</th></tr></thead>
+        <thead><tr><th>#</th><th>User</th><th>Affiliate Link</th><th class="a-num">Referred Users</th><th class="a-num">Orders</th><th class="a-num">Paid Revenue</th><th class="a-num">Actions</th></tr></thead>
         <tbody>
         @foreach($affiliates as $affiliate)
             @php $paidRevenue = (float) ($affiliate->affiliate_paid_revenue ?? 0); @endphp
             <tr>
                 <td data-label="#">{{ $affiliate->id }}</td>
                 <td data-label="User" class="a-wrap"><span class="a-table__main">{{ $affiliate->name }}</span><span class="a-table__sub">{{ $affiliate->email }}</span></td>
-                <td data-label="Affiliate link" class="a-wrap"><div class="a-cus-link">
+                <td data-label="Affiliate Link" class="a-wrap"><div class="a-cus-link">
                     <a href="{{ $affiliate->generated_short_affiliate_link }}" target="_blank" rel="noopener">{{ $affiliate->generated_short_affiliate_link }}</a>
                     <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $affiliate->generated_short_affiliate_link }}">Copy</button>
                 </div></td>
-                <td data-label="Referred users" class="a-num">{{ $affiliate->referred_users_count }}</td>
+                <td data-label="Referred Users" class="a-num">{{ $affiliate->referred_users_count }}</td>
                 <td data-label="Orders" class="a-num">{{ $affiliate->affiliate_orders_count }}</td>
-                <td data-label="Paid revenue" class="a-num">{{ number_format($paidRevenue, 2) }} EGP</td>
+                <td data-label="Paid Revenue" class="a-num">{{ number_format($paidRevenue, 2) }} EGP</td>
                 <td data-label="Actions"><div class="a-table__actions">
                     <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="a-btn a-btn--outline a-btn--sm" aria-label="View affiliate"><i class="fa fa-eye"></i></a>
                 </div></td>

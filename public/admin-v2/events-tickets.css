@@ -70,3 +70,11 @@
 .a-tk-modal-fields { display: grid; gap: 14px; grid-template-columns: 1fr; }
 @media (min-width: 768px) { .a-tk-modal-fields { grid-template-columns: repeat(6, minmax(0, 1fr)); } .a-tk-modal-fields .a-span-3 { grid-column: span 3; } .a-tk-modal-fields .a-span-2 { grid-column: span 2; } .a-tk-modal-fields .a-span-4 { grid-column: span 4; } .a-tk-modal-fields .a-span-6 { grid-column: 1 / -1; } }
 .a-ev-wrap, .a-tk-wrap { min-width: 0; }
+
+/* guest list create: editable rows table */
+.a-tk-rows td .form-control, .a-tk-rows td .form-select { min-width: 150px; }
+.a-tk-rows td .iti { width: 100%; }
+@media (max-width: 767px) {
+    .a-tk-rows tbody td { flex-direction: column; align-items: stretch; text-align: left; }
+    .a-tk-rows tbody td .form-control, .a-tk-rows tbody td .form-select { min-width: 0; width: 100%; }
+}

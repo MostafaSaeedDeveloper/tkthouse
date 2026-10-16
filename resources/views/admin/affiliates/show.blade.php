@@ -1,138 +1,110 @@
 @extends('admin.master')
+@section('title', 'Affiliate: '.$affiliate->name)
+
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
-<div class="content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="h4 mb-1">Affiliate: {{ $affiliate->name }}</h2>
-            <div class="text-muted">{{ $affiliate->email }}</div>
-        </div>
-        <a href="{{ route('admin.affiliates.index') }}" class="btn btn-alt-secondary">Back</a>
-    </div>
+<x-admin.page-header :title="'Affiliate: '.$affiliate->name" :subtitle="$affiliate->email" :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates' => route('admin.affiliates.index'), $affiliate->name]">
+    <a href="{{ route('admin.affiliates.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back</a>
+</x-admin.page-header>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-3"><div class="block block-rounded"><div class="block-content"><div class="text-muted small">Referred Users</div><div class="fs-3 fw-bold">{{ $stats['referred_users'] }}</div></div></div></div>
-        <div class="col-md-3"><div class="block block-rounded"><div class="block-content"><div class="text-muted small">Orders</div><div class="fs-3 fw-bold">{{ $stats['orders_total'] }}</div></div></div></div>
-        <div class="col-md-3"><div class="block block-rounded"><div class="block-content"><div class="text-muted small">Paid Orders</div><div class="fs-3 fw-bold">{{ $stats['orders_paid'] }}</div></div></div></div>
-        <div class="col-md-3"><div class="block block-rounded"><div class="block-content"><div class="text-muted small">Paid Revenue</div><div class="fs-3 fw-bold">{{ number_format($stats['revenue_paid'], 2) }} EGP</div></div></div></div>
-    </div>
+<x-admin.flash />
 
-    <div class="block block-rounded mb-4">
-        <div class="block-header block-header-default">
-            <h3 class="block-title">Affiliate Link</h3>
-        </div>
-        <div class="block-content">
-            @if($affiliateLink)
-                <div class="mb-2">
-                    <div class="small text-muted">Full Affiliate Link</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <a href="{{ $affiliateLink }}" target="_blank">{{ $affiliateLink }}</a>
-                        <button type="button" class="btn btn-sm btn-alt-secondary js-copy-link" data-copy-text="{{ $affiliateLink }}">Copy</button>
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <div class="small text-muted">Short Affiliate Link</div>
-                    <div class="d-flex align-items-center gap-2">
-                        <a href="{{ $shortAffiliateLink }}" target="_blank">{{ $shortAffiliateLink }}</a>
-                        <button type="button" class="btn btn-sm btn-alt-secondary js-copy-link" data-copy-text="{{ $shortAffiliateLink }}">Copy</button>
-                    </div>
-                </div>
-                <div class="text-muted mt-2">Target: <code>{{ $affiliate->affiliate_target_url ?: '/account/register' }}</code></div>
-            @else
-                <p class="text-muted mb-0">No affiliate link generated yet.</p>
-            @endif
-            <form method="POST" action="{{ route('admin.affiliates.store') }}" class="mt-3">
-                @csrf
-                <input type="hidden" name="user_id" value="{{ $affiliate->id }}">
-                <label class="form-label" for="target_url">Target Link</label>
-                <input id="target_url" name="target_url" class="form-control mb-2" value="{{ old('target_url', $affiliate->affiliate_target_url ?: '/account/register') }}" placeholder="/events/my-event">
-                <button class="btn btn-alt-success" type="submit">Update Link</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="block block-rounded mb-4">
-        <div class="block-header block-header-default"><h3 class="block-title">Referred Users</h3></div>
-        <div class="block-content">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead><tr><th>Name</th><th>Email</th><th>Joined At</th></tr></thead>
-                    <tbody>
-                        @forelse($referredUsers as $user)
-                            <tr>
-                                <td>{{ $user->name }}</td>
-                                <td>{{ $user->email }}</td>
-                                <td>{{ $user->created_at?->format('Y-m-d H:i') }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="3" class="text-center py-3 text-muted">No referred users yet.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            {{ $referredUsers->links() }}
-        </div>
-    </div>
-
-    <div class="block block-rounded">
-        <div class="block-header block-header-default"><h3 class="block-title">Orders via Affiliate</h3></div>
-        <div class="block-content">
-            <form method="GET" action="{{ route('admin.affiliates.show', $affiliate) }}" class="row g-2 mb-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label mb-1 small">Event</label>
-                    <select name="event_id" class="form-select form-select-sm">
-                        <option value="">All Events</option>
-                        @foreach($events as $event)
-                            <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label mb-1 small">From</label>
-                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ $filters['date_from'] }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label mb-1 small">To</label>
-                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ $filters['date_to'] }}">
-                </div>
-                <div class="col-md-2 d-flex gap-1">
-                    <button type="submit" class="btn btn-sm btn-alt-primary">Filter</button>
-                    <a href="{{ route('admin.affiliates.show', $affiliate) }}" class="btn btn-sm btn-alt-secondary">Reset</a>
-                </div>
-            </form>
-
-            @if($filters['event_id'] || $filters['date_from'] || $filters['date_to'])
-                <div class="alert alert-info py-2 px-3 mb-3 small">
-                    Showing filtered results &mdash;
-                    <strong>{{ $stats['orders_total'] }}</strong> orders,
-                    <strong>{{ $stats['orders_paid'] }}</strong> paid,
-                    <strong>{{ number_format($stats['revenue_paid'], 2) }} EGP</strong> revenue.
-                </div>
-            @endif
-
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment Method</th><th>Total</th><th class="text-end">View</th></tr></thead>
-                    <tbody>
-                        @forelse($orders as $order)
-                            <tr>
-                                <td>{{ $order->order_number }}</td>
-                                <td>{{ $order->user?->name ?? '-' }}</td>
-                                <td>{{ ucfirst(str_replace('_', ' ', $order->status)) }}</td>
-                                <td>{{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}</td>
-                                <td>{{ number_format((float) $order->total_amount, 2) }} EGP</td>
-                                <td class="text-end"><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-alt-primary"><i class="fa fa-eye"></i></a></td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="text-center py-3 text-muted">No orders found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            {{ $orders->links() }}
-        </div>
-    </div>
+<div class="a-grid a-grid--4" style="margin-bottom:20px">
+    <x-admin.kpi label="Referred Users" :value="$stats['referred_users']" icon="fa-user-plus" />
+    <x-admin.kpi label="Orders" :value="$stats['orders_total']" icon="fa-receipt" />
+    <x-admin.kpi label="Paid Orders" :value="$stats['orders_paid']" icon="fa-circle-check" />
+    <x-admin.kpi label="Paid Revenue" :value="number_format($stats['revenue_paid'], 2).' EGP'" icon="fa-wallet" />
 </div>
+
+<x-admin.card title="Affiliate Link" style="margin-bottom:20px">
+    @if($affiliateLink)
+        <dl class="a-kv">
+            <div><dt>Full Affiliate Link</dt><dd class="a-cus-link" style="justify-content:flex-end"><a href="{{ $affiliateLink }}" target="_blank" rel="noopener">{{ $affiliateLink }}</a>
+                <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $affiliateLink }}">Copy</button></dd></div>
+            <div><dt>Short Affiliate Link</dt><dd class="a-cus-link" style="justify-content:flex-end"><a href="{{ $shortAffiliateLink }}" target="_blank" rel="noopener">{{ $shortAffiliateLink }}</a>
+                <button type="button" class="a-btn a-btn--outline a-btn--sm js-copy-link" data-copy-text="{{ $shortAffiliateLink }}">Copy</button></dd></div>
+            <div><dt>Target</dt><dd><code>{{ $affiliate->affiliate_target_url ?: '/account/register' }}</code></dd></div>
+        </dl>
+    @else
+        <p class="a-muted">No affiliate link generated yet.</p>
+    @endif
+    <form method="POST" action="{{ route('admin.affiliates.store') }}" style="margin-top:16px" data-a-loading>
+        @csrf
+        <input type="hidden" name="user_id" value="{{ $affiliate->id }}">
+        <div class="a-field">
+            <label class="form-label" for="target_url">Target Link</label>
+            <input id="target_url" name="target_url" class="form-control" value="{{ old('target_url', $affiliate->affiliate_target_url ?: '/account/register') }}" placeholder="/events/my-event">
+        </div>
+        <button class="a-btn a-btn--dark" type="submit" style="margin-top:12px">Update Link</button>
+    </form>
+</x-admin.card>
+
+<x-admin.card flush title="Referred Users" style="margin-bottom:20px">
+    @if($referredUsers->isEmpty())
+        <x-admin.empty icon="fa-user-plus" title="No referred users yet" />
+    @else
+    <x-admin.table stack caption="Referred users">
+        <thead><tr><th>Name</th><th>Email</th><th>Joined At</th></tr></thead>
+        <tbody>
+        @foreach($referredUsers as $user)
+            <tr>
+                <td data-label="Name">{{ $user->name }}</td>
+                <td data-label="Email" class="a-wrap">{{ $user->email }}</td>
+                <td data-label="Joined At">{{ $user->created_at?->format('Y-m-d H:i') }}</td>
+            </tr>
+        @endforeach
+        </tbody>
+    </x-admin.table>
+    <x-admin.pager :paginator="$referredUsers" />
+    @endif
+</x-admin.card>
+
+<x-admin.filters :action="route('admin.affiliates.show', $affiliate)" :reset="route('admin.affiliates.show', $affiliate)">
+    <div class="a-field"><label class="form-label" for="afoEvent">Event</label>
+        <select name="event_id" id="afoEvent" class="form-select no-select2">
+            <option value="">All Events</option>
+            @foreach($events as $event)
+                <option value="{{ $event->id }}" @selected($filters['event_id'] == $event->id)>{{ $event->name }}</option>
+            @endforeach
+        </select></div>
+    <div class="a-field"><label class="form-label" for="afoFrom">From</label>
+        <input type="date" id="afoFrom" name="date_from" class="form-control" value="{{ $filters['date_from'] }}"></div>
+    <div class="a-field"><label class="form-label" for="afoTo">To</label>
+        <input type="date" id="afoTo" name="date_to" class="form-control" value="{{ $filters['date_to'] }}"></div>
+</x-admin.filters>
+
+@if($filters['event_id'] || $filters['date_from'] || $filters['date_to'])
+    <x-admin.alert type="info">
+        Showing filtered results &mdash;
+        <strong>{{ $stats['orders_total'] }}</strong> orders,
+        <strong>{{ $stats['orders_paid'] }}</strong> paid,
+        <strong>{{ number_format($stats['revenue_paid'], 2) }} EGP</strong> revenue.
+    </x-admin.alert>
+@endif
+
+<x-admin.card flush title="Orders via Affiliate">
+    @if($orders->isEmpty())
+        <x-admin.empty icon="fa-receipt" title="No orders found" />
+    @else
+    <x-admin.table stack caption="Orders via affiliate">
+        <thead><tr><th>Order #</th><th>Buyer</th><th>Status</th><th>Payment Method</th><th class="a-num">Total</th><th class="a-num">View</th></tr></thead>
+        <tbody>
+        @foreach($orders as $order)
+            <tr>
+                <td data-label="Order #"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">{{ $order->order_number }}</a></td>
+                <td data-label="Buyer">{{ $order->user?->name ?? '-' }}</td>
+                <td data-label="Status"><x-admin.status :status="$order->status" kind="order" /></td>
+                <td data-label="Payment Method">{{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}</td>
+                <td data-label="Total" class="a-num">{{ number_format((float) $order->total_amount, 2) }} EGP</td>
+                <td data-label="View"><div class="a-table__actions"><a href="{{ route('admin.orders.show', $order) }}" class="a-btn a-btn--outline a-btn--sm" aria-label="View order"><i class="fa fa-eye"></i></a></div></td>
+            </tr>
+        @endforeach
+        </tbody>
+    </x-admin.table>
+    <x-admin.pager :paginator="$orders" />
+    @endif
+</x-admin.card>
 @endsection
 
 

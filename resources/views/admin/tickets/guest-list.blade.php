@@ -1,96 +1,73 @@
 @extends('admin.master')
+@section('title', 'Guest List')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<div class="content">
-    @include('admin.partials.flash')
+<x-admin.page-header title="Guest List" subtitle="Invitation tickets issued outside of paid orders." :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
+    <a href="{{ route('admin.guest-list.template') }}" class="a-btn a-btn--outline"><i class="fa fa-file-arrow-down"></i> Import Template</a>
+    <a href="{{ route('admin.guest-list.export') }}" class="a-btn a-btn--outline"><i class="fa fa-file-export"></i> Export</a>
+    <button type="button" class="a-btn a-btn--outline" data-bs-toggle="modal" data-bs-target="#importGuestListModal"><i class="fa fa-file-import"></i> Import</button>
+    <button type="button" class="a-btn a-btn--primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal"><i class="fa fa-plus"></i> Create Invitation</button>
+</x-admin.page-header>
 
-    <div class="d-flex justify-content-between mb-3">
-        <h1 class="h3 mb-0">Guest List</h1>
-        <div class="d-flex gap-2">
-            <a href="{{ route('admin.guest-list.template') }}" class="btn btn-alt-info">Import Template</a>
-            <a href="{{ route('admin.guest-list.export') }}" class="btn btn-alt-secondary">Export</a>
-            <button class="btn btn-alt-primary" data-bs-toggle="modal" data-bs-target="#importGuestListModal">Import</button>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal">Create Invitation</button>
-        </div>
-    </div>
+<x-admin.flash />
 
-    <div class="block block-rounded mb-3">
-        <div class="block-content py-3">
-            <form method="GET" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / guest">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Event Name</label>
-                    <select name="event_name" class="form-select js-select2">
-                        <option value="">All events</option>
-                        @foreach($eventNames as $eventName)
-                            <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Guest Type</label>
-                    <select name="guest_type" class="form-select js-select2">
-                        <option value="">All types</option>
-                        @foreach($guestTypes as $guestType)
-                            <option value="{{ $guestType }}" @selected(request('guest_type') === $guestType)>{{ $guestType }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button class="btn btn-primary" type="submit">Filter</button>
-                    <a class="btn btn-alt-secondary" href="{{ route('admin.guest-list.index') }}">Reset</a>
-                </div>
-            </form>
-        </div>
-    </div>
+<x-admin.filters :action="route('admin.guest-list.index')" :reset="route('admin.guest-list.index')">
+    <div class="a-field"><label class="form-label" for="glSearch">Search</label><input type="text" id="glSearch" name="search" value="{{ request('search') }}" class="form-control" placeholder="Ticket # / guest"></div>
+    <div class="a-field"><label class="form-label" for="glEvent">Event Name</label>
+        <select id="glEvent" name="event_name" class="form-select js-select2">
+            <option value="">All events</option>
+            @foreach($eventNames as $eventName)
+                <option value="{{ $eventName }}" @selected(request('event_name') === $eventName)>{{ $eventName }}</option>
+            @endforeach
+        </select></div>
+    <div class="a-field"><label class="form-label" for="glType">Guest Type</label>
+        <select id="glType" name="guest_type" class="form-select js-select2">
+            <option value="">All types</option>
+            @foreach($guestTypes as $guestType)
+                <option value="{{ $guestType }}" @selected(request('guest_type') === $guestType)>{{ $guestType }}</option>
+            @endforeach
+        </select></div>
+</x-admin.filters>
 
-    <div class="block block-rounded">
-        <div class="block-content p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-vcenter mb-0">
-                    <thead>
-                        <tr>
-                            <th>Ticket Number</th>
-                            <th>Name</th>
-                            <th>Event</th>
-                            <th>Guest Type</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($tickets as $ticket)
-                            <tr>
-                                <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a></td>
-                                <td>{{ $ticket->holder_name }}</td>
-                                <td>{{ $ticket->eventLabel() }}</td>
-                                <td>{{ $ticket->guest_type }}</td>
-                                <td>{{ str($ticket->status)->headline() }}</td>
-                                <td class="text-end">
-                                    <a class="btn btn-sm btn-alt-info" href="{{ route('admin.tickets.show', $ticket) }}"><i class="fa fa-eye"></i></a>
-                                    @can('tickets.delete')
-                                        <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <input type="hidden" name="redirect_to" value="guest-list">
-                                            <button class="btn btn-sm btn-alt-danger" type="submit"><i class="fa fa-trash"></i></button>
-                                        </form>
-                                    @endcan
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="text-center py-4 text-muted">No guest tickets found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="mt-3">{{ $tickets->links() }}</div>
-</div>
+<x-admin.card flush>
+    @if($tickets->isEmpty())
+        <x-admin.empty icon="fa-list-check" title="No guest tickets found" text="Create an invitation or import a CSV to add guests.">
+            <button type="button" class="a-btn a-btn--primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal"><i class="fa fa-plus"></i> Create Invitation</button>
+        </x-admin.empty>
+    @else
+        <x-admin.table stack caption="Guest tickets">
+            <thead>
+                <tr><th>Ticket Number</th><th>Name</th><th>Event</th><th>Guest Type</th><th>Status</th><th class="a-num">Actions</th></tr>
+            </thead>
+            <tbody>
+            @foreach($tickets as $ticket)
+                <tr>
+                    <td data-label="Ticket Number"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a></td>
+                    <td data-label="Name" class="a-wrap">{{ $ticket->holder_name }}</td>
+                    <td data-label="Event" class="a-wrap">{{ $ticket->eventLabel() }}</td>
+                    <td data-label="Guest Type" class="a-wrap">{{ $ticket->guest_type }}</td>
+                    <td data-label="Status"><x-admin.status :status="$ticket->status" kind="ticket" /></td>
+                    <td data-label="Actions">
+                        <div class="a-table__actions">
+                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>
+                            @can('tickets.delete')
+                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete guest ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="redirect_to" value="guest-list">
+                                    <button class="a-btn a-btn--danger a-btn--sm" type="submit" aria-label="Delete ticket {{ $ticket->ticket_number }}" title="Delete"><i class="fa fa-trash"></i></button>
+                                </form>
+                            @endcan
+                        </div>
+                    </td>
+                </tr>
+            @endforeach
+            </tbody>
+        </x-admin.table>
+        <x-admin.pager :paginator="$tickets" />
+    @endif
+</x-admin.card>
 
 <div class="modal fade" id="createInvitationModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -101,29 +78,29 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Event</label>
-                    <select name="event_name" class="form-select js-modal-select2" required>
+            <div class="a-tk-modal-fields">
+                <div class="a-field a-span-3">
+                    <label class="form-label" for="invEvent">Event</label>
+                    <select id="invEvent" name="event_name" class="form-select js-modal-select2" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Guest Type</label>
-                    <input type="text" class="form-control" name="guest_type" placeholder="Regular" required>
+                <div class="a-field a-span-2">
+                    <label class="form-label" for="invGuestType">Guest Type</label>
+                    <input type="text" id="invGuestType" class="form-control" name="guest_type" placeholder="Regular" required>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Count</label>
-                    <input type="number" name="count" class="form-control" value="1" min="1" max="500">
+                <div class="a-field">
+                    <label class="form-label" for="invCount">Count</label>
+                    <input type="number" id="invCount" name="count" class="form-control" value="1" min="1" max="500">
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-alt-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Generate</button>
+          <button type="button" class="a-btn a-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="a-btn a-btn--primary">Generate</button>
         </div>
       </form>
     </div>
@@ -140,28 +117,28 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Event</label>
-                    <select name="event_name" class="form-select js-modal-select2" required>
+            <div class="a-tk-modal-fields">
+                <div class="a-field a-span-3">
+                    <label class="form-label" for="impEvent">Event</label>
+                    <select id="impEvent" name="event_name" class="form-select js-modal-select2" required>
                         <option value="">Select event</option>
                         @foreach($eventNames as $eventName)
                             <option value="{{ $eventName }}">{{ $eventName }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">CSV File</label>
-                    <input type="file" name="file" class="form-control" accept=".csv,text/csv" required>
+                <div class="a-field a-span-3">
+                    <label class="form-label" for="importFile">CSV File</label>
+                    <input type="file" id="importFile" name="file" class="form-control" accept=".csv,text/csv" required>
                 </div>
             </div>
-            <div class="mt-3 text-muted small">
+            <div class="a-hint" style="margin-top:14px">
                 Template now contains only ticket data (guest_type, name, email, phone, gender).
             </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-alt-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Import</button>
+          <button type="button" class="a-btn a-btn--ghost" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="a-btn a-btn--primary">Import</button>
         </div>
       </form>
     </div>
