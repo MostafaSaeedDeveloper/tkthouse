@@ -68,7 +68,7 @@
 .tkt-booking { min-width: 0; order: -1; } /* tickets first on mobile */
 @media (min-width: 992px) {
     .tkt-event-layout { grid-template-columns: minmax(0, 1fr) 390px; gap: 40px; align-items: start; padding-top: 40px; }
-    .tkt-booking { order: 0; position: sticky; top: calc(var(--tkt-header-h) + 16px); }
+    .tkt-booking { order: 0; }
 }
 .tkt-booking__card { padding: 20px; }
 .tkt-booking__title { font-size: var(--tkt-fs-lg); font-weight: 800; margin-bottom: 14px; }
@@ -150,8 +150,8 @@
 /* desktop: the list has its own scroll area so the summary never moves down */
 .tkt-tickets-scroll { margin: 0 -6px; padding: 0 6px; }
 @media (min-width: 992px) {
-    .tkt-booking__card { display: flex; flex-direction: column; max-height: calc(100vh - var(--tkt-header-h) - 32px); overflow: hidden; }
-    .tkt-tickets-scroll { flex: 0 1 auto; min-height: 120px; max-height: min(420px, 52vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-bottom: 2px; }
+    /* tickets are listed in full length: no inner scroll areas */
+    .tkt-booking__card { display: flex; flex-direction: column; }
     .tkt-booking__head, .tkt-soldout, .tkt-summary, .tkt-alert, .tkt-closed { flex: none; }
 }
 /* sold-out tickets: one folded line, tiny rows when opened, never selectable */
@@ -160,7 +160,7 @@
 .tkt-soldout__toggle svg { transition: transform .18s; }
 .tkt-soldout__toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .tkt-soldout__toggle:focus-visible { outline: 0; box-shadow: var(--tkt-focus); border-radius: 8px; }
-.tkt-soldout__list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; max-height: 168px; overflow-y: auto; }
+.tkt-soldout__list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }
 .tkt-soldout__list[hidden] { display: none; }
 .tkt-soldout__list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--tkt-line); font-size: var(--tkt-fs-sm); color: var(--tkt-muted); }
 .tkt-soldout__list li:first-child { border-top: 0; }
