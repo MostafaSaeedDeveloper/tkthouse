@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('scan_logs')) {
+            return; // already created outside the migrations table
+        }
+
         Schema::create('scan_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->nullable()->constrained()->nullOnDelete();

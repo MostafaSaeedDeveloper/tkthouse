@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('orders', 'owner_unverified')) {
+            return; // already present outside the migrations table
+        }
+
         Schema::table('orders', function (Blueprint $table) {
             $table->boolean('owner_unverified')->default(false)->after('user_id');
         });

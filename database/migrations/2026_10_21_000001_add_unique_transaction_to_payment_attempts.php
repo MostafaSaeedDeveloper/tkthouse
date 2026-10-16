@@ -12,6 +12,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasIndex('payment_attempts', 'payment_attempts_provider_tx_unique')) {
+            return;
+        }
+
         Schema::table('payment_attempts', function (Blueprint $table) {
             $table->unique(['provider', 'transaction_id'], 'payment_attempts_provider_tx_unique');
         });

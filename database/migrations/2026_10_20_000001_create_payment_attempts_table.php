@@ -12,6 +12,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('payment_attempts')) {
+            return; // already created outside the migrations table
+        }
+
         Schema::create('payment_attempts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();

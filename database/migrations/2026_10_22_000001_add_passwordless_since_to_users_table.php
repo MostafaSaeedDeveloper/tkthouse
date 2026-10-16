@@ -12,6 +12,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'passwordless_since')) {
+            return; // already present outside the migrations table
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->timestamp('passwordless_since')->nullable()->after('email_verified_at');
         });

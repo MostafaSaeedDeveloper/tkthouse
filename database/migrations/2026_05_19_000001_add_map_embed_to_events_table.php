@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('events', 'map_embed')) {
+            return; // already present outside the migrations table
+        }
+
         Schema::table('events', function (Blueprint $table) {
             $table->text('map_embed')->nullable()->after('map_url');
         });
