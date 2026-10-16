@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Order #'.(preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number))
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php

@@ -1,53 +1,66 @@
-# Admin V2 design system
+# TKT Admin Design System
 
-Black sidebar + topbar, light content, TKT yellow (`#FFD200`) primary actions. Blade + Bootstrap 5 (bundled with the existing admin assets) + vanilla JS. No third-party admin theme.
+An independent, token-driven design system for the TKT House admin. Black sidebar + topbar, light content, TKT yellow (`#FFD200`) for primary actions only. Blade + the bundled Bootstrap 5 (grid / utilities / JS) + vanilla JS — no React, Vue, Tailwind or ready-made admin theme. It is separate from the frontend: it is loaded only by `resources/views/admin/master.blade.php` and `auth/login.blade.php`, and no frontend stylesheet is loaded in the admin (or vice-versa).
 
-Files: `public/admin-v2/admin-v2.css`, `public/admin-v2/admin-v2.js`, `resources/views/admin/master.blade.php` (shell), `resources/views/admin/navbar.blade.php` (sidebar), `resources/views/components/admin/*` (components).
-Screens `@extends('admin.master')`, set `@section('title', '…')` and put their markup in `@section('content')`. Page-specific scripts go in `@push('scripts')`, page-specific CSS in `@push('styles')` (prefix your classes, e.g. `a-ev-…`).
+## 1. Audit (what was wrong, what stays)
 
-## Page skeleton
-```blade
-@extends('admin.master')
-@section('title', 'Orders')
-@section('content')
-<x-admin.page-header title="Orders" subtitle="…" :crumbs="['Dashboard' => route('admin.dashboard'), 'Orders']">
-    <a class="a-btn a-btn--primary" href="…"><i class="fa fa-plus"></i> New</a>      {{-- header actions slot --}}
-</x-admin.page-header>
-<x-admin.flash />                                   {{-- success / error / validation summary --}}
-<x-admin.filters :action="route('admin.orders.index')" :reset="route('admin.orders.index')"> …fields… </x-admin.filters>
-<x-admin.card flush>
-    <x-admin.table stack caption="Orders"> <thead>…</thead> <tbody>… <td data-label="Order">…</td> …</tbody> </x-admin.table>
-    <x-admin.pager :paginator="$orders" />
-</x-admin.card>
-@endsection
+| Finding | Decision |
+|---|---|
+| Admin screens were built on Dashmix (`dashmix.min.css`, 577 KB, Bootstrap 5 + its own colours). Its blue links/buttons, `html.dark` theme and `.block`/`.btn-alt-*` styles leaked through (e.g. a dark page + blue links when the OS prefers dark). | Dashmix is kept **only** for grid, utilities, modal/dropdown JS. Its colours are neutralised in `base.css` / `components.css`; `master.blade.php` removes the `dark` class it adds and declares `color-scheme: light`. |
+| 4 competing CSS files (`admin-v2.css` + three per-page files) with oversized sizes (15 px body, 44 px controls, 14 px radius, 20 px paddings) and duplicated component rules. | Replaced by `public/admin-ds/css/` (below). One definition per component; per-page CSS reduced to 3 module files + dashboard. |
+| `admin/assets/css/custom.css` (28 KB) and `dashmix.css` (700 KB, un-minified duplicate): not referenced by any view. | Deleted. |
+| 66 inline `style=""` attributes, one `<style>` block in the dashboard (moved to `dashboard.css`); scanner pages (`scanner.blade.php`, `scanner-login.blade.php`, `pdf.blade.php`) are standalone documents with their own dark/camera UI. | Inline styles reduced to layout one-offs; scanner/pdf deliberately stay standalone (camera + print). |
+| Ticket types rendered as saturated Bootstrap-blue pills in tables; 9-column orders table needing horizontal scroll. | `<x-admin.more>` (first value + "+N more" popover); columns merged by priority. |
+| 202 static Dashmix demo files in `resources/views/admin/html template/`. | Not referenced by routes/controllers; safe to delete in a separate clean-up commit (left untouched here). |
+| Status badges: raw `<span class="badge bg-…">` in places. | `<x-admin.status>` maps existing statuses → success/warning/danger/info only. |
+
+## 2. Files
+
+```
+public/admin-ds/css/tokens.css      colours, type scale, spacing, radius, control heights, layout sizes
+public/admin-ds/css/base.css        reset, typography, links, Bootstrap/Dashmix colour neutralisation
+public/admin-ds/css/layout.css      shell, sidebar, topbar, page header, grids
+public/admin-ds/css/components.css  buttons, badges, cards, KPI, forms, filter bar, tables, pagination, alerts, toast,
+                                    empty/loading, tabs, dropdown, modal, select2/flatpickr skins
+public/admin-ds/css/dashboard.css   dashboard home
+public/admin-ds/css/module-*.css    module-only rules (events/tickets, orders/customers, settings/users/roles/reports/login)
+public/admin-ds/admin.js            off-canvas sidebar, menus, floating popovers, confirm dialog, loading state, window.aToast()
+resources/views/admin/master.blade.php, admin/navbar.blade.php   the single layout
+resources/views/components/admin/*.blade.php                      the Blade components
 ```
 
-## Components (`<x-admin.*>`)
-| Component | Props / slots | Use |
-|---|---|---|
-| `page-header` | `title`, `subtitle`, `crumbs` (`['Label' => url, 'Current']`); default slot = action buttons | top of every screen |
-| `card` | `title`, `subtitle`, `flush`, `id`; slots `actions`, `footer` | any block; `flush` for tables |
-| `kpi` | `label`, `value`, `icon` (FontAwesome name), `hint` | KPI tiles inside `.a-grid.a-grid--4` |
-| `status` | `status`, `kind` = order\|payment\|ticket\|event | status pills for the statuses that already exist (never invent new ones) |
-| `badge` | `variant` = success\|warning\|danger\|info\|dark\|primary, `dot` | generic pill |
-| `empty` | `title`, `text`, `icon`; default slot = action | empty states |
-| `alert` / `flash` | `type` | messages |
-| `filters` | `action`, `reset`; fields are `<div class="a-field"><label class="form-label">…` | GET filter bar (search + selects + dates) |
-| `table` | `stack`, `compact`, `caption` | responsive table wrapper (`stack` turns rows into labelled blocks < 768px; give every `td` a `data-label`) |
-| `pager` | `paginator` | "Showing x–y of z" + pagination |
-| `field` | `label`, `name`, `hint`, `for`, `required` | labelled form control + error message |
-| `form-section` | `title`, `description`, `cols` (1–3) | groups of fields inside a form card |
-| `thumb` | `src`, `alt` | 44px image/thumbnail cell |
+## 3. Tokens (`tokens.css`)
 
-Layout helpers: `.a-grid` (`--2`, `--3`, `--4`, `--main-side` = content + 360px sidebar), `.a-form-grid` (`--2`, `--3`; `.is-full` spans), `.a-kv` (label/value list), `.a-btn-group`, `.a-chips/.a-chip`, `.a-tabs`, `.a-form-actions` (sticky save bar at the bottom of a form card), `.a-progress`.
-Buttons: `a-btn a-btn--primary|dark|outline|ghost|danger|success`, sizes `--sm`/`--lg`; loading state: put `data-a-loading` on a `<form>` (its submit button shows a spinner and is disabled once).
-Confirmations: `<form data-a-confirm="Message" data-a-confirm-title="Title" data-a-confirm-ok="Delete">` or the same attributes on a `<button>`; DELETE forms get a default confirmation automatically (`admin/master.blade.php`).
-Tables: cells are `nowrap`; use `class="a-wrap"` on a cell that may wrap, `.a-trunc` for long single-line text, `.a-num` for right-aligned numbers, `.a-table__main` / `.a-table__sub` for primary/secondary text, `.a-table__actions` for row buttons.
-Legacy Bootstrap classes (`.btn`, `.form-control`, `.form-select`, `.badge`, `.table`, `.modal`, `.alert`, `.pagination`, `.nav-tabs`) are already styled to match; prefer the `a-*` components in new markup.
+* Colour: primary `#FFD200`, sidebar/topbar `#111111`, background `#F7F8FA`, card `#FFFFFF`, text `#171717` / secondary `#6B7280`, border `#E5E7EB` (rows `#EEF0F3`, controls `#D1D5DB`). Success / warning / danger / info exist **for meaning only**.
+* Type: Inter. Body/inputs/buttons 14 px, table body 13 px, table head 11.5 px uppercase, labels/secondary 12.5 px, card title 15 px, page title 22 px, KPI 24 px. Money and counts use `font-variant-numeric: tabular-nums` and never wrap.
+* Spacing scale `--a-s-1…8` (4 · 8 · 12 · 16 · 20 · 24 · 32). Card padding 16, page gap 16, table cell 10 × 16.
+* Shape: card radius 12, control radius 8, one control height 36 px (sm 30, lg 42) for inputs, selects, buttons.
 
-## Rules for screens
-* UI only: never change business logic, routes, route names, form field names, permission checks (`@can`/middleware stay as they are — the server enforces them), validation, or database.
-* Keep every element id/class that JavaScript or tests rely on, and keep text that existing tests assert (`grep -rn "<text>" tests/` before removing copy).
-* No demo numbers, no placeholder images: show real data or an empty state.
-* Accessible: labels on every control, `aria-label` on icon buttons, visible focus (provided), keyboard-operable menus/modals, table captions.
-* Responsive 360 → 1440, no horizontal page scroll (tables scroll inside `.a-table-wrap` or use `stack`).
+## 4. Layout
+
+One layout: `@extends('admin.master')`, `@section('title', …)`, `@section('content')`. It provides sidebar (logo, Operations / System groups, permission-aware items, yellow active state), topbar (global search, *Create event* by permission, user menu), skip link, flash/validation toasts, confirm dialog, off-canvas sidebar < 992 px. Screens never re-implement these.
+
+## 5. Components (`<x-admin.*>`)
+
+| Component | Use |
+|---|---|
+| `page-header` (`title`, `subtitle`, `crumbs`, actions slot) / `breadcrumb` | top of every screen |
+| `button` (`variant` primary·secondary·danger·dark·ghost·success, `size`, `href`, `icon`, `loading`) | all buttons (or the `a-btn a-btn--…` classes) |
+| `input`, `select`, `search`, `date`, `field` (+ `form-section`) | labelled controls with error/hint; `a-form-grid--2/3`, sticky `a-form-actions` |
+| `filters` (`action`, `reset`) | the one filter bar: Search · Status · Event · Payment method · Date range · Apply · Reset — each page includes only the fields that apply |
+| `card` (`title`, `subtitle`, `flush`; slots `actions`, `footer`), `kpi` | content blocks |
+| `table` (`stack`, `compact`, `caption`) + `pager` | data tables. Cells: `a-table__main` / `a-table__sub`, `a-num` for money, `a-trunc` for long single-line text, `a-wrap` to allow wrapping. `stack` turns rows into labelled blocks < 768 px (`data-label` on every `td`). |
+| `more` | several values in one cell → first value + "+N more" popover (ticket types, events) — never a wall of pills |
+| `dropdown` | row / toolbar action menus (`a-menu__item`, `--danger`); a "View" button stays visible, secondary actions go in the menu |
+| `status`, `badge` | order/payment/ticket/event status pills |
+| `tabs`, `modal`, `empty`, `loading`, `alert`, `flash`, `toast` (JS `aToast()`), `thumb` | the rest |
+
+Confirmations: `data-a-confirm="…"` (+ `-title`, `-ok`) on a form or button; DELETE forms get one automatically. Loading: `data-a-loading` on a form.
+
+## 6. Rules for screens
+
+* UI only: no changes to routes, field names, validation, permissions (`@can` / middleware), business logic or the database.
+* Use components and tokens. If a rule is missing, add it to the shared CSS, not the page. Module CSS only for genuinely page-specific layout.
+* No default Bootstrap colours, no hex colours outside `tokens.css`, no demo data.
+* Tables: first value + "+N more", full names on the details page; no horizontal page scroll; every icon button has `aria-label`.
+* Keep text asserted by tests (`grep -rn "<text>" tests/`).

@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Payment Methods')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Payment Methods" subtitle="Methods customers can choose at checkout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings' => route('admin.settings.edit'), 'Payment Methods']">
     <a href="{{ route('admin.settings.edit') }}" class="a-btn a-btn--ghost">&larr; Back to General Settings</a>

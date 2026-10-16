@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Affiliates')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 <x-admin.page-header title="Affiliates" subtitle="Portal users with a referral link, and the orders they bring in." :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates']">

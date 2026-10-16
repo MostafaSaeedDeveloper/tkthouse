@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Scanners')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Scanners" subtitle="Manage scanner users for the gate team." :crumbs="['Dashboard' => route('admin.dashboard'), 'Scanners']">
     <a href="{{ route('admin.scanners.export-history') }}" class="a-btn a-btn--outline"><i class="fa fa-file-csv"></i> Export Check-in History</a>

@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Roles')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Roles" subtitle="Bundles of permissions you can assign to users." :crumbs="['Dashboard' => route('admin.dashboard'), 'Roles']">
     <a class="a-btn a-btn--primary" href="{{ route('admin.roles.create') }}"><i class="fa fa-plus"></i> Create Role</a>

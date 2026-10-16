@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', $reportTitle ?? 'Reports')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header :title="$reportTitle ?? 'Reports'" :subtitle="$reportDescription ?? 'Detailed per-event performance, tickets and check-ins.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports']">
     @if($forcedEvent)

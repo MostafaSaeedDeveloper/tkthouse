@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Create Event')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
 <x-admin.page-header title="Create Event" subtitle="Set up the event details, ticket types, fees and lineup." :crumbs="['Dashboard' => route('admin.dashboard'), 'Events' => route('admin.events.index'), 'Create']">

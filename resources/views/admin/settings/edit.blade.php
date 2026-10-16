@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'General Settings')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="General Settings" subtitle="Branding, WhatsApp ticket sending and payment timeout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Settings']">
     <a class="a-btn a-btn--outline" href="{{ route('admin.payment-methods.index') }}"><i class="fa fa-credit-card"></i> Payment Methods</a>

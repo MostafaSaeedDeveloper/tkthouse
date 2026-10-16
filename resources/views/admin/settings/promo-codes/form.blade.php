@@ -2,7 +2,6 @@
 
 @section('title', $promoCode->exists ? 'Edit Promo Code' : 'Create Promo Code')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 <x-admin.page-header :title="$promoCode->exists ? 'Edit Promo Code' : 'Create Promo Code'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Promo Codes' => route('admin.promo-codes.index'), $promoCode->exists ? 'Edit' : 'Create']">

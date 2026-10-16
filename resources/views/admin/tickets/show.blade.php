@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Ticket '.($ticket->ticket_number ?? ''))
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
 @php

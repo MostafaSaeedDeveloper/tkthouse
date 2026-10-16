@@ -99,5 +99,36 @@
         });
     }, true);
 
+
+    /* ---- floating panels inside scrollable tables: menus and "+N more" popovers are positioned with fixed coordinates so the table wrapper never clips them ---- */
+    function place(panel, anchor, alignRight) {
+        panel.style.position = 'fixed'; panel.style.left = 'auto'; panel.style.right = 'auto'; panel.style.top = '0';
+        var a = anchor.getBoundingClientRect(), w = panel.offsetWidth, h = panel.offsetHeight;
+        var left = alignRight ? a.right - w : a.left;
+        left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+        var top = a.bottom + 6; if (top + h > window.innerHeight - 8 && a.top - h - 6 > 8) top = a.top - h - 6;
+        panel.style.left = left + 'px'; panel.style.top = top + 'px';
+    }
+    document.addEventListener('click', function (e) {
+        var mt = e.target.closest('[data-a-menu-toggle]');
+        if (mt) { var m = mt.closest('.a-menu'); var panel = m && m.querySelector('.a-menu__panel'); if (panel && m.classList.contains('is-open') && m.closest('.a-table-wrap')) place(panel, mt, true); }
+        $$('details.a-more[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+    document.addEventListener('toggle', function (e) {
+        var d = e.target; if (!d.matches || !d.matches('details.a-more') || !d.open) return;
+        $$('details.a-more[open]').forEach(function (o) { if (o !== d) o.removeAttribute('open'); });
+        var pop = d.querySelector('.a-more__pop'); if (pop && d.closest('.a-table-wrap')) place(pop, d.querySelector('summary'), false);
+    }, true);
+    function closeFloating() { $$('.a-menu.is-open').forEach(function (m) { if (m.closest('.a-table-wrap')) m.classList.remove('is-open'); }); $$('details.a-more[open]').forEach(function (d) { d.removeAttribute('open'); }); }
+    window.addEventListener('scroll', closeFloating, true); window.addEventListener('resize', closeFloating);
+
+    /* ---- toasts: window.aToast(message, 'success' | 'error' | 'info') ---- */
+    window.aToast = function (message, type) {
+        var root = document.getElementById('aToastRoot');
+        if (!root) { root = document.createElement('div'); root.id = 'aToastRoot'; root.className = 'a-toast-root'; root.setAttribute('aria-live', 'polite'); document.body.appendChild(root); }
+        var t = document.createElement('div'); t.className = 'a-toast a-toast--' + (type || 'info'); t.setAttribute('role', 'status'); t.textContent = message;
+        root.appendChild(t); setTimeout(function () { t.classList.add('is-out'); setTimeout(function () { t.remove(); }, 250); }, 4200);
+    };
+
     function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
 })();

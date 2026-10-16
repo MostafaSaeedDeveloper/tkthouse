@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', ($method->exists ? 'Edit' : 'Create').' Payment Method')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header :title="($method->exists ? 'Edit' : 'Create').' Payment Method'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Payment Methods' => route('admin.payment-methods.index'), $method->exists ? 'Edit' : 'Create']">
     <a href="{{ route('admin.payment-methods.index') }}" class="a-btn a-btn--ghost">&larr; Back to Payment Methods</a>

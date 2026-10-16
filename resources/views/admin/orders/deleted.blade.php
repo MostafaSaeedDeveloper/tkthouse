@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Deleted Orders')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php $statusList = ['pending_approval','pending_payment','on_hold','paid','canceled','rejected','refunded','partially_refunded']; @endphp

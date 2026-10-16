@@ -2,7 +2,6 @@
 
 @section('title', 'Promo Codes')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 <x-admin.page-header title="Promo Codes" subtitle="Discount codes customers can apply at checkout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates' => route('admin.affiliates.index'), 'Promo Codes']">

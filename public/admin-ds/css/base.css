@@ -1,0 +1,39 @@
+/* TKT Admin Design System — 2/6 base: reset, typography, links, Bootstrap/Dashmix neutralisation.
+   Dashmix (bundled Bootstrap 5) is only kept for its grid, utilities and JS; its colours never show. */
+html { font-size: 16px; }
+body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-family: var(--a-font); font-size: var(--a-fs-base); line-height: 1.45; font-weight: var(--a-fw-normal); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+.a-body *, .a-body *::before, .a-body *::after { box-sizing: border-box; }
+.a-body a { color: inherit; text-decoration: none; }
+.a-body a:hover { color: inherit; }
+.a-body h1, .a-body h2, .a-body h3, .a-body h4, .a-body h5, .a-body h6 { font-family: var(--a-font); color: var(--a-ink); margin: 0; letter-spacing: -.005em; line-height: 1.25; }
+.a-body :where(p) { margin: 0 0 var(--a-s-3); }
+.a-body img { max-width: 100%; }
+.a-body hr { border: 0; border-top: 1px solid var(--a-line); opacity: 1; margin: var(--a-s-4) 0; }
+.a-body small, .a-body .small { font-size: var(--a-fs-sm); }
+.a-body code { font-size: .92em; color: var(--a-ink-soft); background: var(--a-hover); padding: 1px 5px; border-radius: 4px; }
+.a-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.a-skip { position: fixed; left: 12px; top: -60px; z-index: 5000; background: var(--a-yellow); color: #000; padding: 8px 14px; border-radius: var(--a-radius-sm); font-weight: var(--a-fw-bold); transition: top .15s; }
+.a-skip:focus { top: 12px; }
+.a-body :focus-visible { outline: 0; box-shadow: var(--a-focus); }
+
+/* text helpers */
+.a-muted, .a-body .text-muted { color: var(--a-muted) !important; }
+.a-text-sm, .a-body .fs-sm { font-size: var(--a-fs-sm); }
+.a-num { font-variant-numeric: tabular-nums; }
+.a-link { font-weight: var(--a-fw-semibold); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--a-line-strong); }
+.a-link:hover { text-decoration-color: var(--a-ink); }
+.a-body .link-fx { color: inherit; }
+
+/* Bootstrap / Dashmix colour classes must never paint default blue/green/etc. */
+.a-body .text-primary, .a-body .link-primary { color: var(--a-yellow-ink) !important; }
+.a-body .text-success { color: var(--a-success) !important; } .a-body .text-danger { color: var(--a-danger) !important; }
+.a-body .text-warning { color: var(--a-warning) !important; } .a-body .text-info { color: var(--a-info) !important; }
+.a-body .bg-primary, .a-body .bg-primary-dark, .a-body .bg-primary-light { background: var(--a-yellow-soft) !important; color: var(--a-yellow-ink) !important; }
+.a-body .bg-body-light, .a-body .bg-body-extra-light { background: var(--a-surface-2) !important; }
+.a-body .border { border-color: var(--a-line) !important; }
+.a-body .rounded { border-radius: var(--a-radius-sm) !important; }
+.a-body .content { padding: 0; width: 100%; max-width: none; margin: 0; }
+.a-body .fade-up, .a-body .animated { animation: none; }
+.a-body .list-group-item { border-color: var(--a-line); }
+@media (prefers-reduced-motion: reduce) { .a-body * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+@media print { .a-sidebar, .a-topbar, .a-backdrop { display: none !important; } .a-main { margin: 0 !important; } }

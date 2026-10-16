@@ -1,3 +1,5 @@
+/* TKT Admin Design System — module rules (only what the shared components cannot express). */
+/* settings, users, roles, reports, scanners, login — prefixes a-m / a-lg */
 /* Admin V2 — page-specific styles for users, roles, permissions, settings, reports, scanners */
 .a-m-narrow { max-width: 820px; }
 .a-m-chips { display: flex; flex-wrap: wrap; gap: 6px; }

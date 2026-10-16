@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Add Affiliate Link')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 <x-admin.page-header title="Add Affiliate Link" subtitle="Pick a portal user and the page their link opens." :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates' => route('admin.affiliates.index'), 'Add link']">

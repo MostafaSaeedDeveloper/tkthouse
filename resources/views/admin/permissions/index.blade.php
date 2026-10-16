@@ -1,6 +1,5 @@
 @extends('admin.master')
 @section('title', 'Permissions')
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 <x-admin.page-header title="Permissions" subtitle="Individual abilities that can be assigned to roles or users." :crumbs="['Dashboard' => route('admin.dashboard'), 'Permissions']">
     <a class="a-btn a-btn--primary" href="{{ route('admin.permissions.create') }}"><i class="fa fa-plus"></i> Create Permission</a>

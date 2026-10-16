@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', 'Edit Order')
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 @php

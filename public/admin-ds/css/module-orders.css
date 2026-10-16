@@ -1,3 +1,5 @@
+/* TKT Admin Design System — module rules (only what the shared components cannot express). */
+/* orders, customers, affiliates, promo codes — prefixes a-ord / a-cus */
 /* Admin V2 - orders / customers / affiliates / promo codes (prefixes a-ord-, a-cus-) */
 .a-ord-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .a-ord-count { font-size: 13px; color: var(--a-muted); font-weight: 600; }

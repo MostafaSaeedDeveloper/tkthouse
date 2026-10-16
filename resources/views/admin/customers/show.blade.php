@@ -1,7 +1,6 @@
 @extends('admin.master')
 @section('title', $customer->full_name)
 
-@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/orders-customers.css') }}">@endpush
 
 @section('content')
 <x-admin.page-header :title="$customer->full_name" subtitle="Checkout customer record (buyer), not a portal login account." :crumbs="['Dashboard' => route('admin.dashboard'), 'Customers' => route('admin.customers.index'), $customer->full_name]">
