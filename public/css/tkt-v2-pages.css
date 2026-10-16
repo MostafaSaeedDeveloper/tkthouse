@@ -119,17 +119,17 @@
 .tkt-booking__head { margin-bottom: 12px; }
 .tkt-booking__title { font-size: var(--tkt-fs-lg); font-weight: 800; margin: 0; }
 .tkt-booking__count { margin: 2px 0 0; font-size: var(--tkt-fs-sm); color: var(--tkt-muted); }
-.tkt-tickets { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); }
-.tkt-ticket { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "info" "price" "limit" "step"; align-content: space-between; gap: 8px; align-items: start; padding: 12px 14px; border: 1px solid var(--tkt-line); border-radius: var(--tkt-radius-sm); background: #fff; transition: border-color .15s, background-color .15s, box-shadow .15s; }
+.tkt-tickets { display: grid; gap: 8px; }
+.tkt-ticket { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "info price" "limit step"; gap: 8px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--tkt-line); border-radius: var(--tkt-radius-sm); background: #fff; transition: border-color .15s, background-color .15s, box-shadow .15s; }
 .tkt-ticket.is-folded { display: none; }
 .tkt-ticket.is-selected { background: #FFF8D6; border-color: var(--tkt-primary); box-shadow: inset 0 0 0 1px var(--tkt-primary); }
 .tkt-ticket__info { grid-area: info; min-width: 0; }
 .tkt-ticket__name { font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; word-break: break-word; }
 .tkt-ticket__desc { margin-top: 2px; font-size: var(--tkt-fs-sm); line-height: 1.35; color: var(--tkt-ink-soft); overflow-wrap: anywhere; }
-.tkt-ticket__price { grid-area: price; align-self: end; text-align: left; font-weight: 800; font-size: var(--tkt-fs-lg); line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tkt-ticket__price { grid-area: price; align-self: start; text-align: right; font-weight: 800; font-size: var(--tkt-fs-lg); line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tkt-ticket__price small { font-size: var(--tkt-fs-xs); font-weight: 600; color: var(--tkt-muted); }
 .tkt-ticket__limit { grid-area: limit; min-width: 0; font-size: var(--tkt-fs-xs); color: var(--tkt-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.tkt-stepper { grid-area: step; display: inline-flex; align-items: center; justify-content: space-between; justify-self: stretch; border: 1px solid var(--tkt-line-strong); border-radius: var(--tkt-radius-sm); background: #fff; }
+.tkt-stepper { grid-area: step; display: inline-flex; align-items: center; justify-self: end; border: 1px solid var(--tkt-line-strong); border-radius: var(--tkt-radius-sm); background: #fff; }
 .tkt-stepper button { width: 44px; height: 44px; border: 0; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; border-radius: var(--tkt-radius-sm); color: var(--tkt-ink); touch-action: manipulation; }
 .tkt-stepper button:hover:not(:disabled) { background: var(--tkt-primary-soft); }
 .tkt-stepper button:focus-visible { outline: 0; box-shadow: var(--tkt-focus); }
