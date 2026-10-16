@@ -65,17 +65,13 @@
 
 .tkt-event-layout { display: grid; gap: 28px; padding: 28px 0 var(--tkt-section-y); }
 .tkt-event-main { min-width: 0; }
-.tkt-event-aside { min-width: 0; }
+.tkt-booking { min-width: 0; order: -1; } /* tickets first on mobile */
 @media (min-width: 992px) {
-    .tkt-event-layout { grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; padding-top: 40px; }
-    .tkt-event-aside { position: sticky; top: calc(var(--tkt-header-h) + 16px); }
+    .tkt-event-layout { grid-template-columns: minmax(0, 1fr) 390px; gap: 40px; align-items: start; padding-top: 40px; }
+    .tkt-booking { order: 0; position: sticky; top: calc(var(--tkt-header-h) + 16px); }
 }
-.tkt-summary-card { padding: 20px; }
-.tkt-summary-card__title { font-size: var(--tkt-fs-lg); font-weight: 800; margin-bottom: 4px; }
-.tkt-tickets-section { margin-bottom: 36px; scroll-margin-top: calc(var(--tkt-header-h) + 12px); }
-.tkt-tickets-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.tkt-tickets-section__title { font-size: var(--tkt-fs-2xl); font-weight: 800; }
-.tkt-tickets-section__count { font-size: var(--tkt-fs-sm); color: var(--tkt-muted); font-weight: 600; }
+.tkt-booking__card { padding: 20px; }
+.tkt-booking__title { font-size: var(--tkt-fs-lg); font-weight: 800; margin-bottom: 14px; }
 
 /* About / details */
 .tkt-detail-list { display: grid; gap: 14px; margin-top: 24px; padding: 20px; background: var(--tkt-surface); border-radius: var(--tkt-radius); }
@@ -119,50 +115,26 @@
 .tkt-organizer a:hover { color: var(--tkt-ink); text-decoration: underline !important; }
 
 /* Ticket selection ------------------------------------------------------- */
-.tkt-tickets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
-.tkt-tickets.is-collapsed .tkt-ticket.is-extra:not(.is-selected) { display: none; }
-.tkt-ticket { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; padding: 18px; min-width: 0; border: 1px solid var(--tkt-line); border-radius: var(--tkt-radius); background: #fff; transition: border-color .15s, background-color .15s, box-shadow .15s; }
-.tkt-ticket:hover:not(.is-unavailable) { border-color: var(--tkt-line-strong); }
-.tkt-ticket.is-selected { border-color: var(--tkt-ink); background: #FFFDF0; box-shadow: inset 4px 0 0 var(--tkt-primary); }
-.tkt-ticket__body { min-width: 0; display: grid; gap: 6px; align-content: start; }
-.tkt-ticket__name { margin: 0; font-size: var(--tkt-fs-lg); font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.tkt-ticket__desc { margin: 0; font-size: var(--tkt-fs-sm); line-height: 1.45; color: var(--tkt-ink-soft); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.tkt-ticket.is-expanded .tkt-ticket__name, .tkt-ticket.is-expanded .tkt-ticket__desc { display: block; -webkit-line-clamp: unset; overflow: visible; }
-.tkt-ticket__more { justify-self: start; padding: 0; border: 0; background: none; font-size: var(--tkt-fs-xs); font-weight: 700; text-decoration: underline; color: var(--tkt-ink); cursor: pointer; }
-.tkt-ticket__more[hidden] { display: none; }
-.tkt-ticket__tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: var(--tkt-fs-xs); color: var(--tkt-muted); font-weight: 600; }
-.tkt-ticket__buy { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.tkt-ticket__price { line-height: 1.1; white-space: nowrap; }
-.tkt-ticket__price b { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.tkt-ticket__price span { font-size: var(--tkt-fs-sm); font-weight: 700; margin-left: 2px; }
-.tkt-ticket__price small { display: block; margin-top: 3px; font-size: var(--tkt-fs-xs); font-weight: 500; color: var(--tkt-muted); }
-.tkt-ticket__sub { flex-basis: 100%; font-size: var(--tkt-fs-sm); font-weight: 700; color: var(--tkt-ink); padding-top: 10px; border-top: 1px dashed var(--tkt-line-strong); font-variant-numeric: tabular-nums; }
-.tkt-ticket__sub[hidden] { display: none; }
+.tkt-tickets { display: grid; gap: 10px; }
+.tkt-ticket { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--tkt-line); border-radius: var(--tkt-radius); background: #fff; transition: border-color .15s, background-color .15s; }
+.tkt-ticket.is-selected { border-color: var(--tkt-ink); background: #FFFDF0; box-shadow: inset 3px 0 0 var(--tkt-primary); }
+.tkt-ticket.is-unavailable { background: var(--tkt-surface); }
+.tkt-ticket.is-unavailable .tkt-ticket__name, .tkt-ticket.is-unavailable .tkt-ticket__price { color: var(--tkt-muted); }
+.tkt-ticket__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.tkt-ticket__name { font-weight: 700; overflow-wrap: anywhere; }
+.tkt-ticket__price { flex: none; text-align: right; font-weight: 800; white-space: nowrap; }
+.tkt-ticket__price small { display: block; margin-top: 2px; font-size: var(--tkt-fs-xs); font-weight: 500; color: var(--tkt-muted); }
+.tkt-ticket__desc { margin-top: 4px; font-size: var(--tkt-fs-sm); color: var(--tkt-muted); overflow-wrap: anywhere; }
+.tkt-ticket__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tkt-ticket__limit { font-size: var(--tkt-fs-xs); color: var(--tkt-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tkt-stepper { display: inline-flex; align-items: center; border: 1px solid var(--tkt-line-strong); border-radius: var(--tkt-radius-sm); background: #fff; }
-.tkt-stepper button { width: 46px; height: 46px; border: 0; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; border-radius: var(--tkt-radius-sm); color: var(--tkt-ink); }
-.tkt-stepper button:hover:not(:disabled) { background: var(--tkt-primary-soft); }
-.tkt-stepper button:focus-visible { outline: 0; box-shadow: var(--tkt-focus); }
+.tkt-stepper button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 20px; line-height: 1; cursor: pointer; border-radius: var(--tkt-radius-sm); color: var(--tkt-ink); }
+.tkt-stepper button:hover:not(:disabled) { background: var(--tkt-surface); }
 .tkt-stepper button:disabled { color: #bdbdbd; cursor: not-allowed; }
-.tkt-stepper output { min-width: 40px; text-align: center; font-size: var(--tkt-fs-lg); font-weight: 800; font-variant-numeric: tabular-nums; }
-.tkt-ticket.is-selected .tkt-stepper { border-color: var(--tkt-ink); }
-.tkt-more { margin-top: 14px; }
-/* Unavailable tickets: short, quiet rows below the available ones */
-.tkt-tickets-off { margin-top: 28px; }
-.tkt-tickets-off__title { font-size: var(--tkt-fs-sm); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--tkt-muted); margin-bottom: 10px; }
-.tkt-tickets--off { grid-template-columns: 1fr; gap: 8px; }
-.tkt-tickets--off.is-collapsed .tkt-ticket.is-extra { display: none; }
-.tkt-ticket--compact { flex-direction: row; align-items: center; padding: 12px 16px; background: var(--tkt-surface); gap: 12px; }
-.tkt-ticket--compact .tkt-ticket__name { font-size: var(--tkt-fs-base); font-weight: 700; -webkit-line-clamp: 1; color: var(--tkt-muted); }
-.tkt-ticket--compact .tkt-ticket__buy { flex: none; flex-wrap: nowrap; gap: 14px; }
-.tkt-ticket--compact .tkt-ticket__price b { font-size: var(--tkt-fs-base); color: var(--tkt-muted); }
-.tkt-more--off { margin-top: 8px; }
-@media (max-width: 575px) {
-    .tkt-tickets { grid-template-columns: 1fr; }
-    .tkt-ticket--compact { flex-wrap: wrap; }
-}
+.tkt-stepper output { min-width: 34px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Order summary */
-.tkt-summary { margin-top: 12px; }
+.tkt-summary { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--tkt-line-strong); }
 .tkt-summary__empty { padding: 10px 0 14px; font-size: var(--tkt-fs-sm); color: var(--tkt-muted); text-align: center; }
 .tkt-summary.has-items .tkt-summary__empty { display: none; }
 .tkt-summary__lines { display: grid; gap: 8px; font-size: var(--tkt-fs-sm); }
@@ -179,10 +151,6 @@
 
 /* Mobile: summary becomes a bottom bar once something is selected */
 @media (max-width: 991px) {
-    .tkt-event-aside { order: 5; }
-    .tkt-summary-card { padding: 0; border: 0; background: none; box-shadow: none; }
-    .tkt-summary-card__title { display: none; }
-    .tkt-summary:not(.has-items) { display: none; }
     .tkt-summary { margin: 0; padding: 0; border: 0; }
     .tkt-summary.has-items {
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; max-height: 80vh; overflow-y: auto;
@@ -346,7 +314,7 @@ body.tkt-has-bottombar { padding-bottom: 84px; }
 .tkt-wz__phases li + li::before { content: ""; flex: 1; height: 2px; background: var(--tkt-line); margin: 0 8px; min-width: 12px; }
 .tkt-wz__phase { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 4px 2px; font-weight: 700; font-size: var(--tkt-fs-sm); color: var(--tkt-muted); cursor: pointer; white-space: nowrap; }
 .tkt-wz__phase:disabled { cursor: default; opacity: .55; }
-.tkt-wz__dot { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--tkt-line-strong); background: #fff; color: var(--tkt-ink); font-size: 13px; font-weight: 800; flex: none; }
+.tkt-wz__dot { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--tkt-line-strong); background: #fff; color: var(--tkt-ink); font-size: 12px; font-weight: 800; flex: none; }
 .tkt-wz__phase.is-current { color: var(--tkt-ink); }
 .tkt-wz__phase.is-current .tkt-wz__dot { background: var(--tkt-ink); border-color: var(--tkt-ink); color: #fff; }
 .tkt-wz__phase.is-done { color: var(--tkt-ink); }
@@ -386,7 +354,7 @@ body.tkt-has-bottombar { padding-bottom: 84px; }
 .tkt-wz [data-wz-step].is-entering, .tkt-wz .tkt-attendee.is-entering { animation: tktWzIn .22s ease both; }
 @media (prefers-reduced-motion: reduce) { .tkt-wz [data-wz-step].is-entering, .tkt-wz .tkt-attendee.is-entering { animation: none; } .tkt-wz__bar i { transition: none; } }
 @media (max-width: 575px) {
-    .tkt-wz__phase-name { font-size: 13px; }
+    .tkt-wz__phase-name { font-size: 12px; }
     .tkt-wz__phases li + li::before { margin: 0 4px; min-width: 6px; }
     .tkt-wz .tkt-form-grid { row-gap: 12px; }
     .tkt-wz .tkt-attendee__head { margin-bottom: 8px; }
