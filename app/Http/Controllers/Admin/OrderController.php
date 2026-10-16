@@ -146,7 +146,7 @@ class OrderController extends Controller
         $this->abortIfOrderNotAccessible($request, $order, false);
 
         $order->load(['customer', 'items.ticket', 'items.event:id,name,event_date,end_date,event_time,location', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
-        $paymentAttempts = $order->paymentAttempts()->latest()->get();
+        $paymentAttempts = $order->paymentAttempts()->with('integrationAccount:id,name')->latest()->get();
 
         $paymentMethodLabel = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
@@ -204,7 +204,7 @@ class OrderController extends Controller
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;
 
-        $canSeeAccounts = $request->user()->can('settings.payment-accounts.view') || \App\Orders\OrderAccess::isSuper($request->user());
+        $canSeeAccounts = \App\Http\Controllers\Admin\TransactionController::canSeeAccounts($request->user());
         $pinnedAccount = $canSeeAccounts ? $order->integrationAccount : null;
         $switchTargets = ($canSeeAccounts && $request->user()->can('orders.reroute_payment') && $order->status === 'pending_payment')
             ? \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->where('enabled', true)->get()->filter(fn ($a) => \App\Services\Payments\Routing\PaymentAccountResolver::usable($a) && $a->id !== $order->integration_account_id)->values()

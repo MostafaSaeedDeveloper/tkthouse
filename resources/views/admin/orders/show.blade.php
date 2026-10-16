@@ -160,17 +160,49 @@
       @endforelse
     </x-admin.card>
 
-    <x-admin.card flush title="Payment Attempts" :subtitle="$attempts->count().' attempt(s)'">
+    @php
+        $primary = $attempts->firstWhere('status', 'paid') ?? $attempts->sortByDesc('id')->first();
+        $canTx = auth()->user()->can('payments.transactions.view');
+        $canInq = auth()->user()->can('payments.transactions.inquire') && \App\Orders\OrderAccess::canManage($order, auth()->user());
+    @endphp
+    <x-admin.card title="Payment Information" subtitle="Our order reference is separate from every provider reference.">
+        @if(! $primary)
+            <x-admin.empty icon="fa-credit-card" title="No online payment yet" text="Online payment attempts appear when the customer starts paying." />
+        @else
+        <dl class="a-kv">
+            <div><dt>Payment provider</dt><dd>{{ ucfirst((string) $primary->provider) }}</dd></div>
+            @if($canSeeAccounts)<div><dt>Merchant account</dt><dd>{{ $primary->integrationAccount?->name ?? 'Legacy configuration' }}</dd></div>@endif
+            <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel ?: ($primary->method_code ?: '—') }}</dd></div>
+            <div><dt>Order reference</dt><dd>#{{ $order->order_number }}</dd></div>
+            <div><dt>Payment reference</dt><dd>{{ $primary->internal_reference ?: 'Legacy attempt' }}@if($primary->internal_reference) <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-copy-text="{{ $primary->internal_reference }}" aria-label="Copy payment reference"><i class="fa fa-copy"></i></button>@endif</dd></div>
+            <div><dt>Provider transaction ID</dt><dd>{{ $primary->transaction_id ?: '—' }}@if($primary->transaction_id) <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-copy-text="{{ $primary->transaction_id }}" aria-label="Copy transaction ID"><i class="fa fa-copy"></i></button>@endif</dd></div>
+            @if($primary->provider_reference)<div><dt>Provider reference number</dt><dd>{{ $primary->provider_reference }}</dd></div>@endif
+            <div><dt>{{ $primary->status === 'paid' ? 'Paid amount' : 'Amount requested' }}</dt><dd>{{ $money($primary->amount) }}</dd></div>
+            <div><dt>Payment date</dt><dd>{{ ($primary->paid_at ?? $primary->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
+            <div><dt>Current status</dt><dd><x-admin.status :status="$primary->status" kind="payment" /></dd></div>
+            <div><dt>Last verification</dt><dd>{{ $primary->last_checked_at?->diffForHumans() ?? 'never checked' }}</dd></div>
+        </dl>
+        <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
+            @if($canInq)<form method="POST" action="{{ route('admin.payments.transactions.inquire', $primary) }}" data-a-loading>@csrf<button class="a-btn a-btn--outline" type="submit"><i class="fa fa-rotate"></i> Check payment status</button></form>@endif
+            @if($canTx)<a class="a-btn a-btn--outline" href="{{ route('admin.payments.transactions.show', $primary) }}">View transaction details</a>@endif
+            @includeIf('admin.orders._refund-actions', ['attempt' => $primary])
+        </div>
+        @endif
+    </x-admin.card>
+
+    <x-admin.card flush title="Payment Attempts History" :subtitle="$attempts->count().' attempt(s) — a retry never overwrites an earlier attempt'">
       @if($attempts->isEmpty())
         <x-admin.empty icon="fa-credit-card" title="No payment attempts" text="Attempts appear when the customer starts paying online." />
       @else
         <x-admin.table stack compact caption="Payment attempts">
-          <thead><tr><th>Gateway</th><th>Reference</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <thead><tr><th>Reference</th><th>Gateway</th>@if($canSeeAccounts)<th>Account</th>@endif<th>Provider ID</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
           @foreach($attempts as $a)
             <tr>
+              <td data-label="Reference">@if($canTx)<a class="a-table__main" href="{{ route('admin.payments.transactions.show', $a) }}">{{ $a->internal_reference ?: '#'.$a->id }}</a>@else{{ $a->internal_reference ?: '#'.$a->id }}@endif</td>
               <td data-label="Gateway">{{ ucfirst((string) $a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
-              <td data-label="Reference" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
+              @if($canSeeAccounts)<td data-label="Account">{{ $a->integrationAccount?->name ?? 'Legacy' }}</td>@endif
+              <td data-label="Provider ID" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
               <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
               <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
               <td data-label="Date">{{ $a->created_at?->format('d M Y, H:i') }}</td>
@@ -211,7 +243,6 @@
     <x-admin.card title="Merchant account" subtitle="Where this order's online payments are collected.">
         <dl class="a-kv">
             <div><dt>Pinned account</dt><dd>@if($pinnedAccount)<strong>{{ $pinnedAccount->name }}</strong> <span class="a-muted">{{ ucfirst($pinnedAccount->provider) }} · {{ $pinnedAccount->environment }}</span>@else<span class="a-muted">Legacy configuration</span>@endif</dd></div>
-            @foreach($paymentAttempts->take(5) as $pa)<div><dt>Attempt #{{ $pa->id }}</dt><dd>{{ $accountNames[$pa->integration_account_id] ?? 'Legacy' }} · <x-admin.status :status="$pa->status" kind="payment" /></dd></div>@endforeach
         </dl>
         @if($switchTargets->isNotEmpty())
         <form method="POST" action="{{ route('admin.orders.payment-account.switch', $order) }}" data-a-loading data-a-confirm="Switch the merchant account? Every open payment is checked at its gateway first; the switch is refused if money may be collected." data-a-confirm-ok="Switch">
@@ -392,3 +423,4 @@
 })();
 </script>
 @endsection
+@push('scripts')<script>document.querySelectorAll('[data-copy-text]').forEach(function (b) { b.addEventListener('click', function () { navigator.clipboard.writeText(b.dataset.copyText); b.innerHTML = '<i class="fa fa-check"></i>'; setTimeout(function () { b.innerHTML = '<i class="fa fa-copy"></i>'; }, 1200); }); });</script>@endpush
