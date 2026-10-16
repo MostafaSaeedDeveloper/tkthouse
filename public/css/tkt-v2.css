@@ -514,3 +514,6 @@ body.tkt-has-bar .tkt-toast { bottom: 96px; }
 .tkt-v2 .iti input.tkt-input { padding-left: 90px; }
 .tkt-flash { padding-top: 16px; display: grid; gap: 8px; }
 .tkt-v2 [hidden] { display: none !important; }
+
+/* Base size: Bootstrap 3 sets the root to 10px; +1px keeps every rem token a little more readable without a big jump */
+html { font-size: 11px; }

@@ -12,6 +12,10 @@
     $banner = $event->event_banner_url ?: $event->cover_image_url;
 
     $tickets = $event->tickets->filter(fn ($t) => $t->status !== 'hidden')->values();
+    // Available first; sold-out (or any ticket of a closed event) go into the collapsed list. Each group keeps the server order.
+    [$available, $unavailable] = $tickets->partition(fn ($t) => ! ($isBookingClosed || $t->status === 'sold_out'));
+    $available = $available->values();
+    $unavailable = $unavailable->values();
     $descriptionHtml = \App\Support\SafeHtml::clean($event->description);
     $rules = collect(preg_split('/\r\n|\r|\n/', (string) $event->house_rules))->map(fn ($rule) => trim($rule))->filter()->values();
     if ($rules->isEmpty()) {
@@ -90,7 +94,13 @@
 </section>
 
 <div class="tkt-container">
-    <div class="tkt-event-layout">
+    @php $showSummary = ! $isPreviousEvent && $available->isNotEmpty(); @endphp
+    <div class="tkt-event-layout{{ $showSummary ? '' : ' tkt-event-layout--single' }}" id="tktBooking"
+         data-checkout-base="{{ route('front.checkout') }}"
+         data-event-id="{{ $event->id }}"
+         data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}"
+         data-fold-initial="6" data-fold-step="6"
+         data-fees='@json($fees)'>
 
         {{-- Content --}}
         <div class="tkt-event-main">
@@ -220,16 +230,15 @@
                     @endforeach
                 </ol>
             </div>
-        </div>
 
-        {{-- Tickets --}}
-        <aside class="tkt-booking" id="tktBooking" aria-label="Tickets"
-               data-checkout-base="{{ route('front.checkout') }}"
-               data-event-id="{{ $event->id }}"
-               data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}"
-               data-fees='@json($fees)'>
-            <div class="tkt-card tkt-booking__card">
-                <h2 class="tkt-booking__title">Select tickets</h2>
+            {{-- Ticket selection: dynamic ticket types in a grid, sold-out ones folded away --}}
+            <section class="tkt-tickets-section" aria-labelledby="ticketsTitle">
+                <header class="tkt-booking__head">
+                    <h2 class="tkt-booking__title" id="ticketsTitle">Select tickets</h2>
+                    @if(! $isPreviousEvent && $available->isNotEmpty())
+                        <p class="tkt-booking__count">{{ $available->count() }} ticket {{ \Illuminate\Support\Str::plural('type', $available->count()) }} available</p>
+                    @endif
+                </header>
 
                 @if($isPreviousEvent)
                     <div class="tkt-closed">
@@ -239,78 +248,114 @@
                             <p class="tkt-text-muted" style="margin-top:2px">Tickets are no longer available. Browse our upcoming events instead.</p>
                         </div>
                     </div>
-                    <a class="tkt-btn tkt-btn--primary tkt-btn--block" style="margin-top:14px" href="{{ route('front.events', ['when' => 'upcoming']) }}">See upcoming events</a>
+                    <a class="tkt-btn tkt-btn--primary" style="margin-top:14px" href="{{ route('front.events', ['when' => 'upcoming']) }}">See upcoming events</a>
                 @else
                     @if($isEventSoldOut)
                         <div class="tkt-alert tkt-alert--danger" style="margin-bottom:12px">This event is sold out.</div>
                     @endif
 
-                    <div class="tkt-tickets">
-                        @forelse($tickets as $ticket)
-                            @php
-                                $isTicketSoldOut = $ticket->status === 'sold_out';
-                                $isUnavailable = $isBookingClosed || $isTicketSoldOut;
-                                $isCouple = (bool) $ticket->is_couple;
-                                $maxQuantity = $isCouple ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
-                            @endphp
-                            <div class="tkt-ticket {{ $isUnavailable ? 'is-unavailable' : '' }}"
-                                 data-id="ticket-{{ $ticket->id }}"
-                                 data-ticket="{{ $ticket->name }}"
-                                 data-price="{{ number_format($ticket->price, 2, '.', '') }}"
-                                 data-max-qty="{{ $maxQuantity }}"
-                                 data-is-couple="{{ $isCouple ? 1 : 0 }}"
-                                 data-disabled="{{ $isUnavailable ? 1 : 0 }}">
-                                <div class="tkt-ticket__head">
-                                    <div style="min-width:0">
+                    @if($tickets->isEmpty())
+                        <x-tkt.empty-state icon="ticket" title="Tickets not available yet" text="Please check again later." style="padding:28px 16px" />
+                    @elseif($available->isEmpty())
+                        <div class="tkt-alert tkt-alert--danger" role="status" style="margin-bottom:12px">
+                            <div><strong>All tickets are sold out.</strong> Check our other events — new ones are added regularly.</div>
+                        </div>
+                        <span class="tkt-btn tkt-btn--primary tkt-btn--lg is-disabled" aria-disabled="true" role="button">Booking closed</span>
+                        <a class="tkt-link" style="display:block;margin:12px 0" href="{{ route('front.events', ['when' => 'upcoming']) }}">See upcoming events</a>
+                    @else
+                        <div class="tkt-tickets" data-ticket-list>
+                            @foreach($available as $i => $ticket)
+                                @php
+                                    $isCouple = (bool) $ticket->is_couple;
+                                    $maxQuantity = $isCouple ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
+                                @endphp
+                                <div class="tkt-ticket"
+                                     data-id="ticket-{{ $ticket->id }}"
+                                     data-ticket="{{ $ticket->name }}"
+                                     data-price="{{ number_format($ticket->price, 2, '.', '') }}"
+                                     data-max-qty="{{ $maxQuantity }}"
+                                     data-is-couple="{{ $isCouple ? 1 : 0 }}"
+                                     data-index="{{ $i }}"
+                                     data-disabled="0">
+                                    <div class="tkt-ticket__info">
                                         <div class="tkt-ticket__name">{{ $ticket->name }}</div>
-                                        @if($ticket->description)
-                                            <div class="tkt-ticket__desc">{{ $ticket->description }}</div>
-                                        @endif
+                                        @if($ticket->description)<div class="tkt-ticket__desc">{{ $ticket->description }}</div>@endif
                                     </div>
-                                    <div class="tkt-ticket__price">{{ number_format($ticket->price, 2) }} <small>EGP / ticket</small></div>
-                                </div>
-                                <div class="tkt-ticket__foot">
+                                    <div class="tkt-ticket__price">{{ number_format($ticket->price, 2) }} <small>EGP</small></div>
                                     <div class="tkt-ticket__limit">
-                                        @if($isTicketSoldOut)
-                                            <x-tkt.badge variant="danger">Sold out</x-tkt.badge>
-                                        @elseif($isCouple)
+                                        <span class="tkt-ticket__avail">Available</span>
+                                        @if($isCouple)
                                             <x-tkt.badge variant="warning">Couples only · 2 tickets</x-tkt.badge>
                                         @else
                                             <span>Max {{ $maxQuantity }} per order</span>
                                         @endif
                                     </div>
-                                    @unless($isUnavailable)
-                                        <div class="tkt-stepper" role="group" aria-label="Quantity for {{ $ticket->name }}">
-                                            <button type="button" data-step="-1" aria-label="Decrease quantity" disabled>−</button>
-                                            <output aria-live="polite">0</output>
-                                            <button type="button" data-step="1" aria-label="Increase quantity">+</button>
-                                        </div>
-                                    @endunless
+                                    <div class="tkt-stepper" role="group" aria-label="Quantity for {{ $ticket->name }}">
+                                        <button type="button" data-step="-1" aria-label="Decrease quantity of {{ $ticket->name }}" disabled>−</button>
+                                        <output aria-live="polite">0</output>
+                                        <button type="button" data-step="1" aria-label="Increase quantity of {{ $ticket->name }}">+</button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="tkt-more-row">
+                            <button type="button" class="tkt-btn tkt-btn--outline tkt-more" data-more hidden></button>
+                            <button type="button" class="tkt-btn tkt-btn--ghost tkt-more" data-less hidden>Show Less</button>
+                        </div>
+                    @endif
+
+                    @if($unavailable->isNotEmpty())
+                        <div class="tkt-soldout">
+                            <button type="button" class="tkt-soldout__toggle" id="soldoutToggle" aria-expanded="false" aria-controls="soldoutList">
+                                <span>{{ $isBookingClosed ? 'Tickets' : 'Sold Out Tickets' }} ({{ $unavailable->count() }})</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <ul class="tkt-soldout__list" id="soldoutList" hidden>
+                                @foreach($unavailable as $ticket)
+                                    <li><span class="tkt-soldout__name">{{ $ticket->name }}</span><span class="tkt-soldout__price">{{ number_format($ticket->price, 2) }} EGP</span><x-tkt.badge variant="danger">Sold out</x-tkt.badge></li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                @endif
+            </section>
+        </div>
+
+        {{-- Order summary: sticky sidebar on desktop, bottom bar + sheet on mobile (one cart state, one DOM) --}}
+        @if($showSummary)
+            <aside class="tkt-booking" aria-label="Order summary">
+                <div class="tkt-card tkt-booking__card">
+                    <h2 class="tkt-booking__title tkt-booking__title--summary">Order Summary</h2>
+                    <div class="tkt-summary" id="orderSummary">
+                        <div class="tkt-summary__detail" id="summarySheet">
+                            <div class="tkt-summary__sheethead"><b>Your order</b><button type="button" class="tkt-summary__close" data-sheet-close aria-label="Close order details">×</button></div>
+                            <p class="tkt-summary__empty">No tickets selected</p>
+                            <div class="tkt-summary__lines" id="summaryLines"></div>
+                            <div class="tkt-summary__clear">
+                                <button type="button" class="tkt-summary__clear-btn" data-clear-open>Clear selection</button>
+                                <div class="tkt-summary__confirm" data-clear-confirm role="alertdialog" aria-label="Clear selection" hidden>
+                                    <span>Remove all selected tickets?</span>
+                                    <button type="button" class="tkt-btn tkt-btn--dark tkt-btn--sm" data-clear-yes>Yes, clear</button>
+                                    <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--sm" data-clear-no>Keep</button>
                                 </div>
                             </div>
-                        @empty
-                            <x-tkt.empty-state icon="ticket" title="Tickets not available yet" text="Please check again later." style="padding:28px 16px" />
-                        @endforelse
-                    </div>
-
-                    <div class="tkt-summary" id="orderSummary">
-                        <div class="tkt-summary__detail">
-                            <p class="tkt-summary__empty">No tickets selected yet</p>
-                            <div class="tkt-summary__lines" id="summaryLines"></div>
                         </div>
-                        <div class="tkt-summary__total">
-                            <span>Total<button type="button" class="tkt-summary__toggle" id="summaryToggle" aria-expanded="false">Details</button></span>
-                            <b id="summaryTotal">0.00 EGP</b>
+                        <div class="tkt-summary__bar">
+                            <button type="button" class="tkt-summary__total" id="summaryToggle" aria-expanded="false" aria-controls="summarySheet">
+                                <small><span id="summaryCount">No tickets selected</span><svg class="tkt-summary__chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></small>
+                                <b id="summaryTotal">0.00 EGP</b>
+                            </button>
+                            <a href="{{ route('front.checkout') }}" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-checkout-btn is-disabled" id="checkoutBtn" data-express-checkout aria-disabled="true" tabindex="-1">
+                                Continue to Checkout
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                            </a>
                         </div>
-                        <a href="{{ route('front.checkout') }}" class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block tkt-checkout-btn is-disabled" id="checkoutBtn" data-express-checkout aria-disabled="true" tabindex="-1">
-                            {{ $isBookingClosed ? 'Booking closed' : 'Continue' }}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                        </a>
-                        <p class="tkt-summary__note">{{ $isBookingClosed ? 'This event is sold out, so checkout is disabled.' : 'No account needed · Final amount shown at checkout' }}</p>
+                        <p class="tkt-summary__note">No account needed · Promo codes and the final amount are confirmed at checkout</p>
                     </div>
-                @endif
-            </div>
-        </aside>
+                    <div class="tkt-sheet-backdrop" id="sheetBackdrop" hidden></div>
+                </div>
+            </aside>
+        @endif
     </div>
 </div>
 @endsection

@@ -12,6 +12,9 @@
     var linesEl = document.getElementById('summaryLines');
     var totalEl = document.getElementById('summaryTotal');
     var toggleEl = document.getElementById('summaryToggle');
+    var countEl = document.getElementById('summaryCount');
+    var backdrop = document.getElementById('sheetBackdrop');
+    var mobile = window.matchMedia('(max-width: 991px)');
     if (!checkoutBtn || !summary) return; // finished event: nothing to select
 
     var bookingClosed = root.dataset.bookingClosed === '1';
@@ -19,6 +22,7 @@
     try { fees = JSON.parse(root.dataset.fees || '[]'); } catch (e) { fees = []; }
 
     var cart = {}; // id -> { name, price, qty }
+    var setters = {}; // id -> function(qty), used by Clear selection
 
     function money(n) {
         return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP';
@@ -32,12 +36,17 @@
         return Math.max(0, Math.round(amount * 100) / 100);
     }
 
-    function line(label, value, extraClass) {
+    function line(label, value, extraClass, sub) {
         var row = document.createElement('div');
         row.className = 'tkt-summary__line' + (extraClass ? ' ' + extraClass : '');
         var a = document.createElement('span');
         var b = document.createElement('span');
         a.textContent = label;
+        if (sub) {
+            var s = document.createElement('small');
+            s.textContent = sub;
+            a.appendChild(s);
+        }
         b.textContent = value;
         row.appendChild(a);
         row.appendChild(b);
@@ -76,14 +85,12 @@
             var item = cart[id];
             subtotal += item.price * item.qty;
             count += item.qty;
-            linesEl.appendChild(line(item.name + ' × ' + item.qty, money(item.price * item.qty)));
+            linesEl.appendChild(line(item.name, money(item.price * item.qty), 'tkt-summary__line--item', item.qty + ' × ' + money(item.price)));
         });
 
         var feeTotal = 0;
         if (ids.length) {
-            if (fees.length) {
-                linesEl.appendChild(line('Subtotal', money(subtotal)));
-            }
+            linesEl.appendChild(line('Subtotal', money(subtotal), 'tkt-summary__line--sub'));
             fees.forEach(function (fee) {
                 var amount = feeAmount(fee, subtotal);
                 if (amount > 0) {
@@ -94,12 +101,10 @@
         }
 
         totalEl.textContent = money(subtotal + feeTotal);
+        if (countEl) countEl.textContent = count > 0 ? count + (count === 1 ? ' ticket' : ' tickets') : 'No tickets selected';
         summary.classList.toggle('has-items', ids.length > 0);
-        document.body.classList.toggle('tkt-has-bar', ids.length > 0 && window.matchMedia('(max-width: 991px)').matches);
-        if (!ids.length) {
-            summary.classList.remove('is-expanded');
-            if (toggleEl) toggleEl.setAttribute('aria-expanded', 'false');
-        }
+        document.body.classList.toggle('tkt-has-bar', ids.length > 0 && mobile.matches);
+        if (!ids.length) { closeSheet(); if (typeof showClear === 'function') showClear(false); }
         updateCheckoutLink(count);
     }
 
@@ -118,6 +123,7 @@
         if (!minus || !plus || !out) return;
 
         function set(qty) {
+            setters[id] = set;
             qty = Math.max(0, Math.min(maxQty, qty));
             if (qty === 0) {
                 delete cart[id];
@@ -129,6 +135,7 @@
             plus.disabled = qty >= maxQty;
             card.classList.toggle('is-selected', qty > 0);
             render();
+            applyFold();
         }
 
         minus.addEventListener('click', function () {
@@ -145,16 +152,101 @@
         });
     });
 
-    if (toggleEl) {
-        toggleEl.addEventListener('click', function () {
-            var open = summary.classList.toggle('is-expanded');
-            toggleEl.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
+    /* ---- order details sheet (mobile bottom bar) ---- */
+    function openSheet() {
+        if (!mobile.matches || !summary.classList.contains('has-items')) return;
+        summary.classList.add('is-expanded');
+        if (toggleEl) toggleEl.setAttribute('aria-expanded', 'true');
+        if (backdrop) backdrop.hidden = false;
+        sheetOpener = document.activeElement;
+        var closeBtn = summary.querySelector('[data-sheet-close]');
+        if (closeBtn) closeBtn.focus();
     }
+    var sheetOpener = null;
+    function closeSheet() {
+        var wasOpen = summary.classList.contains('is-expanded');
+        summary.classList.remove('is-expanded');
+        if (toggleEl) toggleEl.setAttribute('aria-expanded', 'false');
+        if (backdrop) backdrop.hidden = true;
+        if (wasOpen && sheetOpener && document.contains(sheetOpener)) { try { sheetOpener.focus(); } catch (e) {} }
+        if (wasOpen) sheetOpener = null;
+    }
+    if (toggleEl) toggleEl.addEventListener('click', function () { summary.classList.contains('is-expanded') ? closeSheet() : openSheet(); });
+    if (backdrop) backdrop.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab' || !summary.classList.contains('is-expanded')) return;
+        var f = Array.prototype.slice.call(summary.querySelectorAll('button, a[href]:not(.is-disabled)')).filter(function (el) { return el.offsetParent !== null && !el.disabled; });
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+    Array.prototype.forEach.call(summary.querySelectorAll('[data-sheet-close]'), function (b) { b.addEventListener('click', closeSheet); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && summary.classList.contains('is-expanded')) { closeSheet(); } });
 
-    window.addEventListener('resize', function () {
-        document.body.classList.toggle('tkt-has-bar', Object.keys(cart).length > 0 && window.matchMedia('(max-width: 991px)').matches);
+    /* ---- mobile: show the first few tickets, reveal more step by step (selected tickets are never folded away) ---- */
+    var cards = Array.prototype.slice.call(root.querySelectorAll('.tkt-ticket'));
+    var moreBtn = root.querySelector('[data-more]');
+    var lessBtn = root.querySelector('[data-less]');
+    var initial = parseInt(root.dataset.foldInitial || '6', 10);
+    var stepBy = parseInt(root.dataset.foldStep || '6', 10);
+    var shown = initial;
+    function applyFold() {
+        var folded = 0;
+        cards.forEach(function (card, i) {
+            var hide = i >= shown && !card.classList.contains('is-selected');
+            card.classList.toggle('is-folded', hide);
+            if (hide) folded++;
+        });
+        if (moreBtn) {
+            moreBtn.hidden = folded === 0;
+            if (folded > 0) { moreBtn.textContent = 'Show More Available Tickets (' + folded + ' left)'; }
+        }
+        if (lessBtn) lessBtn.hidden = !(shown > initial && cards.length > initial);
+    }
+    if (moreBtn) moreBtn.addEventListener('click', function () { shown += stepBy; applyFold(); });
+    if (lessBtn) lessBtn.addEventListener('click', function () {
+        shown = initial; applyFold();
+        var list = root.querySelector('[data-ticket-list]'); if (list && list.scrollIntoView) list.scrollIntoView({ block: 'nearest' });
+        if (moreBtn && !moreBtn.hidden) moreBtn.focus();
     });
 
+    /* ---- clear selection (asks first) ---- */
+    var clearOpen = summary.querySelector('[data-clear-open]');
+    var clearBox = summary.querySelector('[data-clear-confirm]');
+    function showClear(on) {
+        if (!clearBox) return;
+        clearBox.hidden = !on;
+        if (clearOpen) clearOpen.hidden = on;
+        if (on) { var y = clearBox.querySelector('[data-clear-yes]'); if (y) y.focus(); } else if (clearOpen && !clearOpen.hidden) clearOpen.focus();
+    }
+    if (clearOpen) clearOpen.addEventListener('click', function () { showClear(true); });
+    var clearNo = summary.querySelector('[data-clear-no]');
+    if (clearNo) clearNo.addEventListener('click', function () { showClear(false); });
+    var clearYes = summary.querySelector('[data-clear-yes]');
+    if (clearYes) clearYes.addEventListener('click', function () {
+        Object.keys(cart).slice().forEach(function (id) { if (setters[id]) setters[id](0); });
+        showClear(false);
+        closeSheet();
+        toast('Selection cleared.');
+    });
+
+    /* ---- sold-out accordion ---- */
+    var soldToggle = document.getElementById('soldoutToggle');
+    var soldList = document.getElementById('soldoutList');
+    if (soldToggle && soldList) soldToggle.addEventListener('click', function () {
+        var open = soldList.hidden;
+        soldList.hidden = !open;
+        soldToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    var onBreakpoint = function () {
+        document.body.classList.toggle('tkt-has-bar', Object.keys(cart).length > 0 && mobile.matches);
+        if (!mobile.matches) closeSheet();
+        applyFold();
+    };
+    if (mobile.addEventListener) mobile.addEventListener('change', onBreakpoint); else window.addEventListener('resize', onBreakpoint);
+
     render();
+    applyFold();
 })();
