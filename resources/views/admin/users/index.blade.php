@@ -30,8 +30,8 @@
                     <td data-label="Email"><span class="a-trunc" title="{{ $user->email }}">{{ $user->email }}</span></td>
                     <td data-label="Role">@if($user->roles->first()?->name)<x-admin.badge variant="dark">{{ $user->roles->first()->name }}</x-admin.badge>@else<span class="a-muted">—</span>@endif</td>
                     <td data-label="Access">
-                        <span class="a-table__sub">Events: @if($user->managedEvents->isEmpty()) All @else <x-admin.more :items="$user->managedEvents->pluck('name')" /> @endif</span>
-                        <span class="a-table__sub">Extra permissions: @if($user->permissions->isEmpty()) none @else <x-admin.more :items="$user->permissions->pluck('name')" /> @endif</span>
+                        <span class="a-table__main">@if($user->managedEvents->isEmpty()) All events @else <x-admin.more :items="$user->managedEvents->pluck('name')" /> @endif</span>
+                        @if($user->permissions->isNotEmpty())<span class="a-table__sub">+ <x-admin.more :items="$user->permissions->pluck('name')" /></span>@endif
                     </td>
                     <td data-label="Last login">{{ $user->last_login_at?->format('d M Y, H:i') ?: '—' }}@if($user->last_login_ip)<span class="a-table__sub">{{ $user->last_login_ip }}</span>@endif</td>
                     <td data-label="">

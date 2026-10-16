@@ -11,35 +11,37 @@
 
 <x-admin.flash />
 
-<x-admin.card flush>
+<x-admin.card flush title="All promo codes" :subtitle="$promoCodes->total().' total'">
     @if($promoCodes->isEmpty())
         <x-admin.empty icon="fa-tags" title="No promo codes yet" text="Create a code to offer a percentage or fixed discount.">
             <a href="{{ route('admin.promo-codes.create') }}" class="a-btn a-btn--primary a-btn--sm">Add Promo Code</a>
         </x-admin.empty>
     @else
     <x-admin.table stack caption="Promo codes">
-        <thead><tr><th>Code</th><th>Discount</th><th>Usage</th><th>Status</th><th>Period</th><th class="a-num">Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th class="a-num">Discount</th><th class="a-num">Usage</th><th>Period</th><th>Status</th><th class="a-num"><span class="a-sr-only">Actions</span></th></tr></thead>
         <tbody>
         @foreach($promoCodes as $promoCode)
             <tr>
-                <td data-label="Code"><span class="a-table__main">{{ $promoCode->code }}</span></td>
-                <td data-label="Discount">
+                <td data-label="Code"><span class="a-table__main a-m-code a-trunc" title="{{ $promoCode->code }}">{{ $promoCode->code }}</span></td>
+                <td data-label="Discount" class="a-num">
                     @if($promoCode->discount_type === 'percent')
-                        {{ rtrim(rtrim(number_format((float) $promoCode->discount_value, 2), '0'), '.') }}%
+                        <b>{{ rtrim(rtrim(number_format((float) $promoCode->discount_value, 2), '0'), '.') }}%</b>
                     @else
-                        {{ number_format((float) $promoCode->discount_value, 2) }} EGP
+                        <b>{{ number_format((float) $promoCode->discount_value, 2) }}</b> <span class="a-muted">EGP</span>
                     @endif
                 </td>
-                <td data-label="Usage">{{ $promoCode->used_count }} / {{ $promoCode->usage_limit ?? '∞' }}</td>
-                <td data-label="Status"><x-admin.badge :variant="$promoCode->is_active ? 'success' : 'default'" dot>{{ $promoCode->is_active ? 'Active' : 'Inactive' }}</x-admin.badge></td>
-                <td data-label="Period">{{ $promoCode->starts_at?->format('Y-m-d H:i') ?? 'Any' }} → {{ $promoCode->ends_at?->format('Y-m-d H:i') ?? 'Open' }}</td>
-                <td data-label="Actions"><div class="a-table__actions">
-                    <a href="{{ route('admin.promo-codes.edit', $promoCode) }}" class="a-btn a-btn--outline a-btn--sm"><i class="fa fa-pen"></i> Edit</a>
-                    <form method="POST" action="{{ route('admin.promo-codes.destroy', $promoCode) }}" data-a-confirm="Delete this promo code?" data-a-confirm-title="Delete promo code" data-a-confirm-ok="Delete">
-                        @csrf
-                        @method('DELETE')
-                        <button class="a-btn a-btn--danger a-btn--sm" type="submit"><i class="fa fa-trash"></i> Delete</button>
-                    </form>
+                <td data-label="Usage" class="a-num">{{ $promoCode->used_count }} <span class="a-muted">/ {{ $promoCode->usage_limit ?? '∞' }}</span></td>
+                <td data-label="Period">{{ $promoCode->starts_at?->format('d M Y') ?? 'Any time' }}<span class="a-table__sub">until {{ $promoCode->ends_at?->format('d M Y') ?? 'open' }}</span></td>
+                <td data-label="Status"><x-admin.status :status="$promoCode->is_active ? 'active' : 'inactive'" kind="event" /></td>
+                <td data-label=""><div class="a-table__actions">
+                    <a href="{{ route('admin.promo-codes.edit', $promoCode) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>
+                    <x-admin.dropdown label="" aria-label="More actions">
+                        <form method="POST" action="{{ route('admin.promo-codes.destroy', $promoCode) }}" data-a-confirm="Delete promo code {{ $promoCode->code }}?" data-a-confirm-title="Delete promo code" data-a-confirm-ok="Delete">
+                            @csrf
+                            @method('DELETE')
+                            <button class="a-menu__item a-menu__item--danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
+                        </form>
+                    </x-admin.dropdown>
                 </div></td>
             </tr>
         @endforeach

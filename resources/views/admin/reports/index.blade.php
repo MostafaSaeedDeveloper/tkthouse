@@ -26,7 +26,7 @@
 <p class="a-muted a-m-scope">Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.</p>
 
 <section class="a-m-section" aria-labelledby="rep-paid">
-    <h2 class="a-m-section__title" id="rep-paid"><x-admin.status status="paid" kind="payment" /> Paid sales</h2>
+    <h2 class="a-m-section__title" id="rep-paid">Paid sales</h2>
     <div class="a-grid a-grid--3">
         <x-admin.kpi class="a-m-kpi--success" label="Tickets sold" :value="number_format($totalTickets)" icon="fa-ticket" hint="Paid, completed orders only" />
         <x-admin.kpi class="a-m-kpi--success" label="Paid orders" :value="number_format($totalOrders)" icon="fa-receipt" />

@@ -19,7 +19,7 @@
             <img src="{{ asset('images/logo-light.png') }}" alt="TKT House">
         </a>
         <h1 class="a-lg__title">Dashboard sign in</h1>
-        <p class="a-lg__sub">Admin access</p>
+        <p class="a-lg__sub">Admin access only.</p>
 
         @if($errors->has('email') || $errors->has('auth'))
             <div class="a-lg__alert" role="alert">{{ $errors->first('email') ?: $errors->first('auth') }}</div>

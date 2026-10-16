@@ -12,9 +12,9 @@
 
 <div class="a-grid a-grid--4">
     <x-admin.kpi class="a-m-kpi--success" label="Paid" :value="$money($stats['paid']).' EGP'" icon="fa-circle-check" :hint="number_format($stats['paid_count']).' paid attempts'" />
-    <x-admin.kpi class="a-m-kpi--warning" label="Pending" :value="number_format($stats['processing'])" icon="fa-hourglass-half" :hint="$stats['review'] > 0 ? 'Waiting for the gateway · '.number_format($stats['review']).' need review' : 'Waiting for the gateway'" />
+    <x-admin.kpi class="a-m-kpi--warning" label="Pending" :value="number_format($stats['processing'])" icon="fa-hourglass-half" :hint="$stats['review'] > 0 ? number_format($stats['review']).' need review' : 'Processing at the gateway'" />
     <x-admin.kpi class="a-m-kpi--danger" label="Failed" :value="number_format($stats['failed'])" icon="fa-circle-xmark" hint="Customers can retry" />
-    <x-admin.kpi class="a-m-kpi--info" label="Refunded" :value="number_format($stats['refunded'])" icon="fa-rotate-left" hint="Orders refunded (handled by the provider)" />
+    <x-admin.kpi class="a-m-kpi--info" label="Refunded" :value="number_format($stats['refunded'])" icon="fa-rotate-left" hint="Refunded orders" />
 </div>
 
 @if(! $liveGateways || $fakeAllowed)
