@@ -8,7 +8,21 @@ final class Definitions
     /** @return array<string, array<string, mixed>> */
     public static function all(): array
     {
+        $all = self::definitions();
+        if (! \App\Support\PaymentEnvironment::fakeGatewayAllowed()) {
+            unset($all['fake']); // the simulator provider exists only where the fake gateway may run (never production)
+        }
+
+        return $all;
+    }
+
+    private static function definitions(): array
+    {
         return [
+            'fake' => [
+                'label' => 'Fake gateway (test only)', 'icon' => 'fa-flask', 'kind' => 'payment',
+                'fields' => [['name' => 'supported_methods', 'label' => 'Payment methods this account may take', 'secret' => false, 'type' => 'methods']],
+            ],
             'paymob' => [
                 'label' => 'Paymob', 'icon' => 'fa-credit-card', 'kind' => 'payment',
                 'fields' => [
@@ -20,6 +34,7 @@ final class Definitions
                     ['name' => 'integration_card', 'label' => 'Card integration ID', 'secret' => false],
                     ['name' => 'integration_wallet', 'label' => 'Wallet integration ID', 'secret' => false],
                     ['name' => 'integration_apple_pay', 'label' => 'Apple Pay integration ID', 'secret' => false],
+                    ['name' => 'supported_methods', 'label' => 'Payment methods this account may take', 'secret' => false, 'type' => 'methods'],
                 ],
             ],
             'fawaterak' => [
@@ -30,6 +45,7 @@ final class Definitions
                     ['name' => 'provider_card', 'label' => 'Card provider key', 'secret' => false],
                     ['name' => 'provider_wallet', 'label' => 'Wallet provider key', 'secret' => false],
                     ['name' => 'provider_apple_pay', 'label' => 'Apple Pay provider key', 'secret' => false],
+                    ['name' => 'supported_methods', 'label' => 'Payment methods this account may take', 'secret' => false, 'type' => 'methods'],
                 ],
             ],
             'ultramsg' => [
@@ -57,7 +73,7 @@ final class Definitions
 
     public static function get(string $provider): ?array
     {
-        return self::all()[$provider] ?? null;
+        return self::all()[$provider] ?? self::definitions()[$provider] ?? null; // archived fake accounts stay readable
     }
 
     public static function isSecret(string $provider, string $field): bool

@@ -29,6 +29,12 @@
                     <x-admin.field :label="$def['label']" :name="$key" :for="'s-'.$key" hint="Only active users who are allowed to receive orders are listed.">
                         <select id="s-{{ $key }}" class="form-select" name="{{ $key }}"><option value="">— none —</option>@foreach(($orderTools['eligible'] ?? collect()) as $eu)<option value="{{ $eu->id }}" @selected((int) $val === $eu->id)>{{ $eu->name }}</option>@endforeach</select>
                     </x-admin.field>
+                @elseif($def['type'] === 'account')
+                    <x-admin.field :label="$def['label']" :name="$key" :for="'s-'.$key" :hint="$def['help'] ?? null">
+                        <select id="s-{{ $key }}" class="form-select" name="{{ $key }}"><option value="">— none (legacy payment-method configuration) —</option>
+                            @foreach(($paymentAccounts ?? collect())->filter(fn ($r) => $r['usable']) as $r)<option value="{{ $r['account']->id }}" @selected((int) $val === $r['account']->id)>{{ $r['account']->name }} · {{ ucfirst($r['account']->provider) }} · {{ $r['account']->environment }}</option>@endforeach
+                        </select>
+                    </x-admin.field>
                 @elseif($def['type'] === 'select')
                     <x-admin.field :label="$def['label']" :name="$key" :for="'s-'.$key" :hint="$def['help'] ?? null">
                         <select id="s-{{ $key }}" class="form-select" name="{{ $key }}">@foreach($def['options'] as $v => $l)<option value="{{ $v }}" @selected($val == $v)>{{ $l }}</option>@endforeach</select>
@@ -42,6 +48,30 @@
                 @endif
             @endforeach
         </x-admin.form-section>
+
+        @if($section === 'payments')
+            <x-admin.form-section title="Payment account status" description="Read-only overview. Manage credentials and tests in Settings → Integrations. Turning routing off never changes existing payment attempts." cols="1">
+                <x-admin.table stack compact caption="Merchant accounts">
+                    <thead><tr><th scope="col">Account</th><th scope="col">Provider</th><th scope="col">Environment</th><th scope="col">Status</th><th scope="col" class="a-num">Agents</th><th scope="col" class="a-num">Attempts</th><th scope="col" class="a-num">Open</th></tr></thead>
+                    <tbody>
+                    @forelse($paymentAccounts as $r)
+                        @php $a = $r['account']; @endphp
+                        <tr>
+                            <td data-label="Account"><span class="a-table__main">{{ $a->name }}</span></td>
+                            <td data-label="Provider">{{ ucfirst($a->provider) }}</td>
+                            <td data-label="Environment">{{ ucfirst($a->environment) }}</td>
+                            <td data-label="Status"><x-admin.badge :variant="$a->archived_at ? 'dark' : ($r['usable'] ? 'success' : 'warning')">{{ $a->archived_at ? 'Archived' : ($r['usable'] ? 'Ready' : ($a->enabled ? 'Not usable here' : 'Disabled')) }}</x-admin.badge> <x-admin.badge :variant="match($a->status){'verified'=>'success','error'=>'danger',default=>'warning'}">{{ ucfirst($a->status) }}</x-admin.badge></td>
+                            <td data-label="Agents" class="a-num">{{ $r['users'] }}</td>
+                            <td data-label="Attempts" class="a-num">{{ $r['attempts'] }}</td>
+                            <td data-label="Open" class="a-num">{{ $r['open'] }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="a-muted">No merchant accounts yet. Create one in Integrations.</td></tr>
+                    @endforelse
+                    </tbody>
+                </x-admin.table>
+            </x-admin.form-section>
+        @endif
 
         @if($section === 'orders')
             <x-admin.form-section title="Rollout safety" description="Assignment is off until you enable it here. Turning it off later never removes assignees or history." cols="1">

@@ -57,6 +57,17 @@ class OrderAssignmentService
         });
     }
 
+    /** Final assignment of an order to the agent its customer was shown (see CheckoutRoutingService::finalize). */
+    public function assignFromReservation(Order $order, User $to, string $source): void
+    {
+        $locked = Order::withTrashed()->lockForUpdate()->findOrFail($order->id);
+        if ($locked->assigned_user_id) {
+            return;
+        }
+        $this->write($locked, $to, null, $source, null);
+        $order->setRawAttributes($locked->getAttributes(), true);
+    }
+
     /** Called when an order is created. Never throws: a failure leaves the order unassigned and checkout unaffected. */
     public function assignOnCreate(Order $order): void
     {

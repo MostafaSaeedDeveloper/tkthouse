@@ -36,6 +36,13 @@ class SystemSettingController extends Controller
             'values' => $this->settings->all(),
             'sections' => $this->visibleSections($request),
             'platform' => $this->platformStatus(),
+            'paymentAccounts' => $section === 'payments' ? \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->orderBy('provider')->orderBy('name')->get()
+                ->map(fn ($a) => [
+                    'account' => $a, 'usable' => \App\Services\Payments\Routing\PaymentAccountResolver::usable($a),
+                    'users' => \App\Models\User::query()->where('payment_account_id', $a->id)->count(),
+                    'attempts' => \App\Models\PaymentAttempt::query()->where('integration_account_id', $a->id)->count(),
+                    'open' => \App\Models\PaymentAttempt::query()->where('integration_account_id', $a->id)->where('status', 'initiated')->count(),
+                ]) : null,
             'orderTools' => $section === 'orders' ? [
                 'lockedOut' => app(\App\Orders\AssignmentReadiness::class)->lockedOut(),
                 'eligible' => app(\App\Orders\OrderAssignmentService::class)->eligibleUsers(),
@@ -68,6 +75,16 @@ class SystemSettingController extends Controller
             if ($check['lockedOut']->isNotEmpty() && ! $request->boolean('acknowledge_lockout')) {
                 return back()->withInput()->withErrors(['order_assignment_enabled' => $check['lockedOut']->count().' staff member(s) can open Orders today but have neither orders.view_all nor orders.view_assigned and would see nothing. Grant them access below, or tick the acknowledgement.']);
             }
+        }
+
+        if ($section === 'payments') {
+            if (isset($input['default_payment_account_id']) && $input['default_payment_account_id'] !== '' && $input['default_payment_account_id'] !== null) {
+                $acc = \App\Models\IntegrationAccount::query()->find((int) $input['default_payment_account_id']);
+                if (! \App\Services\Payments\Routing\PaymentAccountResolver::usable($acc)) {
+                    return back()->withInput()->withErrors(['default_payment_account_id' => 'The default merchant account must be enabled, verified and allowed in this environment.']);
+                }
+            }
+            abort_unless($request->user()->can('settings.payment-accounts.manage'), 403);
         }
 
         $request->validate(collect(Registry::forGroup($section))->filter(fn ($d) => $d['type'] === 'file')->map(fn ($d) => $d['rules'])->all());

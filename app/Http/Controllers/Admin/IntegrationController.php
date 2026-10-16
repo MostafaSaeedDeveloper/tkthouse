@@ -17,10 +17,12 @@ class IntegrationController extends Controller
     public function index(Request $request)
     {
         $accounts = IntegrationAccount::query()->orderBy('provider')->orderBy('name')->get()->groupBy('provider');
+        $methods = \App\Models\PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['code', 'name', 'provider'])->groupBy('provider');
 
         return view('admin.settings.integrations', [
             'definitions' => Definitions::all(),
             'accounts' => $accounts,
+            'methodsByProvider' => $methods,
             'canManage' => $request->user()->can('settings.integrations.manage'),
             'canTest' => $request->user()->can('settings.integrations.test'),
         ]);
@@ -72,9 +74,27 @@ class IntegrationController extends Controller
         return redirect()->route('admin.integrations.index')->with('success', "\"{$account->name}\" was disabled.");
     }
 
+    public function attest(Request $request, IntegrationAccount $account)
+    {
+        $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300']]);
+        $this->manager->attestSandbox($account, $data['note'], $request->user());
+
+        return redirect()->route('admin.integrations.index')->with('success', 'Sandbox verification recorded for the current credentials.');
+    }
+
+    public function archive(Request $request, IntegrationAccount $account)
+    {
+        $this->manager->archive($account, $request->user());
+
+        return redirect()->route('admin.integrations.index')->with('success', "\"{$account->name}\" archived. Its payment history stays verifiable.");
+    }
+
     public function destroy(Request $request, IntegrationAccount $account)
     {
         abort_if($account->enabled, 422, 'Disable the account before deleting it.');
+        if ($account->isReferenced()) {
+            return back()->with('error', 'This account has payment history, orders, users or reservations attached and cannot be deleted. Archive it instead.');
+        }
         activity('settings')->causedBy($request->user())->withProperties(['provider' => $account->provider, 'name' => $account->name])->log('Integration account deleted');
         $account->delete();
         $this->manager->flush();

@@ -104,6 +104,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.manage_assigned',
             'orders.view_unassigned',
             'orders.view_agent_stats',
+            'orders.reroute_payment',
+            'settings.payment-accounts.view',
+            'settings.payment-accounts.manage',
         ];
 
         foreach ($permissions as $permissionName) {

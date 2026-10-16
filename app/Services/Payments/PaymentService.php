@@ -35,6 +35,8 @@ class PaymentService
     public function __construct(
         private readonly PaymentGatewayManager $gateways,
         private readonly TicketIssuanceService $issuance,
+        private readonly \App\Services\Payments\Routing\PaymentAccountResolver $resolver,
+        private readonly \App\Services\Payments\Routing\OfferedMethods $offered,
     ) {
     }
 
@@ -59,9 +61,28 @@ class PaymentService
 
     private function open(Order $order, PaymentMethod $method): string
     {
+        // Which merchant account takes this payment? Pinned account > latest attempt's account > fresh decision. Never browser input.
+        $resolution = $this->resolver->forOrder($order);
+        if ($resolution->blocked) {
+            throw new \RuntimeException('Online payment is not available for this order right now ('.$resolution->reason.').');
+        }
+        if (! $this->offered->offers($resolution, $method->code)) {
+            throw new \RuntimeException("Payment method [{$method->code}] is not available for this order's merchant account.");
+        }
+        $accountId = $resolution->account?->id;
+
+        // A payment session of another merchant account is never reused, and a second account is never opened next to a live one.
+        $liveOther = $order->paymentAttempts()->where('status', PaymentAttempt::INITIATED)
+            ->where(fn ($q) => $accountId === null ? $q->whereNotNull('integration_account_id') : $q->where(fn ($w) => $w->whereNull('integration_account_id')->orWhere('integration_account_id', '!=', $accountId)))
+            ->where('created_at', '>=', now()->subMinutes(60))->exists();
+        if ($liveOther) {
+            throw new \RuntimeException('A payment is already open with a different merchant account. Use "Switch payment account" after checking it.');
+        }
+
         $reusable = $order->paymentAttempts()
             ->where('status', PaymentAttempt::INITIATED)
             ->where('method_code', $method->code)
+            ->when($accountId === null, fn ($q) => $q->whereNull('integration_account_id'), fn ($q) => $q->where('integration_account_id', $accountId))
             ->where('created_at', '>=', now()->subMinutes(30))
             ->orderByDesc('id')
             ->get()
@@ -74,7 +95,7 @@ class PaymentService
         $gateway = $this->gateways->for((string) $method->provider);
 
         // Defence in depth: never open a payment through a method this environment must not use.
-        if (! $gateway->isConfigured($method)) {
+        if (! $gateway->isConfigured($method, $resolution->account)) {
             throw new \RuntimeException("Payment method [{$method->code}] is not available in this environment.");
         }
 
@@ -85,7 +106,13 @@ class PaymentService
             'amount' => $order->total_amount,
             'currency' => 'EGP',
             'status' => PaymentAttempt::INITIATED,
+            'integration_account_id' => $accountId,
+            'routing_snapshot' => $resolution->snapshot() + ['method_code' => $method->code, 'amount' => (float) $order->total_amount],
         ]);
+
+        if ($accountId && $order->integration_account_id === null) {
+            $order->forceFill(['integration_account_id' => $accountId])->saveQuietly(); // pinned for good at the first attempt
+        }
 
         try {
             $init = $gateway->initiate($order, $method, $attempt);
@@ -111,7 +138,7 @@ class PaymentService
         // Failed attempts stay eligible for a while: a customer can retry inside the same gateway session and
         // the successful transaction then arrives under an attempt we had already marked failed.
         $attempts = $order->paymentAttempts()
-            ->whereIn('status', [PaymentAttempt::INITIATED, PaymentAttempt::FAILED])
+            ->where(fn ($q) => $q->whereIn('status', [PaymentAttempt::INITIATED, PaymentAttempt::FAILED])->orWhere(fn ($w) => $w->where('status', PaymentAttempt::EXPIRED)->where('meta->rerouted', true)))
             ->where('created_at', '>=', now()->subHours((int) config('payments.reconcile.max_age_hours', 48)))
             ->when($provider, fn ($q) => $q->where('provider', $provider))
             ->orderByDesc('id')
@@ -134,6 +161,14 @@ class PaymentService
         return $outcome;
     }
 
+    /** Settles exactly one attempt (used by callbacks that identified it): other attempts and other merchant accounts are not touched. */
+    public function refreshAttempt(PaymentAttempt $attempt, ?string $hintTransactionId = null): string
+    {
+        $result = $this->gateways->for($attempt->provider)->inquire($attempt, $hintTransactionId);
+
+        return $this->settle($attempt, $result);
+    }
+
     /** Re-checks every still-open attempt (callback lost, customer closed the tab, ...). */
     public function reconcile(): Collection
     {
@@ -143,7 +178,7 @@ class PaymentService
         $settled = collect();
 
         PaymentAttempt::query()
-            ->where('status', PaymentAttempt::INITIATED)
+            ->where(fn ($q) => $q->where('status', PaymentAttempt::INITIATED)->orWhere(fn ($w) => $w->where('status', PaymentAttempt::EXPIRED)->where('meta->rerouted', true)))
             ->where('created_at', '<=', now()->subMinutes($minAge))
             ->where('created_at', '>=', now()->subHours($maxAge))
             ->whereHas('order')

@@ -26,7 +26,7 @@ class PaymentController extends Controller
             return $redirect;
         }
 
-        $methods = $gateways->available();
+        $methods = $this->methodsFor($order, $gateways);
         $selected = $methods->firstWhere('code', $order->payment_method)?->code ?? $methods->first()?->code ?? $order->payment_method;
 
         $order->load(['items', 'customer', 'paymentAttempts']);
@@ -46,7 +46,7 @@ class PaymentController extends Controller
             return $redirect;
         }
 
-        $paymentMethod = $gateways->available()->firstWhere('code', (string) $request->query('method', $order->payment_method));
+        $paymentMethod = $this->methodsFor($order, $gateways)->firstWhere('code', (string) $request->query('method', $order->payment_method));
 
         if (! $paymentMethod || ! $gateways->isOnline($paymentMethod)) {
             return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $token])
@@ -89,7 +89,15 @@ class PaymentController extends Controller
         $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
         $isGet = $request->isMethod('get');
 
-        $secret = (string) (config('payments.paymob.hmac_secret') ?: '');
+        // Which merchant account does this callback belong to? Looked up from OUR unique merchant_order_id (attempt reference). The
+        // field is unauthenticated, so it only selects which secret to verify with: a wrong pick fails the signature check, and
+        // settlement still needs the server-to-server inquiry with that account's own API key.
+        $attempt = $merchantOrderId !== ''
+            ? \App\Models\PaymentAttempt::query()->where('provider', 'paymob')->where('reference', $merchantOrderId)->first()
+            : null;
+        $account = $attempt?->integration_account_id ? $attempt->integrationAccount : null;
+
+        $secret = $account ? (string) ($account->secret('hmac_secret') ?: '') : (string) (config('payments.paymob.hmac_secret') ?: '');
         $hmac = (string) ($request->query('hmac') ?: data_get($payload, 'hmac', ''));
         $signatureRequired = PaymentEnvironment::paymobSignatureRequired();
 
@@ -119,7 +127,7 @@ class PaymentController extends Controller
         // optional in this environment). Settlement itself always goes through the server-to-server inquiry.
         $hintAllowed = $signed || ($secret === '' && ! $signatureRequired);
 
-        $order = $merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null;
+        $order = $attempt?->order ?? ($merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null);
 
         if (! $order) {
             Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
@@ -129,7 +137,9 @@ class PaymentController extends Controller
                 : response()->json(['received' => true, 'updated' => false]);
         }
 
-        $outcome = $payments->refresh($order, $hintAllowed && $transactionId !== '' ? $transactionId : null, 'paymob');
+        $hint = $hintAllowed && $transactionId !== '' ? $transactionId : null;
+        // An identified attempt is settled alone (with its own account); only legacy callbacks fall back to the order-wide refresh.
+        $outcome = $attempt ? $payments->refreshAttempt($attempt, $hint) : $payments->refresh($order, $hint, 'paymob');
         Log::info('Paymob callback processed.', ['order_id' => $order->id, 'outcome' => $outcome]);
 
         if ($isGet) {
@@ -206,5 +216,11 @@ class PaymentController extends Controller
         }
 
         return $logger->log($description);
+    }
+
+    /** Methods for an existing order: the pre-existing list unless routing/default account/policy says otherwise. */
+    private function methodsFor(Order $order, PaymentGatewayManager $gateways)
+    {
+        return app(\App\Services\Payments\Routing\OfferedMethods::class)->for(app(\App\Services\Payments\Routing\PaymentAccountResolver::class)->forOrder($order));
     }
 }

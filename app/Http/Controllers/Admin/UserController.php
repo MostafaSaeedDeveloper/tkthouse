@@ -121,6 +121,7 @@ class UserController extends Controller
         $user->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->applyAccountFlags($request, $user->fresh());
+        $this->applyPaymentConfiguration($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
@@ -195,6 +196,7 @@ class UserController extends Controller
         $user->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->applyAccountFlags($request, $user->fresh());
+        $this->applyPaymentConfiguration($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
@@ -239,6 +241,45 @@ class UserController extends Controller
         if (! $wantActive) {
             activity('users')->performedOn($user)->causedBy($request->user())->log('User deactivated');
         }
+    }
+
+    /**
+     * Per-user payment configuration. Only super admin / settings.payment-accounts.manage may change it (the section is not even
+     * rendered for anyone else, and a forged request is ignored). The user row stores a reference to an account, never keys.
+     * Past orders and payment attempts are unaffected: they stay bound to the account they were opened with.
+     */
+    private function applyPaymentConfiguration(Request $request, User $user): void
+    {
+        $actor = $request->user();
+        if (! $request->boolean('payment_flags') || ! (\App\Orders\OrderAccess::isSuper($actor) || $actor->can('settings.payment-accounts.manage'))) {
+            return;
+        }
+
+        $data = $request->validate([
+            'payment_routing_mode' => ['required', 'in:default,custom'],
+            'payment_account_id' => ['nullable', 'integer', 'exists:integration_accounts,id'],
+            'allowed_payment_methods' => ['nullable', 'array'],
+            'allowed_payment_methods.*' => ['string', 'exists:payment_methods,code'],
+        ]);
+
+        $account = ! empty($data['payment_account_id']) ? \App\Models\IntegrationAccount::query()->find($data['payment_account_id']) : null;
+        if ($data['payment_routing_mode'] === 'custom') {
+            if (! $account || $account->archived_at !== null || ! in_array($account->provider, ['paymob', 'fawaterak', 'fake'], true)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['payment_account_id' => 'Choose an active merchant account for custom routing.']);
+            }
+        }
+
+        $before = [$user->payment_routing_mode, $user->payment_account_id, $user->payment_routing_enabled];
+        $user->forceFill([
+            'payment_routing_mode' => $data['payment_routing_mode'],
+            'payment_account_id' => $data['payment_routing_mode'] === 'custom' ? $account->id : null,
+            'allowed_payment_methods' => $data['allowed_payment_methods'] ?? null ?: null,
+            'payment_routing_enabled' => $data['payment_routing_mode'] === 'custom' && $request->boolean('payment_routing_enabled'),
+        ])->save();
+
+        activity('users')->performedOn($user)->causedBy($actor)->withProperties([
+            'from' => $before, 'mode' => $user->payment_routing_mode, 'account' => $account?->name, 'routing_enabled' => $user->payment_routing_enabled,
+        ])->log('User payment configuration changed');
     }
 
     private function ensureCanManageUser(?User $actor, User $target): void

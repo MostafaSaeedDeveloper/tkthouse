@@ -183,6 +183,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
     Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view')->name('payments.index');
     Route::post('orders/{order}/assign', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'assign'])->middleware('permission:orders.view')->name('orders.assign');
+    Route::post('orders/{order}/payment-account', [\App\Http\Controllers\Admin\OrderPaymentAccountController::class, 'switch'])->middleware('permission:orders.reroute_payment')->name('orders.payment-account.switch');
     Route::post('orders/assign-bulk', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'bulk'])->middleware('permission:orders.view')->name('orders.assign.bulk');
     Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
     Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
@@ -196,13 +197,15 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('settings/integrations/accounts/{account}/test', [IntegrationController::class, 'test'])->middleware('permission:settings.integrations.test')->name('integrations.test');
     Route::post('settings/integrations/accounts/{account}/enable', [IntegrationController::class, 'enable'])->middleware('permission:settings.integrations.manage')->name('integrations.enable');
     Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:settings.integrations.manage')->name('integrations.disable');
+    Route::post('settings/integrations/accounts/{account}/attest', [IntegrationController::class, 'attest'])->middleware('permission:settings.integrations.manage')->name('integrations.attest');
+    Route::post('settings/integrations/accounts/{account}/archive', [IntegrationController::class, 'archive'])->middleware('permission:settings.integrations.manage')->name('integrations.archive');
     Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:settings.integrations.manage')->name('integrations.destroy');
 
     Route::post('settings/orders/grant-view-all', [SystemSettingController::class, 'grantViewAll'])->middleware('permission:settings.orders')->name('settings.orders.grant-view-all');
     Route::post('settings/notifications/test', [SystemSettingController::class, 'testNotification'])->middleware('permission:settings.integrations.test')->name('settings.notifications.test');
 
-    Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|notifications|security')->name('settings.section');
-    Route::put('settings/{section}', [SystemSettingController::class, 'save'])->where('section', 'general|branding|events|orders|notifications|security')->name('settings.section.update');
+    Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|payments|notifications|security')->name('settings.section');
+    Route::put('settings/{section}', [SystemSettingController::class, 'save'])->where('section', 'general|branding|events|orders|payments|notifications|security')->name('settings.section.update');
 
     Route::resource('payment-methods', PaymentMethodController::class)->except('show')
         ->middlewareFor('index', 'permission:payment-methods.view')

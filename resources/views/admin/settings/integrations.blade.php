@@ -8,13 +8,13 @@
 
 @foreach($definitions as $provider => $def)
     <x-admin.card :title="$def['label']" class="a-m-form-card" :id="'int-'.$provider">
-        @php $list = $accounts->get($provider, collect()); @endphp
+        @php $list = $accounts->get($provider, collect())->filter(fn ($a) => request('archived') || ! $a->archived_at); @endphp
         @forelse($list as $account)
             <details class="a-m-account" @if($errors->any() && old('_account') == $account->id) open @endif>
                 <summary class="a-btn-group" style="cursor:pointer;gap:10px;flex-wrap:wrap">
                     <strong>{{ $account->name }}</strong>
                     <x-admin.badge :variant="$account->environment === 'production' ? 'dark' : 'info'">{{ ucfirst($account->environment) }}</x-admin.badge>
-                    <x-admin.badge :variant="$account->enabled ? 'success' : 'warning'">{{ $account->enabled ? 'Enabled' : 'Disabled' }}</x-admin.badge>
+                    <x-admin.badge :variant="$account->enabled ? 'success' : 'warning'">{{ $account->archived_at ? 'Archived' : ($account->enabled ? 'Enabled' : 'Disabled') }}</x-admin.badge>
                     <x-admin.badge :variant="match($account->status){'verified'=>'success','error'=>'danger',default=>'warning'}">{{ ucfirst($account->status) }}</x-admin.badge>
                 </summary>
                 <p class="a-hint">
@@ -26,7 +26,7 @@
                 <form method="POST" action="{{ route('admin.integrations.update', $account) }}" data-a-loading>
                     @csrf @method('PUT')
                     <input type="hidden" name="_account" value="{{ $account->id }}">
-                    @include('admin.settings._integration-fields', ['def' => $def, 'account' => $account])
+                    @include('admin.settings._integration-fields', ['def' => $def, 'account' => $account, 'provider' => $provider])
                     <div class="a-form-actions"><button class="a-btn a-btn--primary" type="submit">Save account</button></div>
                 </form>
                 @endif
@@ -42,7 +42,17 @@
                                 @csrf <input type="hidden" name="confirm_production" value="1">
                                 <button class="a-btn a-btn--success" type="submit" @disabled($account->status !== 'verified')>Enable</button>
                             </form>
-                            <form method="POST" action="{{ route('admin.integrations.destroy', $account) }}">@csrf @method('DELETE')<button class="a-btn a-btn--danger" type="submit">Delete</button></form>
+                            @if($provider === 'fawaterak' && $account->environment === 'sandbox' && $account->status !== 'verified')
+                                <form method="POST" action="{{ route('admin.integrations.attest', $account) }}" class="a-btn-group">@csrf
+                                    <input class="form-control" name="note" placeholder="Sandbox run reference (required)" minlength="5" required aria-label="Sandbox verification note">
+                                    <button class="a-btn a-btn--outline" type="submit">Record sandbox verification</button>
+                                </form>
+                            @endif
+                            @if($account->isReferenced())
+                                <form method="POST" action="{{ route('admin.integrations.archive', $account) }}" data-a-confirm="Archive this account? It stays usable for historical payments only.">@csrf<button class="a-btn a-btn--outline" type="submit">Archive</button></form>
+                            @else
+                                <form method="POST" action="{{ route('admin.integrations.destroy', $account) }}">@csrf @method('DELETE')<button class="a-btn a-btn--danger" type="submit">Delete</button></form>
+                            @endif
                         @endif
                     @endif
                 </div>
@@ -57,7 +67,7 @@
                 <summary class="a-btn a-btn--outline" style="display:inline-flex"><i class="fa fa-plus"></i> Add {{ $def['label'] }} account</summary>
                 <form method="POST" action="{{ route('admin.integrations.store', $provider) }}" data-a-loading style="margin-top:14px">
                     @csrf
-                    @include('admin.settings._integration-fields', ['def' => $def, 'account' => null])
+                    @include('admin.settings._integration-fields', ['def' => $def, 'account' => null, 'provider' => $provider])
                     <div class="a-form-actions"><button class="a-btn a-btn--primary" type="submit">Create account</button></div>
                 </form>
             </details>

@@ -41,10 +41,16 @@ class AgentReport
         $methods = $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])
             ->select('sold_by_user_id', 'payment_method', DB::raw('COUNT(*) as c'))->groupBy('sold_by_user_id', 'payment_method')->get()->groupBy('sold_by_user_id');
 
+        // Which merchant account actually collected each attributed sale (paid attempts only; NULL = legacy configuration).
+        $accounts = \App\Models\PaymentAttempt::query()->join('orders', 'orders.id', '=', 'payment_attempts.order_id')
+            ->where('payment_attempts.status', 'paid')
+            ->whereIn('orders.id', $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->select('orders.id'))
+            ->select('orders.sold_by_user_id', 'payment_attempts.integration_account_id', DB::raw('COUNT(*) as c'))->groupBy('orders.sold_by_user_id', 'payment_attempts.integration_account_id')->get()->groupBy('sold_by_user_id');
+
         $ids = $workflow->pluck('assigned_user_id')->merge($sales->keys())->unique()->values();
         $users = User::query()->whereIn('id', $ids)->get(['id', 'name'])->keyBy('id');
 
-        $rows = $ids->map(function ($id) use ($workflow, $sales, $tickets, $methods, $users) {
+        $rows = $ids->map(function ($id) use ($workflow, $sales, $tickets, $methods, $users, $accounts) {
             $by = $workflow->where('assigned_user_id', $id)->pluck('c', 'status');
             $assigned = (int) $by->sum();
             $paidNow = (int) ($by['paid'] ?? 0);
@@ -59,6 +65,7 @@ class AgentReport
                 'sold_orders' => (int) ($sales[$id]->c ?? 0),
                 'collected' => (float) ($sales[$id]->amount ?? 0),
                 'tickets' => (int) ($tickets[$id] ?? 0),
+                'accounts' => ($accounts[$id] ?? collect())->mapWithKeys(fn ($m) => [(string) ($m->integration_account_id ?? 0) => (int) $m->c])->all(),
                 'methods' => ($methods[$id] ?? collect())->mapWithKeys(fn ($m) => [(string) $m->payment_method => (int) $m->c])->all(),
             ];
         })->sortByDesc('collected')->values();
@@ -85,7 +92,7 @@ class AgentReport
         $data = $this->build($viewer, $from, $to);
         $row = $data['rows']->firstWhere('user_id', $viewer->id) ?? [
             'user_id' => $viewer->id, 'name' => $viewer->name, 'assigned' => 0, 'pending' => 0, 'paid' => 0, 'canceled' => 0, 'win_rate' => null,
-            'sold_orders' => 0, 'collected' => 0.0, 'tickets' => 0, 'methods' => [],
+            'sold_orders' => 0, 'collected' => 0.0, 'tickets' => 0, 'methods' => [], 'accounts' => [],
         ];
 
         return ['row' => $row] + $data;

@@ -36,6 +36,7 @@ class Order extends Model
         'assigned_at',
         'sold_by_user_id',
         'sold_at',
+        'integration_account_id',
     ];
 
     protected function casts(): array
@@ -79,6 +80,11 @@ class Order extends Model
     public function promoCode()
     {
         return $this->belongsTo(PromoCode::class);
+    }
+
+    public function integrationAccount()
+    {
+        return $this->belongsTo(IntegrationAccount::class);
     }
 
     public function assignedUser()

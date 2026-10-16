@@ -29,7 +29,30 @@ class IntegrationAccount extends Model
             'secrets' => 'encrypted:array',
             'last_tested_at' => 'datetime',
             'last_success_at' => 'datetime',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    /** Method codes this account may take payments for (payment_methods.code), stored as a comma list in config. */
+    public function supportedMethods(): array
+    {
+        return array_values(array_filter(array_map('trim', explode(',', (string) ($this->config['supported_methods'] ?? '')))));
+    }
+
+    /** The account field holding the per-method id: Paymob integration_<suffix>, Fawaterak provider_<suffix> (suffix = method code minus provider prefix). */
+    public function methodField(string $methodCode): string
+    {
+        $suffix = \Illuminate\Support\Str::after($methodCode, $this->provider.'_');
+
+        return ($this->provider === 'paymob' ? 'integration_' : 'provider_').$suffix;
+    }
+
+    public function isReferenced(): bool
+    {
+        return \App\Models\PaymentAttempt::query()->where('integration_account_id', $this->id)->exists()
+            || \App\Models\Order::withTrashed()->where('integration_account_id', $this->id)->exists()
+            || \App\Models\User::query()->where('payment_account_id', $this->id)->exists()
+            || \App\Models\CheckoutRouting::query()->where('integration_account_id', $this->id)->exists();
     }
 
     public function secret(string $field): ?string
@@ -71,7 +94,7 @@ class IntegrationAccount extends Model
 
     public function isUsable(): bool
     {
-        return $this->enabled && $this->status === self::VERIFIED;
+        return $this->enabled && $this->archived_at === null && $this->status === self::VERIFIED;
     }
 
     public static function fingerprint(array $config, array $secrets): string

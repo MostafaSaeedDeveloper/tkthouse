@@ -207,6 +207,24 @@
   </div>
 
   <div class="a-ord-col">
+    @if($canSeeAccounts)
+    <x-admin.card title="Merchant account" subtitle="Where this order's online payments are collected.">
+        <dl class="a-kv">
+            <div><dt>Pinned account</dt><dd>@if($pinnedAccount)<strong>{{ $pinnedAccount->name }}</strong> <span class="a-muted">{{ ucfirst($pinnedAccount->provider) }} · {{ $pinnedAccount->environment }}</span>@else<span class="a-muted">Legacy configuration</span>@endif</dd></div>
+            @foreach($paymentAttempts->take(5) as $pa)<div><dt>Attempt #{{ $pa->id }}</dt><dd>{{ $accountNames[$pa->integration_account_id] ?? 'Legacy' }} · <x-admin.status :status="$pa->status" kind="payment" /></dd></div>@endforeach
+        </dl>
+        @if($switchTargets->isNotEmpty())
+        <form method="POST" action="{{ route('admin.orders.payment-account.switch', $order) }}" data-a-loading data-a-confirm="Switch the merchant account? Every open payment is checked at its gateway first; the switch is refused if money may be collected." data-a-confirm-ok="Switch">
+            @csrf
+            <x-admin.field label="Switch to" name="integration_account_id" for="pa-account"><select id="pa-account" class="form-select" name="integration_account_id">@foreach($switchTargets as $t)<option value="{{ $t->id }}">{{ $t->name }} · {{ ucfirst($t->provider) }}</option>@endforeach</select></x-admin.field>
+            <x-admin.field label="Reason (required)" name="reason" for="pa-reason"><input id="pa-reason" class="form-control" name="reason" minlength="5" maxlength="300" required></x-admin.field>
+            @error('account')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+            <div class="a-form-actions"><button class="a-btn a-btn--danger" type="submit">Switch merchant account</button></div>
+        </form>
+        @endif
+    </x-admin.card>
+    @endif
+
     @if($assignmentOn)
     <x-admin.card title="Assignment" subtitle="Who is responsible for this order.">
         <dl class="a-kv">

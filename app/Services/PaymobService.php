@@ -16,12 +16,32 @@ class PaymobService
         return $this->createCheckout($order)['url'];
     }
 
+    /** @return array{api_key: string, iframe_id: string, integration_id: string} */
+    private function credentials(?PaymentMethod $method, ?\App\Models\IntegrationAccount $account): array
+    {
+        if ($account) {
+            return [
+                'api_key' => (string) $account->secret('api_key'),
+                'iframe_id' => (string) $account->field('iframe_id'),
+                'integration_id' => $method ? (string) $account->field($account->methodField($method->code)) : '',
+            ];
+        }
+
+        $config = $method?->config ?? [];
+
+        return [
+            'api_key' => (string) ($config['api_key'] ?? config('services.paymob.api_key', '')),
+            'iframe_id' => (string) ($config['iframe_id'] ?? config('services.paymob.iframe_id', '')),
+            'integration_id' => (string) ($config['integration_id'] ?? ''),
+        ];
+    }
+
     /** @return array{url: string, reference: string, paymob_order_id: int} */
-    public function createCheckout(Order $order): array
+    public function createCheckout(Order $order, ?\App\Models\IntegrationAccount $account = null, ?PaymentMethod $method = null): array
     {
         PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
 
-        $paymobMethod = PaymentMethod::query()
+        $paymobMethod = $method ?? PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
             ->where('provider', 'paymob')
             ->where('is_active', true)
@@ -31,10 +51,7 @@ class PaymobService
             throw new RuntimeException('Selected Paymob payment method is disabled. Please enable it from Payment Methods settings.');
         }
 
-        $config = $paymobMethod->config ?? [];
-        $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
-        $iframeId = (string) ($config['iframe_id'] ?? config('services.paymob.iframe_id', ''));
-        $integrationId = (string) ($config['integration_id'] ?? '');
+        ['api_key' => $apiKey, 'iframe_id' => $iframeId, 'integration_id' => $integrationId] = $this->credentials($paymobMethod, $account);
         $currency = strtoupper((string) config('services.paymob.currency', 'EGP'));
 
         if ($apiKey === '' || $iframeId === '' || $integrationId === '') {
@@ -58,12 +75,11 @@ class PaymobService
      *
      * @return array<string, mixed>
      */
-    public function inquireTransaction(PaymentMethod $method, string $transactionId): array
+    public function inquireTransaction(?PaymentMethod $method, string $transactionId, ?\App\Models\IntegrationAccount $account = null): array
     {
         PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
 
-        $config = $method->config ?? [];
-        $apiKey = (string) ($config['api_key'] ?? config('services.paymob.api_key', ''));
+        $apiKey = $this->credentials($method, $account)['api_key'];
 
         if ($apiKey === '') {
             throw new RuntimeException('Paymob API key is not configured.');

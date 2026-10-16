@@ -204,13 +204,19 @@ class OrderController extends Controller
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;
 
+        $canSeeAccounts = $request->user()->can('settings.payment-accounts.view') || \App\Orders\OrderAccess::isSuper($request->user());
+        $pinnedAccount = $canSeeAccounts ? $order->integrationAccount : null;
+        $switchTargets = ($canSeeAccounts && $request->user()->can('orders.reroute_payment') && $order->status === 'pending_payment')
+            ? \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->where('enabled', true)->get()->filter(fn ($a) => \App\Services\Payments\Routing\PaymentAccountResolver::usable($a) && $a->id !== $order->integration_account_id)->values()
+            : collect();
+        $accountNames = $canSeeAccounts ? \App\Models\IntegrationAccount::query()->whereIn('id', $paymentAttempts->pluck('integration_account_id')->filter())->pluck('name', 'id') : collect();
         $assignmentOn = \App\Orders\OrderAccess::enabled();
         $assignmentHistory = $assignmentOn ? $order->assignments()->get() : collect();
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user(), $order->assigned_user_id !== null);
         $assignees = $canAssign ? app(\App\Orders\OrderAssignmentService::class)->eligibleUsers() : collect();
         $order->loadMissing(['assignedUser:id,name', 'assignedBy:id,name', 'soldBy:id,name']);
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees'));
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees', 'canSeeAccounts', 'pinnedAccount', 'switchTargets', 'accountNames'));
     }
 
     public function edit(Request $request, Order $order)

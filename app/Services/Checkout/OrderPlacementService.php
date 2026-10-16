@@ -28,9 +28,9 @@ class OrderPlacementService
      * @param array<int, array<string, string>> $attendees one entry per unit, same order
      * @param float|null $expectedTotal total the customer saw on the review step; a different current total aborts the order
      */
-    public function place(User $user, Event $event, Collection $units, array $buyer, array $attendees, ?string $promoCode, ?string $methodCode, ?float $expectedTotal = null, ?int $affiliateUserId = null): Order
+    public function place(User $user, Event $event, Collection $units, array $buyer, array $attendees, ?string $promoCode, ?string $methodCode, ?float $expectedTotal = null, ?int $affiliateUserId = null, ?string $routingToken = null): Order
     {
-        return DB::transaction(function () use ($user, $event, $units, $buyer, $attendees, $promoCode, $methodCode, $expectedTotal, $affiliateUserId) {
+        return DB::transaction(function () use ($user, $event, $units, $buyer, $attendees, $promoCode, $methodCode, $expectedTotal, $affiliateUserId, $routingToken) {
             // Every rule is checked again against current data, and prices are the current ones.
             $fresh = $this->selection->revalidate($event, $units);
             $freshUnits = collect($fresh['units']);
@@ -50,8 +50,17 @@ class OrderPlacementService
             $requiresApproval = (bool) $event->requires_booking_approval;
             $customer = $this->customerFor($user, $buyer);
 
-            $order = $this->createOrder($user, $customer, $quote, $requiresApproval, $methodCode, $promoCode, $affiliateUserId);
-            app(\App\Orders\OrderAssignmentService::class)->assignOnCreate($order); // never throws; unassigned on any problem
+            // Provisional reservation (routing on, online checkout): consumed HERE, inside the order transaction, under the
+            // assignment_state lock. Invalid/expired/conflicting => ReservationInvalid: no order, the customer re-chooses.
+            $routing = app(\App\Services\Payments\Routing\CheckoutRoutingService::class);
+            $decision = (! $requiresApproval && $routing->enabled()) ? $routing->consume($routingToken, $methodCode, true) : null;
+
+            $order = $this->createOrder($user, $customer, $quote, $requiresApproval, $methodCode, $promoCode, $affiliateUserId, $decision['account_id'] ?? null);
+            if ($decision) {
+                $routing->finalize($decision, $order); // binds the reservation, assigns the agent, advances the FINAL pointer
+            } else {
+                app(\App\Orders\OrderAssignmentService::class)->assignOnCreate($order); // never throws; unassigned on any problem
+            }
 
             foreach ($freshUnits->values() as $index => $unit) {
                 $attendee = $attendees[$index];
@@ -87,7 +96,7 @@ class OrderPlacementService
         });
     }
 
-    private function createOrder(User $user, Customer $customer, Quote $quote, bool $requiresApproval, ?string $methodCode, ?string $promoCode, ?int $affiliateUserId): Order
+    private function createOrder(User $user, Customer $customer, Quote $quote, bool $requiresApproval, ?string $methodCode, ?string $promoCode, ?int $affiliateUserId, ?int $accountId = null): Order
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {
             try {
@@ -107,6 +116,7 @@ class OrderPlacementService
                     'payment_timeout_started_at' => $requiresApproval ? null : now(),
                     'payment_timeout_minutes' => $requiresApproval ? null : SystemSettings::pendingPaymentTimeoutMinutes(),
                     'total_amount' => $quote->total,
+                    'integration_account_id' => $accountId,
                 ]);
             } catch (UniqueConstraintViolationException $e) {
                 // Order number collision under concurrency: draw another one.

@@ -30,7 +30,8 @@ class IntegrationManager
         }
 
         foreach ($def['fields'] as $f) {
-            $value = isset($input[$f['name']]) ? trim((string) $input[$f['name']]) : '';
+            $raw = $input[$f['name']] ?? '';
+            $value = is_array($raw) ? implode(',', array_map('trim', $raw)) : trim((string) $raw);
             if ($f['secret']) {
                 if ($value !== '') {
                     $secrets[$f['name']] = $value; // new value typed explicitly
@@ -104,13 +105,41 @@ class IntegrationManager
             }
         }
 
-        if ($account->provider === 'fawaterak') {
-            throw ValidationException::withMessages(['account' => 'Fawaterak accounts cannot be enabled until the sandbox verification of its callbacks and inquiry is completed.']);
+        if ($account->provider === 'fawaterak' && ($account->environment === 'production' || app()->isProduction()) && ! config('payments.fawaterak.verified')) {
+            throw ValidationException::withMessages(['account' => 'Fawaterak is locked for Production until a real sandbox run confirms its inquiry, payment fields and account binding (PAYMENTS_FAWATERAK_VERIFIED).']);
+        }
+        if ($account->archived_at !== null) {
+            throw ValidationException::withMessages(['account' => 'Archived accounts cannot be enabled.']);
         }
 
         $account->forceFill(['enabled' => true, 'updated_by' => $by?->id])->save();
         $this->flush();
         activity('settings')->causedBy($by)->performedOn($account)->withProperties(['provider' => $account->provider, 'environment' => $account->environment])->log('Integration account enabled');
+    }
+
+    /**
+     * Fawaterak has no confirmed read-only endpoint, so a person records the outcome of the sandbox runbook. This only marks the
+     * CURRENT credentials as verified (changing them resets it); Production stays locked by PAYMENTS_FAWATERAK_VERIFIED.
+     */
+    public function attestSandbox(IntegrationAccount $account, string $note, ?User $by): void
+    {
+        if ($account->provider !== 'fawaterak' || $account->environment !== 'sandbox') {
+            throw ValidationException::withMessages(['account' => 'Sandbox attestation is only for Fawaterak sandbox accounts.']);
+        }
+        if ($missing = Definitions::missing('fawaterak', $account->config ?? [], $this->secretsOf($account))) {
+            throw ValidationException::withMessages(['account' => 'Missing required fields: '.implode(', ', $missing).'.']);
+        }
+        $account->forceFill(['status' => IntegrationAccount::VERIFIED, 'last_tested_at' => now(), 'last_success_at' => now(), 'last_error' => null])->save();
+        $this->flush();
+        activity('settings')->causedBy($by)->performedOn($account)->withProperties(['provider' => 'fawaterak', 'note' => mb_substr($note, 0, 300)])->log('Integration sandbox verification recorded');
+    }
+
+    /** Disabled + hidden from selection; historical attempts keep using it for inquiry, callbacks and reconciliation. */
+    public function archive(IntegrationAccount $account, ?User $by): void
+    {
+        $account->forceFill(['enabled' => false, 'archived_at' => now(), 'updated_by' => $by?->id])->save();
+        $this->flush();
+        activity('settings')->causedBy($by)->performedOn($account)->withProperties(['provider' => $account->provider])->log('Integration account archived');
     }
 
     public function disable(IntegrationAccount $account, ?User $by): void

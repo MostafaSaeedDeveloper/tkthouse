@@ -15,6 +15,7 @@ final class Registry
         'branding' => ['label' => 'Branding', 'icon' => 'fa-palette', 'permission' => 'settings.view'],
         'events' => ['label' => 'Events & Tickets', 'icon' => 'fa-ticket', 'permission' => 'settings.view'],
         'orders' => ['label' => 'Orders', 'icon' => 'fa-receipt', 'permission' => 'settings.orders'],
+        'payments' => ['label' => 'Payment Routing', 'icon' => 'fa-credit-card', 'permission' => 'settings.payment-accounts.view'],
         'notifications' => ['label' => 'Notifications', 'icon' => 'fa-bell', 'permission' => 'settings.view'],
         'security' => ['label' => 'Security & Access', 'icon' => 'fa-shield-halved', 'permission' => 'settings.security.view'],
     ];
@@ -56,6 +57,14 @@ final class Registry
             'order_assignment_mode' => ['group' => 'orders', 'type' => 'select', 'label' => 'Assignment mode', 'default' => 'manual',
                 'options' => ['manual' => 'Manual', 'round_robin' => 'Automatic — round robin', 'default_assignee' => 'Default assignee'], 'rules' => ['required', 'in:manual,round_robin,default_assignee']],
             'order_default_assignee_id' => ['group' => 'orders', 'type' => 'user', 'label' => 'Default assignee', 'default' => null, 'rules' => ['nullable', 'integer']],
+
+            // ---- Payment routing (all off / empty by default => today's payment behaviour is unchanged)
+            'payment_routing_enabled' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Enable per-user payment routing', 'default' => false,
+                'help' => 'When on, an agent with a custom merchant account collects the payments of the orders shown to their customers. Existing payment attempts are never affected.', 'rules' => ['boolean']],
+            'default_payment_account_id' => ['group' => 'payments', 'type' => 'account', 'label' => 'Default merchant account', 'default' => null,
+                'help' => 'Used when no agent-specific account applies. Leave empty to keep using the existing payment-method configuration.', 'rules' => ['nullable', 'integer']],
+            'unassigned_order_payment_policy' => ['group' => 'payments', 'type' => 'select', 'label' => 'Unassigned order payment policy', 'default' => 'default_account',
+                'options' => ['default_account' => 'Use the default merchant account', 'block_online' => 'Block online payment (manual confirmation only)'], 'rules' => ['required', 'in:default_account,block_online']],
 
             // ---- Notifications
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,

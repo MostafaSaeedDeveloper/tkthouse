@@ -98,6 +98,19 @@ class CheckoutController extends Controller
             $quote = $this->pricing->quote($event, $units);
         }
 
+        // Provisional routing: the agent/merchant account (and so the methods) shown to this customer, fixed for this session.
+        $routing = null;
+        if (! $event->requires_booking_approval) {
+            $routingSvc = app(\App\Services\Payments\Routing\CheckoutRoutingService::class);
+            if ($routing = $routingSvc->reserve(session(\App\Services\Payments\Routing\CheckoutRoutingService::SESSION_KEY), $request->session()->getId())) {
+                session([\App\Services\Payments\Routing\CheckoutRoutingService::SESSION_KEY => $routing->token]);
+            }
+        }
+        $methods = $routing ? app(\App\Services\Payments\Routing\CheckoutRoutingService::class)->methods($routing) : app(\App\Services\Payments\Routing\CheckoutRoutingService::class)->methodsWithoutReservation();
+        // A saved choice that this customer's account no longer offers is dropped (never silently swapped).
+        $savedMethod = (string) ($draft['payment_method'] ?? '');
+        $savedMethod = $methods->contains('code', $savedMethod) ? $savedMethod : '';
+
         return view('front.checkout.express', [
             'event' => $event,
             'groups' => $this->groups($units),
@@ -107,8 +120,8 @@ class CheckoutController extends Controller
             'quote' => $quote,
             'buyer' => $buyer,
             'attendees' => (array) ($draft['attendees'] ?? []),
-            'methods' => $gateways->available(),
-            'selectedMethod' => (string) ($draft['payment_method'] ?? ''),
+            'methods' => $methods,
+            'selectedMethod' => $savedMethod,
             'requiresApproval' => (bool) $event->requires_booking_approval,
             'promoCode' => $promoCode,
             'promoNotice' => $promoNotice,
@@ -219,7 +232,7 @@ class CheckoutController extends Controller
                 $methodCode = trim((string) $request->input('payment_method', ''));
                 if ($methodCode === '') {
                     $errors['payment_method'] = ['Please choose a payment method.'];
-                } elseif (! $gateways->available()->contains('code', $methodCode)) {
+                } elseif (! $this->methodOffered($request, $gateways, $methodCode)) {
                     $errors['payment_method'] = ['The selected payment method is not available.'];
                 }
             }
@@ -255,7 +268,8 @@ class CheckoutController extends Controller
             try {
                 $order = $placement->place(
                     $user, $event, $units, $buyer, $attendees,
-                    $promo !== '' ? $promo : null, $methodCode, $expected, $this->affiliateUserId($request, $user)
+                    $promo !== '' ? $promo : null, $methodCode, $expected, $this->affiliateUserId($request, $user),
+                    session(\App\Services\Payments\Routing\CheckoutRoutingService::SESSION_KEY)
                 );
             } catch (ValidationException $e) {
                 return $this->handlePlacementError($request, $e, $event);
@@ -432,9 +446,22 @@ class CheckoutController extends Controller
         }
     }
 
+    /** The methods THIS customer was offered (their reservation) — or the pre-existing list when routing is off / not needed. */
+    private function methodOffered(Request $request, PaymentGatewayManager $gateways, string $code): bool
+    {
+        $svc = app(\App\Services\Payments\Routing\CheckoutRoutingService::class);
+        if (! $svc->enabled()) {
+            return $svc->methodsWithoutReservation()->contains('code', $code);
+        }
+
+        // Routing on: the reservation decides (inside place()). A method that is no longer offered, an expired or missing reservation
+        // all end the same way: 409 "options changed", the customer chooses again, nothing is created, nothing is lost.
+        return true;
+    }
+
     private function clearCheckoutSession(): void
     {
-        session()->forget([self::SELECTION, self::DRAFT, self::PROMO, self::SELECTION_ID, 'checkout_verify_email', 'checkout.preflight_email']);
+        session()->forget([self::SELECTION, self::DRAFT, self::PROMO, self::SELECTION_ID, 'checkout_verify_email', 'checkout.preflight_email', \App\Services\Payments\Routing\CheckoutRoutingService::SESSION_KEY]);
     }
 
     private function backToEvents(string $message)
@@ -502,9 +529,14 @@ class CheckoutController extends Controller
 
         if (isset($errors['price_changed'])) {
             $message = $this->firstError($e, 'The price changed. Please review your order.');
+            $routingChanged = $e instanceof \App\Services\Payments\Routing\ReservationInvalid;
+            if ($routingChanged) {
+                // The draft (buyer + attendees) is already stored in the session: reloading re-renders it with a fresh reservation.
+                Log::info('Checkout routing reservation invalid.', ['reason' => $e->reason]);
+            }
 
             return $request->expectsJson()
-                ? response()->json(['ok' => false, 'price_changed' => true, 'message' => $message], 409)
+                ? response()->json(['ok' => false, 'price_changed' => true, 'routing_changed' => $routingChanged, 'message' => $message], 409)
                 : redirect()->route('front.checkout')->with('error', $message);
         }
         if (isset($errors['cart']) || isset($errors['tickets'])) {

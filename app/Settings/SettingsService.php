@@ -117,6 +117,7 @@ class SettingsService
         return match ($type) {
             'bool' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
             'int' => $value === null || $value === '' ? null : (int) $value,
+            'account' => $value === null || $value === '' ? null : (int) $value,
             'user' => $value === null || $value === '' ? null : (int) $value,
             default => is_string($value) && trim($value) === '' ? null : (is_string($value) ? trim($value) : $value),
         };

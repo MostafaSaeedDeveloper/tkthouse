@@ -28,6 +28,9 @@ class AgentReportController extends Controller
             $data['unattributed'] = null;
         }
 
-        return view('admin.reports.agents', ['data' => $data, 'from' => $from, 'to' => $to, 'seesTeam' => $seesTeam]);
+        $showAccounts = $user->can('settings.payment-accounts.view') || OrderAccess::isSuper($user);
+        $accountNames = $showAccounts ? \App\Models\IntegrationAccount::query()->pluck('name', 'id') : collect();
+
+        return view('admin.reports.agents', ['data' => $data, 'from' => $from, 'to' => $to, 'seesTeam' => $seesTeam, 'showAccounts' => $showAccounts, 'accountNames' => $accountNames]);
     }
 }

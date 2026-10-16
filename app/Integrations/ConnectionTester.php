@@ -36,6 +36,7 @@ class ConnectionTester
                 'paymob' => $this->paymob($account),
                 'ultramsg' => $this->ultramsg($account),
                 'email' => $this->smtp($account),
+                'fake' => \App\Support\PaymentEnvironment::fakeGatewayAllowed() ? $this->result(true, true, 'Fake gateway: no external call is made.') : $this->result(false, false, 'The fake gateway is disabled in this environment.'),
                 'fawaterak' => $this->result(true, false, 'Fields are complete. Fawaterak has no confirmed read-only endpoint, so it stays "unverified" until a sandbox run (Stage E).'),
                 default => $this->result(false, false, 'Unsupported provider.'),
             };
