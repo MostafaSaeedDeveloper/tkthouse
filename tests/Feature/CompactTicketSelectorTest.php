@@ -61,7 +61,7 @@ class CompactTicketSelectorTest extends TestCase
             $this->assertSame("Type $n", end($names));
             $list = substr($html, strpos($html, 'data-ticket-scroll'), strpos($html, 'data-more') - strpos($html, 'data-ticket-scroll'));
             $this->assertSame($n, substr_count($list, 'class="tkt-ticket"'));            // all inside the scroll container
-            $this->assertStringContainsString('data-fold-initial="5"', $html);     // 4–5 shown by default
+            $this->assertStringContainsString('data-fold-initial="' . max(5, $n) . '"', $html);     // every available ticket is shown, nothing folded
             $this->assertStringContainsString('data-fold-step="5"', $html);
             $this->assertStringContainsString('data-more', $html);
             $this->assertStringContainsString('data-less', $html);                 // Show less

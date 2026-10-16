@@ -231,7 +231,7 @@
                data-checkout-base="{{ route('front.checkout') }}"
                data-event-id="{{ $event->id }}"
                data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}"
-               data-fold-initial="5" data-fold-step="5"
+               data-fold-initial="{{ max(5, $available->count()) }}" data-fold-step="5"
                data-fees='@json($fees)'>
             <div class="tkt-card tkt-booking__card">
                 <header class="tkt-booking__head">
