@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
  *  - Workflow counts (assigned / pending / paid / canceled): by the order's CURRENT assignee, orders created in range.
  *  - Collected sales + tickets sold: by the sales-attribution SNAPSHOT (orders.sold_by_user_id), orders paid in range.
  *    Reassigning an order later never moves a sale. Orders paid before attribution existed are "Unattributed".
- *  - Not computed (not modelled in the system): refunds, merchant settlement.
+ *  - Refunded = refunds that SUCCEEDED in the range for orders the agent sold (snapshot); requested/processing refunds are not counted.
+ *  - Not computed (not modelled in the system): merchant settlement (bank payouts).
  * Everything is built on Order::visibleTo($viewer), so an agent can only ever get their own row.
  */
 class AgentReport
@@ -47,10 +48,17 @@ class AgentReport
             ->whereIn('orders.id', $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->select('orders.id'))
             ->select('orders.sold_by_user_id', 'payment_attempts.integration_account_id', DB::raw('COUNT(*) as c'))->groupBy('orders.sold_by_user_id', 'payment_attempts.integration_account_id')->get()->groupBy('sold_by_user_id');
 
-        $ids = $workflow->pluck('assigned_user_id')->merge($sales->keys())->unique()->values();
+        // Refunds that SUCCEEDED in the range, attributed to the agent who held the sale (sold_by snapshot), never to the current assignee.
+        $refunded = \App\Models\PaymentRefund::query()->join('orders', 'orders.id', '=', 'payment_refunds.order_id')
+            ->where('payment_refunds.status', 'succeeded')->whereNotNull('orders.sold_by_user_id')
+            ->whereIn('orders.id', $visible()->select('orders.id'))
+            ->whereBetween(DB::raw('COALESCE(payment_refunds.completed_at, payment_refunds.updated_at)'), [$from, $to])
+            ->select('orders.sold_by_user_id', DB::raw('SUM(payment_refunds.amount_minor) m'))->groupBy('orders.sold_by_user_id')->pluck('m', 'sold_by_user_id');
+
+        $ids = $workflow->pluck('assigned_user_id')->merge($sales->keys())->merge($refunded->keys())->unique()->values();
         $users = User::query()->whereIn('id', $ids)->get(['id', 'name'])->keyBy('id');
 
-        $rows = $ids->map(function ($id) use ($workflow, $sales, $tickets, $methods, $users, $accounts) {
+        $rows = $ids->map(function ($id) use ($workflow, $sales, $tickets, $methods, $users, $accounts, $refunded) {
             $by = $workflow->where('assigned_user_id', $id)->pluck('c', 'status');
             $assigned = (int) $by->sum();
             $paidNow = (int) ($by['paid'] ?? 0);
@@ -65,6 +73,8 @@ class AgentReport
                 'sold_orders' => (int) ($sales[$id]->c ?? 0),
                 'collected' => (float) ($sales[$id]->amount ?? 0),
                 'tickets' => (int) ($tickets[$id] ?? 0),
+                'refunded' => (float) (($refunded[$id] ?? 0) / 100),
+                'net' => (float) ($sales[$id]->amount ?? 0) - (float) (($refunded[$id] ?? 0) / 100),
                 'accounts' => ($accounts[$id] ?? collect())->mapWithKeys(fn ($m) => [(string) ($m->integration_account_id ?? 0) => (int) $m->c])->all(),
                 'methods' => ($methods[$id] ?? collect())->mapWithKeys(fn ($m) => [(string) $m->payment_method => (int) $m->c])->all(),
             ];
@@ -92,7 +102,7 @@ class AgentReport
         $data = $this->build($viewer, $from, $to);
         $row = $data['rows']->firstWhere('user_id', $viewer->id) ?? [
             'user_id' => $viewer->id, 'name' => $viewer->name, 'assigned' => 0, 'pending' => 0, 'paid' => 0, 'canceled' => 0, 'win_rate' => null,
-            'sold_orders' => 0, 'collected' => 0.0, 'tickets' => 0, 'methods' => [], 'accounts' => [],
+            'sold_orders' => 0, 'collected' => 0.0, 'refunded' => 0.0, 'net' => 0.0, 'tickets' => 0, 'methods' => [], 'accounts' => [],
         ];
 
         return ['row' => $row] + $data;

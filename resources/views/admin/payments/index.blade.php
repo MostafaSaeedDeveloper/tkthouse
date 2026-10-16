@@ -11,11 +11,27 @@
 <x-admin.flash />
 @include('admin.payments._nav')
 
-<div class="a-grid a-grid--4" style="margin-bottom:20px">
-    <x-admin.kpi label="Collected (paid attempts)" :value="$money($stats['paid'])" icon="fa-circle-check" :hint="$stats['paid_count'].' paid attempts'" />
-    <x-admin.kpi label="Processing" :value="number_format($stats['processing'])" icon="fa-hourglass-half" hint="Waiting for the gateway" />
-    <x-admin.kpi label="Failed attempts" :value="number_format($stats['failed'])" icon="fa-circle-xmark" hint="Customers can retry" />
-    <x-admin.kpi label="Needs review" :value="number_format($stats['review'])" icon="fa-flag" :hint="$stats['refunded'].' refunded orders'" />
+<form method="GET" action="{{ route('admin.payments.index') }}" class="a-m-range-form" style="margin-bottom:14px">
+    <div class="a-field"><label class="form-label" for="pf">From</label><input id="pf" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
+    <div class="a-field"><label class="form-label" for="pt">To</label><input id="pt" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
+    <button class="a-btn a-btn--dark" type="submit">Apply</button>
+</form>
+@php $m = fn ($minor) => number_format($minor / 100, 2).' EGP'; $t = $report['totals']; @endphp
+<div class="a-grid a-grid--4" style="margin-bottom:12px">
+    <x-admin.kpi label="Total collected" :value="$m($t['collected'])" icon="fa-circle-check" :hint="$t['successful'].' successful transactions'" />
+    <x-admin.kpi label="Refunded" :value="$m($t['refunded'])" icon="fa-rotate-left" :hint="$t['refund_count'].' refunds · '.$t['partial_refunds'].' partial'" />
+    <x-admin.kpi label="Net collected" :value="$m($t['net'])" icon="fa-scale-balanced" hint="Collected − refunded (not a bank settlement)" />
+    <x-admin.kpi label="Pending / failed" :value="$t['pending'].' / '.$t['failed']" icon="fa-hourglass-half" :hint="$m($t['pending_amount']).' waiting for the gateway'" />
+</div>
+@if($t['refunds_in_progress'] > 0)<p class="a-hint">{{ $t['refunds_in_progress'] }} refund(s) worth {{ $m($t['refunds_in_progress_amount']) }} are requested or processing: they are <strong>not</strong> counted as refunded until confirmed.</p>@endif
+<div class="a-grid a-grid--2" style="margin-bottom:20px">
+    @foreach(array_filter(['Provider' => ['rows' => $report['by_provider'], 'label' => fn ($k) => ucfirst($k)], 'Payment method' => ['rows' => $report['by_method'], 'label' => fn ($k) => $methodNames[$k] ?? ($k ?: 'Unknown')], 'Merchant account' => $report['by_account'] === null ? null : ['rows' => $report['by_account'], 'label' => fn ($k) => $k === '' || $k === '0' ? 'Legacy configuration' : ($accountNames[(int) $k] ?? '#'.$k)]]) as $title => $g)
+    <x-admin.card flush :title="$title.' breakdown'">
+        <x-admin.table stack compact :caption="$title.' breakdown'"><thead><tr><th>{{ $title }}</th><th class="a-num">Payments</th><th class="a-num">Collected</th><th class="a-num">Refunded</th><th class="a-num">Net</th></tr></thead><tbody>
+            @forelse($g['rows'] as $k => $r)<tr><td data-label="{{ $title }}">{{ ($g['label'])($k) }}</td><td data-label="Payments" class="a-num">{{ $r['count'] }}</td><td data-label="Collected" class="a-num">{{ number_format($r['collected'] / 100, 2) }}</td><td data-label="Refunded" class="a-num">{{ number_format($r['refunded'] / 100, 2) }}</td><td data-label="Net" class="a-num">{{ number_format($r['net'] / 100, 2) }}</td></tr>@empty<tr><td colspan="5" class="a-muted">No payments in this period.</td></tr>@endforelse
+        </tbody></x-admin.table>
+    </x-admin.card>
+    @endforeach
 </div>
 
 @if(! $liveGateways || $fakeAllowed)

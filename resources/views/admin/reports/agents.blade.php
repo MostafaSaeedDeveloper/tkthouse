@@ -16,7 +16,7 @@
     <x-admin.table stack caption="Agent performance">
         <thead><tr>
             <th scope="col">Agent</th><th scope="col" class="a-num">Assigned</th><th scope="col" class="a-num">Pending</th><th scope="col" class="a-num">Paid</th>
-            <th scope="col" class="a-num">Canceled</th><th scope="col" class="a-num">Win rate</th><th scope="col" class="a-num">Tickets sold</th><th scope="col" class="a-num">Collected (EGP)</th><th scope="col">Payment methods</th>@if($showAccounts)<th scope="col">Merchant accounts</th>@endif
+            <th scope="col" class="a-num">Canceled</th><th scope="col" class="a-num">Win rate</th><th scope="col" class="a-num">Tickets sold</th><th scope="col" class="a-num">Collected (EGP)</th><th scope="col" class="a-num">Refunded</th><th scope="col" class="a-num">Net</th><th scope="col">Payment methods</th>@if($showAccounts)<th scope="col">Merchant accounts</th>@endif
         </tr></thead>
         <tbody>
         @foreach($data['rows'] as $r)
@@ -29,6 +29,8 @@
                 <td data-label="Win rate" class="a-num">{{ $r['win_rate'] === null ? '—' : $r['win_rate'].'%' }}</td>
                 <td data-label="Tickets sold" class="a-num">{{ $r['tickets'] }}</td>
                 <td data-label="Collected" class="a-num">{{ $money($r['collected']) }}</td>
+                <td data-label="Refunded" class="a-num">{{ $money($r['refunded']) }}</td>
+                <td data-label="Net" class="a-num">{{ $money($r['net']) }}</td>
                 @if($showAccounts)<td data-label="Merchant accounts" class="a-wrap">@forelse($r['accounts'] as $aid => $c)<span class="a-table__sub">{{ $accountNames[$aid] ?? 'Legacy configuration' }} × {{ $c }}</span>@empty — @endforelse</td>@endif
                 <td data-label="Payment methods" class="a-wrap">@forelse($r['methods'] as $m => $c)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $m ?: 'unknown')) }} × {{ $c }}</span>@empty — @endforelse</td>
             </tr>
@@ -45,5 +47,5 @@
     <x-admin.card title="Unattributed sales"><p><strong>{{ $data['unattributed']['orders'] }}</strong> order(s), {{ $money($data['unattributed']['amount']) }} EGP paid in this period without an attributed agent (paid before assignment was enabled, or never assigned). They are never guessed onto anyone.</p></x-admin.card>
 </div>
 @endif
-<p class="a-hint" style="margin-top:12px">Not shown because the system does not track them: refunds and merchant settlement. "Collected" is the order total of paid orders, not a bank settlement.</p>
+<p class="a-hint" style="margin-top:12px">"Collected" is the order total of paid orders, "Refunded" only counts refunds the provider (or a person) confirmed; neither is a bank settlement, which is not tracked.</p>
 @endsection
