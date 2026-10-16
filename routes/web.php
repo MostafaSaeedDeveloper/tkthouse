@@ -179,6 +179,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware('permission:attendees.view')->name('affiliates.show');
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
+    Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
+    Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view')->name('payments.index');
     Route::get('reports', [ReportController::class, 'index'])->middleware('permission:reports.view')->name('reports.index');
 
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');

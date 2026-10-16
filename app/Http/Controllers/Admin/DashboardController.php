@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ScanLog;
 use App\Models\Ticket;
+use App\Services\Admin\DashboardMetrics;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -23,10 +24,10 @@ class DashboardController extends Controller
             return app(EventInsightsController::class)->dashboard($request, $userManagedEvents->first());
         }
 
-        $selectedRange = (string) $request->input('range', 'last30');
-        $allowedRanges = ['today', 'yesterday', 'last7', 'last30', 'this_month', 'last_month', 'all', 'custom'];
+        $selectedRange = (string) $request->input('range', '30d');
+        $allowedRanges = ['today', 'yesterday', 'last7', 'last30', 'this_month', 'last_month', 'all', 'custom', '7d', '30d', '3m', '1y'];
         if (! in_array($selectedRange, $allowedRanges, true)) {
-            $selectedRange = 'last30';
+            $selectedRange = '30d';
         }
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
@@ -191,7 +192,22 @@ class DashboardController extends Controller
             'all' => 'All Time',
         ];
 
+        // Admin V2 dashboard blocks (same scope + range as the figures above)
+        $metricsStart = $startAt ?? now()->subYear()->startOfDay();
+        $metricsEnd = $endAt ?? now()->endOfDay();
+        $metrics = new DashboardMetrics($userManagedEventIds, $selectedEvent ? Event::find($selectedEvent->id) : null);
+        $kpis = $metrics->kpis($metricsStart, $metricsEnd);
+        $series = $metrics->series($metricsStart, $metricsEnd);
+        $revenue = $metrics->revenue($metricsStart, $metricsEnd);
+        $upcoming = $metrics->upcomingEvents();
+        $scans = $metrics->scans();
+        $rangeKey = $selectedRange;
+        $ranges = DashboardMetrics::RANGES;
+        $from = $metricsStart->toDateString();
+        $to = $metricsEnd->toDateString();
+
         return view('admin.index', compact(
+            'kpis', 'series', 'revenue', 'upcoming', 'scans', 'rangeKey', 'ranges', 'from', 'to',
             'totalOrders',
             'totalPaidOrders',
             'totalRevenue',
@@ -227,7 +243,10 @@ class DashboardController extends Controller
             'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay(), 'Today'],
             'yesterday' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay(), 'Yesterday'],
             'last7' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay(), 'Last 7 Days'],
-            'last30' => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay(), 'Last 30 Days'],
+            'last30', '30d' => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay(), 'Last 30 days'],
+            '7d' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay(), 'Last 7 days'],
+            '3m' => [$now->copy()->subMonths(3)->addDay()->startOfDay(), $now->copy()->endOfDay(), 'Last 3 months'],
+            '1y' => [$now->copy()->subYear()->addDay()->startOfDay(), $now->copy()->endOfDay(), 'Last year'],
             'this_month' => [$now->copy()->startOfMonth(), $now->copy()->endOfDay(), 'This Month'],
             'last_month' => [
                 $now->copy()->subMonthNoOverflow()->startOfMonth(),
