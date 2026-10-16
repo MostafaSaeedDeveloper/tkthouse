@@ -64,3 +64,19 @@ Confirmations: `data-a-confirm="…"` (+ `-title`, `-ok`) on a form or button; D
 * No default Bootstrap colours, no hex colours outside `tokens.css`, no demo data.
 * Tables: first value + "+N more", full names on the details page; no horizontal page scroll; every icon button has `aria-label`.
 * Keep text asserted by tests (`grep -rn "<text>" tests/`).
+
+## 7. Delivery status
+
+**Unified on the system (all use `admin.master`, the shared components and tokens):** Dashboard, Events (list, create/edit, details, event dashboard), Tickets (list, details, edit, create), Guest list (+ create), Orders (list, details, edit, deleted), Customers (list, details), Promo codes, Payments, Reports, Affiliates, Scanner staff, Team & access (users, roles, permissions), Settings, Payment methods, Activity logs, global Search, admin Login.
+
+**Deliberately standalone:** `tickets/scanner.blade.php`, `scanner-login.blade.php` (camera UI, dark by design) and `tickets/pdf.blade.php` (print). They are not part of the shell.
+
+**Verification:** 175 page × width combinations (360 / 390 / 768 / 1024 / 1440) — no horizontal page scroll and no console errors; a permission-limited role was checked (sidebar, Quick actions and Create event follow permissions, restricted routes still 403); `tests/Feature/AdminDesignSystemTest.php` locks in the layout, token file, no hard-coded colours, ticket-type collapsing, single pagination summary and permission-aware navigation. Screenshots: `docs/screenshots/admin-ds/` (desktop + mobile, `limited/` for the restricted role, `mobile-sidebar.png`, `mobile-orders-cards.png`).
+
+**Still open / decisions:**
+* Events list has no filter bar (the controller does no filtering; adding fields would be dead controls).
+* Reports only query paid orders (controller untouched) — pending / failed / refunded are separated on Payments and linked from Reports.
+* Ticket-type colour input default `#0d6efd` is stored form data, not styling.
+* `resources/views/admin/html template/` (202 static Dashmix demo files) is unused and can be deleted in a separate commit.
+* Dashmix (`dashmix.min.css`) is still loaded for grid/modal/dropdown behaviour; replacing it with plain Bootstrap 5 would be a separate, riskier step.
+* The few scanner screens that stay dark/standalone could be aligned later if desired.
