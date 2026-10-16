@@ -84,6 +84,23 @@ class Order extends Model
         return $this->hasMany(IssuedTicket::class);
     }
 
+    /**
+     * Orders a signed-in customer may see in their portal. Ownership is never "same e-mail typed at checkout":
+     *  - orders bound to the account (user_id), unless they were placed before the mailbox was proven (owner_unverified), or
+     *  - legacy/back-office orders with no account at all whose contact e-mail equals the account's *verified* e-mail.
+     */
+    public function scopeOwnedByCustomer($query, \App\Models\User $user)
+    {
+        return $query->where('owner_unverified', false)->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+
+            if ($user->email_verified_at) {
+                $q->orWhere(fn ($w) => $w->whereNull('user_id')
+                    ->whereHas('customer', fn ($c) => $c->whereRaw('LOWER(email) = ?', [mb_strtolower((string) $user->email)])));
+            }
+        });
+    }
+
     public function scopeIncludedInStatistics($query)
     {
         return $query->where('exclude_from_statistics', false);

@@ -85,7 +85,10 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
     Route::get('/account/profile', [CustomerDashboardController::class, 'profile'])->name('front.account.profile');
     Route::put('/account/profile', [CustomerDashboardController::class, 'updateProfile'])->name('front.account.profile.update');
+    Route::post('/account/email/request', [CustomerDashboardController::class, 'requestEmailChange'])->middleware('throttle:10,1,account-email-request')->name('front.account.email.request');
+    Route::post('/account/email/confirm', [CustomerDashboardController::class, 'confirmEmailChange'])->middleware('throttle:10,1,account-email-confirm')->name('front.account.email.confirm');
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');
+    Route::get('/account/orders/{orderNumber}', [CustomerDashboardController::class, 'showOrder'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.account.orders.show');
     Route::get('/account/tickets', [CustomerDashboardController::class, 'tickets'])->name('front.account.tickets');
     Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');

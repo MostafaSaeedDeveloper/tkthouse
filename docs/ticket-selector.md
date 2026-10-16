@@ -12,7 +12,6 @@ renamed or classified from a name (no VIP/Wave/... logic anywhere in PHP, JS or 
 * **Show more**: more than 6 available tickets → the first 6 plus **Show more tickets (N)**; selected tickets are never hidden (CSS `:not(.is-selected)`), the cart lives in JS state,
   so expanding/collapsing never changes it; the count excludes tickets that are already visible because selected.
 * **Rules untouched**: couple passes move 0 → 2 only, maximum per order, fees and prices are computed exactly as before; the hand-off is still `/checkout?event=…&cart=…`.
-* **Global font size**: Bootstrap 3 sets `html{font-size:10px}`, which shrank every rem-based V2 size by 37.5% (buttons were 8.75px). `tkt-v2.css` now sets `html{font-size:var(--tkt-root-size)}` (default `100%` = 16px).
-  Change `--tkt-root-size` in one place to tune the whole site.
+* **Global font size**: unchanged (Bootstrap 3's `html{font-size:10px}` still applies). A site-wide bump was tried and reverted at the owner's request.
 * **Verified**: `tests/Feature/TicketSelectorTest.php` plus a Playwright run (148 checks at 360/390/768/1024/1440) on seeded events with 1, 3 and 23 ticket types (long names, couple passes,
   sold out): clamping, couple cap, max per order, Show more with selection kept, fees in the total, no overflow, hand-off to the checkout wizard. Screenshots in `docs/screenshots/ticket-selector/`.
