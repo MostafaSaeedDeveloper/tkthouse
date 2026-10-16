@@ -8,10 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->string('source')->default('standard')->after('name');
-            $table->string('guest_type')->nullable()->after('source');
-        });
+        // Guarded: some databases already have these columns (applied outside the migrations table).
+        if (! Schema::hasColumn('tickets', 'source')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->string('source')->default('standard')->after('name');
+            });
+        }
+
+        if (! Schema::hasColumn('tickets', 'guest_type')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->string('guest_type')->nullable()->after('source');
+            });
+        }
     }
 
     public function down(): void
