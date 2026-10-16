@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Server-to-server gateway webhook: it has no session/CSRF token. It is authenticated by the Paymob HMAC
         // (mandatory in production) and, in any case, never trusted without a server-side transaction lookup.
-        $middleware->validateCsrfTokens(except: ['payments/paymob/callback']);
+        $middleware->validateCsrfTokens(except: ['payments/paymob/callback', 'payments/fawaterak/webhook_json']);
 
         $middleware->redirectGuestsTo(static function (Request $request): string {
             if ($request->is('dashboard') || $request->is('dashboard/*') || $request->is('admin') || $request->is('admin/*')) {

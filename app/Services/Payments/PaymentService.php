@@ -106,6 +106,7 @@ class PaymentService
             'amount' => $order->total_amount,
             'currency' => 'EGP',
             'status' => PaymentAttempt::INITIATED,
+            'internal_reference' => PaymentAttempt::newInternalReference(),
             'integration_account_id' => $accountId,
             'routing_snapshot' => $resolution->snapshot() + ['method_code' => $method->code, 'amount' => (float) $order->total_amount],
         ]);
@@ -124,6 +125,7 @@ class PaymentService
         $attempt->update(array_filter([
             'reference' => $init['reference'] ?? null,
             'transaction_id' => $init['transaction_id'] ?? null,
+            'provider_order_id' => $init['provider_order_id'] ?? null,
         ], fn ($v) => $v !== null && $v !== '') + ['meta' => array_merge($attempt->fresh()->meta ?? [], ['url' => (string) $init['url']])]);
 
         return (string) $init['url'];
@@ -200,6 +202,9 @@ class PaymentService
 
     public function settle(PaymentAttempt $attempt, GatewayResult $result): string
     {
+        // Every gateway answer (callback, redirect, reconcile, manual check) counts as a check of this attempt.
+        PaymentAttempt::query()->whereKey($attempt->id)->update(['last_checked_at' => now()]);
+
         if (in_array($result->status, [GatewayResult::PENDING, GatewayResult::UNKNOWN], true)) {
             return self::OUTCOME_PENDING;
         }
@@ -271,6 +276,7 @@ class PaymentService
                 $locked->update([
                     'status' => PaymentAttempt::PAID,
                     'settled_at' => now(),
+                    'paid_at' => now(),
                     'transaction_id' => $result->transactionId,
                     'meta' => $meta,
                 ]);

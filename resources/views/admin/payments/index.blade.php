@@ -9,6 +9,7 @@
 </x-admin.page-header>
 
 <x-admin.flash />
+@include('admin.payments._nav')
 
 <div class="a-grid a-grid--4" style="margin-bottom:20px">
     <x-admin.kpi label="Collected (paid attempts)" :value="$money($stats['paid'])" icon="fa-circle-check" :hint="$stats['paid_count'].' paid attempts'" />

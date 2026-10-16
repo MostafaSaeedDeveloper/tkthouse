@@ -41,6 +41,7 @@ final class Definitions
                 'label' => 'Fawaterak', 'icon' => 'fa-file-invoice-dollar', 'kind' => 'payment',
                 'fields' => [
                     ['name' => 'api_key', 'label' => 'API key (Bearer token)', 'secret' => true, 'required' => true],
+                    ['name' => 'vendor_key', 'label' => 'Vendor key (webhook hash verification)', 'secret' => true],
                     ['name' => 'api_url', 'label' => 'API base URL', 'secret' => false, 'default' => 'https://app.fawaterk.com/api/v2'],
                     ['name' => 'provider_card', 'label' => 'Card provider key', 'secret' => false],
                     ['name' => 'provider_wallet', 'label' => 'Wallet provider key', 'secret' => false],

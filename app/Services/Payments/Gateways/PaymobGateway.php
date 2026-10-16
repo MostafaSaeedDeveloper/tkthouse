@@ -46,7 +46,7 @@ class PaymobGateway implements PaymentGateway
 
         $checkout = $this->paymob->createCheckout($order, $attempt->integrationAccount, $method);
 
-        return ['url' => $checkout['url'], 'transaction_id' => null, 'reference' => $checkout['reference']];
+        return ['url' => $checkout['url'], 'transaction_id' => null, 'reference' => $checkout['reference'], 'provider_order_id' => (string) ($checkout['paymob_order_id'] ?? '')];
     }
 
     public function inquire(PaymentAttempt $attempt, ?string $hintTransactionId = null): GatewayResult

@@ -47,6 +47,7 @@ Route::match(['GET','POST'], '/payments/paymob/callback', [PaymentController::cl
 Route::get('/t/{ticketNumber}', [FrontTicketController::class, 'shortDownload'])
     ->name('front.tickets.short-download');
 Route::get('/tickets/public/{ticketNumber}/download', [FrontTicketController::class, 'publicDownloadByNumber'])->name('front.tickets.public-download');
+Route::post('/payments/fawaterak/webhook_json', \App\Http\Controllers\FawaterakWebhookController::class)->middleware('throttle:240,1')->name('front.fawaterak.webhook');
 Route::get('/payments/fawaterak/callback/{order}/{token}', [PaymentController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
 
 Route::middleware('guest')->group(function () {
@@ -181,7 +182,13 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
-    Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view')->name('payments.index');
+    Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view|payments.transactions.view')->name('payments.index');
+    Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
+    Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
+    Route::post('payments/transactions/{attempt}/inquire', [\App\Http\Controllers\Admin\TransactionController::class, 'inquire'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.inquire');
+    Route::get('settings/payments/webhooks', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'index'])->middleware('permission:payments.webhooks.view')->name('payments.webhooks');
+    Route::post('settings/payments/webhooks/events/{event}/retry', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'retry'])->middleware('permission:payments.transactions.inquire')->name('payments.webhooks.retry');
+    Route::post('settings/payments/webhooks/accounts/{account}/configured', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'markConfigured'])->middleware('permission:payments.accounts.manage|settings.payment-accounts.manage')->name('payments.webhooks.configured');
     Route::post('orders/{order}/assign', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'assign'])->middleware('permission:orders.view')->name('orders.assign');
     Route::post('orders/{order}/payment-account', [\App\Http\Controllers\Admin\OrderPaymentAccountController::class, 'switch'])->middleware('permission:orders.reroute_payment')->name('orders.payment-account.switch');
     Route::post('orders/assign-bulk', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'bulk'])->middleware('permission:orders.view')->name('orders.assign.bulk');

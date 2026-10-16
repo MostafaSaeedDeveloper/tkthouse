@@ -14,6 +14,7 @@ class PaymentAttempt extends Model
     protected $fillable = [
         'order_id', 'provider', 'method_code', 'reference', 'transaction_id', 'amount', 'currency',
         'status', 'failure_reason', 'meta', 'settled_at', 'integration_account_id', 'routing_snapshot',
+        'internal_reference', 'provider_order_id', 'provider_reference', 'paid_at', 'last_checked_at',
     ];
 
     protected function casts(): array
@@ -23,6 +24,8 @@ class PaymentAttempt extends Model
             'meta' => 'array',
             'routing_snapshot' => 'array',
             'settled_at' => 'datetime',
+            'paid_at' => 'datetime',
+            'last_checked_at' => 'datetime',
         ];
     }
 
@@ -37,6 +40,20 @@ class PaymentAttempt extends Model
                 }
             }
         });
+    }
+
+    public function webhookEvents()
+    {
+        return $this->hasMany(WebhookEvent::class);
+    }
+
+    public static function newInternalReference(): string
+    {
+        do {
+            $ref = 'PAY-'.strtoupper(\Illuminate\Support\Str::random(10));
+        } while (static::query()->where('internal_reference', $ref)->exists());
+
+        return $ref;
     }
 
     public function integrationAccount()

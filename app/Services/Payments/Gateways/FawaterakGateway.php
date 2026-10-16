@@ -63,6 +63,7 @@ class FawaterakGateway implements PaymentGateway
             'url' => (string) ($data['url'] ?? ''),
             'transaction_id' => (string) $data['transaction_id'],
             'reference' => null,
+            'provider_order_id' => (string) ($data['invoice_key'] ?? ''),
         ];
     }
 

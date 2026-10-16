@@ -139,6 +139,7 @@ class FawaterakService
         return [
             'url' => $redirectUrl,
             'transaction_id' => $this->extractTransactionId($json),
+            'invoice_key' => (string) (data_get($json, 'data.invoice_key') ?: ''),
             'transaction_url' => $this->extractTransactionUrl($json),
             'provider_payload' => $json,
         ];
