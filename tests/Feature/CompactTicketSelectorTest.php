@@ -47,7 +47,7 @@ class CompactTicketSelectorTest extends TestCase
         $this->assertMatchesRegularExpression('/class="[^"]*is-disabled[^"]*"[^>]*id="checkoutBtn"|id="checkoutBtn"[^>]*is-disabled/s', $html);
     }
 
-    public function test_five_fifteen_and_thirty_types_all_render_inside_the_one_scroll_area_in_order(): void
+    public function test_five_fifteen_and_thirty_types_all_render_in_one_grid_in_order(): void
     {
         foreach ([5, 15, 30] as $n) {
             $event = $this->makeEvent(['name' => "Event $n"]);
@@ -59,10 +59,10 @@ class CompactTicketSelectorTest extends TestCase
             $this->assertCount($n, $names);                                              // nothing is dropped
             $this->assertSame("Type 1", $names[0]);
             $this->assertSame("Type $n", end($names));
-            $list = substr($html, strpos($html, 'data-ticket-scroll'), strpos($html, 'data-more') - strpos($html, 'data-ticket-scroll'));
-            $this->assertSame($n, substr_count($list, 'class="tkt-ticket"'));            // all inside the scroll container
-            $this->assertStringContainsString('data-fold-initial="' . max(5, $n) . '"', $html);     // every available ticket is shown, nothing folded
-            $this->assertStringContainsString('data-fold-step="5"', $html);
+            $list = substr($html, strpos($html, 'data-ticket-list'), strpos($html, 'data-more') - strpos($html, 'data-ticket-list'));
+            $this->assertSame($n, substr_count($list, 'class="tkt-ticket"'));            // all inside the one grid
+            $this->assertStringContainsString('data-fold-initial="6"', $html);     // first 6 shown by default
+            $this->assertStringContainsString('data-fold-step="6"', $html);
             $this->assertStringContainsString('data-more', $html);
             $this->assertStringContainsString('data-less', $html);                 // Show less
         }
@@ -76,7 +76,7 @@ class CompactTicketSelectorTest extends TestCase
         $this->makeTicket($event, ['name' => 'Open B']);
         $this->many($event, 9, ['status' => 'sold_out', 'name' => 'Gone']);
 
-        $html = $this->show($event)->assertSee('Sold out (10)')->assertSee('2 ticket types available')->getContent();
+        $html = $this->show($event)->assertSee('Sold Out Tickets (10)')->assertSee('2 ticket types available')->getContent();
 
         $this->assertMatchesRegularExpression('/id="soldoutToggle"[^>]*aria-expanded="false"/s', $html);   // closed by default
         $this->assertMatchesRegularExpression('/<ul class="tkt-soldout__list" id="soldoutList" hidden>/', $html);
@@ -95,7 +95,7 @@ class CompactTicketSelectorTest extends TestCase
         $event = $this->makeEvent();
         $this->many($event, 4, ['status' => 'sold_out']);
 
-        $html = $this->show($event)->assertSee('All tickets are sold out.')->assertSee('Booking closed')->assertSee('Sold out (4)')
+        $html = $this->show($event)->assertSee('All tickets are sold out.')->assertSee('Booking closed')->assertSee('Sold Out Tickets (4)')
             ->assertDontSee('data-ticket-list', false)->assertDontSee('id="orderSummary"', false)->assertDontSee('data-step=', false)->getContent();
 
         $this->assertStringNotContainsString('ticket types available', $html);
@@ -166,15 +166,45 @@ class CompactTicketSelectorTest extends TestCase
         $this->assertStringContainsString('setters[id](0)', $js);                                              // clearing goes through the normal quantity path
     }
 
-    public function test_layout_rules_full_length_list_and_mobile_fold(): void
+    public function test_layout_rules_two_columns_grid_sticky_summary_and_mobile_bar(): void
     {
         $css = file_get_contents(public_path('css/tkt-v2-pages.css'));
 
-        $this->assertStringNotContainsString('max-height: min(420px, 52vh)', $css);                           // tickets are listed in full length: no inner scroll
-        $this->assertStringNotContainsString('max-height: calc(100vh - var(--tkt-header-h) - 32px)', $css);
+        $this->assertStringNotContainsString('max-height: min(420px, 52vh)', $css);                           // the ticket grid has no inner scroll
+        $this->assertStringContainsString('grid-template-columns: minmax(0, 7fr) minmax(300px, 3fr)', $css);  // ~70 / ~30 columns
+        $this->assertStringContainsString('repeat(3, minmax(0, 1fr))', $css);                                  // 3 ticket columns on desktop
+        $this->assertStringContainsString('repeat(2, minmax(0, 1fr))', $css);                                  // 2 on tablet
+        $this->assertStringContainsString('position: sticky; top: calc(var(--tkt-header-h) + 16px)', $css);   // sticky order summary under the header
+        $this->assertStringContainsString('max-height: calc(100vh - var(--tkt-header-h) - 32px)', $css);     // never taller than the screen
         $this->assertStringContainsString('.tkt-ticket.is-selected { background: #FFF8D6; border-color: var(--tkt-primary)', $css);
         $this->assertStringContainsString('env(safe-area-inset-bottom)', $css);
         $js = file_get_contents(public_path('js/tkt-booking.js'));
         $this->assertStringContainsString('!card.classList.contains(\'is-selected\')', $js);                   // a selected ticket is never folded away
+    }
+
+    public function test_summary_is_a_separate_sidebar_with_one_cart_state_and_the_grid_is_in_the_main_column(): void
+    {
+        $event = $this->makeEvent();
+        $this->many($event, 7);
+
+        $html = $this->show($event)->assertSee('Order Summary')->assertSee('Continue to Checkout')->assertSee('No tickets selected')->assertSee('0.00 EGP')->getContent();
+
+        $main = strpos($html, 'class="tkt-event-main"');
+        $grid = strpos($html, 'data-ticket-list');
+        $aside = strpos($html, '<aside class="tkt-booking"');
+        $this->assertTrue($main < $grid && $grid < $aside);                                   // tickets live in the main column, the summary after it
+        $this->assertSame(1, substr_count($html, 'id="orderSummary"'));                     // a single summary element (desktop sidebar = mobile bar + sheet)
+        $this->assertSame(1, substr_count($html, 'id="tktBooking"'));
+        $this->assertStringContainsString('is-disabled', substr($html, strpos($html, 'id="checkoutBtn"') - 120, 200));
+        $this->assertStringContainsString('Show Less', $html);
+    }
+
+    public function test_summary_lines_show_unit_price_line_total_subtotal_and_only_real_fees(): void
+    {
+        $js = file_get_contents(public_path('js/tkt-booking.js'));
+        $this->assertStringContainsString("item.qty + ' × ' + money(item.price)", $js);        // quantity × unit price
+        $this->assertStringContainsString("line('Subtotal'", $js);
+        $this->assertStringContainsString('feeAmount(fee, subtotal)', $js);                     // fees come from the event's own fee rows, same rule as checkout
+        $this->assertStringNotContainsString('VAT', $js);                                       // no assumed taxes
     }
 }

@@ -36,12 +36,17 @@
         return Math.max(0, Math.round(amount * 100) / 100);
     }
 
-    function line(label, value, extraClass) {
+    function line(label, value, extraClass, sub) {
         var row = document.createElement('div');
         row.className = 'tkt-summary__line' + (extraClass ? ' ' + extraClass : '');
         var a = document.createElement('span');
         var b = document.createElement('span');
         a.textContent = label;
+        if (sub) {
+            var s = document.createElement('small');
+            s.textContent = sub;
+            a.appendChild(s);
+        }
         b.textContent = value;
         row.appendChild(a);
         row.appendChild(b);
@@ -80,14 +85,12 @@
             var item = cart[id];
             subtotal += item.price * item.qty;
             count += item.qty;
-            linesEl.appendChild(line(item.name + ' × ' + item.qty, money(item.price * item.qty)));
+            linesEl.appendChild(line(item.name, money(item.price * item.qty), 'tkt-summary__line--item', item.qty + ' × ' + money(item.price)));
         });
 
         var feeTotal = 0;
         if (ids.length) {
-            if (fees.length) {
-                linesEl.appendChild(line('Subtotal', money(subtotal)));
-            }
+            linesEl.appendChild(line('Subtotal', money(subtotal), 'tkt-summary__line--sub'));
             fees.forEach(function (fee) {
                 var amount = feeAmount(fee, subtotal);
                 if (amount > 0) {
@@ -185,8 +188,8 @@
     var cards = Array.prototype.slice.call(root.querySelectorAll('.tkt-ticket'));
     var moreBtn = root.querySelector('[data-more]');
     var lessBtn = root.querySelector('[data-less]');
-    var initial = parseInt(root.dataset.foldInitial || '5', 10);
-    var stepBy = parseInt(root.dataset.foldStep || '5', 10);
+    var initial = parseInt(root.dataset.foldInitial || '6', 10);
+    var stepBy = parseInt(root.dataset.foldStep || '6', 10);
     var shown = initial;
     function applyFold() {
         var folded = 0;
@@ -197,14 +200,14 @@
         });
         if (moreBtn) {
             moreBtn.hidden = folded === 0;
-            if (folded > 0) { var n = Math.min(stepBy, folded); moreBtn.textContent = 'Show ' + n + ' more ticket' + (n === 1 ? '' : 's') + ' (' + folded + ' left)'; }
+            if (folded > 0) { moreBtn.textContent = 'Show More Available Tickets (' + folded + ' left)'; }
         }
         if (lessBtn) lessBtn.hidden = !(shown > initial && cards.length > initial);
     }
     if (moreBtn) moreBtn.addEventListener('click', function () { shown += stepBy; applyFold(); });
     if (lessBtn) lessBtn.addEventListener('click', function () {
         shown = initial; applyFold();
-        var sc = root.querySelector('[data-ticket-scroll]'); if (sc) sc.scrollTop = 0;
+        var list = root.querySelector('[data-ticket-list]'); if (list && list.scrollIntoView) list.scrollIntoView({ block: 'nearest' });
         if (moreBtn && !moreBtn.hidden) moreBtn.focus();
     });
 

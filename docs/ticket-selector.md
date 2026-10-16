@@ -22,3 +22,19 @@ classified from a name; one ticket or thirty work the same way.
 Verification: `tests/Feature/CompactTicketSelectorTest.php` (markup/contract) plus a Playwright run on seeded events with 1, 3, 5, 15, 18, 30 (+10 sold out) and all-sold-out tickets at 360/390/768/1024/1440
 (188 checks: internal scroll ≤420px, summary in view while scrolling and on a 560px-high screen, Show more/less from the keyboard, Clear selection with confirmation, sheet focus handling, step-by-step fold, selection kept when folding, bottom bar/sheet, accordion, totals with fees, couple/max caps, hand-off to the checkout wizard).
 Screenshots: `docs/screenshots/ticket-selector/`.
+
+---
+
+## Event Details redesign (two columns, ticket grid, sticky Order Summary)
+
+Files: `resources/views/front/events/show.blade.php`, `public/js/tkt-booking.js`, `public/css/tkt-v2-pages.css`, `tests/Feature/CompactTicketSelectorTest.php`. No controller, checkout, payment, schema or admin file was touched.
+
+* **Layout** (≥ 992px): ~70 % main column (tabs, description, Date/Time/Location, ticket grid) + ~30 % `Order Summary` sidebar. The sidebar is `position: sticky` under the header; its card is never taller than the viewport (`max-height: calc(100vh − header − 32px)`); only the ticket lines scroll inside it, the total and **Continue to Checkout** stay visible.
+* **Ticket grid**: 3 columns ≥ 1100px, 2 columns ≥ 640px (also the 1024px case, where the 70 % column is ~650px wide), 1 compact column on phones. Cards grow with their content (no fixed height, names never clipped), selected card = yellow border + light yellow background. Each card: full name, description, price + EGP, "Available", `Max N per order` or the *Couples only · 2 tickets* badge, − / qty / + stepper.
+* **Fold**: 6 available tickets by default, `Show More Available Tickets (N left)` reveals 6 more each time, `Show Less` returns; a selected ticket is never hidden and the order never changes. System order is kept.
+* **Sold Out Tickets (N)**: one closed accordion with compact rows, no stepper.
+* **Order Summary**: empty = "No tickets selected", `0.00 EGP`, disabled Continue. With a selection: each ticket (`qty × unit price`, line total), Subtotal, the event's own fee rows (same percentage/fixed rule as the checkout), Final total, *Continue to Checkout*. Note: "Promo codes and the final amount are confirmed at checkout". No VAT/tax is assumed — only fees that exist on the event.
+* **Mobile** (< 992px): the same `#orderSummary` element becomes the bottom bar (count, total, Continue) with an "Order details" sheet (backdrop, focus trap, Escape, safe-area padding). One DOM element and one cart object → no duplicated state.
+* **Hand-off unchanged**: `/checkout?event=…&cart=base64url([{ticket_id, qty}])`; the server recomputes everything.
+
+QA (Playwright, local seeded data, Fake Gateway untouched): 1 / 3 / 5 / 15 / 30(40) / 18 ticket events, all-sold-out, long names, couple, max-per-order at 360 / 390 / 768 / 1024 / 1440 and 1366×600: no horizontal scroll, Continue and total always in view after selecting and scrolling, fold/accordion/sheet work, journey Event → select → summary → `/checkout` shows the same total. Screenshots: `docs/screenshots/event-redesign/`.
