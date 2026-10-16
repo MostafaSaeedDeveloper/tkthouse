@@ -16,7 +16,7 @@ class IntegrationAccount extends Model
 
     protected $fillable = [
         'provider', 'name', 'environment', 'enabled', 'status', 'last_tested_at', 'last_success_at', 'last_error',
-        'config', 'secrets', 'credential_fingerprint', 'webhook_configured_at', 'webhook_configured_by', 'source', 'legacy_ref', 'created_by', 'updated_by',
+        'config', 'secrets', 'credential_fingerprint', 'webhook_configured_at', 'webhook_configured_by', 'refund_enabled_at', 'refund_enabled_by', 'source', 'legacy_ref', 'created_by', 'updated_by',
     ];
 
     protected $hidden = ['secrets'];
@@ -31,6 +31,7 @@ class IntegrationAccount extends Model
             'last_success_at' => 'datetime',
             'archived_at' => 'datetime',
             'webhook_configured_at' => 'datetime',
+            'refund_enabled_at' => 'datetime',
         ];
     }
 

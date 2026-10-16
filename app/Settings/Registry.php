@@ -66,6 +66,9 @@ final class Registry
             'unassigned_order_payment_policy' => ['group' => 'payments', 'type' => 'select', 'label' => 'Unassigned order payment policy', 'default' => 'default_account',
                 'options' => ['default_account' => 'Use the default merchant account', 'block_online' => 'Block online payment (manual confirmation only)'], 'rules' => ['required', 'in:default_account,block_online']],
 
+            'refund_approval_required' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Require a second person to approve refunds', 'default' => false,
+                'help' => 'Requests from users without payments.refunds.approve wait for someone else with that permission; nothing is sent to the provider before approval.', 'rules' => ['boolean']],
+
             // ---- Notifications
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,
                 'help' => 'Disable to stop WhatsApp sending from admin and post-payment flows.', 'rules' => ['boolean']],

@@ -213,6 +213,17 @@
       @endif
     </x-admin.card>
 
+    @can('payments.refunds.view')
+    @php $orderRefunds = \App\Models\PaymentRefund::query()->where('order_id', $order->id)->latest('id')->get(); @endphp
+    <x-admin.card flush title="Refund History" :subtitle="$orderRefunds->count().' refund record(s) — financial status only; the order and tickets are not changed'">
+        @if($orderRefunds->isEmpty())<p class="a-hint" style="padding:16px">No refunds recorded for this order.</p>
+        @else
+        <x-admin.table stack compact caption="Refunds"><thead><tr><th>Reference</th><th>Mode</th><th class="a-num">Amount</th><th>Status</th><th>Requested</th></tr></thead><tbody>
+            @foreach($orderRefunds as $r)<tr><td data-label="Reference"><a class="a-table__main" href="{{ route('admin.payments.refunds.show', $r) }}">{{ $r->internal_reference }}</a></td><td data-label="Mode">{{ $r->mode === 'api' ? 'Provider API' : 'Manual' }}</td><td data-label="Amount" class="a-num">{{ $r->amount() }} {{ $r->currency }}</td><td data-label="Status">@include('admin.payments._refund-status', ['refund' => $r])</td><td data-label="Requested">{{ $r->requested_at->format('d M Y, H:i') }}</td></tr>@endforeach
+        </tbody></x-admin.table>@endif
+    </x-admin.card>
+    @endcan
+
     <x-admin.card title="Internal Notes" :subtitle="$notes->count().' notes'">
       @forelse($notes as $note)
         <div class="a-ord-log">

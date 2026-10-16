@@ -111,6 +111,19 @@ class IntegrationController extends Controller
         return $this->backTo($account ?? null)->with('success', 'Sandbox verification recorded for the current credentials.');
     }
 
+    public function refundVerified(Request $request, IntegrationAccount $account)
+    {
+        $this->guard($account->provider, 'manage');
+        $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300'], 'on' => ['required', 'boolean']]);
+        try {
+            $this->manager->setRefundVerified($account, (bool) $data['on'], $data['note'], $request->user());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        return back()->with('success', $data['on'] ? 'Refunds confirmed for this account (the environment flag PAYMENTS_REFUNDS_LIVE is still required).' : 'Refunds disabled for this account.');
+    }
+
     public function archive(Request $request, IntegrationAccount $account)
     {
         $this->guard($account->provider, 'manage');

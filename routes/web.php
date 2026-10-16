@@ -186,6 +186,16 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
     Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
     Route::post('payments/transactions/{attempt}/inquire', [\App\Http\Controllers\Admin\TransactionController::class, 'inquire'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.inquire');
+    $rc = \App\Http\Controllers\Admin\RefundController::class;
+    Route::get('payments/refunds', [$rc, 'index'])->middleware('permission:payments.refunds.view')->name('payments.refunds');
+    Route::get('payments/refunds/{refund}', [$rc, 'show'])->middleware('permission:payments.refunds.view')->name('payments.refunds.show');
+    Route::post('payments/transactions/{attempt}/refunds', [$rc, 'store'])->middleware('permission:payments.refunds.create')->name('payments.refunds.store');
+    Route::post('payments/refunds/{refund}/check', [$rc, 'check'])->middleware('permission:payments.refunds.create|payments.refunds.approve|payments.transactions.inquire')->name('payments.refunds.check');
+    Route::post('payments/refunds/{refund}/approve', [$rc, 'approve'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.approve');
+    Route::post('payments/refunds/{refund}/reject', [$rc, 'reject'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.reject');
+    Route::post('payments/refunds/{refund}/submitted', [$rc, 'submitted'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.submitted');
+    Route::post('payments/refunds/{refund}/confirm', [$rc, 'confirm'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.confirm');
+    Route::post('payments/refunds/{refund}/fail', [$rc, 'fail'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.fail');
     Route::get('settings/payments/webhooks', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'index'])->middleware('permission:payments.webhooks.view')->name('payments.webhooks');
     Route::post('settings/payments/webhooks/events/{event}/retry', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'retry'])->middleware('permission:payments.transactions.inquire')->name('payments.webhooks.retry');
     Route::post('settings/payments/webhooks/accounts/{account}/configured', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'markConfigured'])->middleware('permission:payments.accounts.manage|settings.payment-accounts.manage')->name('payments.webhooks.configured');
@@ -207,6 +217,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('settings/integrations/accounts/{account}/enable', [IntegrationController::class, 'enable'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.enable');
     Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.disable');
     Route::post('settings/integrations/accounts/{account}/attest', [IntegrationController::class, 'attest'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.attest');
+    Route::post('settings/integrations/accounts/{account}/refund-verified', [IntegrationController::class, 'refundVerified'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.refund-verified');
     Route::post('settings/integrations/accounts/{account}/archive', [IntegrationController::class, 'archive'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.archive');
     Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.destroy');
 

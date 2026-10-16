@@ -14,11 +14,14 @@ trait BuildsMerchantAccounts
     /** @var array<string, array<string, mixed>> fawaterak invoices keyed by id; owner = bearer key */
     protected array $fawInvoices = [];
     protected array $httpLog = [];
+    /** accept | reject | server_error | timeout */
+    protected string $paymobRefundMode = 'accept';
+    protected int $paymobRefundSeq = 9000;
 
     protected function account(string $provider, string $name, array $config = [], array $secrets = [], array $o = []): IntegrationAccount
     {
         $defaults = match ($provider) {
-            'paymob' => [['iframe_id' => 'IF-'.$name, 'integration_card' => (string) $this->numericId($name), 'integration_wallet' => (string) ($this->numericId($name) + 1), 'supported_methods' => 'paymob_card,paymob_wallet'], ['api_key' => 'KEY-'.$name, 'hmac_secret' => 'HMAC-'.$name]],
+            'paymob' => [['iframe_id' => 'IF-'.$name, 'integration_card' => (string) $this->numericId($name), 'integration_wallet' => (string) ($this->numericId($name) + 1), 'supported_methods' => 'paymob_card,paymob_wallet'], ['api_key' => 'KEY-'.$name, 'hmac_secret' => 'HMAC-'.$name, 'secret_key' => 'SECRET-'.$name]],
             'fawaterak' => [['provider_card' => '27416', 'supported_methods' => 'fawaterak_card'], ['api_key' => 'FKEY-'.$name]],
             default => [['supported_methods' => 'fake_card,fake_wallet'], []],
         };
@@ -54,6 +57,28 @@ trait BuildsMerchantAccounts
             if (str_contains($url, '/acceptance/payment_keys')) {
                 return Http::response(['token' => 'pk-'.$req['integration_id'].'-'.$req['auth_token']], 201);
             }
+            if (preg_match('#/acceptance/void_refund/(refund|void)$#', $url, $m)) {
+                $this->httpLog[count($this->httpLog) - 1]['refund_call'] = ['kind' => $m[1], 'authorization' => $req->header('Authorization')[0] ?? null, 'body' => $req->data()];
+                if ($this->paymobRefundMode === 'timeout') {
+                    throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: timed out');
+                }
+                if ($this->paymobRefundMode === 'reject') {
+                    return Http::response(['message' => 'Amount exceeds the transaction amount'], 422);
+                }
+                if ($this->paymobRefundMode === 'server_error') {
+                    return Http::response('upstream error', 502);
+                }
+                $parent = $this->paymobTx[(string) $req['transaction_id']] ?? null;
+                $id = ++$this->paymobRefundSeq;
+                $token = str_replace('Token ', '', $req->header('Authorization')[0] ?? '');
+                $this->paymobTx[(string) $id] = ['id' => $id, 'owner' => $parent['owner'] ?? $token, 'merchant_order_id' => $parent['merchant_order_id'] ?? '', 'amount_cents' => $req['amount_cents'] ?? ($parent['amount_cents'] ?? 0),
+                    'success' => true, 'pending' => $this->paymobRefundMode === 'pending', 'has_parent_transaction' => true, 'is_voided' => false, 'is_refunded' => false];
+                if ($m[1] === 'void' && $parent) {
+                    $this->paymobTx[(string) $req['transaction_id']]['is_voided'] = true;
+                }
+
+                return Http::response(['id' => $id, 'success' => true], 200);
+            }
             if (preg_match('#/acceptance/transactions/([^/?]+)#', $url, $m)) {
                 $tx = $this->paymobTx[urldecode($m[1])] ?? null;
                 $bearer = str_replace('Bearer ', '', $req->header('Authorization')[0] ?? '');
@@ -62,7 +87,7 @@ trait BuildsMerchantAccounts
                 }
 
                 return Http::response([
-                    'id' => $tx['id'], 'success' => $tx['success'] ?? true, 'pending' => $tx['pending'] ?? false, 'is_voided' => false, 'is_refunded' => false,
+                    'id' => $tx['id'], 'success' => $tx['success'] ?? true, 'pending' => $tx['pending'] ?? false, 'is_voided' => $tx['is_voided'] ?? false, 'is_refunded' => $tx['is_refunded'] ?? false, 'has_parent_transaction' => $tx['has_parent_transaction'] ?? false,
                     'amount_cents' => $tx['amount_cents'], 'currency' => 'EGP', 'order' => ['merchant_order_id' => $tx['merchant_order_id']],
                 ]);
             }

@@ -115,4 +115,50 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertSame(1, collect($out)->filter(fn ($l) => $l === 'OK')->count(), implode(' / ', $out));
         $this->assertSame(5, collect($out)->filter(fn ($l) => $l === 'DUP')->count(), implode(' / ', $out));
     }
+
+    private function paidAttempt(float $amount = 300): array
+    {
+        \Spatie\Permission\Models\Permission::findOrCreate('payments.refunds.create', 'web');
+        $staff = User::factory()->create();
+        $staff->givePermissionTo('payments.refunds.create');
+        $acc = $this->account('fake', 'RF', [], [], ['refund_enabled_at' => now()]);
+        $c = Customer::create(['first_name' => 'R', 'last_name' => 'F', 'email' => 'rf@example.test', 'phone' => '0100']);
+        $o = Order::create(['customer_id' => $c->id, 'order_number' => (string) random_int(1000000000, 9999999999), 'status' => 'paid', 'payment_method' => 'fake_card', 'total_amount' => $amount, 'integration_account_id' => $acc->id]);
+        $a = \App\Models\PaymentAttempt::create(['order_id' => $o->id, 'provider' => 'fake', 'method_code' => 'fake_card', 'amount' => $amount, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => 'FT-'.random_int(1, 99999), 'integration_account_id' => $acc->id, 'paid_at' => now()]);
+
+        return [$a, $staff];
+    }
+
+    public function test_parallel_refund_requests_can_never_over_refund_or_double_send(): void
+    {
+        [$a, $staff] = $this->paidAttempt(300);
+
+        $out = $this->spawn(array_map(fn ($i) => ['refund', (string) $a->id, (string) $staff->id, 'full', '-', 'key-'.$i], range(1, 8)));
+
+        $this->assertSame(1, collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->count(), implode(' / ', $out));
+        $this->assertSame(1, \App\Models\PaymentRefund::count());
+        $this->assertSame(30000, (int) \App\Models\PaymentRefund::sum('amount_minor'));
+    }
+
+    public function test_parallel_partial_refunds_hold_at_most_the_captured_amount_one_in_flight_at_a_time(): void
+    {
+        [$a, $staff] = $this->paidAttempt(300);
+
+        $out = $this->spawn(array_map(fn ($i) => ['refund', (string) $a->id, (string) $staff->id, 'partial', '200.00', 'k-'.$i], range(1, 8)));
+
+        $ok = collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->count();
+        $this->assertSame(1, $ok, implode(' / ', $out));
+        $this->assertLessThanOrEqual(30000, (int) \App\Models\PaymentRefund::whereIn('status', \App\Models\PaymentRefund::HOLDING)->sum('amount_minor'));
+    }
+
+    public function test_the_same_form_submitted_many_times_in_parallel_makes_one_refund(): void
+    {
+        [$a, $staff] = $this->paidAttempt(300);
+
+        $out = $this->spawn(array_map(fn () => ['refund', (string) $a->id, (string) $staff->id, 'partial', '100', 'same-key'], range(1, 8)));
+
+        $ids = collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->map(fn ($l) => substr($l, 3))->unique();
+        $this->assertCount(1, $ids, implode(' / ', $out));
+        $this->assertSame(1, \App\Models\PaymentRefund::count());
+    }
 }

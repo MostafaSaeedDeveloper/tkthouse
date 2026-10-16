@@ -36,6 +36,15 @@ return [
         'verified' => filter_var(env('PAYMENTS_FAWATERAK_VERIFIED', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
+    /*
+    | Provider refund APIs. OFF by default everywhere: real refund calls need this flag AND an account that an operator marked
+    | "refunds verified" after the sandbox runbook. Non-production environments may use sandbox accounts without the flag only
+    | for the fake provider.
+    */
+    'refunds' => [
+        'live_api_enabled' => filter_var(env('PAYMENTS_REFUNDS_LIVE', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
     'paymob' => [
         'hmac_secret' => env('PAYMOB_HMAC_SECRET'),
         // Always enforced in production; can be forced on elsewhere.

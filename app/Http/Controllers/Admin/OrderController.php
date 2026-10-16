@@ -146,7 +146,7 @@ class OrderController extends Controller
         $this->abortIfOrderNotAccessible($request, $order, false);
 
         $order->load(['customer', 'items.ticket', 'items.event:id,name,event_date,end_date,event_time,location', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
-        $paymentAttempts = $order->paymentAttempts()->with('integrationAccount:id,name')->latest()->get();
+        $paymentAttempts = $order->paymentAttempts()->with('integrationAccount')->latest()->get();
 
         $paymentMethodLabel = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)

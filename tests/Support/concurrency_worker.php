@@ -13,7 +13,7 @@ require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-[$script, $mode, $a, $b] = array_pad($argv, 4, null);
+[$script, $mode, $a, $b, $c, $d, $e] = array_pad($argv, 7, null);
 $svc = app(CheckoutRoutingService::class);
 
 $newOrder = function (): Order {
@@ -45,10 +45,15 @@ try {
             return $o->id;
         });
         echo 'OK:'.$out;
+    } elseif ($mode === 'refund') {            // refund request race: attempt, user, type, amount, idempotency key
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->request(\App\Models\PaymentAttempt::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b), $c, $d === '-' ? null : $d, 'concurrency probe refund', $e);
+        echo 'OK:'.$r->id;
     } elseif ($mode === 'tx') {                // many workers race to bind the same gateway transaction id
         PaymentAttempt::create(['order_id' => (int) $a, 'provider' => 'paymob', 'method_code' => 'paymob_card', 'amount' => 100, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => $b]);
         echo 'OK';
     }
+} catch (Illuminate\Validation\ValidationException $e) {
+    echo 'INVALID:'.($e->errors()['refund'][0] ?? 'validation');
 } catch (ReservationInvalid $e) {
     echo 'INVALID:'.$e->reason.(getenv('WORKER_DEBUG') ? ' fake='.var_export(config('payments.fake.enabled'), true).' env='.app()->environment().' routing='.var_export(\App\Services\Payments\Routing\PaymentAccountResolver::routingEnabled(), true).' tok='.($a ?? '') : '');
 } catch (Illuminate\Database\UniqueConstraintViolationException $e) {

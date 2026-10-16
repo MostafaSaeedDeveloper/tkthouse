@@ -52,7 +52,7 @@ class IntegrationManager
         ]);
 
         if ($changed) {
-            $account->fill(['enabled' => false, 'status' => IntegrationAccount::UNVERIFIED, 'last_error' => null]);
+            $account->fill(['enabled' => false, 'status' => IntegrationAccount::UNVERIFIED, 'last_error' => null, 'refund_enabled_at' => null]);
         }
         $account->save();
         $this->flush();
@@ -132,6 +132,23 @@ class IntegrationManager
         $account->forceFill(['status' => IntegrationAccount::VERIFIED, 'last_tested_at' => now(), 'last_success_at' => now(), 'last_error' => null])->save();
         $this->flush();
         activity('settings')->causedBy($by)->performedOn($account)->withProperties(['provider' => 'fawaterak', 'note' => mb_substr($note, 0, 300)])->log('Integration sandbox verification recorded');
+    }
+
+    /**
+     * An operator records that a real refund (and its confirmation) worked for this account in the provider's sandbox. Until then
+     * the system offers only the manual / external refund workflow for this account. Changing credentials resets it.
+     */
+    public function setRefundVerified(IntegrationAccount $account, bool $on, string $note, ?User $by): void
+    {
+        if (! in_array($account->provider, ['paymob', 'fake'], true)) {
+            throw ValidationException::withMessages(['account' => 'This provider has no documented refund API.']);
+        }
+        if ($on && blank($account->secret('secret_key')) && $account->provider === 'paymob') {
+            throw ValidationException::withMessages(['account' => 'Store the Paymob secret key first (it authenticates the refund API).']);
+        }
+        $account->forceFill(['refund_enabled_at' => $on ? now() : null, 'refund_enabled_by' => $on ? $by?->id : null])->save();
+        activity('settings')->causedBy($by)->performedOn($account)->withProperties(['provider' => $account->provider, 'note' => mb_substr($note, 0, 300)])
+            ->log($on ? 'Refunds confirmed for merchant account' : 'Refunds disabled for merchant account');
     }
 
     /** Disabled + hidden from selection; historical attempts keep using it for inquiry, callbacks and reconciliation. */

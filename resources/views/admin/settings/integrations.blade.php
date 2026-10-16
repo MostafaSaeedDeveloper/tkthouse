@@ -17,6 +17,7 @@
                 <summary class="a-btn-group" style="cursor:pointer;gap:10px;flex-wrap:wrap">
                     <strong>{{ $account->name }}</strong>
                     <x-admin.badge :variant="$account->environment === 'production' ? 'dark' : 'info'">{{ ucfirst($account->environment) }}</x-admin.badge>
+                    @if($kind === 'payment' && in_array($provider, ['paymob', 'fake'], true))<x-admin.badge :variant="$account->refund_enabled_at ? 'success' : 'default'">{{ $account->refund_enabled_at ? 'Refunds verified' : 'Refunds: manual only' }}</x-admin.badge>@endif
                     @if($kind === 'payment' && $defaultAccountId === $account->id)<x-admin.badge variant="primary">Default account</x-admin.badge>@endif
                     <x-admin.badge :variant="$account->enabled ? 'success' : 'warning'">{{ $account->archived_at ? 'Archived' : ($account->enabled ? 'Enabled' : 'Disabled') }}</x-admin.badge>
                     <x-admin.badge :variant="match($account->status){'verified'=>'success','error'=>'danger',default=>'warning'}">{{ ucfirst($account->status) }}</x-admin.badge>
@@ -37,6 +38,15 @@
                 <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
                     @if($canTest)
                         <form method="POST" action="{{ route('admin.integrations.test', $account) }}" data-a-loading>@csrf<button class="a-btn a-btn--outline" type="submit"><i class="fa fa-plug"></i> Test connection</button></form>
+                    @endif
+                    @if($canManage)
+                    @if($kind === 'payment' && in_array($provider, ['paymob', 'fake'], true))
+                        <form method="POST" action="{{ route('admin.integrations.refund-verified', $account) }}" class="a-btn-group">@csrf
+                            <input type="hidden" name="on" value="{{ $account->refund_enabled_at ? 0 : 1 }}">
+                            <input class="form-control" name="note" placeholder="{{ $account->refund_enabled_at ? 'Why disable?' : 'Sandbox refund run reference' }}" minlength="5" required aria-label="Refund verification note">
+                            <button class="a-btn a-btn--outline" type="submit">{{ $account->refund_enabled_at ? 'Disable refunds' : 'Confirm refunds verified' }}</button>
+                        </form>
+                    @endif
                     @endif
                     @if($canManage && $kind === 'payment' && $account->isUsable() && $defaultAccountId !== $account->id)
                         <form method="POST" action="{{ route('admin.integrations.default', $account) }}">@csrf<button class="a-btn a-btn--outline" type="submit">Make default</button></form>
