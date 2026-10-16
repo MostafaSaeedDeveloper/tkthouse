@@ -14,9 +14,12 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        // MySQL refuses TRUNCATE on tables that are referenced by foreign keys.
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
         DB::table('role_has_permissions')->truncate();
         DB::table('model_has_permissions')->truncate();
         DB::table('permissions')->truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
         $permissions = [
             'dashboard.view',

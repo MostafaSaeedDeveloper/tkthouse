@@ -25,14 +25,15 @@ parallel table.
 4. Else policy: `default_account` (**your decision**) or `block_online`.
 5. Methods = intersection described above.
 
-## 3. Automatic assignment before methods are shown (your requirement)
-Today the order does not exist when the customer picks a method. Design:
-1. When the checkout payment step is rendered, `CheckoutRoutingService::reserve(session)` runs **once per session** (refresh/back are idempotent: same reservation returned):
-   inside one DB transaction it locks the `assignment_state` row, picks the next eligible agent (round robin / default assignee / none for manual), resolves the account, stores the reservation (TTL 30 min) and advances the pointer. Concurrent customers serialise on that lock, so each gets a distinct turn and nobody is assigned twice.
-2. The methods list shown to the customer comes from the reserved account. The session holds only the reservation token.
-3. `OrderPlacementService::place()` **consumes** the reservation: the order is created assigned to the reserved agent and pinned to the reserved account (exactly what the customer saw). If the reservation expired or the agent/account became unavailable, the order is not silently re-routed: checkout returns "payment options changed, please choose again" and a fresh reservation is made.
-4. Manual mode: no agent ⇒ default merchant account (policy), order lands in the Unassigned queue.
-5. Abandoned carts consume a round-robin turn (documented trade-off; avoids creating orders before payment choice). Alternative in §8.
+## 3. Automatic assignment before methods are shown — PROVISIONAL reservation (approved revision)
+Goal: the customer is shown one agent's account and methods and keeps them; abandoned carts never consume a final round-robin turn.
+* `checkout_routings` row = **provisional** reservation (token, hashed session id, assignee, account, source, expires_at default 30 min, consumed_order_id, released_at). It does **not** move the final pointer `assignment_state.last_assigned_user_id`.
+* **reserve()** (when the payment step renders; idempotent per session — refresh/back return the same live reservation): one transaction that locks the `assignment_state` row, then picks the next eligible agent after the pointer **skipping agents currently held by other live reservations** (so concurrent sessions are spread, not stacked; if all are held, the first in rotation is used). The account is resolved from that agent (§2). Reservation stores both.
+* **consume()** (inside `OrderPlacementService::place()`'s transaction): lock the state row, then re-validate — not expired, not consumed, belongs to this session, agent still eligible, account still enabled + verified, chosen method still offered by that account/user. Valid ⇒ the order is created assigned to the reserved agent and pinned to the reserved account; **only now** the pointer advances (to the reserved agent) and the reservation is marked consumed. Row locks + a unique `consumed_order_id` make a double consume impossible.
+* Invalid/expired/conflicting ⇒ **no order is created**, nothing is silently re-routed: the customer is sent back to the payment step with a clear message ("Your payment options changed or expired — please choose again") and **keeps buyer/attendee data** (the session draft is untouched); a fresh reservation is made on that render.
+* Abandoned reservations simply expire (a scheduled prune releases them); they never touch the pointer, so they cost no turns. Because the pointer follows *completed* orders, two sessions that finish out of order can reorder the rotation slightly; fairness is preserved in aggregate and documented.
+* Reservations exist only while routing is enabled. Routing off ⇒ today's flow plus `assignOnCreate` (which already advances the pointer on order creation).
+* Manual mode: no agent ⇒ default merchant account (policy `default_account`) / online payment blocked (policy `block_online`), order lands in the Unassigned queue.
 
 ## 4. Attempt lifecycle (settlement code untouched)
 * `PaymentService::start()` resolves the account (§2), creates the attempt with `integration_account_id` + snapshot **before** calling the gateway, and passes the account to the gateway. Gateways read credentials from the account, never from `payment_methods.config`/`.env` when an account is bound.
@@ -52,10 +53,15 @@ Today the order does not exist when the customer picks a method. Design:
 ## 7. Tests planned
 Paymob A vs B, Fawaterak A vs B (HTTP faked), mixed gateways, duplicate callback, reassignment during payment, retry after failure, late payment, old orders/attempts without account, integration disabled, account disabled, missing/invalid credentials, concurrent reservations (distinct round-robin turns), reservation reuse on refresh, reservation expiry, switch-account refusal with an open/paid attempt, secrets never in logs/JSON. Payment fakes and mocked HTTP only; no real charge, no real notification.
 
-## 8. Decisions I need from you before coding
-1. **Reservation at payment step** (consumes a round-robin turn even if the cart is abandoned) vs creating the order first. *Recommended: reservation.*
-2. If the reserved agent/account is no longer valid when the customer submits: **ask the customer to choose again** (recommended) vs silently fall back to the default account.
-3. A disabled account with **open attempts**: keep reconciling them (recommended) vs stop.
-4. Backfill: leave old attempts `NULL` (recommended; legacy path) vs attach them to the imported legacy account.
-5. Fawaterak: confirm you will run the sandbox verification before any production enablement.
-6. Visibility: should the merchant account name appear in orders/reports only for `settings.payment-accounts.view`? (recommended: yes)
+## 8. Decisions (all approved)
+1. Provisional reservation (revised as §3: final pointer advances at order creation only). 2. Invalid reservation ⇒ customer re-chooses, data kept. 3. Disabled account keeps reconciling its attempts. 4. Legacy attempts stay `NULL` and use the legacy path; legacy keys in `payment_methods.config`/`.env` are **not** removed until a confirmed migration plan and tests of open historical operations. 5. Fawaterak multi-merchant stays blocked in production until a real sandbox run. 6. Merchant account visibility needs `settings.payment-accounts.view`.
+
+## 9. Added by the approval
+* **Account lifecycle**: accounts referenced by any attempt, order or user cannot be deleted (DB `RESTRICT` + controller guard); they can be *archived* (disabled, hidden from selection, still used for historical inquiry/callbacks/reconcile). Secrets stay encrypted in the account row, readable only by server code that verifies an attempt of that account.
+* **Immutable binding**: `payment_attempts.integration_account_id`/`routing_snapshot` and `orders.integration_account_id` can be set once; any later change throws (model guard) — except through the audited switch service.
+* **No session re-use across accounts**: an open attempt is only re-used if its account equals the order's pinned account; an unpinned order is sticky to the account of its latest attempt; a different account is refused unless switched explicitly.
+* **Switch merchant account** (`orders.reroute_payment`): live gateway inquiry on every open/failed-but-eligible attempt; refuse on PAID (and settle it), on UNKNOWN/error, and on PENDING younger than 60 minutes (a payment may be in progress, incl. 3DS). Older pending attempts are marked `expired` with `meta.rerouted` but stay reconcile-eligible, so a late payment on the old session is still matched (and flagged as a duplicate for refund review if the order is already paid). Full audit row.
+* **Fake provider for journeys**: a `fake` integration provider (non-production only) so full browser journeys with two merchant accounts run with no real gateway.
+* **Paymob attempt lookup** by the unique `merchant_order_id` (`attempt.reference`), then that attempt's account/HMAC; settlement refreshes only that attempt.
+* **Finding**: `FawaterakPaymentMethodsSeeder` contains a hard-coded default Fawaterak API key in source control — treat as exposed and rotate it.
+* **Provider verification runbook** (`docs/v2-payment-sandbox-runbook.md`): Paymob sandbox (HMAC, processed callback, GET return, 3DS, two accounts); Fawaterak sandbox (inquiry endpoint, `paid` semantics, account binding). Production enablement for either stays blocked until the runbook sign-off is recorded.
