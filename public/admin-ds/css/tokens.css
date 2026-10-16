@@ -10,6 +10,11 @@
     --a-yellow-soft: #FFF6C7;
     --a-yellow-ink: #6B5200;          /* text on yellow-soft */
     --a-dark: #111111;                /* alias: solid dark (buttons, active chips) */
+    --a-black: #111111; --a-white: #FFFFFF;
+    --a-on-yellow: #111111;           /* text on the yellow primary */
+    --a-dark-surface: #1E1E1E;        /* inputs / chips on the black topbar */
+    --a-dark-surface-2: #2A2A2A;
+    --a-skeleton-a: #EEF0F3; --a-skeleton-b: #F6F7F9;
 
     /* surfaces */
     --a-sidebar: #111111;

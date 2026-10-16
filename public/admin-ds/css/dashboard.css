@@ -4,10 +4,10 @@
     .a-dash__hello { margin: 0 0 4px; color: var(--a-muted); font-size: 14px; }
     .a-dash__title { font-size: var(--a-fs-xl); font-weight: 700; line-height: 1.15; }
     .a-range { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .a-seg { display: inline-flex; padding: 3px; background: #fff; border: 1px solid var(--a-line); border-radius: var(--a-radius-sm); gap: 2px; }
+    .a-seg { display: inline-flex; padding: 3px; background: var(--a-white); border: 1px solid var(--a-line); border-radius: var(--a-radius-sm); gap: 2px; }
     .a-seg a, .a-seg button { min-height: 30px; padding: 0 var(--a-s-3); border: 0; border-radius: var(--a-radius-xs); background: transparent; font: inherit; font-size: var(--a-fs-sm); font-weight: 600; color: var(--a-muted); cursor: pointer; display: inline-flex; align-items: center; }
     .a-seg a:hover, .a-seg button:hover { color: var(--a-ink); }
-    .a-seg .is-active { background: var(--a-yellow); color: #000; }
+    .a-seg .is-active { background: var(--a-yellow); color: var(--a-black); }
     .a-custom { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
     .a-custom.is-open { display: flex; }
     .a-custom input { height: var(--a-control-h); padding: 0 var(--a-s-3); border: 1px solid var(--a-line-strong); border-radius: var(--a-radius-sm); font: inherit; font-size: var(--a-fs-base); }
@@ -30,13 +30,13 @@
     .a-split b { font-variant-numeric: tabular-nums; }
     .a-event { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--a-s-3); align-items: center; padding: 12px 0; border-top: 1px solid var(--a-line); }
     .a-event:first-child { border-top: 0; padding-top: 0; }
-    .a-event__img { position: relative; width: 52px; height: 52px; border-radius: var(--a-radius-sm); background: #1a1a1a center / cover no-repeat; overflow: hidden; }
-    .a-event__date { position: absolute; left: 6px; top: 6px; padding: 2px 6px; border-radius: 6px; background: #fff; color: #111; font-size: 10px; font-weight: 700; line-height: 1.1; text-align: center; }
+    .a-event__img { position: relative; width: 52px; height: 52px; border-radius: var(--a-radius-sm); background: var(--a-dark-surface) center / cover no-repeat; overflow: hidden; }
+    .a-event__date { position: absolute; left: 6px; top: 6px; padding: 2px 6px; border-radius: 6px; background: var(--a-white); color: var(--a-black); font-size: 10px; font-weight: 700; line-height: 1.1; text-align: center; }
     .a-event__date b { display: block; font-size: 14px; }
     .a-event__name { font-weight: 700; font-size: 14px; display: block; overflow-wrap: anywhere; }
     .a-event__meta { font-size: 12.5px; color: var(--a-muted); display: block; overflow-wrap: anywhere; }
     .a-ring { --p: 0; width: 132px; height: 132px; border-radius: 50%; background: conic-gradient(var(--a-success) calc(var(--p) * 1%), var(--a-line-soft) 0); display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-    .a-ring > div { width: 100px; height: 100px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .a-ring > div { width: 100px; height: 100px; border-radius: 50%; background: var(--a-white); display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .a-ring b { font-size: 22px; font-weight: 700; } .a-ring span { font-size: 11px; color: var(--a-muted); }
     .a-scan-stats { display: grid; gap: 10px; margin-top: 16px; font-size: 13px; }
     .a-scan-stats div { display: flex; justify-content: space-between; gap: 10px; } .a-scan-stats b { font-variant-numeric: tabular-nums; }
@@ -45,5 +45,5 @@
     .a-quick a small { font-weight: 500; font-size: 12px; color: var(--a-muted); }
     .a-quick a i { margin-bottom: 6px; color: var(--a-yellow-ink); }
     .a-quick a.is-primary { background: var(--a-yellow); border-color: var(--a-yellow); }
-    .a-quick a.is-primary i, .a-quick a.is-primary small { color: #000; }
+    .a-quick a.is-primary i, .a-quick a.is-primary small { color: var(--a-black); }
     .a-quick a:hover { border-color: var(--a-ink); }

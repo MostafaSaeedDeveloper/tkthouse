@@ -122,6 +122,9 @@
     function closeFloating() { $$('.a-menu.is-open').forEach(function (m) { if (m.closest('.a-table-wrap')) m.classList.remove('is-open'); }); $$('details.a-more[open]').forEach(function (d) { d.removeAttribute('open'); }); }
     window.addEventListener('scroll', closeFloating, true); window.addEventListener('resize', closeFloating);
 
+    /* ---- date pickers: any input.js-flatpickr that no page script has initialised yet ---- */
+    document.addEventListener('DOMContentLoaded', function () { if (window.flatpickr) $$('input.js-flatpickr').forEach(function (el) { if (!el._flatpickr) window.flatpickr(el, { dateFormat: 'Y-m-d', allowInput: true }); }); });
+
     /* ---- toasts: window.aToast(message, 'success' | 'error' | 'info') ---- */
     window.aToast = function (message, type) {
         var root = document.getElementById('aToastRoot');
