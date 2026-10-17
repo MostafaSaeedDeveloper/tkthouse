@@ -31,6 +31,14 @@ class OrderPlacementService
     public function place(User $user, Event $event, Collection $units, array $buyer, array $attendees, ?string $promoCode, ?string $methodCode, ?float $expectedTotal = null, ?int $affiliateUserId = null, ?string $routingToken = null): Order
     {
         return DB::transaction(function () use ($user, $event, $units, $buyer, $attendees, $promoCode, $methodCode, $expectedTotal, $affiliateUserId, $routingToken) {
+            // Same lock, same order as archiving/deleting an event: they either finish first (this checkout is refused) or wait for
+            // this order to commit (they then see its history). The status is read again under the lock, not trusted from the page.
+            $locked = Event::query()->whereKey($event->id)->lockForUpdate()->first();
+            if (! $locked || ! $this->selection->isEventBookable($locked)) {
+                throw ValidationException::withMessages(['cart' => 'Booking is closed for this event.']);
+            }
+            $event = $locked;
+
             // Every rule is checked again against current data, and prices are the current ones.
             $fresh = $this->selection->revalidate($event, $units, lockTickets: true);
             $freshUnits = collect($fresh['units']);

@@ -145,6 +145,7 @@ class PagesController extends Controller
 
     public function eventShow(Event $event)
     {
+        abort_if($event->isArchived(), 404); // archived events are not public
         $event->load([
             'tickets' => fn ($query) => $query->whereIn('status', ['active', 'sold_out'])->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderBy('price'),
             'images',

@@ -61,6 +61,14 @@ class PaymentService
 
     private function open(Order $order, PaymentMethod $method): string
     {
+        // An archived event takes no new payment sessions. Money that is already in flight is NOT affected: settlement of an existing
+        // attempt (callback / reconcile) does not pass through here and still completes and issues the tickets.
+        $order->loadMissing('items');
+        $eventIds = $order->items->pluck('event_id')->filter()->unique();
+        if ($eventIds->isNotEmpty() && Event::query()->whereIn('id', $eventIds)->where('status', Event::ARCHIVED)->exists()) {
+            throw new \RuntimeException('This event has been archived and is no longer accepting payments. Please contact the organiser.');
+        }
+
         // Which merchant account takes this payment? Pinned account > latest attempt's account > fresh decision. Never browser input.
         $resolution = $this->resolver->forOrder($order);
         if ($resolution->blocked) {

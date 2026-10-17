@@ -222,4 +222,70 @@ class ConcurrencyMysqlTest extends TestCase
         }
         $this->assertSame(6, array_sum($outcomes));
     }
+
+    private function raceEvent(string $name): array
+    {
+        $event = \App\Models\Event::create(['name' => $name, 'event_date' => now()->addDays(5)->toDateString(), 'event_time' => '21:00:00', 'location' => 'Cairo', 'description' => '', 'status' => 'active', 'requires_booking_approval' => false]);
+        $ticket = \App\Models\EventTicket::create(['event_id' => $event->id, 'name' => 'GA', 'price' => 100, 'status' => 'active', 'max_per_order' => 4]);
+
+        return [$event, $ticket];
+    }
+
+    public function test_deleting_an_event_while_orders_are_being_created_never_loses_or_orphans_a_sale(): void
+    {
+        $user = User::factory()->create();
+        $outcome = ['deleted' => 0, 'kept' => 0];
+
+        foreach (range(1, 6) as $trial) {
+            [$event, $ticket] = $this->raceEvent('Delete Race '.$trial);
+            $sell = ['sell', (string) $event->id, (string) $ticket->id, (string) $user->id];
+            $out = $this->spawn([['delete-event', (string) $event->id], $sell, $sell]);
+
+            $okSales = collect([$out[1], $out[2]])->filter(fn ($l) => str_starts_with($l, 'OK:'))->count();
+            $items = \App\Models\OrderItem::where('event_ticket_id', $ticket->id)->count();
+            foreach ($out as $line) {
+                // a checkout that starts after the delete committed simply finds no event (404 for the customer): also a clean refusal
+                $this->assertTrue(str_starts_with($line, 'OK:') || str_starts_with($line, 'INVALID:') || str_contains($line, 'ModelNotFoundException'), 'unexpected worker result: '.$line);
+            }
+            $this->assertSame($okSales, $items, 'every sale that reported success exists, and nothing else: '.implode(' / ', $out));
+
+            if (\App\Models\Event::find($event->id)) {
+                $outcome['kept']++;
+                $this->assertSame($okSales > 0, str_starts_with($out[0], 'INVALID:'), 'delete is refused exactly when a sale committed: '.implode(' / ', $out));
+                $this->assertSame($okSales, \App\Models\OrderItem::where('event_id', $event->id)->count());
+            } else {
+                $outcome['deleted']++;
+                $this->assertSame(0, $okSales, 'the event is gone, so no sale may have succeeded: '.implode(' / ', $out));
+                $this->assertSame(0, \App\Models\OrderItem::where('event_ticket_id', $ticket->id)->count());
+            }
+            $this->assertSame(0, \App\Models\OrderItem::whereNull('event_id')->count(), 'no order item was left without its event');
+        }
+        $this->assertSame(6, array_sum($outcome));
+    }
+
+    public function test_archiving_during_checkout_keeps_every_order_and_closes_the_door_afterwards(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (range(1, 4) as $trial) {
+            [$event, $ticket] = $this->raceEvent('Archive Race '.$trial);
+            $sell = ['sell', (string) $event->id, (string) $ticket->id, (string) $user->id];
+            $out = $this->spawn([$sell, ['archive-event', (string) $event->id], $sell, $sell]);
+
+            $this->assertSame('OK:archived', $out[1], implode(' / ', $out));
+            $ok = collect([$out[0], $out[2], $out[3]])->filter(fn ($l) => str_starts_with($l, 'OK:'))->count();
+            foreach ([$out[0], $out[2], $out[3]] as $line) {
+                $this->assertTrue(str_starts_with($line, 'OK:') || str_starts_with($line, 'INVALID:'), 'unexpected worker result: '.$line);
+            }
+            $this->assertSame($ok, \App\Models\OrderItem::where('event_id', $event->id)->count(), 'a sale either committed completely or not at all: '.implode(' / ', $out));
+            $fresh = \App\Models\Event::findOrFail($event->id);
+            $this->assertSame(['archived', 'active'], [$fresh->status, $fresh->status_before_archive]);
+            $this->assertSame($ticket->id, \App\Models\EventTicket::where('event_id', $event->id)->value('id'), 'ticket ids unchanged');
+
+            // afterwards nobody can buy
+            $late = $this->spawn([$sell]);
+            $this->assertStringStartsWith('INVALID:', $late[0], implode(' / ', $late));
+            $this->assertSame($ok, \App\Models\OrderItem::where('event_id', $event->id)->count());
+        }
+    }
 }

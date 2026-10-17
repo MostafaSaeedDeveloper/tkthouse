@@ -73,11 +73,12 @@
 
 <x-admin.form-section id="ev-sale" class="a-ev-block" title="Availability & checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
     <x-admin.field label="Status" for="event_status" name="status">
-        <select name="status" id="event_status" class="form-select">
+        <select name="status" id="event_status" class="form-select" @if(isset($event) && $event->isArchived()) data-archived="1" disabled @endif>
             <option value="active" @selected(old('status', $event->status ?? 'active') === 'active')>Active</option>
             <option value="inactive" @selected(old('status', $event->status ?? '') === 'inactive')>Inactive</option>
             <option value="draft" @selected(old('status', $event->status ?? '') === 'draft')>Draft</option>
             <option value="sold_out" @selected(old('status', $event->status ?? '') === 'sold_out')>Sold Out</option>
+            @if(isset($event) && $event->isArchived())<option value="archived" selected>Archived (use Restore to change)</option>@endif
         </select>
     </x-admin.field>
     <x-admin.field label="Checkout Flow" for="event_checkout_flow" name="requires_booking_approval">

@@ -45,6 +45,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'events.create',
             'events.update',
             'events.delete',
+            'events.archive',
+            'events.restore',
             'events.publish',
             'events.mark-sold-out',
 

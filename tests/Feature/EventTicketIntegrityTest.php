@@ -285,7 +285,7 @@ class EventTicketIntegrityTest extends TestCase
         $order->items()->update(['ticket_name' => $event->name.' - Vanished']); // a sale whose ticket type is gone
         $before = [OrderItem::count(), EventTicket::count(), $order->items()->pluck('ticket_name')->all()];
 
-        $this->artisan('events:audit-tickets')->expectsOutputToContain('Read-only audit')->expectsOutputToContain('matches no current ticket type')->assertExitCode(0);
+        $this->artisan('events:audit-tickets')->expectsOutputToContain('Read-only audit')->expectsOutputToContain('MISSING')->assertExitCode(0);
 
         $this->assertSame($before, [OrderItem::count(), EventTicket::count(), $order->items()->pluck('ticket_name')->all()]);
     }

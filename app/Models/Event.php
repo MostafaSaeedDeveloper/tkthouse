@@ -30,13 +30,23 @@ class Event extends Model
         'requires_booking_approval',
     ];
 
+    /** archived_at / archived_by / status_before_archive are set only by EventLifecycle (never mass-assigned from a form). */
+
     protected function casts(): array
     {
         return [
             'event_date' => 'date',
             'end_date' => 'date',
             'requires_booking_approval' => 'boolean',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public const ARCHIVED = 'archived';
+
+    public function isArchived(): bool
+    {
+        return $this->status === self::ARCHIVED;
     }
 
     protected static function booted(): void

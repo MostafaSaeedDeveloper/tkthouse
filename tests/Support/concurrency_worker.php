@@ -57,6 +57,12 @@ try {
     } elseif ($mode === 'remove-ticket') {     // the event form explicitly removing a ticket type: event id, ticket id
         $r = app(\App\Services\Events\EventTicketSync::class)->sync(\App\Models\Event::findOrFail((int) $a), [], [(int) $b]);
         echo 'OK:'.json_encode($r);
+    } elseif ($mode === 'delete-event') {      // permanent delete attempt: event id
+        app(\App\Services\Events\EventLifecycle::class)->delete(\App\Models\Event::findOrFail((int) $a));
+        echo 'OK:deleted';
+    } elseif ($mode === 'archive-event') {     // archive: event id
+        $e = app(\App\Services\Events\EventLifecycle::class)->archive(\App\Models\Event::findOrFail((int) $a));
+        echo 'OK:'.$e->status;
     } elseif ($mode === 'approve') {           // approval race: refund id, approver user id
         $r = app(\App\Services\Payments\Refunds\RefundService::class)->approve(\App\Models\PaymentRefund::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b));
         echo 'OK:'.$r->status;

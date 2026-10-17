@@ -124,6 +124,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor(['edit', 'update'], 'permission:permissions.update')
         ->middlewareFor('destroy', 'permission:permissions.delete');
 
+    Route::post('events/{event}/archive', [EventController::class, 'archive'])->middleware('permission:events.archive')->name('events.archive');
+    Route::post('events/{event}/restore', [EventController::class, 'restore'])->middleware('permission:events.restore')->name('events.restore');
     Route::resource('events', EventController::class)
         ->middlewareFor(['index', 'show'], 'permission:events.view')
         ->middlewareFor(['create', 'store'], 'permission:events.create')
