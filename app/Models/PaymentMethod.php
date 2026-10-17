@@ -17,6 +17,7 @@ class PaymentMethod extends Model
         'code',
         'provider',
         'is_active',
+        'sort_order',
         'config',
     ];
 
@@ -26,6 +27,19 @@ class PaymentMethod extends Model
             'is_active' => 'boolean',
             'config' => 'array',
         ];
+    }
+
+    /** The provider-side identifier of this method (legacy: stored in the method's own config). Never includes any key. */
+    public function providerMethodIdentifier(): ?string
+    {
+        $config = is_array($this->config) ? $this->config : [];
+        $value = match ($this->provider) {
+            'paymob' => $config['integration_id'] ?? null,
+            'fawaterak' => $config['provider_key'] ?? null,
+            default => null,
+        };
+
+        return filled($value) ? (string) $value : null;
     }
 
     public static function activeCodes(): array

@@ -23,6 +23,11 @@ class LoginController extends Controller
         $this->middleware('auth')->only('logout');
     }
 
+    protected function credentials(Request $request): array
+    {
+        return $request->only($this->username(), 'password') + ['is_active' => true];
+    }
+
     protected function authenticated(Request $request, $user): void
     {
         $user->update([

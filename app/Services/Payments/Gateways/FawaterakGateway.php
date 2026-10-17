@@ -29,10 +29,15 @@ class FawaterakGateway implements PaymentGateway
         return 'fawaterak';
     }
 
-    public function isConfigured(PaymentMethod $method): bool
+    public function isConfigured(PaymentMethod $method, ?\App\Models\IntegrationAccount $account = null): bool
     {
         if (! PaymentEnvironment::fawaterakAllowed()) {
             return false;
+        }
+
+        if ($account) {
+            return $account->provider === 'fawaterak' && filled($account->secret('api_key'))
+                && (int) preg_replace('/[^0-9]/', '', (string) $account->field($account->methodField($method->code))) > 0;
         }
 
         $config = is_array($method->config) ? $method->config : [];
@@ -47,7 +52,7 @@ class FawaterakGateway implements PaymentGateway
             throw new \RuntimeException('Fawaterak is not enabled in this environment.');
         }
 
-        $data = $this->fawaterak->createCheckoutData($order->loadMissing('customer'));
+        $data = $this->fawaterak->createCheckoutData($order->loadMissing('customer'), $attempt->integrationAccount, $method);
 
         // Without the invoice id the payment could never be verified later, so refuse to open it.
         if (blank($data['transaction_id'] ?? null)) {
@@ -58,6 +63,7 @@ class FawaterakGateway implements PaymentGateway
             'url' => (string) ($data['url'] ?? ''),
             'transaction_id' => (string) $data['transaction_id'],
             'reference' => null,
+            'provider_order_id' => (string) ($data['invoice_key'] ?? ''),
         ];
     }
 
@@ -74,13 +80,15 @@ class FawaterakGateway implements PaymentGateway
             return new GatewayResult(GatewayResult::PENDING, message: 'No invoice id stored for this attempt.');
         }
 
+        // Bound attempts are verified with their own account only (see PaymobGateway::inquire).
+        $account = $attempt->integration_account_id ? $attempt->integrationAccount : null;
         $method = PaymentMethod::query()->where('code', (string) $attempt->method_code)->where('provider', 'fawaterak')->first();
-        if (! $method) {
+        if (! $method && ! $account) {
             return GatewayResult::unknown('Fawaterak payment method not found.');
         }
 
         try {
-            $json = $this->fawaterak->inquireInvoice($method, (string) $invoiceId);
+            $json = $this->fawaterak->inquireInvoice($method, (string) $invoiceId, $account);
         } catch (\Throwable $e) {
             Log::warning('Fawaterak inquiry failed.', ['attempt_id' => $attempt->id, 'error' => $e->getMessage()]);
 

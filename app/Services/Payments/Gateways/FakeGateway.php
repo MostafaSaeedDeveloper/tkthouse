@@ -21,7 +21,7 @@ class FakeGateway implements PaymentGateway
         return 'fake';
     }
 
-    public function isConfigured(PaymentMethod $method): bool
+    public function isConfigured(PaymentMethod $method, ?\App\Models\IntegrationAccount $account = null): bool
     {
         return PaymentEnvironment::fakeGatewayAllowed();
     }

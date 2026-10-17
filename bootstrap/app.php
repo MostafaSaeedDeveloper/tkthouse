@@ -14,9 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\StoreAffiliateReferral::class,
+            \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
 
         $middleware->alias([
+            'orders.global' => \App\Http\Middleware\EnsureNotOrderScoped::class,
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
             'customer.account' => \App\Http\Middleware\EnsureCustomerAccountAccess::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -26,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Server-to-server gateway webhook: it has no session/CSRF token. It is authenticated by the Paymob HMAC
         // (mandatory in production) and, in any case, never trusted without a server-side transaction lookup.
-        $middleware->validateCsrfTokens(except: ['payments/paymob/callback']);
+        $middleware->validateCsrfTokens(except: ['payments/paymob/callback', 'payments/fawaterak/webhook_json']);
 
         $middleware->redirectGuestsTo(static function (Request $request): string {
             if ($request->is('dashboard') || $request->is('dashboard/*') || $request->is('admin') || $request->is('admin/*')) {

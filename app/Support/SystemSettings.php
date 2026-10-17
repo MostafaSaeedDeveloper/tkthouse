@@ -7,31 +7,24 @@ use App\Models\PaymentMethod;
 
 class SystemSettings
 {
-    private static ?array $cache = null;
+    private static function service(): \App\Settings\SettingsService
+    {
+        return app(\App\Settings\SettingsService::class);
+    }
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        return static::all()[$key] ?? $default;
+        return static::service()->get($key, $default);
     }
 
     public static function set(string $key, mixed $value): void
     {
-        SystemSetting::query()->updateOrCreate(['key' => $key], ['value' => static::encode($value)]);
-        static::$cache = null;
+        static::service()->set($key, $value);
     }
 
     public static function all(): array
     {
-        if (static::$cache !== null) {
-            return static::$cache;
-        }
-
-        static::$cache = SystemSetting::query()
-            ->get(['key', 'value'])
-            ->mapWithKeys(fn (SystemSetting $setting) => [$setting->key => static::decode($setting->value)])
-            ->all();
-
-        return static::$cache;
+        return static::service()->all();
     }
 
     public static function paymentMethods(): array
@@ -42,29 +35,5 @@ class SystemSettings
     public static function pendingPaymentTimeoutMinutes(): int
     {
         return max(1, (int) static::get('pending_payment_timeout_minutes', 60 * 24 * 2));
-    }
-
-    private static function encode(mixed $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        if (is_array($value) || is_bool($value) || is_int($value) || is_float($value)) {
-            return json_encode($value, JSON_UNESCAPED_UNICODE);
-        }
-
-        return (string) $value;
-    }
-
-    private static function decode(?string $value): mixed
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $json = json_decode($value, true);
-
-        return json_last_error() === JSON_ERROR_NONE ? $json : $value;
     }
 }

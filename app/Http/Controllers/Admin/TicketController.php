@@ -33,6 +33,11 @@ class TicketController extends Controller
 
         $this->applyManagedEventScopeToTicketsQuery($ticketsQuery, $managedEventNames);
 
+        // Order Assignment: only tickets that belong to orders the user may see.
+        if (\App\Orders\OrderAccess::scoped($request->user())) {
+            $ticketsQuery->whereHas('order', fn ($o) => $o->visibleTo($request->user()));
+        }
+
         if ($request->filled('status')) {
             $ticketsQuery->where('status', $request->string('status'));
         }
@@ -88,6 +93,7 @@ class TicketController extends Controller
 
     public function show(Request $request, Ticket $ticket)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         $ticket->load('order');
@@ -106,6 +112,7 @@ class TicketController extends Controller
 
     public function edit(Request $request, Ticket $ticket)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         $ticket->load('order');
@@ -115,6 +122,7 @@ class TicketController extends Controller
 
     public function update(Request $request, Ticket $ticket)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         $validated = $this->validateTicket($request);
@@ -126,6 +134,7 @@ class TicketController extends Controller
 
     public function destroy(Request $request, Ticket $ticket)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         $ticket->delete();
@@ -139,6 +148,7 @@ class TicketController extends Controller
 
     public function sendEmail(Request $request, Ticket $ticket)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         $data = $request->validate([
@@ -170,6 +180,7 @@ class TicketController extends Controller
 
     public function sendWhatsapp(Request $request, Ticket $ticket, UltramsgWhatsappService $whatsappService)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         if (! (bool) SystemSettings::get('whatsapp_ticket_sending_enabled', true)) {
@@ -197,6 +208,7 @@ class TicketController extends Controller
 
     public function download(Request $request, Ticket $ticket)
     {
+        $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
 
         $ticket->loadMissing('order');
@@ -225,7 +237,7 @@ class TicketController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt(['username' => $data['username'], 'password' => $data['password']])) {
+        if (! Auth::attempt(['username' => $data['username'], 'password' => $data['password'], 'is_active' => true])) {
             return back()->withErrors(['username' => 'Invalid credentials.'])->withInput();
         }
 
@@ -514,5 +526,16 @@ class TicketController extends Controller
         }
 
         return null;
+    }
+
+    /** Order Assignment: a ticket is reachable only through an order the user may see (404 otherwise). */
+    private function guardAssignedTicket(Request $request, Ticket $ticket): void
+    {
+        if (! \App\Orders\OrderAccess::scoped($request->user())) {
+            return;
+        }
+
+        $ticket->loadMissing('order');
+        abort_unless($ticket->order && $ticket->order->isVisibleTo($request->user()), 404);
     }
 }

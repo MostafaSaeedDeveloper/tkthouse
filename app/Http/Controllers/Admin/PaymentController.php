@@ -47,7 +47,15 @@ class PaymentController extends Controller
             })
             ->latest('id')->paginate(15)->withQueryString();
 
+        $from = $request->filled('from') ? \Illuminate\Support\Carbon::parse($request->string('from'))->startOfDay() : now()->startOfMonth();
+        $to = $request->filled('to') ? \Illuminate\Support\Carbon::parse($request->string('to'))->endOfDay() : now()->endOfDay();
+        $seeAccounts = TransactionController::canSeeAccounts($user);
+        $report = app(\App\Services\Payments\PaymentReport::class)->build($user, $from, $to, $seeAccounts);
+
         return view('admin.payments.index', [
+            'report' => $report, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
+            'accountNames' => $seeAccounts ? \App\Models\IntegrationAccount::query()->pluck('name', 'id') : collect(),
+            'methodNames' => PaymentMethod::query()->pluck('name', 'code'),
             'attempts' => $attempts,
             'stats' => $stats,
             'filter' => $filter,

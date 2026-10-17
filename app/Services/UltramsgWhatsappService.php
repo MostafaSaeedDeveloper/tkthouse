@@ -217,8 +217,9 @@ class UltramsgWhatsappService
 
     private function apiBasePath(): string
     {
-        $instanceId = (string) config('services.ultramsg.instance_id');
-        $baseUrl = rtrim((string) config('services.ultramsg.base_url', 'https://api.ultramsg.com'), '/');
+        $account = \App\Integrations\IntegrationManager::runtimeAccount('ultramsg');
+        $instanceId = (string) ($account ? $account->field('instance_id') : config('services.ultramsg.instance_id'));
+        $baseUrl = rtrim((string) ($account ? ($account->field('base_url') ?: 'https://api.ultramsg.com') : config('services.ultramsg.base_url', 'https://api.ultramsg.com')), '/');
 
         if ($instanceId === '') {
             throw new RuntimeException('UltraMsg is not configured. Please set ULTRAMSG_INSTANCE_ID and ULTRAMSG_TOKEN.');
@@ -229,7 +230,8 @@ class UltramsgWhatsappService
 
     private function apiToken(): string
     {
-        $token = (string) config('services.ultramsg.token');
+        $account = \App\Integrations\IntegrationManager::runtimeAccount('ultramsg');
+        $token = (string) ($account ? $account->secret('token') : config('services.ultramsg.token'));
 
         if ($token === '') {
             throw new RuntimeException('UltraMsg is not configured. Please set ULTRAMSG_INSTANCE_ID and ULTRAMSG_TOKEN.');

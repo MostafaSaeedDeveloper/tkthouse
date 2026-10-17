@@ -78,6 +78,10 @@ class AuthOtpController extends Controller
             return response()->json(['ok' => false, 'message' => 'Staff accounts sign in with their password.'], 403);
         }
 
+        if ($user->is_active === false) {
+            return response()->json(['ok' => false, 'message' => 'This account is disabled. Please contact support.'], 403);
+        }
+
         if (! $user->email_verified_at) {
             $user->forceFill(['email_verified_at' => now()])->save();
         }

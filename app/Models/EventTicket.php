@@ -19,6 +19,7 @@ class EventTicket extends Model
         'description',
         'max_per_order',
         'is_couple',
+        'sort_order',
     ];
 
     protected $casts = [

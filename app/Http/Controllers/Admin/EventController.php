@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\Events\EventTicketSync;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,8 @@ class EventController extends Controller
                 'venue_map' => $venueMap,
             ]));
 
-            $this->syncTickets($event, $validated['tickets'] ?? []);
+            $newTickets = array_map(fn ($t) => array_diff_key($t, ['id' => 1]), array_values($validated['tickets'] ?? []));
+            app(EventTicketSync::class)->sync($event, $newTickets);
             $this->syncFees($event, $validated['fees'] ?? []);
             $this->syncImages($event, $request);
             $this->syncLineups($event, $validated['lineups'] ?? [], $request);
@@ -68,7 +70,8 @@ class EventController extends Controller
     {
         $validated = $this->normalizeEventPayload($this->validateEvent($request, $event));
 
-        DB::transaction(function () use ($request, $validated, $event) {
+        $ticketResult = null;
+        DB::transaction(function () use ($request, $validated, $event, &$ticketResult) {
             if ($request->hasFile('cover_image')) {
                 $validated['cover_image'] = $this->storePublicImage($request->file('cover_image'), 'uploads/events');
             }
@@ -82,7 +85,8 @@ class EventController extends Controller
             }
 
             $event->update($validated);
-            $this->syncTickets($event, $validated['tickets'] ?? [], true);
+            // Ticket types are synced by id, never deleted and recreated; only explicitly removed ones go (or are hidden when they have sales).
+            $ticketResult = app(EventTicketSync::class)->sync($event, array_values($validated['tickets'] ?? []), $validated['removed_ticket_ids'] ?? []);
             $this->syncFees($event, $validated['fees'] ?? [], true);
             $this->syncLineups($event, $validated['lineups'] ?? [], $request, true);
 
@@ -91,10 +95,15 @@ class EventController extends Controller
             }
             $this->syncImages($event, $request);
 
-            activity('events')->performedOn($event)->causedBy(auth()->user())->log('Event updated');
+            activity('events')->performedOn($event)->causedBy(auth()->user())->withProperties(['tickets' => $ticketResult])->log('Event updated');
         });
 
-        return redirect()->route('admin.events.index')->with('success', 'Event updated successfully.');
+        $redirect = redirect()->route('admin.events.index')->with('success', 'Event updated successfully.');
+        if (! empty($ticketResult['hidden'])) {
+            $redirect->with('warning', 'These ticket types already have sales, so they were hidden instead of deleted: '.implode(', ', $ticketResult['hidden']).'. Their orders, tickets and QR codes are unchanged.');
+        }
+
+        return $redirect;
     }
 
     public function destroy(Event $event)
@@ -119,8 +128,31 @@ class EventController extends Controller
         return $validated;
     }
 
+    /**
+     * The form always renders one empty ticket row and one empty fee row. A row the user never touched is not a row: drop it before
+     * validation, otherwise saving an event without fees (or tickets) fails with "name is required when fees is present".
+     * Keys are preserved because lineup image uploads are matched by index.
+     */
+    private function dropUntouchedRows(Request $request): void
+    {
+        $blank = fn ($row, array $keys) => collect($keys)->every(fn ($k) => trim((string) data_get($row, $k, '')) === '');
+        $rules = [
+            'tickets' => ['name', 'price', 'label', 'description'],
+            'fees' => ['name', 'value', 'description'],
+            'lineups' => ['artist_name', 'instagram', 'performance_time', 'performance_date'],
+        ];
+        $merge = [];
+        foreach ($rules as $field => $keys) {
+            if (is_array($rows = $request->input($field))) {
+                $merge[$field] = array_filter($rows, fn ($row) => ! (is_array($row) && trim((string) ($row['id'] ?? '')) === '' && $blank($row, $keys)));
+            }
+        }
+        $request->merge($merge);
+    }
+
     private function validateEvent(Request $request, ?Event $event = null): array
     {
+        $this->dropUntouchedRows($request);
         $coverRule = ['nullable', 'image', 'max:2048'];
 
         return $request->validate([
@@ -141,6 +173,10 @@ class EventController extends Controller
             'venue_map' => $coverRule,
             'gallery_images.*' => ['nullable', 'image', 'max:2048'],
             'tickets' => ['nullable', 'array'],
+            'tickets.*.id' => ['nullable', 'integer', 'min:1'],
+            'tickets.*.position' => ['nullable', 'integer', 'min:0'],
+            'removed_ticket_ids' => ['nullable', 'array'],
+            'removed_ticket_ids.*' => ['integer', 'min:1'],
             'tickets.*.name' => ['required_with:tickets', 'string', 'max:255'],
             'tickets.*.price' => ['required_with:tickets', 'numeric', 'min:0'],
             'tickets.*.status' => ['required_with:tickets', 'in:active,inactive,sold_out,hidden'],
@@ -163,22 +199,6 @@ class EventController extends Controller
             'lineups.*.existing_image' => ['nullable', 'string', 'max:500'],
             'lineup_images.*' => ['nullable', 'image', 'max:2048'],
         ]);
-    }
-
-    private function syncTickets(Event $event, array $tickets, bool $replace = false): void
-    {
-        if ($replace) {
-            $event->tickets()->delete();
-        }
-
-        foreach ($tickets as $ticket) {
-            if (! empty($ticket['name'])) {
-                $ticket['color'] = $ticket['color'] ?? '#0d6efd';
-                $ticket['is_couple'] = (bool) ($ticket['is_couple'] ?? false);
-                $ticket['max_per_order'] = $ticket['is_couple'] ? 2 : max(1, (int) ($ticket['max_per_order'] ?? 10));
-                $event->tickets()->create($ticket);
-            }
-        }
     }
 
     private function syncFees(Event $event, array $fees, bool $replace = false): void

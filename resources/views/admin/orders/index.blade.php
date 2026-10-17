@@ -60,13 +60,24 @@
             @endif
         </x-admin.empty>
     @else
+    @if($canAssign)
+    <form method="POST" action="{{ route('admin.orders.assign.bulk') }}" id="bulkAssignForm" class="a-ord-bulk" hidden>
+        @csrf
+        <span><strong data-bulk-count>0</strong> selected</span>
+        <label class="a-sr-only" for="bulkAssignee">Assign selected orders to</label>
+        <select id="bulkAssignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach</select>
+        <input class="form-control" name="reason" maxlength="300" placeholder="Reason (optional)" aria-label="Reason">
+        <button type="submit" class="a-btn a-btn--primary a-btn--sm">Apply</button>
+    </form>
+    @endif
     <x-admin.table stack class="a-ordt" caption="Orders">
         <thead>
             <tr>
-                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}"><a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
+                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}">@if($canAssign)<input type="checkbox" class="a-ord-check" data-bulk-all aria-label="Select all orders on this page" form="bulkAssignForm">@endif<a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-customer">Customer</th>
                 <th scope="col" class="c-event">Event</th>
                 <th scope="col" class="c-tickets a-num">Tickets</th>
+                @if($assignmentOn)<th scope="col" class="c-assignee">Assigned to</th>@endif
                 <th scope="col" class="c-total a-num" aria-sort="{{ $ariaSort('total_amount') }}"><a class="a-ordt__sort" href="{{ $sortUrl('total_amount') }}">Total <i class="fa {{ $sortIcon('total_amount') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-status" aria-sort="{{ $ariaSort('status') }}"><a class="a-ordt__sort" href="{{ $sortUrl('status') }}">Status <i class="fa {{ $sortIcon('status') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-actions"><span class="a-sr-only">Actions</span></th>
@@ -86,7 +97,7 @@
                 $customerName = $order->customer?->full_name ?: 'Unknown customer';
             @endphp
             <tr>
-                <td data-label="Order" class="c-order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
+                <td data-label="Order" class="c-order">@if($canAssign)<input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}">@endif<a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
                     <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></td>
                 <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
                 <td data-label="Event" class="c-event">
@@ -99,6 +110,12 @@
                     <span class="a-table__sub a-ord-inline-tix">{{ $ticketCount }} {{ \Illuminate\Support\Str::plural('ticket', $ticketCount) }}@if($typeCount > 1) · {{ $typeCount }} types @endif</span>
                 </td>
                 <td data-label="Tickets" class="c-tickets a-num"><span class="a-table__main">{{ $ticketCount }}</span>@if($typeCount > 1)<span class="a-table__sub">{{ $typeCount }} types</span>@endif</td>
+                @if($assignmentOn)
+                <td data-label="Assigned to" class="c-assignee">
+                    @if($order->assignedUser)<span class="a-table__main a-ord-ellipsis" title="{{ $order->assignedUser->name }}">{{ $order->assignedUser->name }}</span>
+                    @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif
+                </td>
+                @endif
                 <td data-label="Total" class="c-total a-num"><span class="a-table__main">{{ number_format((float) $order->total_amount, 2) }}</span><span class="a-table__sub">EGP</span></td>
                 <td data-label="Status" class="c-status">
                     <x-admin.status :status="$order->status" kind="order" />
@@ -117,6 +134,7 @@
                         @endif
                     @endcan
                     <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order {{ $number }}"><i class="fa fa-eye"></i><span class="a-ord-btn-text">View</span></a>
+                    @if(\App\Orders\OrderAccess::canManage($order, auth()->user()) || $canAssign)
                     @canany(['orders.update', 'update_status', 'orders.delete'])
                     <div class="a-menu a-menu--fixed">
                         <button type="button" class="a-btn a-btn--outline a-btn--sm" data-a-menu-toggle aria-haspopup="true" aria-expanded="false" aria-label="More actions for order {{ $number }}" title="More actions"><i class="fa fa-ellipsis-vertical"></i></button>
@@ -124,6 +142,9 @@
                             @can('orders.update')
                                 <a class="a-menu__item" role="menuitem" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen" aria-hidden="true"></i> Edit order</a>
                             @endcan
+                            @if($canAssign)
+                                <button type="button" class="a-menu__item" role="menuitem" data-ord-assign-open data-action="{{ route('admin.orders.assign', $order) }}" data-current="{{ $order->assigned_user_id }}" data-number="{{ $number }}"><i class="fa fa-user-check" aria-hidden="true"></i> {{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}</button>
+                            @endif
                             @can('update_status')
                                 <button type="button" class="a-menu__item" role="menuitem" data-ord-status-open data-action="{{ route('admin.orders.status.update', $order) }}" data-current="{{ $order->status }}" data-number="{{ $number }}"><i class="fa fa-arrows-rotate" aria-hidden="true"></i> Change status</button>
                             @endcan
@@ -142,6 +163,7 @@
                         </div>
                     </div>
                     @endcanany
+                    @endif
                 </div></td>
             </tr>
         @endforeach
@@ -150,6 +172,30 @@
     <x-admin.pager :paginator="$orders" />
     @endif
 </x-admin.card>
+
+@if($canAssign)
+<div class="a-ord-modal" id="ordAssignModal" aria-hidden="true">
+    <div class="a-ord-modal__box" role="dialog" aria-modal="true" aria-labelledby="ordAssignTitle">
+        <h2 id="ordAssignTitle">Assign order · <span id="ordAssignNumber"></span></h2>
+        <form method="POST" action="#" id="ordAssignForm" data-a-loading>
+            @csrf
+            <label class="form-label" for="ordAssignSelect">Assigned to</label>
+            <select id="ordAssignSelect" class="form-select" name="assignee_id">
+                <option value="">Unassigned</option>
+                @foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
+            </select>
+            <label class="form-label" for="ordAssignReason" style="margin-top:12px">Reason (optional)</label>
+            <input id="ordAssignReason" class="form-control" name="reason" maxlength="300">
+            <p class="a-hint">Changing the assignee never changes how this order is paid.</p>
+            <div class="a-btn-group" style="justify-content:flex-end;margin-top:16px">
+                <button type="button" class="a-btn a-btn--outline" data-ord-assign-close>Cancel</button>
+                <button type="submit" class="a-btn a-btn--primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="{{ asset('admin-v2/orders-assign.js') }}?v={{ filemtime(public_path('admin-v2/orders-assign.js')) }}" defer></script>
+@endif
 
 @can('update_status')
 <div class="a-ord-modal" id="ordStatusModal" aria-hidden="true">

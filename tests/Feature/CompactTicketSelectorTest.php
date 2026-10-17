@@ -104,7 +104,9 @@ class CompactTicketSelectorTest extends TestCase
     public function test_long_names_keep_their_full_text_and_the_price_gets_its_own_cell(): void
     {
         $event = $this->makeEvent();
-        $name = str_repeat('Extraordinarily-long-ticket-name ', 8).'THE-END';
+        // Ticket names are limited to 255 characters (admin validation and the varchar(255) column): use the longest legal name.
+        $name = str_repeat('Extraordinarily-long-ticket-name ', 7).'THE-END';
+        $this->assertLessThanOrEqual(255, mb_strlen($name));
         $this->makeTicket($event, ['name' => $name, 'description' => 'A short note', 'price' => 99]);
 
         $html = $this->show($event)->assertSee('THE-END')->assertSee('A short note')->getContent();

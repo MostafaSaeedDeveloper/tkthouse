@@ -84,7 +84,7 @@ class Event extends Model
 
     public function tickets()
     {
-        return $this->hasMany(EventTicket::class);
+        return $this->hasMany(EventTicket::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function fees()

@@ -26,7 +26,7 @@ class PaymentController extends Controller
             return $redirect;
         }
 
-        $methods = $gateways->available();
+        $methods = $this->methodsFor($order, $gateways);
         $selected = $methods->firstWhere('code', $order->payment_method)?->code ?? $methods->first()?->code ?? $order->payment_method;
 
         $order->load(['items', 'customer', 'paymentAttempts']);
@@ -46,7 +46,7 @@ class PaymentController extends Controller
             return $redirect;
         }
 
-        $paymentMethod = $gateways->available()->firstWhere('code', (string) $request->query('method', $order->payment_method));
+        $paymentMethod = $this->methodsFor($order, $gateways)->firstWhere('code', (string) $request->query('method', $order->payment_method));
 
         if (! $paymentMethod || ! $gateways->isOnline($paymentMethod)) {
             return redirect()->route('front.orders.payment', ['order' => $order, 'token' => $token])
@@ -82,35 +82,58 @@ class PaymentController extends Controller
      * Paymob return (GET) and processed callback (POST). Whatever the body says, the order is only settled
      * after the transaction has been looked up at Paymob.
      */
-    public function paymobCallback(Request $request, PaymentService $payments)
+    public function paymobCallback(Request $request, PaymentService $payments, \App\Services\Payments\Webhooks\WebhookService $webhooks)
     {
         $payload = $request->all();
         $merchantOrderId = (string) data_get($payload, 'obj.order.merchant_order_id', data_get($payload, 'merchant_order_id', ''));
         $transactionId = (string) data_get($payload, 'obj.id', data_get($payload, 'id', ''));
         $isGet = $request->isMethod('get');
+        $obj = $isGet ? $request->query() : (array) data_get($payload, 'obj', []);
 
-        $secret = (string) (config('payments.paymob.hmac_secret') ?: '');
+        // Which merchant account does this callback belong to? Looked up from OUR unique merchant_order_id (attempt reference). The
+        // field is unauthenticated, so it only selects which secret to verify with: a wrong pick fails the signature check, and
+        // settlement still needs the server-to-server inquiry with that account's own API key.
+        $attempt = $merchantOrderId !== ''
+            ? \App\Models\PaymentAttempt::query()->where('provider', 'paymob')->where('reference', $merchantOrderId)->first()
+            : null;
+        $account = $attempt?->integration_account_id ? $attempt->integrationAccount : null;
+
+        $secret = $account ? (string) ($account->secret('hmac_secret') ?: '') : (string) (config('payments.paymob.hmac_secret') ?: '');
         $hmac = (string) ($request->query('hmac') ?: data_get($payload, 'hmac', ''));
         $signatureRequired = PaymentEnvironment::paymobSignatureRequired();
-
-        if ($signatureRequired && $secret === '') {
-            // Fail closed: in production an unconfigured secret means NOTHING is accepted (and ops must hear about it).
-            Log::critical('Paymob callback rejected: PAYMOB_HMAC_SECRET is not configured but signatures are mandatory.');
-
-            return $isGet
-                ? redirect()->route('front.account.orders')->with('error', 'Payment confirmation is temporarily unavailable. If you were charged, contact support.')
-                : response()->json(['received' => false, 'updated' => false], 503);
-        }
 
         $signed = $secret !== '' && (
             $isGet
                 ? PaymobService::hmacIsValidFlat($request->query(), $hmac, $secret)
                 : (is_array(data_get($payload, 'obj')) && PaymobService::hmacIsValid($payload['obj'], $hmac, $secret))
         );
+        $signature = $secret === '' ? 'unverifiable' : ($hmac === '' ? 'missing' : ($signed ? 'valid' : 'invalid'));
+
+        // Event type from the (unauthenticated until proven) body — informational; money state comes from the inquiry.
+        $flag = fn ($k) => filter_var(data_get($obj, $k), FILTER_VALIDATE_BOOLEAN);
+        $type = match (true) {
+            $flag('is_voided') => 'void',
+            $flag('is_refunded') || $flag('has_parent_transaction') => 'refund',
+            $flag('pending') => 'payment.pending',
+            $flag('success') => 'payment.succeeded',
+            default => 'payment.failed',
+        };
+        [$event] = $webhooks->record('paymob', $type, [$transactionId, $type, data_get($obj, 'amount_cents'), $isGet ? 'get' : 'post'], $transactionId ?: $merchantOrderId, $signature, (array) $obj, $account, $attempt);
+
+        if ($signatureRequired && $secret === '') {
+            // Fail closed: in production an unconfigured secret means NOTHING is accepted (and ops must hear about it).
+            Log::critical('Paymob callback rejected: HMAC secret is not configured but signatures are mandatory.');
+            $webhooks->finish($event, 'failed', 'HMAC secret not configured');
+
+            return $isGet
+                ? redirect()->route('front.account.orders')->with('error', 'Payment confirmation is temporarily unavailable. If you were charged, contact support.')
+                : response()->json(['received' => false, 'updated' => false], 503);
+        }
 
         // Server-to-server webhook: a missing/invalid signature is refused outright whenever a secret exists.
         if (! $isGet && $secret !== '' && ! $signed) {
             Log::warning('Paymob callback rejected: invalid HMAC.', ['merchant_order_id' => $merchantOrderId]);
+            $webhooks->finish($event, 'failed', 'Invalid signature');
 
             return response()->json(['received' => false, 'updated' => false], 403);
         }
@@ -119,17 +142,27 @@ class PaymentController extends Controller
         // optional in this environment). Settlement itself always goes through the server-to-server inquiry.
         $hintAllowed = $signed || ($secret === '' && ! $signatureRequired);
 
-        $order = $merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null;
+        $order = $attempt?->order ?? ($merchantOrderId !== '' ? $this->findOrderFromMerchantOrderId($merchantOrderId) : null);
 
         if (! $order) {
             Log::warning('Paymob callback order not found.', ['merchant_order_id' => $merchantOrderId]);
+            $webhooks->finish($event, 'ignored', 'No matching order');
 
             return $isGet
                 ? redirect()->route('front.account.orders')->with('error', 'We could not find that payment. If you were charged, contact support.')
                 : response()->json(['received' => true, 'updated' => false]);
         }
 
-        $outcome = $payments->refresh($order, $hintAllowed && $transactionId !== '' ? $transactionId : null, 'paymob');
+        $hint = $hintAllowed && $transactionId !== '' ? $transactionId : null;
+
+        if (in_array($type, ['refund', 'void'], true)) {
+            // Refund/void notifications are verified and applied by the refund module, never by the payment settlement path.
+            $outcome = app(\App\Services\Payments\Webhooks\WebhookService::class)->retry($event);
+        } else {
+            // An identified attempt is settled alone (with its own account); only legacy callbacks fall back to the order-wide refresh.
+            $outcome = $attempt ? $payments->refreshAttempt($attempt, $hint) : $payments->refresh($order, $hint, 'paymob');
+            $webhooks->finish($event, 'processed');
+        }
         Log::info('Paymob callback processed.', ['order_id' => $order->id, 'outcome' => $outcome]);
 
         if ($isGet) {
@@ -206,5 +239,11 @@ class PaymentController extends Controller
         }
 
         return $logger->log($description);
+    }
+
+    /** Methods for an existing order: the pre-existing list unless routing/default account/policy says otherwise. */
+    private function methodsFor(Order $order, PaymentGatewayManager $gateways)
+    {
+        return app(\App\Services\Payments\Routing\OfferedMethods::class)->for(app(\App\Services\Payments\Routing\PaymentAccountResolver::class)->forOrder($order));
     }
 }

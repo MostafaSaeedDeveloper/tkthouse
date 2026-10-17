@@ -12,6 +12,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'event_id',
+        'event_ticket_id',
         'ticket_id',
         'ticket_name',
         'ticket_price',

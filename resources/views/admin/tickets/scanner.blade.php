@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#060608">
   <title>TKT Scanner</title>
-  <link rel="shortcut icon" href="{{ asset('images/favicon.png') }}">
+  @include('partials.favicon')
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
@@ -18,8 +18,8 @@
   --surface:  #0e0e12;
   --surface2: #16161d;
   --border:   rgba(255,255,255,0.07);
-  --gold:     #f5b800;
-  --gold-dim: rgba(245,184,0,0.12);
+  --gold:     #FFD200;
+  --gold-dim: rgba(255,210,0,0.12);
   --text:     #e8e8ef;
   --muted:    #5e5e72;
   --green:    #22c55e;
@@ -31,7 +31,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -56,7 +56,7 @@ html, body {
   margin-bottom: 24px;
 }
 .sc-logo {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 800;
   color: #fff;
@@ -212,7 +212,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   padding: 14px 50px 14px 18px;
   outline: none;
@@ -238,7 +238,7 @@ html, body {
   border: none;
   border-radius: 12px;
   color: #0d0d10;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 800;
   padding: 14px;
@@ -250,7 +250,7 @@ html, body {
   justify-content: center;
   gap: 8px;
 }
-.sc-submit:hover { background: #ffc107; transform: translateY(-1px); }
+.sc-submit:hover { background: #F2C500; transform: translateY(-1px); }
 .sc-submit:active { transform: translateY(0); }
 
 /* ── Result Card ────────────────────────────────────── */
@@ -276,7 +276,7 @@ html, body {
   gap: 12px;
 }
 .sc-result-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -298,7 +298,7 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 700;
   padding: 5px 12px;
@@ -322,7 +322,7 @@ html, body {
   background: var(--gold-dim);
   border: 2px solid rgba(245,184,0,0.25);
   color: var(--gold);
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 800;
   font-size: 16px;
   display: flex;
@@ -365,7 +365,7 @@ html, body {
   gap: 8px;
   padding: 13px 12px;
   border-radius: 12px;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 700;
   border: none;
@@ -386,12 +386,12 @@ html, body {
   color: #0d0d10;
   border: none;
   border-radius: 12px;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.3px;
 }
-.sc-scan-another:hover { background: #ffc107; filter: none; }
+.sc-scan-another:hover { background: #F2C500; filter: none; }
 .sc-scan-another i { font-size: 15px; }
 .sc-act-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
 

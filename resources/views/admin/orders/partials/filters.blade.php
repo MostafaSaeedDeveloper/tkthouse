@@ -1,6 +1,6 @@
 {{-- Search + advanced filters shared by Orders and Deleted Orders. Expects: $action, $reset, $statusOptions, $paymentMethods, $events, $canFilterByEvent, $perPageOptions. --}}
 @php
-    $advancedKeys = ['reference', 'customer', 'status', 'payment_method', 'event_id', 'date_from', 'date_to'];
+    $advancedKeys = ['reference', 'customer', 'status', 'payment_method', 'event_id', 'date_from', 'date_to', 'assignee'];
     $advancedActive = collect($advancedKeys)->filter(fn ($key) => filled(request($key)))->count();
     $anyActive = $advancedActive > 0 || filled(request('search')) || filled(request('group')) || (int) request('per_page') > 0;
     $idp = $idp ?? 'o';
@@ -44,6 +44,15 @@
                     <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
                 @endforeach
             </select></div>
+        @if(!empty($assignmentOn) && ($assignees ?? collect())->isNotEmpty() || (!empty($assignmentOn) && \App\Orders\OrderAccess::level(auth()->user()) === \App\Orders\OrderAccess::ALL))
+        <div class="a-field"><label class="form-label" for="{{ $idp }}Assignee">Assigned to</label>
+            <select name="assignee" id="{{ $idp }}Assignee" class="form-select">
+                <option value="">Anyone</option>
+                <option value="unassigned" @selected(request('assignee') === 'unassigned')>Unassigned</option>
+                <option value="me" @selected(request('assignee') === 'me')>Me</option>
+                @foreach(($assignees ?? collect()) as $a)<option value="{{ $a->id }}" @selected((string) request('assignee') === (string) $a->id)>{{ $a->name }}</option>@endforeach
+            </select></div>
+        @endif
         <div class="a-field"><label class="form-label" for="{{ $idp }}Pay">Payment method</label>
             <select name="payment_method" id="{{ $idp }}Pay" class="form-select">
                 <option value="">All methods</option>
