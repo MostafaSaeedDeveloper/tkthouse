@@ -192,4 +192,34 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertCount(1, $accepted, 'exactly one provider send: '.implode(' / ', $out));
         $this->assertSame(1, \App\Models\PaymentRefund::count());
     }
+
+    public function test_removing_a_ticket_type_while_it_is_being_bought_never_orphans_a_sale(): void
+    {
+        $user = User::factory()->create();
+        $outcomes = ['sold_then_hidden' => 0, 'deleted_before_sale' => 0];
+
+        foreach (range(1, 6) as $trial) {
+            $event = \App\Models\Event::create(['name' => 'Race '.$trial, 'event_date' => now()->addDays(5)->toDateString(), 'event_time' => '21:00:00', 'location' => 'Cairo', 'description' => '', 'status' => 'active', 'requires_booking_approval' => false]);
+            $ticket = \App\Models\EventTicket::create(['event_id' => $event->id, 'name' => 'GA', 'price' => 100, 'status' => 'active', 'max_per_order' => 4]);
+
+            $out = $this->spawn([['sell', (string) $event->id, (string) $ticket->id, (string) $user->id], ['remove-ticket', (string) $event->id, (string) $ticket->id], ['sell', (string) $event->id, (string) $ticket->id, (string) $user->id]]);
+
+            $sold = \App\Models\OrderItem::where('event_ticket_id', $ticket->id)->count();
+            $row = \App\Models\EventTicket::find($ticket->id);
+            $this->assertStringStartsWith('OK:', $out[1], implode(' / ', $out));
+            if ($sold > 0) {
+                $this->assertNotNull($row, 'a ticket type with a sale must still exist: '.implode(' / ', $out));
+                $outcomes['sold_then_hidden']++;
+            } else {
+                $this->assertNull($row, 'no sale happened, so the explicit removal deleted it: '.implode(' / ', $out));
+                $outcomes['deleted_before_sale']++;
+            }
+            // a sale that committed is never left pointing at a missing ticket type
+            $this->assertSame(0, \App\Models\OrderItem::where('event_id', $event->id)->whereNotNull('event_ticket_id')->whereNotIn('event_ticket_id', \App\Models\EventTicket::pluck('id'))->count());
+            foreach ($out as $k => $line) {
+                $this->assertTrue(str_starts_with($line, 'OK:') || str_starts_with($line, 'INVALID:'), 'unexpected worker result: '.$line);
+            }
+        }
+        $this->assertSame(6, array_sum($outcomes));
+    }
 }

@@ -9,7 +9,10 @@
         '_existing_image_url' => $lineup->image_url,
     ])->toArray() : []);
 
+    $ticketSync = app(\App\Services\Events\EventTicketSync::class);
     $ticketRows = old('tickets', isset($event) ? $event->tickets->map(fn($ticket) => [
+        'id' => $ticket->id,
+        'sold' => $ticketSync->usage($event, $ticket)['total'],
         'name' => $ticket->name,
         'price' => $ticket->price,
         'status' => $ticket->status,
@@ -160,7 +163,8 @@
     </div>
     <div class="a-ev-rows" id="ticket-rows" data-next-index="{{ count($ticketRows) }}">
         @foreach($ticketRows as $index => $ticket)
-            <div class="a-ev-row a-ev-row--ticket ticket-row">
+            <div class="a-ev-row a-ev-row--ticket ticket-row" data-ticket-id="{{ $ticket['id'] ?? '' }}" data-sold="{{ $ticket['sold'] ?? 0 }}">
+                @if(!empty($ticket['id']))<input type="hidden" name="tickets[{{ $index }}][id]" value="{{ $ticket['id'] }}">@endif
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-name">Ticket Name</label><input class="form-control" id="tickets-{{ $index }}-name" name="tickets[{{ $index }}][name]" value="{{ $ticket['name'] ?? '' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-price">Price (EGP)</label><input type="number" step="0.01" min="0" class="form-control" id="tickets-{{ $index }}-price" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-status">Status</label><select class="form-select" id="tickets-{{ $index }}-status" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
@@ -176,10 +180,11 @@
                         <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
                     </div>
                 </div>
-                <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+                <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
         @endforeach
     </div>
+    <div id="removed-tickets"></div>
 </div>
 
 <div class="a-ev-block" id="ev-fees">
@@ -292,7 +297,7 @@
 </template>
 
 <template id="ticket-row-template">
-    <div class="a-ev-row a-ev-row--ticket ticket-row">
+    <div class="a-ev-row a-ev-row--ticket ticket-row" data-ticket-id="" data-sold="0">
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-name">Ticket Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
         <div class="a-field"><label class="form-label" for="__ID__-price">Price (EGP)</label><input type="number" step="0.01" min="0" class="form-control" id="__ID__-price" name="__NAME__[price]"></div>
         <div class="a-field"><label class="form-label" for="__ID__-status">Status</label><select class="form-select" id="__ID__-status" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
@@ -308,7 +313,7 @@
                 <label class="form-check-label" for="__ID__">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
             </div>
         </div>
-        <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+        <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
 
@@ -352,7 +357,17 @@
                 return;
             }
 
-            btn.closest('.ticket-row, .fee-row')?.remove();
+            const row = btn.closest('.ticket-row, .fee-row');
+            const existingId = row?.dataset?.ticketId;
+            if (existingId) {
+                // an existing ticket type is only removed because the user said so (explicit marker), never because its row is missing
+                const sold = Number(row.dataset.sold || 0);
+                if (sold > 0 && !confirm('This ticket type already has ' + sold + ' sale(s). It will be hidden from customers, not deleted; existing orders and tickets stay as they are. Continue?')) return;
+                const marker = document.createElement('input');
+                marker.type = 'hidden'; marker.name = 'removed_ticket_ids[]'; marker.value = existingId;
+                document.getElementById('removed-tickets')?.appendChild(marker);
+            }
+            row?.remove();
             renumber();
         });
 
@@ -495,7 +510,8 @@
                 rows.forEach((el, i) => {
                     let h = el.querySelector(':scope > .a-ev-row__title');
                     if (!h) { h = document.createElement('div'); h.className = 'a-ev-row__title a-ev-span-6'; el.prepend(h); }
-                    h.textContent = word + ' ' + (i + 1);
+                    const sold = Number(el.dataset.sold || 0);
+                    h.textContent = word + ' ' + (i + 1) + (sold ? ' · ' + sold + ' sold' : '');
                 });
                 let empty = container.parentElement.querySelector('.a-ev-empty');
                 if (!rows.length && !empty) {
@@ -506,6 +522,26 @@
             });
         }
         renumber();
+
+        // Reorder ticket types (position is sent explicitly so the order never depends on field indexes)
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.move-row');
+            if (!btn) return;
+            const row = btn.closest('.ticket-row'), dir = Number(btn.dataset.dir);
+            const sib = dir < 0 ? row.previousElementSibling : row.nextElementSibling;
+            if (!sib) return;
+            dir < 0 ? sib.before(row) : sib.after(row);
+            renumber();
+        });
+        document.querySelector('#ticket-rows')?.closest('form')?.addEventListener('submit', () => {
+            document.querySelectorAll('#ticket-rows .ticket-row').forEach((row, i) => {
+                const field = row.querySelector('input[name^="tickets["]'); const m = field && field.name.match(/^tickets\[(\d+)\]/);
+                if (!m) return;
+                let pos = row.querySelector('input[data-position]');
+                if (!pos) { pos = document.createElement('input'); pos.type = 'hidden'; pos.dataset.position = '1'; pos.name = 'tickets[' + m[1] + '][position]'; row.appendChild(pos); }
+                pos.value = i;
+            });
+        });
 
         // Slug preview (name -> slug auto-fill already exists above; this only shows the resulting address)
         const slugPreview = document.getElementById('slug-preview');

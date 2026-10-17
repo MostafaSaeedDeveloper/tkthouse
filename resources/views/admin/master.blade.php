@@ -17,9 +17,7 @@
   <title>{{ $pageTitle !== '' ? $pageTitle.' · ' : '' }}{{ $siteName }} Admin</title>
   <meta name="robots" content="noindex, nofollow">
 
-  <link rel="shortcut icon" href="{{ asset('images/favicon.png') }}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/favicon.png') }}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/favicon.png') }}">
+  @include('partials.favicon')
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">

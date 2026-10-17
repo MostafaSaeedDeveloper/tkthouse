@@ -53,9 +53,7 @@
         <!--black-style Css-->
         <link href="{{ asset('css/black-style.css') }}" rel="stylesheet" />
         <!-- Fav icon -->
-        <link rel="shortcut icon" href="{{ ($f = \App\Support\SystemSettings::get('site_favicon')) ? asset('storage/'.$f) : asset('images/favicon.png') }}">
-        <link rel="icon" type="image/png" sizes="192x192" href="{{ ($f = \App\Support\SystemSettings::get('site_favicon')) ? asset('storage/'.$f) : asset('images/favicon.png') }}">
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ ($f = \App\Support\SystemSettings::get('site_favicon')) ? asset('storage/'.$f) : asset('images/favicon.png') }}">
+        @include('partials.favicon')
         <link href="{{ asset('css/font-awesome.css') }}" rel="stylesheet">
         <link href="{{ asset('css/svg-icons.css') }}" rel="stylesheet">
         <!-- Pretty Photo CSS -->

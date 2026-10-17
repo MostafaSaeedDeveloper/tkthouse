@@ -48,6 +48,15 @@ try {
     } elseif ($mode === 'refund') {            // refund request race: attempt, user, type, amount, idempotency key
         $r = app(\App\Services\Payments\Refunds\RefundService::class)->request(\App\Models\PaymentAttempt::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b), $c, $d === '-' ? null : $d, 'concurrency probe refund', $e);
         echo 'OK:'.$r->id;
+    } elseif ($mode === 'sell') {              // a real checkout placement of ONE unit of a ticket type: event id, ticket id, user id
+        $event = \App\Models\Event::findOrFail((int) $a);
+        $units = app(\App\Services\Checkout\CheckoutSelection::class)->build($event, collect([['ticket_id' => (int) $b, 'qty' => 1]]))['units'];
+        $attendee = ['name' => 'Fan', 'email' => 'fan@example.test', 'phone' => '+201000000001', 'gender' => 'male'];
+        $o = app(\App\Services\Checkout\OrderPlacementService::class)->place(\App\Models\User::findOrFail((int) $c), $event, collect($units), ['first_name' => 'B', 'last_name' => 'W', 'email' => 'bw@example.test', 'phone' => '+201000000002'], [$attendee], null, 'fake_card');
+        echo 'OK:'.$o->id;
+    } elseif ($mode === 'remove-ticket') {     // the event form explicitly removing a ticket type: event id, ticket id
+        $r = app(\App\Services\Events\EventTicketSync::class)->sync(\App\Models\Event::findOrFail((int) $a), [], [(int) $b]);
+        echo 'OK:'.json_encode($r);
     } elseif ($mode === 'approve') {           // approval race: refund id, approver user id
         $r = app(\App\Services\Payments\Refunds\RefundService::class)->approve(\App\Models\PaymentRefund::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b));
         echo 'OK:'.$r->status;
@@ -59,7 +68,7 @@ try {
         echo 'OK';
     }
 } catch (Illuminate\Validation\ValidationException $e) {
-    echo 'INVALID:'.($e->errors()['refund'][0] ?? 'validation');
+    echo 'INVALID:'.(collect($e->errors())->flatten()->first() ?? 'validation');
 } catch (ReservationInvalid $e) {
     echo 'INVALID:'.$e->reason.(getenv('WORKER_DEBUG') ? ' fake='.var_export(config('payments.fake.enabled'), true).' env='.app()->environment().' routing='.var_export(\App\Services\Payments\Routing\PaymentAccountResolver::routingEnabled(), true).' tok='.($a ?? '') : '');
 } catch (Illuminate\Database\UniqueConstraintViolationException $e) {

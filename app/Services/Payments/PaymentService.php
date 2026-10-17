@@ -409,7 +409,10 @@ class PaymentService
                 $prefix = $event ? $event->name.' - ' : '';
                 $ticketName = trim(str_starts_with((string) $item->ticket_name, $prefix) ? substr((string) $item->ticket_name, strlen($prefix)) : (string) $item->ticket_name);
 
-                $ticket = EventTicket::query()->where('event_id', $item->event_id)->where('name', $ticketName)->first();
+                // sales made after ticket linking carry the ticket type id (survives renames); older ones fall back to the exact text
+                $ticket = $item->event_ticket_id
+                    ? EventTicket::query()->where('event_id', $item->event_id)->whereKey($item->event_ticket_id)->first()
+                    : EventTicket::query()->where('event_id', $item->event_id)->where('name', $ticketName)->first();
                 if (! $ticket || $ticket->status !== 'active') {
                     return 'ticket_unavailable';
                 }

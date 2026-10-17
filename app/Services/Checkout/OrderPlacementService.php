@@ -32,7 +32,7 @@ class OrderPlacementService
     {
         return DB::transaction(function () use ($user, $event, $units, $buyer, $attendees, $promoCode, $methodCode, $expectedTotal, $affiliateUserId, $routingToken) {
             // Every rule is checked again against current data, and prices are the current ones.
-            $fresh = $this->selection->revalidate($event, $units);
+            $fresh = $this->selection->revalidate($event, $units, lockTickets: true);
             $freshUnits = collect($fresh['units']);
 
             if ($freshUnits->count() !== count($attendees)) {
@@ -67,6 +67,7 @@ class OrderPlacementService
 
                 $order->items()->create([
                     'event_id' => $event->id,
+                    'event_ticket_id' => $unit['ticket_id'] ?? null, // the ticket type this sale came from; the text below stays as the historical snapshot
                     'ticket_id' => null,
                     'ticket_name' => self::snapshotName((string) $unit['event_name'], (string) $unit['ticket_name']),
                     'ticket_price' => $unit['ticket_price'],

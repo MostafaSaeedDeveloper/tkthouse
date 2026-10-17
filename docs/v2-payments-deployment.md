@@ -31,6 +31,7 @@ Optional later: `php artisan payments:validate --backfill-references` fills only
 | 2026_12_02 tracking & webhooks | `payment_attempts` reference columns, `webhook_events`, account webhook-configured stamps |
 | 2026_12_03 refunds | `payment_refunds` (FK RESTRICT), account refund-verified stamps |
 | 2026_12_04 refund approval audit | `payment_refunds.approved_at` |
+| 2026_12_06 ticket-type integrity | `order_items.event_ticket_id` (nullable, indexed, no FK), `event_tickets.sort_order` — see `docs/event-ticket-integrity.md`; afterwards run `php artisan events:audit-tickets` (read-only) |
 
 Existing orders, payment attempts, method codes, transaction numbers and stored gateway data are untouched.
 

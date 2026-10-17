@@ -53,7 +53,7 @@ class CheckoutSelection
     }
 
     /** @param Collection<int, array{ticket_id: int, qty: int}> $requested */
-    public function build(Event $event, Collection $requested): array
+    public function build(Event $event, Collection $requested, bool $lockTickets = false): array
     {
         if (! $this->isEventBookable($event)) {
             throw ValidationException::withMessages(['cart' => 'Booking is closed for this event.']);
@@ -67,6 +67,7 @@ class CheckoutSelection
             ->where('event_id', $event->id)
             ->where('status', 'active')
             ->whereIn('id', $requested->pluck('ticket_id'))
+            ->when($lockTickets, fn ($q) => $q->lockForUpdate()) // placing an order serialises against an event edit that could remove/hide the ticket
             ->get()
             ->keyBy('id');
 
@@ -110,7 +111,7 @@ class CheckoutSelection
      *
      * @param Collection<int, array<string, mixed>> $units
      */
-    public function revalidate(Event $event, Collection $units): array
+    public function revalidate(Event $event, Collection $units, bool $lockTickets = false): array
     {
         $requested = $units
             ->groupBy(fn ($unit) => (int) ($unit['ticket_id'] ?? 0))
@@ -118,6 +119,6 @@ class CheckoutSelection
             ->filter(fn ($row) => $row['ticket_id'] > 0)
             ->values();
 
-        return $this->build($event, $requested);
+        return $this->build($event, $requested, $lockTickets);
     }
 }
