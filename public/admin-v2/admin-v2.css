@@ -352,3 +352,8 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 
 /* Very narrow screens: money KPIs stack one per row instead of overflowing two columns. */
 @media (max-width: 480px) { .a-grid--4 { grid-template-columns: minmax(0, 1fr); } .a-kpi__value { white-space: normal; overflow-wrap: anywhere; } }
+
+/* Users list: long emails truncate instead of pushing the Actions column out of view. */
+.a-user-id { min-width: 0; display: block; }
+.a-user-sub { display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 991px) { .a-user-sub { max-width: 100%; white-space: normal; overflow-wrap: anywhere; } }

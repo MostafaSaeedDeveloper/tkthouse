@@ -27,13 +27,26 @@ class UserController extends Controller
             $role = '';
         }
 
-        $users = User::query()
+        $status = in_array($request->string('status')->toString(), ['active', 'inactive'], true) ? $request->string('status')->toString() : '';
+        $orders = $request->boolean('receives_orders');
+        $sort = in_array($request->string('sort')->toString(), ['newest', 'name', 'last_login'], true) ? $request->string('sort')->toString() : 'newest';
+
+        // Everyone the current user may see; the filters narrow it, the summary counts always describe this whole set.
+        $visible = fn () => User::query()->when(! $isSuperAdmin, function ($query) {
+            $query
+                ->whereRaw("LOWER(username) != ?", ['superadmin'])
+                ->whereDoesntHave('roles', fn ($roleQuery) => $this->whereProtectedRole($roleQuery));
+        });
+
+        $stats = [
+            'total' => $visible()->count(),
+            'active' => $visible()->where('is_active', true)->count(),
+            'inactive' => $visible()->where('is_active', false)->count(),
+            'receiving' => $visible()->where('can_receive_orders', true)->where('is_active', true)->count(),
+        ];
+
+        $users = $visible()
             ->with(['roles', 'permissions', 'managedEvents:id,name'])
-            ->when(! $isSuperAdmin, function ($query) {
-                $query
-                    ->whereRaw("LOWER(username) != ?", ['superadmin'])
-                    ->whereDoesntHave('roles', fn ($roleQuery) => $this->whereProtectedRole($roleQuery));
-            })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery
@@ -48,7 +61,12 @@ class UserController extends Controller
             ->when($permission !== '', function ($query) use ($permission) {
                 $query->whereHas('permissions', fn ($permissionQuery) => $permissionQuery->where('name', $permission));
             })
-            ->latest()
+            ->when($status !== '', fn ($query) => $query->where('is_active', $status === 'active'))
+            ->when($orders, fn ($query) => $query->where('can_receive_orders', true))
+            ->when($sort === 'name', fn ($query) => $query->orderBy('name'))
+            ->when($sort === 'last_login', fn ($query) => $query->orderByRaw('last_login_at IS NULL')->orderByDesc('last_login_at'))
+            ->when($sort === 'newest', fn ($query) => $query->latest())
+            ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString();
 
@@ -58,7 +76,7 @@ class UserController extends Controller
             ->pluck('name');
         $permissions = Permission::orderBy('name')->pluck('name');
 
-        return view('admin.users.index', compact('users', 'roles', 'permissions', 'search', 'role', 'permission'));
+        return view('admin.users.index', compact('users', 'roles', 'permissions', 'search', 'role', 'permission', 'status', 'orders', 'sort', 'stats'));
     }
 
     public function create()
