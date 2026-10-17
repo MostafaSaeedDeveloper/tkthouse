@@ -480,4 +480,62 @@ class ExternalTransactionTest extends TestCase
         $show = $this->actingAs($this->admin)->get(route('admin.payments.transactions.show', $legacy))->assertOk();
         $show->assertSee('Status history')->assertSee('Refund history')->assertSee('What can be done here')->assertSee('Cancel');
     }
+
+    /* ------------------------------------------------------------------------- final security & regression checks */
+
+    public function test_a_csv_that_says_paid_never_changes_a_local_payment_or_order(): void
+    {
+        $attempt = $this->paidAttempt($this->pmA, '7001', 150.0, 'initiated');
+        $statuses = [$attempt->status, $attempt->order->status, $attempt->paid_at];
+        $path = $this->csv("Transaction ID,Amount,Status,Merchant Order ID\n7001,150.00,Success,M-7001\n");
+
+        app(ExternalTransactionCsvImporter::class)->import($this->pmA, $path, $this->csvMap($path), 'major', $this->admin);
+
+        $row = ExternalTransaction::where('provider_transaction_id', '7001')->firstOrFail();
+        $this->assertSame(['paid', null], [$row->status, $row->verified_at], 'recorded as an unverified provider record');
+        $this->assertSame($attempt->id, $row->matched_attempt_id, 'exact match is only a link');
+        $fresh = $attempt->fresh();
+        $this->assertSame($statuses, [$fresh->status, $fresh->order->status, $fresh->paid_at], 'a spreadsheet can never settle a payment');
+        $this->assertSame(0, \App\Models\IssuedTicket::count());
+    }
+
+    public function test_csv_upload_rejects_wrong_empty_oversized_and_hostile_files_and_escapes_what_it_shows(): void
+    {
+        $post = fn ($file) => $this->actingAs($this->admin)->post(route('admin.payments.imported.csv'), ['account_id' => $this->pmA->id, 'file' => $file]);
+
+        $post(UploadedFile::fake()->createWithContent('shell.php', "<?php system('id');"))->assertSessionHasErrors('file');          // wrong type
+        $post(UploadedFile::fake()->createWithContent('empty.csv', ''))->assertSessionHasErrors('file');                                // empty
+        $post(UploadedFile::fake()->create('huge.csv', 6000, 'text/csv'))->assertSessionHasErrors('file');                              // > 5 MB
+        $post(UploadedFile::fake()->createWithContent('one-column.csv', "only\n1\n2\n"))->assertSessionHasErrors('file');             // no usable header
+        $this->assertSame(0, ExternalTransaction::count());
+        $this->assertSame([], Storage::disk('local')->files('payment-imports'), 'rejected files are not kept');
+
+        // formulas and markup are stored as plain text and escaped when displayed
+        $path = $this->csv("Transaction ID,Amount,Status,Payment Method,Email\n8001,10,paid,\"<script>alert(1)</script>\",\"=HYPERLINK(\"\"http://evil\"\")\"\n");
+        app(ExternalTransactionCsvImporter::class)->import($this->pmA, $path, $this->csvMap($path), 'major', $this->admin);
+        $html = $this->actingAs($this->admin)->get(route('admin.payments.imported'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
+    }
+
+    public function test_duplicate_prevention_is_per_provider_account_and_never_across_accounts(): void
+    {
+        $path = $this->csv("id,amount\n9001,10\n9001,10\n9002,20\n");
+        $map = ['provider_transaction_id' => 0, 'amount' => 1];
+        $imp = app(ExternalTransactionCsvImporter::class);
+
+        $imp->import($this->pmA, $path, $map, 'major');
+        $imp->import($this->pmA, $path, $map, 'major');
+        $this->assertSame(2, ExternalTransaction::where('integration_account_id', $this->pmA->id)->count());
+
+        $imp->import($this->pmB, $path, $map, 'major');                       // same ids under another merchant account are different records
+        $this->assertSame(4, ExternalTransaction::count());
+        $this->assertSame([2, 2], [ExternalTransaction::where('integration_account_id', $this->pmA->id)->count(), ExternalTransaction::where('integration_account_id', $this->pmB->id)->count()]);
+    }
+
+    public function test_the_csv_import_token_cannot_be_used_to_read_arbitrary_files(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.payments.imported.csv.import'), ['account_id' => $this->pmA->id, 'token' => '../../.env', 'amount_unit' => 'major', 'map' => ['provider_transaction_id' => 0, 'amount' => 1]])->assertSessionHasErrors('token');
+        $this->actingAs($this->admin)->post(route('admin.payments.imported.csv.import'), ['account_id' => $this->pmA->id, 'token' => (string) \Illuminate\Support\Str::uuid(), 'amount_unit' => 'major', 'map' => ['provider_transaction_id' => 0, 'amount' => 1]])->assertNotFound();
+    }
 }

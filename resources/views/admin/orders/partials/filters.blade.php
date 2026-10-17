@@ -33,7 +33,7 @@
             <select name="event_id" id="{{ $idp }}Event" class="form-select">
                 <option value="">All events</option>
                 @foreach($events as $event)
-                    <option value="{{ $event->id }}" @selected((string) request('event_id') === (string) $event->id)>{{ $event->name }}</option>
+                    <option value="{{ $event->id }}" @selected((string) request('event_id') === (string) $event->id)>{{ $event->filterLabel() }}</option>
                 @endforeach
             </select></div>
         @endif

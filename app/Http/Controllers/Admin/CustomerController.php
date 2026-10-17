@@ -50,7 +50,7 @@ class CustomerController extends Controller
         $customers = $customersQuery->latest()->paginate(15)->withQueryString();
 
         $events = $canFilterByEvent
-            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
         return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent'));

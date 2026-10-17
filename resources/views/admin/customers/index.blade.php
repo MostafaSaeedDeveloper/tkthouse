@@ -20,7 +20,7 @@
         <select name="event_id" id="cEvent" class="form-select">
             <option value="">All Events</option>
             @foreach($events as $event)
-                <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->name }}</option>
+                <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->filterLabel() }}</option>
             @endforeach
         </select></div>
     @endif

@@ -354,4 +354,52 @@ class EventLifecycleTest extends TestCase
         $this->assertSame($ticket->id, EventTicket::firstOrFail()->id);
         $this->assertSame(1, \Spatie\Activitylog\Models\Activity::where('description', 'Event restored')->count());
     }
+
+    public function test_unknown_provider_answers_never_settle_or_collect_silently_and_a_later_paid_answer_does(): void
+    {
+        [$event] = $this->eventWithSale(false);
+        $order = $this->makePendingOrder($this->admin, $event, 1, 500);
+        $attempt = $this->attemptFor($order, 'initiated');
+        $this->lifecycle()->archive($event, $this->admin);
+        $payments = app(PaymentService::class);
+
+        $unknown = $payments->settle($attempt->fresh(), \App\Services\Payments\GatewayResult::unknown('network down'));
+        $this->assertSame(PaymentService::OUTCOME_PENDING, $unknown);
+        $this->assertSame(['pending_payment', 'initiated', 0], [$order->fresh()->status, $attempt->fresh()->status, IssuedTicket::count()], 'unknown = nothing changes');
+
+        $paid = new \App\Services\Payments\GatewayResult(\App\Services\Payments\GatewayResult::PAID, 'LATE-1', 500.0, 'EGP', $attempt->reference);
+        $this->assertSame(PaymentService::OUTCOME_PAID, $payments->settle($attempt->fresh(), $paid), 'a payment started before the archive is honoured by the normal rules');
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertSame(1, IssuedTicket::where('order_id', $order->id)->count());
+    }
+
+    public function test_a_payment_that_arrives_after_the_order_expired_and_the_event_was_archived_is_kept_for_review_not_fulfilled(): void
+    {
+        [$event] = $this->eventWithSale(false);
+        $order = $this->makePendingOrder($this->admin, $event, 1, 500);
+        $attempt = $this->attemptFor($order, 'initiated');
+        $order->update(['payment_timeout_started_at' => now()->subHours(5), 'payment_timeout_minutes' => 60]);
+        app(\App\Services\PendingPaymentExpiryService::class)->expireDueOrders();   // expired by the EXISTING policy
+        $this->assertSame('canceled', $order->fresh()->status);
+        $this->lifecycle()->archive($event, $this->admin);
+
+        $paid = new \App\Services\Payments\GatewayResult(\App\Services\Payments\GatewayResult::PAID, 'LATE-2', 500.0, 'EGP', $attempt->reference);
+        $this->assertSame(PaymentService::OUTCOME_REVIEW_REQUIRED, app(PaymentService::class)->settle($attempt->fresh(), $paid));
+
+        $this->assertSame('canceled', $order->fresh()->status);
+        $this->assertSame(0, IssuedTicket::count());
+        $this->assertSame('paid', $attempt->fresh()->status, 'the money was taken: the record is kept');
+        $this->assertSame('event_not_on_sale', $attempt->fresh()->meta['needs_review']);
+        $this->artisan('payments:review-queue')->expectsOutputToContain($order->order_number)->assertExitCode(0);
+    }
+
+    public function test_pending_orders_of_an_archived_event_are_left_to_the_normal_expiry_policy(): void
+    {
+        [$event] = $this->eventWithSale(false);
+        $order = $this->makePendingOrder($this->admin, $event, 1, 500);
+
+        $this->lifecycle()->archive($event, $this->admin);
+
+        $this->assertSame('pending_payment', $order->fresh()->status, 'archiving never cancels pending orders');
+    }
 }

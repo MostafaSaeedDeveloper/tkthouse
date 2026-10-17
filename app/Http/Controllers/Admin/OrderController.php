@@ -89,7 +89,7 @@ class OrderController extends Controller
         $paymentMethodLabels = $this->paymentMethodLabels();
 
         $events = $canFilterByEvent
-            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
         $canExport = $this->isSuperAdmin($request->user());
@@ -132,7 +132,7 @@ class OrderController extends Controller
         $paymentMethodLabels = $this->paymentMethodLabels();
 
         $events = $canFilterByEvent
-            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;

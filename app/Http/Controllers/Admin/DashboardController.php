@@ -37,10 +37,11 @@ class DashboardController extends Controller
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
 
+        // archived events stay selectable (historical numbers) but come last and are marked
         $eventOptions = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
+            ->whereIn('status', ['active', 'sold_out', Event::ARCHIVED])
             ->when(! empty($userManagedEventIds), fn ($q) => $q->whereIn('id', $userManagedEventIds))
-            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'sold_out' THEN 1 ELSE 2 END")
             ->orderBy('event_date')
             ->orderBy('name')
             ->get(['id', 'name', 'status']);
