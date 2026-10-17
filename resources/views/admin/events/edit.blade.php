@@ -16,7 +16,7 @@
     <x-admin.card>
         @include('admin.events.form')
 
-        <div class="a-form-actions">
+        <div class="a-form-actions a-ev-actionbar">
             <a href="{{ route('admin.events.index') }}" class="a-btn a-btn--ghost">Cancel</a>
             <button type="submit" class="a-btn a-btn--primary">Update Event</button>
         </div>

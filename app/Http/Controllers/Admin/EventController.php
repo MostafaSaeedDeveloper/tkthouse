@@ -119,8 +119,31 @@ class EventController extends Controller
         return $validated;
     }
 
+    /**
+     * The form always renders one empty ticket row and one empty fee row. A row the user never touched is not a row: drop it before
+     * validation, otherwise saving an event without fees (or tickets) fails with "name is required when fees is present".
+     * Keys are preserved because lineup image uploads are matched by index.
+     */
+    private function dropUntouchedRows(Request $request): void
+    {
+        $blank = fn ($row, array $keys) => collect($keys)->every(fn ($k) => trim((string) data_get($row, $k, '')) === '');
+        $rules = [
+            'tickets' => ['name', 'price', 'label', 'description'],
+            'fees' => ['name', 'value', 'description'],
+            'lineups' => ['artist_name', 'instagram', 'performance_time', 'performance_date'],
+        ];
+        $merge = [];
+        foreach ($rules as $field => $keys) {
+            if (is_array($rows = $request->input($field))) {
+                $merge[$field] = array_filter($rows, fn ($row) => ! (is_array($row) && $blank($row, $keys)));
+            }
+        }
+        $request->merge($merge);
+    }
+
     private function validateEvent(Request $request, ?Event $event = null): array
     {
+        $this->dropUntouchedRows($request);
         $coverRule = ['nullable', 'image', 'max:2048'];
 
         return $request->validate([

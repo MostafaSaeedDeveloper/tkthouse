@@ -36,7 +36,11 @@
     }
 @endphp
 
-<x-admin.form-section title="Basic information" description="Name, schedule and where the event takes place." :cols="2">
+<nav class="a-ev-jump" aria-label="Jump to section">
+    <a href="#ev-basic">Basics</a><a href="#ev-sale">Availability</a><a href="#ev-media">Media</a><a href="#ev-content">Content</a><a href="#ev-tickets">Tickets</a><a href="#ev-fees">Fees</a><a href="#ev-lineup">Lineup</a>
+</nav>
+
+<x-admin.form-section id="ev-basic" title="Basic information" description="Name, schedule and where the event takes place." :cols="2">
     <x-admin.field label="Event Name" for="event_name" name="name" required class="is-full">
         <input name="name" id="event_name" class="form-control" value="{{ old('name', $event->name ?? '') }}" required>
     </x-admin.field>
@@ -53,17 +57,18 @@
         <input name="location" id="event_location" class="form-control" value="{{ old('location', $event->location ?? '') }}" required>
     </x-admin.field>
     <x-admin.field label="Slug" for="event_slug" name="slug" hint="Leave empty to generate it from the event name.">
-        <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name">
+        <input name="slug" id="event_slug" class="form-control" value="{{ old('slug', $event->slug ?? '') }}" placeholder="auto-generated-from-name" pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Lowercase letters, numbers and single hyphens">
+        <span class="a-hint" id="slug-preview" aria-live="polite"></span>
     </x-admin.field>
     <x-admin.field label="Map URL (Optional)" for="event_map_url" name="map_url">
-        <input name="map_url" id="event_map_url" class="form-control" value="{{ old('map_url', $event->map_url ?? '') }}">
+        <input type="url" name="map_url" id="event_map_url" class="form-control" placeholder="https://maps.google.com/…" value="{{ old('map_url', $event->map_url ?? '') }}">
     </x-admin.field>
     <x-admin.field label="Map Embed Code (Optional)" for="event_map_embed" name="map_embed" class="is-full">
         <textarea name="map_embed" id="event_map_embed" class="form-control" rows="4" placeholder='<iframe src="https://www.google.com/maps/embed?pb=..." ...></iframe>'>{{ old('map_embed', $event->map_embed ?? '') }}</textarea>
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section class="a-ev-block" title="Availability &amp; checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
+<x-admin.form-section id="ev-sale" class="a-ev-block" title="Availability & checkout" description="Control whether the event is on sale and how customers pay." :cols="2">
     <x-admin.field label="Status" for="event_status" name="status">
         <select name="status" id="event_status" class="form-select">
             <option value="active" @selected(old('status', $event->status ?? 'active') === 'active')>Active</option>
@@ -80,7 +85,7 @@
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section class="a-ev-block" title="Media" description="Cover, home page banner, venue map and gallery images." :cols="1">
+<x-admin.form-section id="ev-media" class="a-ev-block" title="Media" description="Cover, home page banner, venue map and gallery images." :cols="1">
     <div class="a-ev-media">
         <x-admin.field label="Event Image (Optional)" for="cover_image" name="cover_image" hint="Upload an image to be shown as the event cover.">
             <input type="file" name="cover_image" id="cover_image" class="form-control" accept="image/*">
@@ -135,7 +140,7 @@
     @endif
 </x-admin.form-section>
 
-<x-admin.form-section class="a-ev-block" title="Content" description="Shown to attendees on the event page." :cols="1">
+<x-admin.form-section id="ev-content" class="a-ev-block" title="Content" description="Shown to attendees on the event page." :cols="1">
     <x-admin.field label="Description (Optional)" for="event_description" name="description" hint="You can leave this empty if you don't need a description.">
         <textarea name="description" id="event_description" class="form-control js-ckeditor-description" rows="3" placeholder="Add event details for attendees...">{{ old('description', $event->description ?? '') }}</textarea>
     </x-admin.field>
@@ -145,7 +150,7 @@
 </x-admin.form-section>
 
 {{-- Ticket types: fully dynamic, add as many as needed --}}
-<div class="a-ev-block">
+<div class="a-ev-block" id="ev-tickets">
     <div class="a-ev-section-head">
         <div>
             <h3>Ticket Types</h3>
@@ -157,10 +162,10 @@
         @foreach($ticketRows as $index => $ticket)
             <div class="a-ev-row a-ev-row--ticket ticket-row">
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-name">Ticket Name</label><input class="form-control" id="tickets-{{ $index }}-name" name="tickets[{{ $index }}][name]" value="{{ $ticket['name'] ?? '' }}"></div>
-                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-price">Price</label><input type="number" step="0.01" class="form-control" id="tickets-{{ $index }}-price" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-price">Price (EGP)</label><input type="number" step="0.01" min="0" class="form-control" id="tickets-{{ $index }}-price" name="tickets[{{ $index }}][price]" value="{{ $ticket['price'] ?? '' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-status">Status</label><select class="form-select" id="tickets-{{ $index }}-status" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control form-control-color w-100" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
-                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max/Order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
+                <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-label">Label</label><input class="form-control" id="tickets-{{ $index }}-label" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
                 <div class="a-field a-ev-span-3"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
                 <div class="a-field">
@@ -168,7 +173,7 @@
                     <div class="form-check">
                         <input type="hidden" name="tickets[{{ $index }}][is_couple]" value="0">
                         <input class="form-check-input" type="checkbox" value="1" name="tickets[{{ $index }}][is_couple]" id="ticket-couple-{{ $index }}" @checked((bool) ($ticket['is_couple'] ?? false))>
-                        <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples Only</label>
+                        <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
                     </div>
                 </div>
                 <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
@@ -177,7 +182,7 @@
     </div>
 </div>
 
-<div class="a-ev-block">
+<div class="a-ev-block" id="ev-fees">
     <div class="a-ev-section-head">
         <div>
             <h3>Event Fees</h3>
@@ -189,8 +194,8 @@
         @foreach($feeRows as $index => $fee)
             <div class="a-ev-row a-ev-row--fee fee-row">
                 <div class="a-field"><label class="form-label" for="fees-{{ $index }}-name">Fee Name</label><input class="form-control" id="fees-{{ $index }}-name" name="fees[{{ $index }}][name]" value="{{ $fee['name'] ?? '' }}"></div>
-                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-type">Fee Type</label><select class="form-select" id="fees-{{ $index }}-type" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
-                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-value">Value</label><input type="number" step="0.01" class="form-control" id="fees-{{ $index }}-value" name="fees[{{ $index }}][value]" value="{{ $fee['value'] ?? '' }}"></div>
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-type">Fee Type</label><select class="form-select" data-fee-type id="fees-{{ $index }}-type" name="fees[{{ $index }}][fee_type]"><option value="percentage" @selected(($fee['fee_type'] ?? 'percentage') === 'percentage')>Percentage (%)</option><option value="fixed" @selected(($fee['fee_type'] ?? '') === 'fixed')>Fixed Amount</option></select></div>
+                <div class="a-field"><label class="form-label" for="fees-{{ $index }}-value">Value</label><input type="number" step="0.01" min="0" class="form-control" data-fee-value id="fees-{{ $index }}-value" name="fees[{{ $index }}][value]" value="{{ $fee['value'] ?? '' }}"></div>
                 <div class="a-field"><label class="form-label" for="fees-{{ $index }}-description">Description</label><input class="form-control" id="fees-{{ $index }}-description" name="fees[{{ $index }}][description]" value="{{ $fee['description'] ?? '' }}"></div>
                 <div class="a-ev-row__tools"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove fee"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
@@ -198,7 +203,7 @@
     </div>
 </div>
 
-<div class="a-ev-block">
+<div class="a-ev-block" id="ev-lineup">
     <div class="a-ev-section-head">
         <div>
             <h3>Lineup Artists</h3>
@@ -289,10 +294,10 @@
 <template id="ticket-row-template">
     <div class="a-ev-row a-ev-row--ticket ticket-row">
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-name">Ticket Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
-        <div class="a-field"><label class="form-label" for="__ID__-price">Price</label><input type="number" step="0.01" class="form-control" id="__ID__-price" name="__NAME__[price]"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-price">Price (EGP)</label><input type="number" step="0.01" min="0" class="form-control" id="__ID__-price" name="__NAME__[price]"></div>
         <div class="a-field"><label class="form-label" for="__ID__-status">Status</label><select class="form-select" id="__ID__-status" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
         <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control form-control-color w-100" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
-        <div class="a-field"><label class="form-label" for="__ID__-max">Max/Order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-label">Label</label><input class="form-control" id="__ID__-label" name="__NAME__[label]"></div>
         <div class="a-field a-ev-span-3"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
         <div class="a-field">
@@ -300,7 +305,7 @@
             <div class="form-check">
                 <input type="hidden" name="__NAME__[is_couple]" value="0">
                 <input class="form-check-input" type="checkbox" value="1" name="__NAME__[is_couple]" id="__ID__">
-                <label class="form-check-label" for="__ID__">Couples Only</label>
+                <label class="form-check-label" for="__ID__">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
             </div>
         </div>
         <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
@@ -310,8 +315,8 @@
 <template id="fee-row-template">
     <div class="a-ev-row a-ev-row--fee fee-row">
         <div class="a-field"><label class="form-label" for="__ID__-name">Fee Name</label><input class="form-control" id="__ID__-name" name="__NAME__[name]"></div>
-        <div class="a-field"><label class="form-label" for="__ID__-type">Fee Type</label><select class="form-select" id="__ID__-type" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
-        <div class="a-field"><label class="form-label" for="__ID__-value">Value</label><input type="number" step="0.01" class="form-control" id="__ID__-value" name="__NAME__[value]"></div>
+        <div class="a-field"><label class="form-label" for="__ID__-type">Fee Type</label><select class="form-select" data-fee-type id="__ID__-type" name="__NAME__[fee_type]"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed Amount</option></select></div>
+        <div class="a-field"><label class="form-label" for="__ID__-value">Value</label><input type="number" step="0.01" min="0" class="form-control" data-fee-value id="__ID__-value" name="__NAME__[value]"></div>
         <div class="a-field"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
         <div class="a-ev-row__tools"><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove fee"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
@@ -348,6 +353,7 @@
             }
 
             btn.closest('.ticket-row, .fee-row')?.remove();
+            renumber();
         });
 
         document.getElementById('add-lineup-row')?.addEventListener('click', () => {
@@ -361,12 +367,15 @@
                 .replaceAll('__LINEUPINDEX__', String(nextIndex));
             container.insertAdjacentHTML('beforeend', html);
             container.dataset.nextIndex = String(nextIndex + 1);
+            initEventDatePicker(); // the new row's date field gets the same picker
+            renumber();
         });
 
         document.addEventListener('click', (event) => {
             const btn = event.target.closest('.remove-lineup-row');
             if (!btn) return;
             btn.closest('.lineup-row')?.remove();
+            renumber();
         });
 
         document.addEventListener('change', (event) => {
@@ -472,6 +481,65 @@
         } else {
             initEventDatePicker();
         }
+
+
+        /* ---- helpers added for usability ---- */
+        const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // matches the server rule (2 MB)
+
+        // "Ticket 1", "Fee 2"... headings and an empty state, kept in sync when rows are added or removed
+        function renumber() {
+            [['#ticket-rows', '.ticket-row', 'Ticket'], ['#fee-rows', '.fee-row', 'Fee'], ['#lineup-rows', '.lineup-row', 'Artist']].forEach(([box, row, word]) => {
+                const container = document.querySelector(box);
+                if (!container) return;
+                const rows = container.querySelectorAll(row);
+                rows.forEach((el, i) => {
+                    let h = el.querySelector(':scope > .a-ev-row__title');
+                    if (!h) { h = document.createElement('div'); h.className = 'a-ev-row__title a-ev-span-6'; el.prepend(h); }
+                    h.textContent = word + ' ' + (i + 1);
+                });
+                let empty = container.parentElement.querySelector('.a-ev-empty');
+                if (!rows.length && !empty) {
+                    empty = document.createElement('p'); empty.className = 'a-ev-empty a-hint';
+                    empty.textContent = box === '#lineup-rows' ? 'No artists yet — add the performers people will see on the event page.' : box === '#fee-rows' ? 'No fees: customers pay the ticket price only.' : 'No ticket types yet — an event needs at least one to sell tickets.';
+                    container.after(empty);
+                } else if (rows.length && empty) { empty.remove(); }
+            });
+        }
+        renumber();
+
+        // Slug preview (name -> slug auto-fill already exists above; this only shows the resulting address)
+        const slugPreview = document.getElementById('slug-preview');
+        const showSlug = () => { if (slugPreview && slugInput) { const v = slugInput.value.trim(); slugPreview.textContent = v ? 'Page address: /events/' + v : 'Page address is created from the event name.'; } };
+        nameInput?.addEventListener('input', () => setTimeout(showSlug, 0)); slugInput?.addEventListener('input', showSlug); showSlug();
+
+        // End date can never be before the start date
+        const startDate = document.getElementById('event_date'), endDate = document.getElementById('end_date');
+        const syncEnd = () => { if (endDate?._flatpickr) { endDate._flatpickr.set('minDate', startDate.value || null); } };
+        startDate?.addEventListener('change', syncEnd);
+        window.addEventListener('load', () => setTimeout(syncEnd, 0));
+
+        // Fee value unit follows the fee type
+        document.addEventListener('change', (e) => { if (e.target.matches('[data-fee-type]')) unit(e.target.closest('.fee-row')); });
+        function unit(row) {
+            if (!row) return;
+            const t = row.querySelector('[data-fee-type]')?.value, v = row.querySelector('[data-fee-value]');
+            if (v) { v.placeholder = t === 'percentage' ? 'e.g. 5 (%)' : 'e.g. 20 (EGP)'; if (t === 'percentage') v.max = 100; else v.removeAttribute('max'); }
+        }
+        document.querySelectorAll('.fee-row').forEach(unit);
+        document.getElementById('add-fee-row')?.addEventListener('click', () => unit([...document.querySelectorAll('.fee-row')].pop()));
+
+        // Tell about oversized images immediately instead of after the upload
+        document.addEventListener('change', (e) => {
+            const input = e.target;
+            if (!(input instanceof HTMLInputElement) || input.type !== 'file' || !input.files?.length) return;
+            const big = [...input.files].filter((f) => f.size > MAX_IMAGE_BYTES);
+            let note = input.parentElement.querySelector('.a-ev-filewarn');
+            if (big.length) {
+                if (!note) { note = document.createElement('div'); note.className = 'a-error a-ev-filewarn'; note.setAttribute('role', 'alert'); input.after(note); }
+                note.textContent = big.map((f) => f.name).join(', ') + ' is larger than 2 MB and will be rejected. Choose a smaller image.';
+                input.value = '';
+            } else if (note) { note.remove(); }
+        });
 
         window.addEventListener('load', initEventDatePicker);
 
