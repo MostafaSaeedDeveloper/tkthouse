@@ -70,7 +70,7 @@
                         <div style="display:flex;gap:12px;align-items:center;min-width:0">
                             <span class="a-userbtn__avatar" aria-hidden="true">@if($user->profileImageUrl())<img src="{{ $user->profileImageUrl() }}" alt="">@else{{ $initials }}@endif</span>
                             <span class="a-user-id">
-                                <span class="a-table__main">{{ $user->name }}@if($isMe) <x-admin.badge variant="info">You</x-admin.badge>@endif</span>
+                                <span class="a-table__main">@can('users.view')<a href="{{ route('admin.users.show', $user) }}" style="color:inherit">{{ $user->name }}</a>@else{{ $user->name }}@endcan @if($isMe) <x-admin.badge variant="info">You</x-admin.badge>@endif</span>
                                 <span class="a-table__sub a-user-sub" title="{{ $user->email }}">{{ $user->email }} · &#64;{{ $user->username }}</span>
                             </span>
                         </div>

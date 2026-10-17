@@ -90,7 +90,9 @@ class UserController extends Controller
         $permissions = Permission::orderBy('name')->get();
         $events = Event::query()->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.users.create', compact('roles', 'permissions', 'events'));
+        $rolePermissions = $this->rolePermissionMap($roles);
+
+        return view('admin.users.create', compact('roles', 'permissions', 'events', 'rolePermissions'));
     }
 
     public function store(Request $request)
@@ -143,7 +145,47 @@ class UserController extends Controller
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
-        return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
+        return $this->afterSave($user)->with('success', 'User created successfully.');
+    }
+
+    public function show(User $user)
+    {
+        $viewer = auth()->user();
+        $this->ensureCanManageUser($viewer, $user);
+        $user->load(['roles.permissions', 'permissions', 'managedEvents:id,name']);
+
+        $viaRole = $user->roles->flatMap(fn ($r) => $r->permissions->pluck('name'))->unique()->sort()->values();
+        $direct = $user->permissions->pluck('name')->sort()->values();
+
+        $assigned = \App\Models\Order::query()->where('assigned_user_id', $user->id);
+        $orders = [
+            'total' => (clone $assigned)->count(),
+            'last30' => (clone $assigned)->where('created_at', '>=', now()->subDays(30))->count(),
+            'byStatus' => (clone $assigned)->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status'),
+            'sold' => \App\Models\Order::query()->where('sold_by_user_id', $user->id)->count(),
+        ];
+
+        $canSeePayment = \App\Orders\OrderAccess::isSuper($viewer) || $viewer->can('settings.payment-accounts.view') || $viewer->can('settings.payment-accounts.manage');
+        $paymentAccount = $canSeePayment && $user->payment_account_id ? \App\Models\IntegrationAccount::query()->find($user->payment_account_id, ['id', 'name', 'provider', 'environment']) : null;
+
+        $activity = \Spatie\Activitylog\Models\Activity::query()
+            ->where('subject_type', User::class)->where('subject_id', $user->id)
+            ->with('causer:id,name')->latest('id')->limit(10)->get();
+
+        return view('admin.users.show', compact('user', 'viaRole', 'direct', 'orders', 'canSeePayment', 'paymentAccount', 'activity'));
+    }
+
+    /** The profile page when the actor may open it, otherwise back to the list (a user with create/update but without view). */
+    private function afterSave(User $user): \Illuminate\Http\RedirectResponse
+    {
+        return auth()->user()->can('users.view') ? redirect()->route('admin.users.show', $user) : redirect()->route('admin.users.index');
+    }
+
+    /** role name => permission names, so the form can show which permissions a role already grants. */
+    private function rolePermissionMap($roles): array
+    {
+        return Role::query()->with('permissions:id,name')->whereIn('name', $roles->pluck('name'))->get()
+            ->mapWithKeys(fn ($r) => [$r->name => $r->permissions->pluck('name')->values()->all()])->all();
     }
 
     public function edit(User $user)
@@ -159,7 +201,10 @@ class UserController extends Controller
         $permissions = Permission::orderBy('name')->get();
         $events = Event::query()->orderBy('name')->get(['id', 'name']);
 
-        return view('admin.users.edit', compact('user', 'roles', 'permissions', 'events'));
+        $rolePermissions = $this->rolePermissionMap($roles);
+        $user->loadMissing(['roles', 'permissions', 'managedEvents:id,name']);
+
+        return view('admin.users.edit', compact('user', 'roles', 'permissions', 'events', 'rolePermissions'));
     }
 
     public function update(Request $request, User $user)
@@ -218,12 +263,13 @@ class UserController extends Controller
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
-        return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
+        return $this->afterSave($user)->with('success', 'User updated successfully.');
     }
 
     public function destroy(User $user)
     {
         $this->ensureCanManageUser(auth()->user(), $user);
+        abort_if($user->id === auth()->id(), 422, 'You cannot delete your own account.');
 
         $user->delete();
         activity('users')->causedBy(auth()->user())->log('User deleted: '.$user->username);

@@ -2,41 +2,55 @@
     <x-admin.field label="Name" name="name" for="u-name" required><input id="u-name" name="name" class="form-control" value="{{ old('name',$user->name ?? '') }}" required></x-admin.field>
     <x-admin.field label="Username" name="username" for="u-username" required><input id="u-username" name="username" class="form-control" value="{{ old('username',$user->username ?? '') }}" required></x-admin.field>
     <x-admin.field label="Email" name="email" for="u-email" required><input id="u-email" type="email" name="email" class="form-control" value="{{ old('email',$user->email ?? '') }}" required></x-admin.field>
-    <x-admin.field label="Password" name="password" for="u-password" :required="!isset($user)" :hint="isset($user) ? 'Leave empty to keep the current password.' : null"><input id="u-password" type="password" name="password" class="form-control" autocomplete="new-password" @required(!isset($user))></x-admin.field>
+    <x-admin.field label="Password" name="password" for="u-password" :required="!isset($user)" :hint="isset($user) ? 'Leave empty to keep the current password.' : null"><div style="display:flex;gap:8px"><input id="u-password" type="password" name="password" class="form-control" autocomplete="new-password" minlength="8" @required(!isset($user))><button type="button" class="a-btn a-btn--outline" data-pw-toggle aria-controls="u-password" aria-pressed="false">Show</button></div></x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section title="Access" description="Role and any extra permissions on top of it." cols="1">
+@php
+    $selectedPermissions = old('permissions', isset($user) ? $user->permissions->pluck('name')->toArray() : []);
+    $selectedEventIds = old('managed_event_ids', isset($user) ? $user->managedEvents->pluck('id')->map(fn($id) => (string) $id)->all() : []);
+    $permGroups = $permissions->groupBy(fn ($p) => str($p->name)->before('.')->before(' ')->toString());
+@endphp
+<x-admin.form-section title="Role" description="The role grants a base set of permissions." cols="1">
     <x-admin.field label="Role" name="role" for="u-role">
-        <select id="u-role" name="role" class="form-select">
+        <select id="u-role" name="role" class="form-select" data-role-perms='@json($rolePermissions ?? [])'>
             <option value="">-- No Role --</option>
             @foreach($roles as $role)
                 <option value="{{ $role->name }}" @selected(old('role', isset($user) ? $user->roles->first()?->name : '') === $role->name)>{{ $role->name }}</option>
             @endforeach
         </select>
     </x-admin.field>
-    <x-admin.field label="Custom Permissions" name="permissions" for="u-permissions" hint="Hold Ctrl/Cmd to select several.">
-        @php
-            $selectedPermissions = old('permissions', isset($user) ? $user->permissions->pluck('name')->toArray() : []);
-        @endphp
-        <select id="u-permissions" name="permissions[]" class="form-select a-m-multi" multiple size="8">
-            @foreach($permissions as $permission)
-                <option value="{{ $permission->name }}" @selected(in_array($permission->name, $selectedPermissions))>{{ $permission->name }}</option>
-            @endforeach
-        </select>
-    </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section title="Event scope" description="Limit which events this user can manage." cols="1">
-    @php
-        $selectedEventIds = old('managed_event_ids', isset($user) ? $user->managedEvents->pluck('id')->map(fn($id) => (string) $id)->all() : []);
-    @endphp
-    <x-admin.field label="Managed Event Scope" name="managed_event_ids" for="u-events" hint="Hold Ctrl/Cmd to select multiple events. Leave empty for no restriction (all events).">
-        <select id="u-events" name="managed_event_ids[]" class="form-select a-m-multi" multiple size="6">
-            @foreach(($events ?? collect()) as $event)
-                <option value="{{ $event->id }}" @selected(in_array((string) $event->id, $selectedEventIds))>{{ $event->name }}</option>
+<x-admin.form-section title="Custom permissions" description="Extra permissions on top of the role. Ones the role already grants are marked “from role”." cols="1">
+    <div id="u-perms">
+        <div class="a-m-perm-toolbar">
+            <input type="search" class="form-control a-user-search" placeholder="Filter permissions…" aria-label="Filter permissions" data-perm-filter>
+            <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-perm-clear>Clear custom</button>
+            <span class="a-table__sub" data-perm-count></span>
+        </div>
+        <div class="a-m-perm-groups">
+            @foreach($permGroups as $group => $items)
+                <fieldset class="a-m-perm-group" data-perm-group-box>
+                    <div class="a-m-perm-group__head"><h4>{{ str($group)->replace(['-', '_'], ' ') }}</h4></div>
+                    <div class="a-m-perm-group__body">
+                        @foreach($items as $permission)
+                            <label class="a-m-perm" data-perm-row="{{ $permission->name }}"><input type="checkbox" name="permissions[]" value="{{ $permission->name }}" @checked(in_array($permission->name, $selectedPermissions))><span>{{ $permission->name }}</span><em class="a-user-inherited" hidden>from role</em></label>
+                        @endforeach
+                    </div>
+                </fieldset>
             @endforeach
-        </select>
-    </x-admin.field>
+        </div>
+    </div>
+</x-admin.form-section>
+
+<x-admin.form-section title="Event scope" description="Limit which events this user can manage. Tick none for no restriction (all events)." cols="1">
+    <div class="a-chips" role="group" aria-label="Managed events">
+        @forelse(($events ?? collect()) as $event)
+            <label class="a-m-perm"><input type="checkbox" name="managed_event_ids[]" value="{{ $event->id }}" @checked(in_array((string) $event->id, $selectedEventIds))><span>{{ $event->name }}</span></label>
+        @empty
+            <span class="a-table__sub">No events yet.</span>
+        @endforelse
+    </div>
 </x-admin.form-section>
 
 <x-admin.form-section title="Status & orders" description="Inactive users cannot sign in or receive orders; their history is kept." cols="1">
@@ -82,3 +96,39 @@
     </fieldset>
 </x-admin.form-section>
 @endif
+
+@push('scripts')
+<script>
+(function () {
+    var role = document.getElementById('u-role'), root = document.getElementById('u-perms');
+    if (role && root) {
+        var map = {}; try { map = JSON.parse(role.getAttribute('data-role-perms') || '{}'); } catch (e) {}
+        var rows = root.querySelectorAll('[data-perm-row]'), count = root.querySelector('[data-perm-count]');
+        function refresh() {
+            var inherited = map[role.value] || [], n = 0;
+            rows.forEach(function (r) {
+                var from = inherited.indexOf(r.getAttribute('data-perm-row')) !== -1;
+                r.querySelector('.a-user-inherited').hidden = !from;
+                if (r.querySelector('input').checked) n++;
+            });
+            if (count) count.textContent = n + ' custom · ' + inherited.length + ' from role';
+        }
+        role.addEventListener('change', refresh);
+        root.addEventListener('change', refresh);
+        refresh();
+        var f = root.querySelector('[data-perm-filter]');
+        f.addEventListener('input', function () {
+            var q = f.value.trim().toLowerCase();
+            rows.forEach(function (r) { r.style.display = !q || r.getAttribute('data-perm-row').toLowerCase().indexOf(q) !== -1 ? '' : 'none'; });
+            root.querySelectorAll('[data-perm-group-box]').forEach(function (g) { g.style.display = g.querySelector('[data-perm-row]:not([style*="none"])') ? '' : 'none'; });
+        });
+        root.querySelector('[data-perm-clear]').addEventListener('click', function () { rows.forEach(function (r) { r.querySelector('input').checked = false; }); refresh(); });
+    }
+    var pw = document.querySelector('[data-pw-toggle]');
+    if (pw) pw.addEventListener('click', function () {
+        var i = document.getElementById('u-password'), show = i.type === 'password';
+        i.type = show ? 'text' : 'password'; pw.textContent = show ? 'Hide' : 'Show'; pw.setAttribute('aria-pressed', show ? 'true' : 'false');
+    });
+})();
+</script>
+@endpush

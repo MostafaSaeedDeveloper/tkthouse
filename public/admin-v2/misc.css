@@ -77,3 +77,11 @@
 
 .a-m-switch.form-switch { padding-left: 16px; }
 .a-m-switch.form-switch .form-check-input { margin-left: 0; float: none; }
+
+/* User profile / edit */
+.a-user-avatar-lg { width: 64px; height: 64px; font-size: 24px; }
+.a-user-edit-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1200px) { .a-user-edit-grid { grid-template-columns: minmax(0, 1fr) 320px; } }
+.a-user-search { max-width: 320px; }
+.a-user-inherited { font-size: 11px; font-weight: 700; color: var(--a-muted); background: var(--a-surface-2); border: 1px solid var(--a-line); border-radius: 999px; padding: 1px 8px; margin-left: auto; white-space: nowrap; }
+.a-user-actionbar { position: sticky; bottom: 0; z-index: 5; background: var(--a-surface); border-top: 1px solid var(--a-line); padding: 12px 0; margin-top: 8px; }

@@ -106,8 +106,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware(['permission:dashboard.view', 'orders.global'])->name('events.dashboard');
     Route::get('events/{event}/report', [ReportController::class, 'event'])->middleware(['permission:reports.view', 'orders.global'])->name('events.report');
 
-    Route::resource('users', UserController::class)->except('show')
-        ->middlewareFor('index', 'permission:users.view')
+    Route::resource('users', UserController::class)
+        ->middlewareFor(['index', 'show'], 'permission:users.view')
         ->middlewareFor(['create', 'store'], 'permission:users.create')
         ->middlewareFor(['edit', 'update'], 'permission:users.update')
         ->middlewareFor('destroy', 'permission:users.delete');
