@@ -57,6 +57,9 @@ try {
     } elseif ($mode === 'remove-ticket') {     // the event form explicitly removing a ticket type: event id, ticket id
         $r = app(\App\Services\Events\EventTicketSync::class)->sync(\App\Models\Event::findOrFail((int) $a), [], [(int) $b]);
         echo 'OK:'.json_encode($r);
+    } elseif ($mode === 'ext-import') {        // import-by-id race: account id, provider transaction id (fake provider)
+        $t = app(\App\Services\Payments\External\ExternalTransactionService::class)->lookup(\App\Models\IntegrationAccount::findOrFail((int) $a), (string) $b);
+        echo 'OK:'.$t->id;
     } elseif ($mode === 'delete-event') {      // permanent delete attempt: event id
         app(\App\Services\Events\EventLifecycle::class)->delete(\App\Models\Event::findOrFail((int) $a));
         echo 'OK:deleted';

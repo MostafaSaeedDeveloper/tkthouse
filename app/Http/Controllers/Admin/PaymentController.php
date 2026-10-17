@@ -50,10 +50,14 @@ class PaymentController extends Controller
         $from = $request->filled('from') ? \Illuminate\Support\Carbon::parse($request->string('from'))->startOfDay() : now()->startOfMonth();
         $to = $request->filled('to') ? \Illuminate\Support\Carbon::parse($request->string('to'))->endOfDay() : now()->endOfDay();
         $seeAccounts = TransactionController::canSeeAccounts($user);
-        $report = app(\App\Services\Payments\PaymentReport::class)->build($user, $from, $to, $seeAccounts);
+        $reports = app(\App\Services\Payments\PaymentReport::class);
+        $report = $reports->build($user, $from, $to, $seeAccounts);
+        $previous = $reports->previous($user, $from, $to);
+        // provider-side (imported) figures: separate data set, only for staff who may see merchant accounts
+        $imported = $seeAccounts ? $reports->imported($from, $to) : null;
 
         return view('admin.payments.index', [
-            'report' => $report, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
+            'report' => $report, 'previous' => $previous, 'imported' => $imported, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
             'accountNames' => $seeAccounts ? \App\Models\IntegrationAccount::query()->pluck('name', 'id') : collect(),
             'methodNames' => PaymentMethod::query()->pluck('name', 'code'),
             'attempts' => $attempts,

@@ -185,6 +185,14 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
     Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view|payments.transactions.view')->name('payments.index');
+    // Provider-side transactions (lookup by id / CSV import) and provider sync. No order, no settlement: see docs/v2-provider-capabilities-audit.md
+    Route::get('payments/imported', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'index'])->middleware('permission:payments.accounts.view|payments.transactions.import')->name('payments.imported');
+    Route::post('payments/imported/lookup', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'lookup'])->middleware('permission:payments.transactions.import')->name('payments.imported.lookup');
+    Route::post('payments/imported/csv', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvUpload'])->middleware('permission:payments.transactions.import')->name('payments.imported.csv');
+    Route::post('payments/imported/csv/import', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvImport'])->middleware('permission:payments.transactions.import')->name('payments.imported.csv.import');
+    Route::get('payments/imported/{external}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'show'])->whereNumber('external')->middleware('permission:payments.accounts.view|payments.transactions.import')->name('payments.imported.show');
+    Route::post('payments/imported/{external}/verify', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'verify'])->whereNumber('external')->middleware('permission:payments.transactions.inquire')->name('payments.imported.verify');
+    Route::post('payments/sync/{account}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'sync'])->whereNumber('account')->middleware('permission:payments.transactions.inquire')->name('payments.sync');
     Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
     Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
     Route::post('payments/transactions/{attempt}/inquire', [\App\Http\Controllers\Admin\TransactionController::class, 'inquire'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.inquire');

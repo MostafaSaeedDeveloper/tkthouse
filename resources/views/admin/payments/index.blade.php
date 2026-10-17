@@ -23,6 +23,17 @@
     <x-admin.kpi label="Net collected" :value="$m($t['net'])" icon="fa-scale-balanced" hint="Collected − refunded (not a bank settlement)" />
     <x-admin.kpi label="Pending / failed" :value="$t['pending'].' / '.$t['failed']" icon="fa-hourglass-half" :hint="$m($t['pending_amount']).' waiting for the gateway'" />
 </div>
+@php
+    $p = $previous['totals'];
+    $delta = function (int $now, int $then) { if ($then === 0) { return $now === 0 ? '—' : 'new'; } $d = round(($now - $then) / abs($then) * 100); return ($d > 0 ? '+' : '').$d.'%'; };
+@endphp
+<x-admin.card title="Compared with the previous period" :subtitle="$previous['from']->format('d M Y').' – '.$previous['to']->format('d M Y').' vs '.$from->format('d M Y').' – '.$to->format('d M Y')" flush style="margin-bottom:12px">
+    <x-admin.table stack compact caption="Period comparison"><thead><tr><th>Figure</th><th class="a-num">Previous</th><th class="a-num">This period</th><th class="a-num">Change</th></tr></thead><tbody>
+        @foreach(['collected' => ['Total collected', true], 'successful' => ['Successful transactions', false], 'failed' => ['Failed transactions', false], 'pending' => ['Pending transactions', false], 'refunded' => ['Refunded', true], 'net' => ['Net collected', true]] as $key => [$label, $isMoney])
+            <tr><td data-label="Figure">{{ $label }}</td><td data-label="Previous" class="a-num">{{ $isMoney ? $m($p[$key]) : $p[$key] }}</td><td data-label="This period" class="a-num">{{ $isMoney ? $m($t[$key]) : $t[$key] }}</td><td data-label="Change" class="a-num">{{ $delta((int) $t[$key], (int) $p[$key]) }}</td></tr>
+        @endforeach
+    </tbody></x-admin.table>
+</x-admin.card>
 @if($t['refunds_in_progress'] > 0)<p class="a-hint">{{ $t['refunds_in_progress'] }} refund(s) worth {{ $m($t['refunds_in_progress_amount']) }} are requested or processing: they are <strong>not</strong> counted as refunded until confirmed.</p>@endif
 <div class="a-grid a-grid--2" style="margin-bottom:20px">
     @foreach(array_filter(['Provider' => ['rows' => $report['by_provider'], 'label' => fn ($k) => ucfirst($k)], 'Payment method' => ['rows' => $report['by_method'], 'label' => fn ($k) => $methodNames[$k] ?? ($k ?: 'Unknown')], 'Merchant account' => $report['by_account'] === null ? null : ['rows' => $report['by_account'], 'label' => fn ($k) => $k === '' || $k === '0' ? 'Legacy configuration' : ($accountNames[(int) $k] ?? '#'.$k)]]) as $title => $g)
@@ -33,6 +44,19 @@
     </x-admin.card>
     @endforeach
 </div>
+
+@if($imported)
+@php $io = $imported['provider_only']; @endphp
+<x-admin.card title="Imported from the provider (not included in the figures above)" :subtitle="'Looked up or imported from provider exports for the same dates. Never added to the local totals, so nothing is counted twice. '.$imported['already_in_local'].' imported record(s) are linked to a local payment and already counted above.'" style="margin-bottom:20px">
+    <div class="a-grid a-grid--4">
+        <x-admin.kpi label="Provider-only paid" :value="$io['paid_count'].' · '.$m($io['paid_volume'])" icon="fa-file-import" hint="Paid at the provider, no local order" />
+        <x-admin.kpi label="Failed / pending" :value="$io['failed'].' / '.$io['pending']" icon="fa-hourglass-half" hint="Provider-only records" />
+        <x-admin.kpi label="Refunded / voided" :value="$io['refunded'].' / '.$io['voided']" icon="fa-rotate-left" hint="Provider-only records" />
+        <x-admin.kpi label="Unverified (CSV)" :value="$io['unverified']" icon="fa-circle-question" hint="Check them with the provider" />
+    </div>
+    <p class="a-hint" style="margin:10px 0 0">Provider-only paid by provider: @forelse($imported['by_provider'] as $k => $r){{ ucfirst($k) }} {{ $r['count'] }} ({{ $m($r['volume']) }})@if(! $loop->last), @endif @empty none @endforelse · <a href="{{ route('admin.payments.imported') }}">Open imported transactions</a></p>
+</x-admin.card>
+@endif
 
 @if(! $liveGateways || $fakeAllowed)
     <x-admin.alert type="warning">

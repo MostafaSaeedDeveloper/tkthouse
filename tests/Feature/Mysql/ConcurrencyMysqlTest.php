@@ -288,4 +288,17 @@ class ConcurrencyMysqlTest extends TestCase
             $this->assertSame($ok, \App\Models\OrderItem::where('event_id', $event->id)->count());
         }
     }
+
+    public function test_importing_the_same_provider_transaction_in_parallel_makes_exactly_one_row(): void
+    {
+        $account = $this->account('fake', 'EXT');
+        $out = $this->spawn(array_map(fn () => ['ext-import', (string) $account->id, 'FAKE-RACE-1'], range(1, 8)));
+
+        foreach ($out as $line) {
+            $this->assertStringStartsWith('OK:', $line, implode(' / ', $out));
+        }
+        $this->assertSame(1, \App\Models\ExternalTransaction::where('provider_transaction_id', 'FAKE-RACE-1')->count());
+        $this->assertCount(1, collect($out)->unique(), 'every worker saw the same row');
+        $this->assertSame(0, Order::count());
+    }
 }

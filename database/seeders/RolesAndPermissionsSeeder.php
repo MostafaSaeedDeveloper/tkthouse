@@ -117,6 +117,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'payments.accounts.view',
             'payments.accounts.manage',
             'payments.webhooks.view',
+            'payments.transactions.import',
         ];
 
         foreach ($permissions as $permissionName) {

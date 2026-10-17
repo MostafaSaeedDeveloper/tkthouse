@@ -12,6 +12,7 @@ final class PaymentPermissionPolicy
         'payments.transactions.view', 'payments.transactions.inquire',
         'payments.refunds.view', 'payments.refunds.create', 'payments.refunds.approve',
         'payments.accounts.view', 'payments.accounts.manage', 'payments.webhooks.view',
+        'payments.transactions.import',
     ];
 
     /** Normalised role name (lower-case letters/digits only) => permissions granted by the policy. */

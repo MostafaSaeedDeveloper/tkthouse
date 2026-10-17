@@ -17,6 +17,8 @@ trait BuildsMerchantAccounts
     /** accept | reject | server_error | timeout */
     protected string $paymobRefundMode = 'accept';
     protected int $paymobRefundSeq = 9000;
+    /** when true every transaction/invoice LOOKUP answers HTTP 429 (provider rate limit) */
+    protected bool $providerRateLimit = false;
 
     protected function account(string $provider, string $name, array $config = [], array $secrets = [], array $o = []): IntegrationAccount
     {
@@ -79,6 +81,9 @@ trait BuildsMerchantAccounts
 
                 return Http::response(['id' => $id, 'success' => true], 200);
             }
+            if ($this->providerRateLimit && (preg_match('#/acceptance/transactions/#', $url) || preg_match('#/getInvoiceData/#', $url))) {
+                return Http::response(['detail' => 'Too many requests'], 429, ['Retry-After' => '30']);
+            }
             if (preg_match('#/acceptance/transactions/([^/?]+)#', $url, $m)) {
                 $tx = $this->paymobTx[urldecode($m[1])] ?? null;
                 $bearer = str_replace('Bearer ', '', $req->header('Authorization')[0] ?? '');
@@ -86,10 +91,10 @@ trait BuildsMerchantAccounts
                     return Http::response(['detail' => 'Not found'], 404); // another merchant's transaction is invisible to this key
                 }
 
-                return Http::response([
+                return Http::response(array_merge([
                     'id' => $tx['id'], 'success' => $tx['success'] ?? true, 'pending' => $tx['pending'] ?? false, 'is_voided' => $tx['is_voided'] ?? false, 'is_refunded' => $tx['is_refunded'] ?? false, 'has_parent_transaction' => $tx['has_parent_transaction'] ?? false,
                     'amount_cents' => $tx['amount_cents'], 'currency' => 'EGP', 'order' => ['merchant_order_id' => $tx['merchant_order_id']],
-                ]);
+                ], $tx['extra'] ?? []));
             }
 
             // ---- Fawaterak
@@ -106,7 +111,7 @@ trait BuildsMerchantAccounts
                     return Http::response(['status' => 'error'], 404);
                 }
 
-                return Http::response(['status' => 'success', 'data' => ['invoice_id' => urldecode($m[1]), 'total' => $inv['total'], 'currency' => 'EGP', 'paid' => $inv['paid'] ? 1 : 0, 'paid_at' => $inv['paid'] ? now()->toDateTimeString() : null]]);
+                return Http::response(['status' => 'success', 'data' => array_merge(['invoice_id' => urldecode($m[1]), 'total' => $inv['total'], 'currency' => 'EGP', 'paid' => $inv['paid'] ? 1 : 0, 'paid_at' => $inv['paid'] ? now()->toDateTimeString() : null], $inv['extra'] ?? [])]);
             }
 
             return Http::response([], 404);

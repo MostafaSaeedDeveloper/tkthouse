@@ -18,6 +18,52 @@ use Illuminate\Support\Facades\DB;
  */
 class PaymentReport
 {
+    /**
+     * The same figures for the equal-length period right before [from, to], so the screen can show "vs previous period".
+     *
+     * @return array{from: CarbonInterface, to: CarbonInterface, totals: array<string,int>}
+     */
+    public function previous(User $viewer, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $seconds = max(1, $from->diffInSeconds($to));
+        $pFrom = $from->copy()->subSeconds($seconds + 1);
+        $pTo = $from->copy()->subSecond();
+
+        return ['from' => $pFrom, 'to' => $pTo, 'totals' => $this->build($viewer, $pFrom, $pTo, false)['totals']];
+    }
+
+    /**
+     * Provider-side transactions that were imported (lookup / CSV) — a SEPARATE data set that is never added to the local totals.
+     * Rows linked to a local payment are only counted as "already in the local figures"; the rest are "provider only".
+     * They are not bank settlements and not orders; CSV rows are unverified.
+     */
+    public function imported(CarbonInterface $from, CarbonInterface $to): array
+    {
+        $rows = fn () => \App\Models\ExternalTransaction::query()->whereBetween(DB::raw('COALESCE(provider_created_at, created_at)'), [$from, $to]);
+        $only = fn () => $rows()->whereNull('matched_attempt_id');
+        $sum = fn ($q) => (int) $q->sum('amount_minor');
+
+        $by = function (string $col) use ($only) {
+            $out = [];
+            foreach ($only()->where('status', 'paid')->select($col, DB::raw('COUNT(*) c'), DB::raw('SUM(amount_minor) a'))->groupBy($col)->get() as $r) {
+                $out[(string) $r->{$col}] = ['count' => (int) $r->c, 'volume' => (int) $r->a];
+            }
+
+            return $out;
+        };
+
+        return [
+            'provider_only' => [
+                'paid_count' => (int) $only()->where('status', 'paid')->count(), 'paid_volume' => $sum($only()->where('status', 'paid')),
+                'failed' => (int) $only()->where('status', 'failed')->count(), 'pending' => (int) $only()->where('status', 'pending')->count(),
+                'refunded' => (int) $only()->whereIn('status', ['refunded', 'partially_refunded'])->count(), 'voided' => (int) $only()->where('status', 'voided')->count(),
+                'unverified' => (int) $only()->whereNull('verified_at')->count(),
+            ],
+            'already_in_local' => (int) $rows()->whereNotNull('matched_attempt_id')->count(),
+            'by_provider' => $by('provider'), 'by_account' => $by('integration_account_id'), 'by_method' => $by('payment_method'),
+        ];
+    }
+
     public function build(User $viewer, CarbonInterface $from, CarbonInterface $to, bool $withAccounts): array
     {
         $attempts = fn () => PaymentAttempt::query()->whereHas('order', fn ($o) => $o->visibleTo($viewer));
