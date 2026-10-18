@@ -357,6 +357,17 @@ class WebhookTrackingTest extends TestCase
         $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertDontSee('Provider answer');
     }
 
+    public function test_the_invoice_inquiry_sends_the_json_content_type_fawaterak_requires(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+
+        app(PaymentService::class)->refresh($a->order, null, 'fawaterak');
+
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r->url(), 'getInvoiceData') && $r->hasHeader('Content-Type', 'application/json') && $r->hasHeader('Accept', 'application/json'));
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);

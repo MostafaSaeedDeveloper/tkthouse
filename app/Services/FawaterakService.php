@@ -166,7 +166,8 @@ class FawaterakService
         return (array) Http::baseUrl($this->apiBaseUrl($account))
             ->timeout(20)
             ->withToken($apiKey)
-            ->withHeaders(['Accept' => 'application/json'])
+            // Fawaterak rejects even a GET without a JSON content-type (HTTP 400 "content-type field is required").
+            ->withHeaders(['Accept' => 'application/json', 'Content-Type' => 'application/json'])
             ->get($path)
             ->throw()
             ->json();
