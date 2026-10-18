@@ -23,14 +23,21 @@ class OrderAssignmentController extends Controller
 
         $data = $request->validate([
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'assignee_ids' => ['nullable', 'array', 'max:20'],
+            'assignee_ids.*' => ['integer', 'exists:users,id'],
             'reason' => ['nullable', 'string', 'max:300'],
         ]);
 
         $this->authorizeChange($actor, $order);
-        $to = filled($data['assignee_id'] ?? null) ? User::query()->findOrFail((int) $data['assignee_id']) : null;
-        $this->service->assign($order, $to, $actor, $data['reason'] ?? null);
+        // assignee_ids[] = several agents (they must share the same payment methods); assignee_id = the old single-agent field.
+        $ids = collect($request->has('assignee_ids') ? $data['assignee_ids'] ?? [] : (filled($data['assignee_id'] ?? null) ? [$data['assignee_id']] : []))->map(fn ($id) => (int) $id)->unique()->values();
+        $found = User::query()->whereIn('id', $ids)->get()->keyBy('id');
+        $users = $ids->map(fn ($id) => $found[$id])->all();
+        $this->service->assignMany($order, $users, $actor, $data['reason'] ?? null);
 
-        return back()->with('success', $to ? "Order #{$order->order_number} assigned to {$to->name}." : "Order #{$order->order_number} is now unassigned.");
+        $names = collect($users)->pluck('name')->implode(', ');
+
+        return back()->with('success', $users ? "Order #{$order->order_number} assigned to {$names}." : "Order #{$order->order_number} is now unassigned.");
     }
 
     public function bulk(Request $request)

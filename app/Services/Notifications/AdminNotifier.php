@@ -121,6 +121,23 @@ class AdminNotifier
         });
     }
 
+    /** Extra agents added to an order (the primary assignee is notified by orderAssigned()). @param list<User> $users */
+    public function orderAssignedTo(Order $order, array $users): void
+    {
+        $this->safely(function () use ($order, $users) {
+            $to = array_values(array_filter($users, fn (User $u) => $u->id !== auth()->id()));
+            if ($to === []) {
+                return;
+            }
+            $this->send($to, [
+                'type' => 'order.assigned', 'icon' => 'fa-user-check',
+                'title' => 'Order assigned to you · #'.$this->number($order),
+                'body' => $this->who($order).' · '.$this->money($order),
+                'url' => $this->orderUrl($order),
+            ]);
+        });
+    }
+
     public function refundRequested(PaymentRefund $refund): void
     {
         $this->safely(function () use ($refund) {

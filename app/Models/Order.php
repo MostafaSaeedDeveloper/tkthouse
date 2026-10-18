@@ -92,6 +92,26 @@ class Order extends Model
         return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
+    /** Every agent on this order (the primary included). `assigned_user_id` is the primary one. */
+    public function assignees()
+    {
+        return $this->belongsToMany(User::class, 'order_assignees')->withPivot('assigned_by_user_id')->withTimestamps()->orderBy('order_assignees.id');
+    }
+
+    /** @return list<int> primary first, then the others */
+    public function assigneeIds(): array
+    {
+        $ids = $this->relationLoaded('assignees') ? $this->assignees->pluck('id')->all() : $this->assignees()->pluck('users.id')->all();
+        $primary = $this->assigned_user_id ? [(int) $this->assigned_user_id] : [];
+
+        return array_values(array_unique(array_merge($primary, array_map('intval', $ids))));
+    }
+
+    public function isAssignedTo(?User $user): bool
+    {
+        return $user !== null && in_array((int) $user->id, $this->assigneeIds(), true);
+    }
+
     public function assignedBy()
     {
         return $this->belongsTo(User::class, 'assigned_by_user_id');

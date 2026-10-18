@@ -130,7 +130,7 @@
                 </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
-                    @if($order->assignedUser)<span class="a-table__main a-ord-ellipsis" title="{{ $order->assignedUser->name }}">{{ $order->assignedUser->name }}</span>
+                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<span class="a-table__main a-ord-ellipsis" title="{{ $order->assignedUser->name }}{{ $others->isNotEmpty() ? ', '.$others->implode(', ') : '' }}">{{ $order->assignedUser->name }}</span>@if($others->isNotEmpty())<span class="a-table__sub a-ord-ellipsis" title="{{ $others->implode(', ') }}">+ {{ $others->implode(', ') }}</span>@endif
                     @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif
                 </td>
                 @endif
@@ -152,7 +152,7 @@
                     @endcan
                     <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order {{ $number }}"><i class="fa fa-eye"></i><span class="a-ord-btn-text">View</span></a>
                     @if($canAssign)
-                        <button type="button" class="a-btn a-btn--outline a-btn--sm" data-ord-assign-open data-action="{{ route('admin.orders.assign', $order) }}" data-current="{{ $order->assigned_user_id }}" data-number="{{ $number }}" title="{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}" aria-label="{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }} order {{ $number }}" aria-haspopup="dialog"><i class="fa fa-user-plus" aria-hidden="true"></i><span class="a-ord-btn-text">{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}</span></button>
+                        <button type="button" class="a-btn a-btn--outline a-btn--sm" data-ord-assign-open data-action="{{ route('admin.orders.assign', $order) }}" data-current="{{ $order->assigned_user_id }}" data-ids="{{ implode(',', $order->assigneeIds()) }}" data-number="{{ $number }}" title="{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}" aria-label="{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }} order {{ $number }}" aria-haspopup="dialog"><i class="fa fa-user-plus" aria-hidden="true"></i><span class="a-ord-btn-text">{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}</span></button>
                     @endif
                     @if(\App\Orders\OrderAccess::canManage($order, auth()->user()) || $canAssign)
                     @canany(['orders.update', 'update_status', 'orders.delete'])
@@ -196,11 +196,9 @@
         <h2 id="ordAssignTitle">Assign order · <span id="ordAssignNumber"></span></h2>
         <form method="POST" action="#" id="ordAssignForm" data-a-loading>
             @csrf
-            <label class="form-label" for="ordAssignSelect">Assigned to</label>
-            <select id="ordAssignSelect" class="form-select" name="assignee_id">
-                <option value="">Unassigned</option>
-                @foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach
-            </select>
+            <label class="form-label" for="ordAssignSelect">Assigned agents</label>
+            <x-admin.multiselect name="assignee_ids" id="ordAssignSelect" label="Assigned agents" :options="$assigneeOptions" :selected="[]" placeholder="Search agents…" empty-text="Unassigned" />
+            <p class="a-hint">Pick one or more agents. They must all have the same payment methods (shown next to each name).</p>
             <label class="form-label" for="ordAssignReason" style="margin-top:12px">Reason (optional)</label>
             <input id="ordAssignReason" class="form-control" name="reason" maxlength="300">
             <p class="a-hint">Changing the assignee never changes how this order is paid.</p>

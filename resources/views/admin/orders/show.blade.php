@@ -274,19 +274,21 @@
     @if($assignmentOn)
     <x-admin.card title="Assignment" subtitle="Who is responsible for this order.">
         <dl class="a-kv">
-            <div><dt>Assigned to</dt><dd>@if($order->assignedUser)<strong>{{ $order->assignedUser->name }}</strong>@else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif</dd></div>
+            <div><dt>Assigned to</dt><dd>@if($order->assignedUser)<strong>{{ $order->assignedUser->name }}</strong>@foreach($order->assignees->where('id', '!=', $order->assigned_user_id) as $extra)<span class="a-table__sub">{{ $extra->name }}</span>@endforeach @if($order->assignees->count() > 1)<span class="a-table__sub">First agent = primary (sales and reports)</span>@endif @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif</dd></div>
             @if($order->assigned_at)<div><dt>Assigned by</dt><dd>{{ $order->assignedBy?->name ?? 'Automatic' }} · {{ $order->assigned_at->format('d M Y, H:i') }}</dd></div>@endif
             @if($order->sold_at)<div><dt>Sale attributed to</dt><dd>{{ $order->soldBy?->name ?? 'Unattributed' }} · {{ $order->sold_at->format('d M Y, H:i') }}</dd></div>@endif
         </dl>
         @if($canAssign)
         <form method="POST" action="{{ route('admin.orders.assign', $order) }}" data-a-loading class="a-form-grid">
             @csrf
-            <x-admin.field label="Change assignee" name="assignee_id" for="oa-assignee">
-                <select id="oa-assignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}" @selected($order->assigned_user_id === $a->id)>{{ $a->name }}</option>@endforeach</select>
-            </x-admin.field>
+            <div class="a-field is-full">
+                <label class="form-label" for="oa-assignee">Assigned agents</label>
+                <x-admin.multiselect name="assignee_ids" id="oa-assignee" label="Assigned agents" :options="$assigneeOptions" :selected="$order->assigneeIds()" placeholder="Search agents…" empty-text="Unassigned" />
+                <p class="a-hint">You can pick several agents, but they must all have the same payment methods (shown next to each name). Leave empty to unassign.</p>
+            </div>
             <x-admin.field label="Reason (optional)" name="reason" for="oa-reason"><input id="oa-reason" class="form-control" name="reason" maxlength="300"></x-admin.field>
-            <p class="a-hint is-full">Reassigning never changes the payment account or any payment attempt of this order.</p>
-            <div class="a-form-actions is-full"><button class="a-btn a-btn--primary" type="submit">Save assignee</button></div>
+            <p class="a-hint is-full">Changing agents never changes the payment account or any payment attempt of this order.</p>
+            <div class="a-form-actions is-full"><button class="a-btn a-btn--primary" type="submit">Save agents</button></div>
         </form>
         @endif
         @if($assignmentHistory->isNotEmpty())

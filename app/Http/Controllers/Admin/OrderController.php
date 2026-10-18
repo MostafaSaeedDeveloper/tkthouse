@@ -99,10 +99,12 @@ class OrderController extends Controller
         $assignmentOn = \App\Orders\OrderAccess::enabled();
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user()) || \App\Orders\OrderAccess::canAssign($request->user(), true);
         $assignees = $assignmentOn && (\App\Orders\OrderAccess::level($request->user()) === \App\Orders\OrderAccess::ALL)
-            ? \App\Models\User::query()->whereIn('id', Order::query()->whereNotNull('assigned_user_id')->distinct()->pluck('assigned_user_id')->merge(app(\App\Orders\OrderAssignmentService::class)->eligibleUsers()->pluck('id'))->unique())->orderBy('name')->get(['id', 'name'])
+            ? \App\Models\User::query()->whereIn('id', Order::query()->whereNotNull('assigned_user_id')->distinct()->pluck('assigned_user_id')->merge(app(\App\Orders\OrderAssignmentService::class)->eligibleUsers()->pluck('id'))->unique())->orderBy('name')->get(['id', 'name', 'allowed_payment_methods'])
             : collect();
 
-        return view('admin.orders.index', compact('assignmentOn', 'canAssign', 'assignees', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
+        $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
+
+        return view('admin.orders.index', compact('assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
@@ -214,9 +216,10 @@ class OrderController extends Controller
         $assignmentHistory = $assignmentOn ? $order->assignments()->get() : collect();
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user(), $order->assigned_user_id !== null);
         $assignees = $canAssign ? app(\App\Orders\OrderAssignmentService::class)->eligibleUsers() : collect();
-        $order->loadMissing(['assignedUser:id,name', 'assignedBy:id,name', 'soldBy:id,name']);
+        $order->loadMissing(['assignedUser:id,name', 'assignedBy:id,name', 'soldBy:id,name', 'assignees:users.id,users.name']);
+        $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees', 'canSeeAccounts', 'pinnedAccount', 'switchTargets', 'accountNames'));
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees', 'assigneeOptions', 'canSeeAccounts', 'pinnedAccount', 'switchTargets', 'accountNames'));
     }
 
     public function edit(Request $request, Order $order)
@@ -761,6 +764,7 @@ class OrderController extends Controller
             'items.event:id,name',
             'items.eventTicket:id,color',
             'assignedUser:id,name',
+            'assignees:users.id,users.name',
         ];
     }
 
@@ -998,4 +1002,17 @@ class OrderController extends Controller
             ->send(new OrderStatusChangedMail($order, $oldStatus, $newStatus));
     }
 
+
+    /** [user id => "Name — payment methods"]: agents on one order must share the same list, so it is shown next to each name. */
+    private function assigneeOptions($users): array
+    {
+        $service = app(\App\Orders\OrderAssignmentService::class);
+        $names = \App\Models\PaymentMethod::query()->pluck('name', 'code');
+
+        return collect($users)->mapWithKeys(function ($u) use ($service, $names) {
+            $set = $service->paymentMethodSet($u);
+
+            return [$u->id => $u->name.' — '.($set === null ? 'all methods' : collect($set)->map(fn ($c) => $names[$c] ?? $c)->implode(', '))];
+        })->all();
+    }
 }

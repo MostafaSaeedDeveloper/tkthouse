@@ -70,7 +70,10 @@ final class OrderAccess
         $col = $table.'.assigned_user_id';
         $seeUnassigned = $user->can('orders.view_unassigned');
 
-        return $query->where(fn ($q) => $q->where($col, $user->id)->when($seeUnassigned, fn ($w) => $w->orWhereNull($col)));
+        // Mine = I am the primary assignee or one of the extra agents on the order.
+        return $query->where(fn ($q) => $q->where($col, $user->id)
+            ->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_assignees')->whereColumn('order_assignees.order_id', $table.'.id')->where('order_assignees.user_id', $user->id))
+            ->when($seeUnassigned, fn ($w) => $w->orWhereNull($col)));
     }
 
     public static function canView(Order $order, ?User $user): bool
@@ -78,7 +81,7 @@ final class OrderAccess
         return match (self::level($user)) {
             self::ALL => true,
             self::NONE => false,
-            default => (int) $order->assigned_user_id === (int) $user->id || ($order->assigned_user_id === null && $user->can('orders.view_unassigned')),
+            default => $order->isAssignedTo($user) || ($order->assigned_user_id === null && $user->can('orders.view_unassigned')),
         };
     }
 
@@ -88,7 +91,7 @@ final class OrderAccess
         return match (self::level($user)) {
             self::ALL => true,
             self::NONE => false,
-            default => (int) $order->assigned_user_id === (int) $user->id && $user->can('orders.manage_assigned'),
+            default => $order->isAssignedTo($user) && $user->can('orders.manage_assigned'),
         };
     }
 

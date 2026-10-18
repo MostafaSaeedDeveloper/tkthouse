@@ -467,4 +467,112 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($actor)->put(route('admin.users.update', $staff), ['name' => $staff->name, 'username' => $staff->username, 'email' => $staff->email, 'role' => 'Order Agent'])->assertRedirect();
         $this->assertTrue($staff->fresh()->is_active);
     }
+
+    /* ------------------------------------------------------------ several agents per order */
+
+    public function test_several_agents_with_the_same_payment_methods_can_share_an_order_and_all_of_them_see_it(): void
+    {
+        $this->on();
+        $service = app(OrderAssignmentService::class);
+        $a = $this->agent(); $b = $this->agent(); $c = $this->agent(); $manager = $this->superAdmin();
+        $order = $this->order($a);
+
+        $service->assignMany($order, [$a, $b], $manager);
+
+        $order->refresh();
+        $this->assertSame($a->id, $order->assigned_user_id, 'the current primary stays primary');
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->assigneeIds());
+        foreach ([$a, $b] as $agent) {
+            $this->actingAs($agent)->get(route('admin.orders.show', $order))->assertOk();
+            $this->actingAs($agent)->get(route('admin.orders.index'))->assertOk()->assertSee($order->order_number);
+            $this->assertTrue(OrderAccess::canView($order, $agent));
+        }
+        $this->actingAs($c)->get(route('admin.orders.show', $order))->assertNotFound();
+        $this->assertSame(1, OrderAssignment::where('order_id', $order->id)->count(), 'one history row for the change');
+    }
+
+    public function test_agents_with_different_payment_methods_cannot_share_an_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $c = $this->agent();
+        $a->forceFill(['allowed_payment_methods' => ['fake_card', 'fake_wallet']])->save();
+        $b->forceFill(['allowed_payment_methods' => ['fake_wallet', 'fake_card']])->save();   // same set, other order => allowed
+        $c->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        $order = $this->order($a);
+        $service = app(OrderAssignmentService::class);
+
+        $service->assignMany($order, [$a, $b], $this->superAdmin());
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds());
+
+        try {
+            $service->assignMany($order, [$a, $b, $c], $this->superAdmin());
+            $this->fail('different payment methods must be refused');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('same payment methods', $e->errors()['assignee'][0]);
+        }
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds(), 'nothing changed');
+    }
+
+    public function test_an_agent_with_no_selection_and_one_with_a_selection_differ(): void
+    {
+        $this->on();
+        $all = $this->agent(); $some = $this->agent();
+        $some->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(OrderAssignmentService::class)->assignMany($this->order(), [$all, $some], $this->superAdmin());
+    }
+
+    public function test_removing_the_primary_promotes_the_next_agent_and_unassigning_clears_everyone(): void
+    {
+        $this->on();
+        $service = app(OrderAssignmentService::class);
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $order = $this->order($a);
+        $service->assignMany($order, [$a, $b], $manager);
+
+        $service->assignMany($order, [$b], $manager);
+        $this->assertSame($b->id, $order->fresh()->assigned_user_id);
+        $this->assertSame([$b->id], $order->fresh()->assigneeIds());
+        $this->actingAs($a)->get(route('admin.orders.show', $order))->assertNotFound();
+
+        $service->assignMany($order, [], $manager);
+        $this->assertNull($order->fresh()->assigned_user_id);
+        $this->assertSame([], $order->fresh()->assigneeIds());
+    }
+
+    public function test_the_assign_endpoint_accepts_several_agents_and_the_list_shows_them(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $order = $this->order();
+
+        $this->actingAs($manager)->post(route('admin.orders.assign', $order), ['assignee_ids' => [$b->id, $a->id]])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $this->assertSame($b->id, $order->fresh()->assigned_user_id, 'the first agent of the list is the primary');
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds());
+        $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee($a->name)->assertSee($b->name);
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Assigned agents')->assertSee('primary');
+
+        // the old single-agent field still works and replaces everyone
+        $this->actingAs($manager)->post(route('admin.orders.assign', $order), ['assignee_id' => $a->id])->assertSessionHasNoErrors();
+        $this->assertSame([$a->id], $order->fresh()->assigneeIds());
+    }
+
+    public function test_extra_agents_get_the_notification_and_agent_reports_still_count_the_primary_only(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        $order = $this->order($a, 'paid', 200);
+        app(OrderAssignmentService::class)->snapshotSale($order);
+        $manager = $this->superAdmin();
+        $b->notifications()->delete();
+        $this->actingAs($manager);
+        app(OrderAssignmentService::class)->assignMany($order, [$a, $b], $manager);
+
+        $this->assertSame(['order.assigned'], $b->notifications()->get()->pluck('data.type')->all());
+        $this->assertSame($a->id, $order->fresh()->sold_by_user_id);
+        $report = app(AgentReport::class)->build($this->superAdmin(), now()->subDay(), now()->addDay());
+        $this->assertSame([$a->id], $report['rows']->pluck('user_id')->map(fn ($id) => (int) $id)->all(), 'only the primary agent is a row');
+    }
 }
