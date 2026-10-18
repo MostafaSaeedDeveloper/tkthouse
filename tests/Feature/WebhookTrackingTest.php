@@ -440,6 +440,29 @@ class WebhookTrackingTest extends TestCase
         $this->actingAs($this->customer)->getJson(route('front.checkout.confirmation.status', $a->order->order_number))->assertOk()->assertJson(['state' => 'failed']);
     }
 
+    public function test_after_a_gateway_reported_failure_the_customer_gets_a_fresh_payment_session(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $first = $this->attempt($acc, 'fawaterak_card');
+        $order = $first->order;
+        $method = PaymentMethod::where('code', 'fawaterak_card')->first();
+
+        // while the first session is alive, asking again hands out the same one (no duplicate invoices)
+        app(PaymentService::class)->start($order->fresh(), $method);
+        $this->assertSame(1, $order->paymentAttempts()->count());
+
+        // Fawaterak says that session failed (webhook only: the attempt stays "initiated") => a new session is opened
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $first->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'amount' => 300, 'errorMessage' => '3DS failed', 'response' => ['gatewayCode' => 'X']])->assertOk();
+        $this->assertSame('initiated', $first->fresh()->status);
+
+        app(PaymentService::class)->start($order->fresh(), $method);
+
+        $this->assertSame(2, $order->paymentAttempts()->count(), 'a retry opens a new invoice instead of reusing the failed one');
+        $second = $order->paymentAttempts()->latest('id')->first();
+        $this->assertNotSame($first->transaction_id, $second->transaction_id);
+        $this->assertSame('initiated', $second->displayStatus());
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);

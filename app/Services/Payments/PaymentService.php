@@ -87,14 +87,15 @@ class PaymentService
             throw new \RuntimeException('A payment is already open with a different merchant account. Use "Switch payment account" after checking it.');
         }
 
-        $reusable = $order->paymentAttempts()
+        // A session the gateway has already reported as failed (webhook) is never handed out again: the customer needs a fresh one to pay.
+        $reusable = $order->paymentAttempts()->with('failedWebhookEvent')
             ->where('status', PaymentAttempt::INITIATED)
             ->where('method_code', $method->code)
             ->when($accountId === null, fn ($q) => $q->whereNull('integration_account_id'), fn ($q) => $q->where('integration_account_id', $accountId))
             ->where('created_at', '>=', now()->subMinutes(30))
             ->orderByDesc('id')
             ->get()
-            ->first(fn (PaymentAttempt $a) => filled(data_get($a->meta, 'url')) && (float) $a->amount === (float) $order->total_amount);
+            ->first(fn (PaymentAttempt $a) => filled(data_get($a->meta, 'url')) && (float) $a->amount === (float) $order->total_amount && $a->displayStatus() === PaymentAttempt::INITIATED);
 
         if ($reusable) {
             return (string) data_get($reusable->meta, 'url');
