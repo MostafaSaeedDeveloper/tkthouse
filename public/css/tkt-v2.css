@@ -515,5 +515,5 @@ body.tkt-has-bar .tkt-toast { bottom: 96px; }
 .tkt-flash { padding-top: 16px; display: grid; gap: 8px; }
 .tkt-v2 [hidden] { display: none !important; }
 
-/* Base size: Bootstrap 3 sets the root to 10px; +1px keeps every rem token a little more readable without a big jump */
-html { font-size: 11px; }
+/* Base size: Bootstrap 3 sets the root to 10px; +2px keeps every rem token a little more readable without a big jump */
+html { font-size: 12px; }
