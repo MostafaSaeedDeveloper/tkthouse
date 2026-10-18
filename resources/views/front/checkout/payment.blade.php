@@ -42,6 +42,7 @@
                         </label>
                     @empty
                         <div class="tkt-alert tkt-alert--warning">No payment methods are available right now. Please try again later.</div>
+                        @if(! empty($emptyReasons))<div class="tkt-alert tkt-alert--warning" style="font-size:12px"><strong>Admin only — why:</strong><ul style="margin:6px 0 0 16px">@foreach($emptyReasons as $r)<li>{{ $r }}</li>@endforeach</ul></div>@endif
                     @endforelse
                 </div>
             </section>

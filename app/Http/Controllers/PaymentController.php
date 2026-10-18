@@ -33,6 +33,7 @@ class PaymentController extends Controller
         return view('front.checkout.payment', [
             'order' => $order,
             'methods' => $methods,
+            'emptyReasons' => auth()->user()?->can('payments.transactions.view') ? $this->emptyReasons : [],
             'selectedMethod' => $selected,
             'event' => \App\Models\Event::query()->find($order->items->pluck('event_id')->filter()->first()),
             'lastFailure' => $order->paymentAttempts->where('status', 'failed')->sortByDesc('id')->first(),
@@ -228,9 +229,19 @@ class PaymentController extends Controller
         return $logger->log($description);
     }
 
+    private array $emptyReasons = [];
+
     /** Methods for an existing order: the pre-existing list unless routing/default account/policy says otherwise. */
     private function methodsFor(Order $order, PaymentGatewayManager $gateways)
     {
-        return app(\App\Services\Payments\Routing\OfferedMethods::class)->for(app(\App\Services\Payments\Routing\PaymentAccountResolver::class)->forOrder($order));
+        $resolution = app(\App\Services\Payments\Routing\PaymentAccountResolver::class)->forOrder($order);
+        $offered = app(\App\Services\Payments\Routing\OfferedMethods::class);
+        $methods = $offered->for($resolution);
+        if ($methods->isEmpty()) {
+            $this->emptyReasons = $offered->diagnose($resolution);
+            \Illuminate\Support\Facades\Log::warning('Checkout has no payment methods', ['order' => $order->id, 'reasons' => $this->emptyReasons]);
+        }
+
+        return $methods;
     }
 }

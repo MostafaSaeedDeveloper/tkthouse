@@ -60,4 +60,42 @@ class OfferedMethods
     {
         return $this->for($resolution)->contains('code', $code);
     }
+
+    /** Why each active method is not offered (for the log and for admins looking at an empty checkout). @return list<string> */
+    public function diagnose(Resolution $resolution): array
+    {
+        $out = [];
+        if ($resolution->blocked) {
+            $out[] = 'Online payment is blocked: '.($resolution->reason ?? 'unknown').'. Check Settings → Payments (default account must be enabled and verified).';
+        }
+        if (! \App\Support\PaymentEnvironment::liveGatewaysAllowed()) {
+            $out[] = 'Live gateways are disabled (PAYMENTS_LIVE_GATEWAYS).';
+        } elseif (! \App\Support\PaymentEnvironment::fawaterakAllowed()) {
+            $out[] = 'Fawaterak is locked in production until PAYMENTS_FAWATERAK_VERIFIED=true.';
+        }
+        $methods = PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->get();
+        if ($methods->isEmpty()) {
+            $out[] = 'No payment method is active (Settings → Payments → Methods).';
+        }
+        foreach ($methods as $m) {
+            $account = $resolution->account;
+            if ($resolution->allowedMethods !== null && ! in_array($m->code, $resolution->allowedMethods, true)) {
+                continue;
+            }
+            if (! $this->gateways->isOnline($m)) {
+                continue;
+            }
+            if ($account === null) {
+                $out[] = $m->name.': the gateway has no credentials on the method itself and no default merchant account is set.';
+            } elseif ($account->provider !== $m->provider) {
+                $out[] = $m->name.': the account "'.$account->name.'" belongs to '.$account->provider.', not '.$m->provider.'.';
+            } elseif (! in_array($m->code, $account->supportedMethods(), true)) {
+                $out[] = $m->name.': not ticked in the account "'.$account->name.'" (Supported methods).';
+            } elseif (! $this->gateways->for((string) $m->provider)->isConfigured($m, $account)) {
+                $out[] = $m->name.': the account "'.$account->name.'" is missing its API key or the provider/integration id for this method ('.$account->methodField($m->code).').';
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
 }
