@@ -92,7 +92,7 @@
 .a-ordt thead th { padding: 10px 12px; }
 .a-ordt tbody td { padding: 12px; vertical-align: top; }
 .a-ordt td, .a-ordt th { white-space: normal; }
-.a-ordt .c-order { width: 150px; } .a-ordt .c-customer { width: 22%; } .a-ordt .c-event { width: auto; }
+.a-ordt .c-order { width: 156px; } .a-ordt .c-customer { width: 22%; } .a-ordt .c-event { width: auto; }
 .a-ordt .c-tickets { width: 84px; } .a-ordt .c-total { width: 116px; } .a-ordt .c-status { width: 156px; } .a-ordt .c-actions { width: 112px; }
 .a-ordt .a-table__main { white-space: nowrap; }
 .a-ordt .a-btn--sm { min-height: 32px; min-width: 32px; padding: 0 9px; }
@@ -124,7 +124,7 @@
 
 /* 768-1279px: the content area is narrow, so the Tickets column folds into the Event cell */
 @media (min-width: 768px) and (max-width: 1279.98px) {
-    .a-ordt .c-order { width: 132px; } .a-ordt .c-customer { width: 20%; } .a-ordt .c-total { width: 92px; } .a-ordt .c-status { width: 118px; } .a-ordt .c-actions { width: 108px; }
+    .a-ordt .c-order { width: 140px; } .a-ordt .c-customer { width: 20%; } .a-ordt .c-total { width: 92px; } .a-ordt .c-status { width: 118px; } .a-ordt .c-actions { width: 108px; }
     .a-ordt .c-tickets { display: none; }
     .a-ord-inline-tix { display: block; }
     .a-ordt thead th, .a-ordt tbody td { padding-left: 8px; padding-right: 8px; }
@@ -175,6 +175,7 @@
 .a-ordt .c-order .a-ord-check, .a-ordt th.c-order .a-ord-check { margin: 0 8px 0 0; vertical-align: middle; accent-color: #111; }
 /* Row checkbox sits beside the order number (the number never wraps below it); the date wraps under both */
 .a-ordt td.c-order .a-ord-check { float: left; margin: 2px 8px 0 0; }
+.a-ordt td.c-order .a-table__sub { font-size: 11px; white-space: nowrap; }
 .a-ord-bulk { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--a-line); background: var(--a-yellow-soft); }
 .a-ord-bulk[hidden] { display: none; }
 .a-ord-bulk .form-select, .a-ord-bulk .form-control { max-width: 240px; }
