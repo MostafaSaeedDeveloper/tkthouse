@@ -58,6 +58,24 @@ class AdminOrdersListTest extends TestCase
         return $order;
     }
 
+    public function test_bulk_bar_markup_matches_the_id_the_script_looks_for(): void
+    {
+        \App\Support\SystemSettings::set('order_assignment_enabled', true);
+        \Spatie\Permission\Models\Role::findOrCreate('super_admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('super_admin');
+        Permission::findOrCreate('orders.view', 'web');
+        $admin->givePermissionTo('orders.view');
+        $this->actingAs($admin);
+        $this->order('900010', 'paid', 'Eve', $this->eventA);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="bulkAssignForm"', $html);
+        $this->assertStringContainsString('data-bulk-all', $html);
+        $this->assertStringContainsString("getElementById('bulkAssignForm')", file_get_contents(public_path('admin-v2/orders-assign.js')));
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();
@@ -73,7 +91,9 @@ class AdminOrdersListTest extends TestCase
             ->assertDontSee('a-ord-tag')                            // the old coloured ticket badges are gone
             ->assertSee('class="a-table__sub a-ord-type"', false)   // ticket types are listed under the event, one line each...
             ->assertSee('<b>2×</b>', false)                         // ...with their quantity
-            ->assertSee('VIP Table For Ten With Bottle Service');
+            ->assertSee('VIP Table For Ten With Bottle Service')
+            ->assertDontSee($this->eventA->name.' - VIP Table', false); // the stored "<event> - <ticket>" prefix is stripped in the list
+
 
         $summary = $response->viewData('summary');
         $this->assertSame(4, $summary['all']);

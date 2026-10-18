@@ -53,7 +53,16 @@ final class OrderPresenter
     public static function ticketTypes(Order $order): \Illuminate\Support\Collection
     {
         return $order->items
-            ->groupBy(fn ($item) => trim((string) $item->ticket_name))
+            // ticket_name is stored as "<event name> - <ticket>"; the list already shows the event, so keep just the ticket.
+            ->groupBy(function ($item) {
+                $name = trim((string) $item->ticket_name);
+                $prefix = trim((string) $item->event?->name).' - ';
+                if ($prefix !== ' - ' && str_starts_with($name, $prefix)) {
+                    $name = trim(substr($name, strlen($prefix)));
+                }
+
+                return $name;
+            })
             ->reject(fn ($group, $name) => $name === '')
             ->map(fn ($group, $name) => ['name' => (string) $name, 'qty' => (int) $group->sum(fn ($item) => max(1, (int) $item->quantity))])
             ->values();

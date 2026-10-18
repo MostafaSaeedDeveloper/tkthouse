@@ -23,7 +23,7 @@
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
     }
 
-    var bar = document.getElementById('bulkAssignBar');
+    var bar = document.getElementById('bulkAssignForm');
     if (bar) {
         var boxes = function () { return Array.prototype.slice.call(document.querySelectorAll('input[name="order_ids[]"]')); };
         var count = bar.querySelector('[data-bulk-count]');
