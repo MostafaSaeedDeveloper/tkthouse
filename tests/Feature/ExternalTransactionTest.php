@@ -465,7 +465,7 @@ class ExternalTransactionTest extends TestCase
         $prev = $reports->previous($this->admin, $from, $to);
         $this->assertSame(0, $prev['totals']['collected']);
         $page = $this->actingAs($this->admin)->get(route('admin.payments.index', ['from' => $from->toDateString(), 'to' => $to->toDateString()]))->assertOk();
-        $page->assertSee('Compared with the previous period')->assertSee('not included in the figures above')->assertSee('Provider-only paid');
+        $page->assertSee('Compared with the previous period')->assertDontSee('not included in the figures above');   // the provider-imported section is no longer on the overview
     }
 
     /* ------------------------------------------------------------------------- legacy payments still render */
