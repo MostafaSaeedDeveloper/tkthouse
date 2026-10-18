@@ -106,8 +106,6 @@
                 $typeCount = \App\Support\OrderPresenter::ticketTypeCount($order);
                 $ticketTypes = \App\Support\OrderPresenter::ticketTypes($order);
                 $secondsLeft = $order->paymentSecondsRemaining();
-                $attempt = $order->latestPaymentAttempt;
-                $showAttempt = $attempt && ($order->status !== 'paid' || $attempt->status !== 'paid');
                 $methodLabel = $order->payment_method ? ($paymentMethodLabels[$order->payment_method] ?? ucwords(str_replace('_', ' ', $order->payment_method))) : null;
                 $customerName = $order->customer?->full_name ?: 'Unknown customer';
             @endphp
@@ -139,7 +137,6 @@
                 <td data-label="Total" class="c-total a-num"><span class="a-table__main">{{ number_format((float) $order->total_amount, 2) }}</span><span class="a-table__sub">EGP</span></td>
                 <td data-label="Status" class="c-status">
                     <x-admin.status :status="$order->status" kind="order" />
-                    @if($showAttempt)<span class="a-ord-pay">Payment: <x-admin.status :status="$attempt->status" kind="payment" /></span>@endif
                     @if($methodLabel)<span class="a-table__sub">{{ $methodLabel }}</span>@endif
                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
                         <span class="a-table__sub a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? 'Expires soon' : 'Expired' }}</span>

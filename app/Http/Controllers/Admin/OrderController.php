@@ -760,7 +760,6 @@ class OrderController extends Controller
             'items:id,order_id,event_id,event_ticket_id,ticket_name,ticket_price,quantity,line_total',
             'items.event:id,name',
             'items.eventTicket:id,color',
-            'latestPaymentAttempt',
             'assignedUser:id,name',
         ];
     }
