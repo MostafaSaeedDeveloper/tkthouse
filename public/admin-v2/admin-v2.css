@@ -233,6 +233,9 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 .a-table th, .a-table td { white-space: nowrap; }
 .a-table td.a-wrap, .a-table th.a-wrap { white-space: normal; min-width: 180px; }
 .a-trunc { display: block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dashboard recent-orders: six compact columns that fit the half-width card without a horizontal scrollbar. */
+.a-dash-orders th, .a-dash-orders td { padding-left: 12px; padding-right: 12px; }
+.a-dash-orders .a-trunc { max-width: 150px; }
 .a-table .a-num, .a-body .table .text-end { text-align: right; font-variant-numeric: tabular-nums; }
 .a-table__main { font-weight: 700; display: block; min-width: 0; overflow-wrap: anywhere; }
 .a-table__sub { display: block; font-size: 12.5px; color: var(--a-muted); overflow-wrap: anywhere; }

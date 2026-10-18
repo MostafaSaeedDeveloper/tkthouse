@@ -154,18 +154,17 @@
             @if($recentOrders->isEmpty())
                 <x-admin.empty icon="fa-receipt" title="No orders yet" text="New orders appear here as they come in." />
             @else
-                <x-admin.table stack caption="Recent orders">
-                    <thead><tr><th>Order</th><th>Customer</th><th>Event</th><th class="a-num">Tickets</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+                <x-admin.table stack class="a-dash-orders" caption="Recent orders">
+                    <thead><tr><th>Order</th><th>Customer</th><th>Event</th><th class="a-num">Tickets</th><th class="a-num">Amount</th><th>Status</th></tr></thead>
                     <tbody>
                     @foreach($recentOrders as $o)
                         <tr>
-                            <td data-label="Order">@can('orders.view')<a class="a-table__main" href="{{ route('admin.orders.show', $o) }}">#{{ $o->order_number }}</a>@else #{{ $o->order_number }} @endcan</td>
+                            <td data-label="Order"><div class="a-cellstack">@can('orders.view')<a class="a-table__main" href="{{ route('admin.orders.show', $o) }}">#{{ $o->order_number }}</a>@else<span class="a-table__main">#{{ $o->order_number }}</span>@endcan<span class="a-table__sub">{{ $o->created_at->format('d M, H:i') }}</span></div></td>
                             <td data-label="Customer"><span class="a-table__main">{{ trim(($o->customer?->first_name ?? '').' '.($o->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub a-trunc">{{ $o->customer?->email }}</span></td>
                             <td data-label="Event"><span class="a-trunc">{{ $o->items->pluck('event.name')->filter()->first() ?? '—' }}</span></td>
                             <td data-label="Tickets" class="a-num">{{ (int) $o->items->sum('quantity') }}</td>
                             <td data-label="Amount" class="a-num">{{ $moneyShort($o->total_amount) }}</td>
                             <td data-label="Status"><x-admin.status :status="$o->status" /></td>
-                            <td data-label="Date">{{ $o->created_at->format('d M, H:i') }}</td>
                         </tr>
                     @endforeach
                     </tbody>
