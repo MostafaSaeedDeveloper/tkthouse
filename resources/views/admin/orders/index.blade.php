@@ -99,7 +99,7 @@
             @endphp
             <tr>
                 <td data-label="Order" class="c-order">@if($canAssign)<input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}">@endif<a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
-                    <span class="a-table__sub">{{ $order->created_at?->format('d M Y, H:i') }}</span></td>
+                    <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span></td>
                 <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
                 <td data-label="Event" class="c-event">
                     @if($eventNames->isEmpty())
