@@ -10,7 +10,7 @@
     <link rel="shortcut icon" href="/images/favicon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -33,7 +33,8 @@
         body {
             background-color: var(--dark);
             color: #ffffff;
-            font-family: 'Syne', 'DM Sans', sans-serif;
+            font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
         }
 
@@ -110,16 +111,8 @@
             letter-spacing: .02em;
             color: #fff;
             line-height: 1.15;
-            margin-bottom: .6rem;
+            margin-bottom: 1.4rem;
             text-wrap: balance;
-        }
-
-        .headline-ar {
-            font-family: 'Cairo', sans-serif;
-            font-size: clamp(1.2rem, 3.4vw, 1.7rem);
-            font-weight: 700;
-            color: rgba(255,255,255,.85);
-            margin-bottom: 1.6rem;
         }
 
         h1 span {
@@ -132,16 +125,6 @@
             max-width: 540px;
             line-height: 1.7;
             margin: 0 auto 1.4rem;
-            text-wrap: balance;
-        }
-
-        .subtitle-ar {
-            font-family: 'Cairo', sans-serif;
-            font-size: clamp(1rem, 2.6vw, 1.2rem);
-            color: var(--text-muted);
-            max-width: 480px;
-            line-height: 1.8;
-            margin: 0 auto 2rem;
             text-wrap: balance;
         }
 
@@ -270,16 +253,12 @@
 
         <!-- Headline -->
         <h1>We're <span>Under Maintenance</span></h1>
-        <p class="headline-ar" lang="ar" dir="rtl">الموقع تحت الصيانة</p>
 
         <div class="gold-line"></div>
 
         <p class="subtitle">
             We're working hard to improve your experience ✦
             We'll be back soon with something better than ever.
-        </p>
-        <p class="subtitle-ar" lang="ar" dir="rtl">
-            بنشتغل على تحسين تجربتك، وراجعين قريب بحاجة أحسن.
         </p>
 
         <!-- Contact -->
