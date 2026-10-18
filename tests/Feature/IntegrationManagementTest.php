@@ -197,4 +197,37 @@ class IntegrationManagementTest extends TestCase
         $this->artisan('settings:import-legacy-credentials --rollback')->assertSuccessful();
         $this->assertSame(0, IntegrationAccount::count());
     }
+
+    private function smtpAccount(): IntegrationAccount
+    {
+        $a = new IntegrationAccount(['provider' => 'email', 'name' => 'SMTP', 'environment' => 'sandbox', 'enabled' => false, 'status' => 'unverified']);
+        $a->config = ['host' => '127.0.0.1', 'port' => '1', 'encryption' => 'none', 'from_address' => 'info@example.com', 'from_name' => 'TKT'];
+        $a->secrets = ['password' => 'smtp-pass-SECRET-999'];
+        $a->save();
+
+        return $a;
+    }
+
+    public function test_email_test_form_asks_for_a_recipient(): void
+    {
+        $u = $this->manager();
+        $this->smtpAccount();
+
+        $this->actingAs($u)->get(route('admin.integrations.index'))->assertOk()
+            ->assertSee('Send test email')->assertSee('name="recipient"', false)->assertSee('Test connection');
+    }
+
+    public function test_send_test_email_reports_failure_without_leaking_the_password(): void
+    {
+        $u = $this->manager();
+        $a = $this->smtpAccount();
+
+        $this->actingAs($u)->post(route('admin.integrations.test', $a), ['recipient' => 'me@example.com'])
+            ->assertRedirect()->assertSessionHas('error');
+        $this->assertStringNotContainsString('smtp-pass-SECRET-999', (string) session('error'));
+        $this->assertSame('error', $a->fresh()->status);
+
+        $this->actingAs($u)->post(route('admin.integrations.test', $a), ['recipient' => 'not-an-email'])
+            ->assertSessionHasErrors('recipient');
+    }
 }

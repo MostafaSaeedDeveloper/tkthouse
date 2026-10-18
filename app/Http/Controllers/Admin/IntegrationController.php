@@ -81,7 +81,11 @@ class IntegrationController extends Controller
     public function test(Request $request, IntegrationAccount $account)
     {
         $this->guard($account->provider, 'test');
-        $result = $this->manager->test($account, $request->user());
+        $recipient = null;
+        if ($account->provider === 'email' && $request->filled('recipient')) {
+            $recipient = $request->validate(['recipient' => ['required', 'email:rfc', 'max:190']])['recipient'];
+        }
+        $result = $this->manager->test($account, $request->user(), $recipient);
 
         return $this->backTo($account ?? null)->with($result['verified'] ? 'success' : ($result['ok'] ? 'success' : 'error'), $account->name.': '.$result['message']);
     }

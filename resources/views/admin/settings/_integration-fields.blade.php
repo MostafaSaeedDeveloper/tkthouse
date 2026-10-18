@@ -5,6 +5,7 @@
         <select id="e-{{ $k }}" class="form-select" name="environment">@foreach(['sandbox' => 'Sandbox', 'production' => 'Production'] as $v => $l)<option value="{{ $v }}" @selected(old('environment', $account?->environment ?? 'sandbox') === $v)>{{ $l }}</option>@endforeach</select>
     </x-admin.field>
     @foreach($def['fields'] as $f)
+        @if(! empty($f['group']))<h4 class="is-full" style="grid-column:1/-1;margin:10px 0 0;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--a-muted,#6b7280)">{{ $f['group'] }}</h4>@endif
         @if(($f['type'] ?? null) === 'methods')
             @php $chosen = $account ? $account->supportedMethods() : []; @endphp
             <fieldset class="is-full" style="grid-column:1/-1"><legend class="form-label">{{ $f['label'] }}</legend>
@@ -18,7 +19,7 @@
             </fieldset>
             @continue
         @endif
-        <x-admin.field :label="$f['label']" :for="'f-'.$k.'-'.$f['name']" :hint="$f['secret'] ? ($account && isset($masked[$f['name']]) ? 'Stored as '.$masked[$f['name']].'. Leave blank to keep it; type a new value to replace it.' : 'Stored encrypted; never shown again.') : null">
+        <x-admin.field :label="$f['label']" :for="'f-'.$k.'-'.$f['name']" :hint="$f['secret'] ? ($account && isset($masked[$f['name']]) ? 'Stored as '.$masked[$f['name']].'. Leave blank to keep it; type a new value to replace it.' : 'Stored encrypted; never shown again.') : ($f['hint'] ?? null)">
             @if($f['secret'])
                 <input id="f-{{ $k }}-{{ $f['name'] }}" class="form-control" type="password" name="{{ $f['name'] }}" value="" autocomplete="new-password" placeholder="{{ $masked[$f['name']] ?? '' }}">
             @else

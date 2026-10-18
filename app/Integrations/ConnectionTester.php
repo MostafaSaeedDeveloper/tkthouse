@@ -10,14 +10,14 @@ use Illuminate\Support\Facades\Http;
  * Read-only connectivity checks. They never create a payment, send a customer message or send mail.
  *  - Paymob:   authentication-token request (POST /auth/tokens) — validates the API key only.
  *  - UltraMsg: instance status (GET /{instance}/instance/status).
- *  - SMTP:     TCP connect + server greeting, nothing is sent.
+ *  - SMTP:     TCP connect + server greeting; with a recipient it sends one real test message.
  *  - Fawaterak: no read-only endpoint is confirmed in the project/docs, so the account is only checked for completeness and
  *    stays "unverified"; real verification happens in the Stage E sandbox run. (Nothing is guessed.)
  */
 class ConnectionTester
 {
     /** @return array{ok: bool, verified: bool, message: string} */
-    public function test(IntegrationAccount $account): array
+    public function test(IntegrationAccount $account, ?string $recipient = null): array
     {
         $config = $account->config ?? [];
         $secrets = [];
@@ -35,7 +35,7 @@ class ConnectionTester
             return match ($account->provider) {
                 'paymob' => $this->paymob($account),
                 'ultramsg' => $this->ultramsg($account),
-                'email' => $this->smtp($account),
+                'email' => $recipient ? $this->sendTestMail($account, $recipient) : $this->smtp($account),
                 'fake' => \App\Support\PaymentEnvironment::fakeGatewayAllowed() ? $this->result(true, true, 'Fake gateway: no external call is made.') : $this->result(false, false, 'The fake gateway is disabled in this environment.'),
                 'fawaterak' => $this->result(true, false, 'Fields are complete. Fawaterak has no confirmed read-only endpoint, so it stays "unverified" until a sandbox run (Stage E).'),
                 default => $this->result(false, false, 'Unsupported provider.'),
@@ -81,6 +81,29 @@ class ConnectionTester
         return str_starts_with((string) $greeting, '220')
             ? $this->result(true, true, 'SMTP server answered (no mail was sent; credentials are checked on first delivery).')
             : $this->result(false, false, 'SMTP server did not greet us.');
+    }
+
+    /** Sends one real message through THIS account's credentials (not the app's active mailer). A delivered message is the proof. */
+    private function sendTestMail(IntegrationAccount $a, string $to): array
+    {
+        $enc = (string) ($a->config['encryption'] ?? 'tls');
+        $mailer = \Illuminate\Support\Facades\Mail::build([
+            'transport' => 'smtp',
+            'host' => $a->config['host'],
+            'port' => (int) $a->config['port'],
+            'scheme' => $enc === 'ssl' ? 'smtps' : 'smtp',
+            'username' => $a->config['username'] ?? null,
+            'password' => $a->secret('password'),
+            'timeout' => 15,
+        ]);
+        $from = (string) $a->config['from_address'];
+        $name = (string) ($a->config['from_name'] ?? '') ?: config('app.name');
+
+        $mailer->raw('This is a test message from the TKT House Settings Center. If you can read it, this SMTP account works. No action is needed.', function ($m) use ($to, $from, $name) {
+            $m->from($from, $name)->to($to)->subject('TKT House — SMTP test');
+        });
+
+        return $this->result(true, true, 'Test e-mail sent to '.$to.'. Check that inbox (and spam) to confirm delivery.');
     }
 
     protected function smtpGreeting(string $host, int $port, bool $ssl): ?string

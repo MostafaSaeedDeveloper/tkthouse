@@ -60,13 +60,13 @@ final class Definitions
             'email' => [
                 'label' => 'E-mail delivery (SMTP)', 'icon' => 'fa-envelope', 'kind' => 'messaging',
                 'fields' => [
-                    ['name' => 'host', 'label' => 'SMTP host', 'secret' => false, 'required' => true],
+                    ['name' => 'host', 'label' => 'SMTP host', 'secret' => false, 'required' => true, 'group' => 'Server', 'hint' => 'e.g. smtp.mailgun.org'],
                     ['name' => 'port', 'label' => 'Port', 'secret' => false, 'required' => true, 'default' => '587'],
-                    ['name' => 'encryption', 'label' => 'Encryption (tls / ssl / none)', 'secret' => false, 'default' => 'tls'],
-                    ['name' => 'username', 'label' => 'Username', 'secret' => false],
+                    ['name' => 'encryption', 'label' => 'Encryption (tls / ssl / none)', 'secret' => false, 'default' => 'tls', 'hint' => '587 uses tls, 465 uses ssl.'],
+                    ['name' => 'username', 'label' => 'Username', 'secret' => false, 'group' => 'Login'],
                     ['name' => 'password', 'label' => 'Password', 'secret' => true],
-                    ['name' => 'from_address', 'label' => 'From address', 'secret' => false, 'required' => true],
-                    ['name' => 'from_name', 'label' => 'From name', 'secret' => false],
+                    ['name' => 'from_address', 'label' => 'From address', 'secret' => false, 'required' => true, 'group' => 'Sender', 'hint' => 'Must be allowed by your SMTP provider.'],
+                    ['name' => 'from_name', 'label' => 'From name', 'secret' => false, 'hint' => 'Shown to the recipient as the sender name.'],
                 ],
             ],
         ];

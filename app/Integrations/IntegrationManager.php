@@ -66,9 +66,9 @@ class IntegrationManager
     }
 
     /** @return array{ok: bool, verified: bool, message: string} */
-    public function test(IntegrationAccount $account, ?User $by): array
+    public function test(IntegrationAccount $account, ?User $by, ?string $recipient = null): array
     {
-        $result = $this->tester->test($account);
+        $result = $this->tester->test($account, $recipient);
 
         $account->forceFill([
             'last_tested_at' => now(),

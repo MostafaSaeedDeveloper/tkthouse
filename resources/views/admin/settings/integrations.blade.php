@@ -37,6 +37,12 @@
                 @endif
                 <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
                     @if($canTest)
+                        @if($provider === 'email')
+                            <form method="POST" action="{{ route('admin.integrations.test', $account) }}" class="a-btn-group" style="flex-wrap:wrap" data-a-loading>@csrf
+                                <input class="form-control" type="email" name="recipient" value="{{ auth()->user()->email }}" placeholder="Send the test to…" required aria-label="Test e-mail recipient" style="min-width:240px">
+                                <button class="a-btn a-btn--primary" type="submit"><i class="fa fa-paper-plane"></i> Send test email</button>
+                            </form>
+                        @endif
                         <form method="POST" action="{{ route('admin.integrations.test', $account) }}" data-a-loading>@csrf<button class="a-btn a-btn--outline" type="submit"><i class="fa fa-plug"></i> Test connection</button></form>
                     @endif
                     @if($canManage)
