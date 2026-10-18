@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
         Order::observe(OrderObserver::class);
+        \App\Models\PaymentRefund::created(fn (\App\Models\PaymentRefund $r) => app(\App\Services\Notifications\AdminNotifier::class)->refundRequested($r));
 
         $this->applyManagedMailSettings();
         $this->guardOutboundMail();

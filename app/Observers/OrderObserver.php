@@ -15,6 +15,23 @@ class OrderObserver
         }
     }
 
+    /** Bell notifications (never allowed to affect the order itself: see AdminNotifier). */
+    public function created(Order $order): void
+    {
+        app(\App\Services\Notifications\AdminNotifier::class)->orderCreated($order);
+    }
+
+    public function updated(Order $order): void
+    {
+        $notifier = app(\App\Services\Notifications\AdminNotifier::class);
+        if ($order->wasChanged('status')) {
+            $notifier->orderStatusChanged($order, $order->getOriginal('status'));
+        }
+        if ($order->wasChanged('assigned_user_id')) {
+            $notifier->orderAssigned($order);
+        }
+    }
+
     public function saved(Order $order): void
     {
         if (! $this->isPaid($order)) {

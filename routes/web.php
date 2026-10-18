@@ -101,6 +101,13 @@ Route::middleware('auth')->group(function () {
 Auth::routes(['register' => false]);
 
 Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::class])->prefix('dashboard')->name('admin.')->group(function () {
+    // Bell notifications: every signed-in panel user, own notifications only.
+    Route::get('notifications', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/feed', [\App\Http\Controllers\Admin\NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::post('notifications/read-all', [\App\Http\Controllers\Admin\NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('notifications/{id}/open', [\App\Http\Controllers\Admin\NotificationController::class, 'open'])->name('notifications.open');
+    Route::post('notifications/{id}/read', [\App\Http\Controllers\Admin\NotificationController::class, 'read'])->name('notifications.read');
+
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
     Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware(['permission:dashboard.view', 'orders.global'])->name('events.dashboard');

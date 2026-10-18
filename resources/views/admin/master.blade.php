@@ -60,6 +60,22 @@
         @can('events.create')
           <a class="a-btn a-btn--primary d-none d-md-inline-flex" href="{{ route('admin.events.create') }}"><i class="fa fa-plus" aria-hidden="true"></i> Create event</a>
         @endcan
+        @php
+          $bellUnread = $authUser ? $authUser->unreadNotifications()->count() : 0;
+          $bellItems = $authUser ? $authUser->notifications()->limit(\App\Http\Controllers\Admin\NotificationController::BELL_LIMIT)->get() : collect();
+        @endphp
+        <div class="a-notif" data-a-notif data-feed="{{ route('admin.notifications.feed') }}" data-read-all="{{ route('admin.notifications.read-all') }}">
+          <button type="button" class="a-notif__btn" aria-haspopup="true" aria-expanded="false" aria-controls="aNotifPanel" aria-label="Notifications">
+            <i class="fa fa-bell" aria-hidden="true"></i>
+            <span class="a-notif__badge" data-notif-badge @if(! $bellUnread) hidden @endif>{{ $bellUnread > 99 ? '99+' : $bellUnread }}</span>
+          </button>
+          <div class="a-notif__panel" id="aNotifPanel" role="dialog" aria-label="Notifications" hidden>
+            <div class="a-notif__head"><b>Notifications</b><button type="button" class="a-notif__link" data-notif-readall>Mark all read</button></div>
+            <div class="a-notif__list" data-notif-list>@include('admin.notifications._items', ['items' => $bellItems])</div>
+            <a class="a-notif__foot" href="{{ route('admin.notifications.index') }}">View all</a>
+          </div>
+          <span class="a-sr-only" role="status" aria-live="polite" data-notif-live></span>
+        </div>
         <div class="a-menu">
           <button type="button" class="a-userbtn" data-a-menu-toggle aria-haspopup="true" aria-expanded="false">
             <span class="a-userbtn__avatar">@if($authUser?->profile_image)<img src="{{ asset('storage/'.$authUser->profile_image) }}" alt="">@else{{ $initial }}@endif</span>
@@ -102,6 +118,7 @@
 <script src="{{ asset('admin-v2/admin-v2.js') }}?v={{ filemtime(public_path('admin-v2/admin-v2.js')) }}"></script>
 <script src="{{ asset('admin-v2/custom-select.js') }}?v={{ filemtime(public_path('admin-v2/custom-select.js')) }}"></script>
 <script src="{{ asset('admin-v2/multiselect.js') }}?v={{ filemtime(public_path('admin-v2/multiselect.js')) }}"></script>
+<script src="{{ asset('admin-v2/notifications.js') }}?v={{ filemtime(public_path('admin-v2/notifications.js')) }}" defer></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
