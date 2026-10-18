@@ -1,5 +1,6 @@
 @extends('admin.master')
 @section('title', 'Payments')
+@push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 
 @php $money = fn ($n) => number_format((float) $n, 2).' EGP'; @endphp
 
@@ -11,11 +12,26 @@
 <x-admin.flash />
 @include('admin.payments._nav')
 
-<form method="GET" action="{{ route('admin.payments.index') }}" class="a-m-range-form" style="margin-bottom:14px">
-    <div class="a-field"><label class="form-label" for="pf">From</label><input id="pf" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
-    <div class="a-field"><label class="form-label" for="pt">To</label><input id="pt" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
-    <button class="a-btn a-btn--dark" type="submit">Apply</button>
-</form>
+@php
+    $quick = [
+        'Today' => [now()->toDateString(), now()->toDateString()],
+        'Last 7 days' => [now()->subDays(6)->toDateString(), now()->toDateString()],
+        'Last 30 days' => [now()->subDays(29)->toDateString(), now()->toDateString()],
+        'This month' => [now()->startOfMonth()->toDateString(), now()->toDateString()],
+    ];
+@endphp
+<x-admin.card style="margin-bottom:14px">
+    <form method="GET" action="{{ route('admin.payments.index') }}" class="a-m-range-form">
+        <div class="a-field"><label class="form-label" for="pf">From</label><input id="pf" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
+        <div class="a-field"><label class="form-label" for="pt">To</label><input id="pt" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
+        <button class="a-btn a-btn--dark" type="submit">Apply</button>
+        <div class="a-btn-group" role="group" aria-label="Quick ranges" style="margin-left:auto">
+            @foreach($quick as $label => [$qf, $qt])
+                <a class="a-btn a-btn--outline a-btn--sm {{ $from->toDateString() === $qf && $to->toDateString() === $qt ? 'is-active' : '' }}" href="{{ route('admin.payments.index', ['from' => $qf, 'to' => $qt]) }}">{{ $label }}</a>
+            @endforeach
+        </div>
+    </form>
+</x-admin.card>
 @php $m = fn ($minor) => number_format($minor / 100, 2).' EGP'; $t = $report['totals']; @endphp
 <div class="a-grid a-grid--4" style="margin-bottom:12px">
     <x-admin.kpi label="Total collected" :value="$m($t['collected'])" icon="fa-circle-check" :hint="$t['successful'].' successful transactions'" />
