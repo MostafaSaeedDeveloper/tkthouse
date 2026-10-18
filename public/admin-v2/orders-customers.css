@@ -94,7 +94,7 @@
 .a-ordt td, .a-ordt th { white-space: normal; }
 .a-ordt tbody td { vertical-align: middle; } /* every cell is centred on the row's height */
 .a-ordt .c-check { width: 44px; padding-right: 0; text-align: center; } .a-ordt .c-order { width: 136px; } .a-ordt .c-customer { width: 22%; } .a-ordt .c-event { width: auto; }
-.a-ordt .c-tickets { width: 240px; } .a-ordt .c-total { width: 116px; } .a-ordt .c-status { width: 156px; } .a-ordt .c-actions { width: 112px; }
+.a-ordt .c-tickets { width: 150px; } .a-ordt .c-total { width: 116px; } .a-ordt .c-status { width: 156px; } .a-ordt .c-actions { width: 112px; }
 .a-ordt .a-table__main { white-space: nowrap; }
 .a-ordt .a-btn--sm { min-height: 32px; min-width: 32px; padding: 0 9px; }
 .a-ordt .a-table__actions { gap: 4px; }
@@ -108,6 +108,14 @@
 /* Ticket types under the event name: one line each, full text on hover */
 .a-ord-type { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .a-ord-type b { color: var(--a-ink, #111); font-weight: 700; }
+.a-ord-tixbtn { margin-top: 4px; white-space: nowrap; }
+.a-ord-tixlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 50vh; overflow: auto; }
+.a-ord-tixlist li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--a-line); }
+.a-ord-tixlist li:first-child { border-top: 0; }
+.a-ord-tixlist__name { font-weight: 700; overflow-wrap: anywhere; }
+.a-ord-tixlist__meta { grid-column: 2; grid-row: 2; font-size: 12.5px; color: var(--a-muted); }
+.a-ord-tixlist li b { grid-column: 3; grid-row: 1 / span 2; align-self: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.a-ord-tixtotal { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 2px solid var(--a-line); font-weight: 800; font-variant-numeric: tabular-nums; }
 .a-ord-dot { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; vertical-align: 0; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
 .a-ord-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-weight: 600; line-height: 1.35; }
 .a-ordt .c-status .a-badge { margin-bottom: 2px; }
@@ -126,7 +134,7 @@
 /* 768-1279px: the content area is narrow, so the Tickets column folds into the Event cell */
 @media (min-width: 768px) and (max-width: 1279.98px) {
     .a-ordt .c-order { width: 124px; } .a-ordt .c-customer { width: 20%; } .a-ordt .c-total { width: 92px; } .a-ordt .c-status { width: 118px; } .a-ordt .c-actions { width: 108px; }
-    .a-ordt .c-tickets { width: 150px; }
+    .a-ordt .c-tickets { width: 140px; }
     .a-ordt thead th, .a-ordt tbody td { padding-left: 8px; padding-right: 8px; }
 }
 /* Mobile: each row becomes a card (order + status on top, then labelled details, then actions) */
@@ -145,7 +153,7 @@
     .a-ordt.a-table--stack td.c-customer::before, .a-ordt.a-table--stack td.c-event::before { display: none; }
     .a-ordt.a-table--stack td.c-tickets { grid-column: 1; grid-row: 4; display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0 5px; align-items: baseline; text-align: left; }
     .a-ordt.a-table--stack td.c-tickets::after { content: "tickets"; font-size: 12px; color: var(--a-muted); }
-    .a-ordt.a-table--stack td.c-tickets .a-table__sub { order: 3; flex-basis: 100%; }
+    .a-ordt.a-table--stack td.c-tickets .a-ord-tixbtn { order: 3; flex-basis: auto; margin-top: 6px; }
     .a-ordt.a-table--stack td.c-total { grid-column: 2; grid-row: 4 / span 2; align-self: start; text-align: right; display: flex; gap: 4px; justify-content: flex-end; align-items: baseline; }
     .a-ordt.a-table--stack td.c-actions { grid-column: 1 / -1; grid-row: 6; padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--a-line); }
     .a-ordt.a-table--stack .c-actions .a-table__actions { justify-content: flex-start; }

@@ -122,10 +122,9 @@
                 </td>
                 <td data-label="Tickets" class="c-tickets">
                     <span class="a-table__main">{{ $ticketCount }}</span>
-                    @foreach($ticketTypes->take(3) as $type)
-                        <span class="a-table__sub a-ord-type" title="{{ $type['qty'] }} × {{ $type['name'] }}"><i class="a-ord-dot" style="background: {{ $type['color'] }}" aria-hidden="true"></i><b>{{ $type['qty'] }}×</b> {{ $type['name'] }}</span>
-                    @endforeach
-                    @if($ticketTypes->count() > 3)<span class="a-table__sub">+{{ $ticketTypes->count() - 3 }} more {{ \Illuminate\Support\Str::plural('type', $ticketTypes->count() - 3) }}</span>@endif
+                    @if($ticketTypes->isNotEmpty())
+                        <button type="button" class="a-btn a-btn--outline a-btn--sm a-ord-tixbtn" data-ord-tix-open data-number="{{ $number }}" data-types="{{ json_encode($ticketTypes->all()) }}" aria-haspopup="dialog"><i class="fa fa-ticket" aria-hidden="true"></i> View tickets</button>
+                    @endif
                 </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
@@ -232,6 +231,17 @@
     </div>
 </div>
 @endcan
+
+<div class="a-ord-modal" id="ordTixModal" aria-hidden="true">
+    <div class="a-ord-modal__box" role="dialog" aria-modal="true" aria-labelledby="ordTixTitle">
+        <h2 id="ordTixTitle">Tickets · #<span id="ordTixNumber"></span></h2>
+        <ul class="a-ord-tixlist" id="ordTixList"></ul>
+        <div class="a-ord-tixtotal"><span><b id="ordTixCount"></b> tickets</span><span id="ordTixSum"></span></div>
+        <div class="a-btn-group" style="justify-content:flex-end;margin-top:16px">
+            <button type="button" class="a-btn a-btn--outline" data-ord-tix-close>Close</button>
+        </div>
+    </div>
+</div>
 
 <script src="{{ asset('admin-v2/orders-list.js') }}?v={{ filemtime(public_path('admin-v2/orders-list.js')) }}" defer></script>
 

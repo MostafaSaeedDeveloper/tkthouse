@@ -727,7 +727,7 @@ class OrderController extends Controller
     {
         return [
             'customer:id,first_name,last_name,email,phone',
-            'items:id,order_id,event_id,event_ticket_id,ticket_name,quantity',
+            'items:id,order_id,event_id,event_ticket_id,ticket_name,ticket_price,quantity,line_total',
             'items.event:id,name',
             'items.eventTicket:id,color',
             'latestPaymentAttempt',

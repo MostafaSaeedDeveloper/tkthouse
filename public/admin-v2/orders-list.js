@@ -4,6 +4,47 @@
     var $ = function (s, r) { return (r || document).querySelector(s); };
     var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
+    /* ---- "View tickets" popup: the ticket types of one order (data comes from the row, nothing is fetched) ---- */
+    var tixModal = document.getElementById('ordTixModal');
+    if (tixModal) {
+        var tixList = document.getElementById('ordTixList');
+        var tixLast = null;
+        var money = function (n) { return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        var closeTix = function () {
+            tixModal.classList.remove('show'); tixModal.setAttribute('aria-hidden', 'true');
+            if (tixLast && tixLast.isConnected) tixLast.focus();
+        };
+        document.addEventListener('click', function (e) {
+            var open = e.target.closest('[data-ord-tix-open]');
+            if (open) {
+                var types = [];
+                try { types = JSON.parse(open.getAttribute('data-types') || '[]'); } catch (err) { types = []; }
+                tixLast = open;
+                document.getElementById('ordTixNumber').textContent = open.getAttribute('data-number') || '';
+                tixList.textContent = '';
+                var qty = 0, sum = 0;
+                types.forEach(function (t) {
+                    qty += t.qty; sum += t.total;
+                    var li = document.createElement('li');
+                    var dot = document.createElement('i'); dot.className = 'a-ord-dot';
+                    if (/^#[0-9a-fA-F]{6}$/.test(t.color || '')) dot.style.background = t.color;
+                    var name = document.createElement('span'); name.className = 'a-ord-tixlist__name'; name.textContent = t.name;
+                    var meta = document.createElement('span'); meta.className = 'a-ord-tixlist__meta'; meta.textContent = t.qty + ' × ' + money(t.price);
+                    var total = document.createElement('b'); total.textContent = money(t.total) + ' EGP';
+                    li.appendChild(dot); li.appendChild(name); li.appendChild(meta); li.appendChild(total);
+                    tixList.appendChild(li);
+                });
+                document.getElementById('ordTixCount').textContent = qty;
+                document.getElementById('ordTixSum').textContent = money(sum) + ' EGP';
+                tixModal.classList.add('show'); tixModal.setAttribute('aria-hidden', 'false');
+                var closeBtn = tixModal.querySelector('[data-ord-tix-close]'); if (closeBtn) closeBtn.focus();
+                return;
+            }
+            if (e.target.closest('[data-ord-tix-close]') || e.target === tixModal) closeTix();
+        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && tixModal.classList.contains('show')) closeTix(); });
+    }
+
     /* ---- advanced filters panel ---- */
     $$('[data-ord-filter-toggle]').forEach(function (btn) {
         var panel = document.getElementById(btn.getAttribute('aria-controls'));

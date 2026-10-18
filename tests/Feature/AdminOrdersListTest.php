@@ -124,7 +124,7 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringContainsString(route('admin.orders.bulk.reject'), $html);
     }
 
-    public function test_ticket_types_are_listed_in_the_tickets_column_with_the_ticket_colour(): void
+    public function test_tickets_column_has_a_view_tickets_button_carrying_the_types_colours_and_prices(): void
     {
         $this->staff();
         $vip = \App\Models\EventTicket::create(['event_id' => $this->eventA->id, 'name' => 'VIP', 'price' => 500, 'status' => 'active', 'color' => '#ff0055']);
@@ -133,10 +133,17 @@ class AdminOrdersListTest extends TestCase
 
         $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('#<td data-label="Tickets" class="c-tickets">.*?<b>2×</b> VIP.*?<b>1×</b> Early Bird.*?</td>#s', $html);
-        $this->assertStringContainsString('background: #ff0055', $html);   // the ticket's own colour
-        $this->assertStringContainsString('background: #9a9a94', $html);   // no linked ticket: neutral grey
-        $this->assertDoesNotMatchRegularExpression('#<td data-label="Event"[^>]*>(?:(?!</td>).)*a-ord-type#s', $html); // not under the event name any more
+        $this->assertMatchesRegularExpression('#<td data-label="Tickets" class="c-tickets">.*?data-ord-tix-open.*?View tickets.*?</td>#s', $html);
+        $this->assertStringContainsString('id="ordTixModal"', $html);
+
+        preg_match('#data-types="([^"]*)"#', $html, $m);
+        $types = json_decode(html_entity_decode($m[1]), true);
+        $this->assertSame(['VIP', 'Early Bird'], array_column($types, 'name'));      // event prefix stripped
+        $this->assertSame([2, 1], array_column($types, 'qty'));
+        $this->assertEquals([1000, 100], array_column($types, 'total'));
+        $this->assertSame('#ff0055', $types[0]['color']);                             // the ticket's own colour
+        $this->assertSame('#9a9a94', $types[1]['color']);                             // not linked to an event ticket: neutral grey
+        $this->assertStringNotContainsString('a-ord-type', $html);                    // no ticket lines in the cells any more
     }
 
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
@@ -151,9 +158,7 @@ class AdminOrdersListTest extends TestCase
         $response->assertSee('The Very Long Winter Open Air Festival 2026 Featuring Many International Headliners', false)
             ->assertSee('class="a-ord-clamp"', false)
             ->assertDontSee('a-ord-tag')                            // the old coloured ticket badges are gone
-            ->assertSee('class="a-table__sub a-ord-type"', false)   // ticket types are listed under the event, one line each...
-            ->assertSee('<b>2×</b>', false)                         // ...with their quantity
-            ->assertSee('VIP Table For Ten With Bottle Service')
+            ->assertSee('VIP Table For Ten With Bottle Service')            // in the popup data (View tickets)
             ->assertDontSee($this->eventA->name.' - VIP Table', false); // the stored "<event> - <ticket>" prefix is stripped in the list
 
 
