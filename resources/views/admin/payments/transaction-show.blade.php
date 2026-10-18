@@ -61,6 +61,7 @@
             <div><dt>Paid at</dt><dd>{{ ($attempt->paid_at ?? $attempt->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
             <div><dt>Last checked</dt><dd>{{ $attempt->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>
             @if($attempt->failure_reason)<div><dt>Failure reason</dt><dd>{{ $attempt->failure_reason }}</dd></div>@endif
+            @if($rr = $attempt->reviewReason())<div><dt>Needs review</dt><dd class="a-wrap"><strong>{{ $rr[0] }}</strong><span class="a-table__sub">{{ $rr[1] }}</span></dd></div>@endif
             @if($attempt->status === 'initiated' && ($li = data_get($attempt->meta, 'last_inquiry')))
                 <div><dt>Provider answer</dt><dd class="a-wrap">
                     {{ $li['message'] ?? 'Not confirmed as paid' }}

@@ -100,7 +100,7 @@
             @foreach($attempts as $a)
                 @php $review = (bool) data_get($a->meta, 'needs_review'); @endphp
                 <tr>
-                    <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $a->order) }}">#{{ $a->order->order_number }}</a>@if($review)<x-admin.badge variant="warning">Needs review</x-admin.badge>@endif</td>
+                    <td data-label="Order"><a class="a-table__main" href="{{ route('admin.orders.show', $a->order) }}">#{{ $a->order->order_number }}</a>@if($review)@php $rr = $a->reviewReason(); @endphp<x-admin.badge variant="warning" title="{{ $rr[1] ?? '' }}">Needs review</x-admin.badge><span class="a-table__sub">{{ $rr[0] ?? '' }}</span>@endif</td>
                     <td data-label="Customer"><span class="a-table__main">{{ trim(($a->order->customer?->first_name ?? '').' '.($a->order->customer?->last_name ?? '')) ?: '—' }}</span><span class="a-table__sub">{{ $a->order->customer?->email }}</span></td>
                     <td data-label="Gateway">{{ ucfirst($a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
                     <td data-label="Reference"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>

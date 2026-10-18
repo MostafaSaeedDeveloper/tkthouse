@@ -42,6 +42,25 @@ class PaymentAttempt extends Model
         });
     }
 
+    /** Why the system flagged this payment "Needs review": [short label, what to do]. Null when it is not flagged. @return array{0: string, 1: string}|null */
+    public function reviewReason(): ?array
+    {
+        $reason = data_get($this->meta, 'needs_review');
+        if (! $reason) {
+            return null;
+        }
+
+        return match ($reason) {
+            'duplicate_payment' => ['Paid twice', 'This payment arrived after the order was already paid (a second payment for the same order). Check whether the customer was charged twice and refund the extra one.'],
+            'order_closed' => ['Order was closed', 'The payment arrived for an order that was canceled, rejected or still awaiting approval. The money is recorded but nothing was issued automatically: reopen the order or refund.'],
+            'event_ended' => ['Event ended', 'The payment arrived but the event has already ended, so the order was not fulfilled automatically. Decide whether to honour it or refund.'],
+            'event_not_on_sale' => ['Event off sale', 'The payment arrived but the event is no longer on sale, so the order was not fulfilled automatically. Decide whether to honour it or refund.'],
+            'event_missing' => ['Event missing', 'The payment arrived but the order\'s event no longer exists. Refund review required.'],
+            'ticket_unavailable' => ['Ticket unavailable', 'The payment arrived but a ticket type on the order is no longer active, so the order was not fulfilled automatically. Refund review required.'],
+            default => ['Needs review', 'Flagged for review: '.str_replace('_', ' ', (string) $reason).'.'],
+        };
+    }
+
     public function webhookEvents()
     {
         return $this->hasMany(WebhookEvent::class);

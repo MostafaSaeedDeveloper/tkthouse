@@ -368,6 +368,19 @@ class WebhookTrackingTest extends TestCase
         \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r->url(), 'getInvoiceData') && $r->hasHeader('Content-Type', 'application/json') && $r->hasHeader('Accept', 'application/json'));
     }
 
+    public function test_a_flagged_payment_says_why_it_needs_review(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view', 'payments.reports.view']);
+        $a->forceFill(['meta' => ['needs_review' => 'duplicate_payment']])->saveQuietly();
+
+        $this->assertSame('Paid twice', $a->fresh()->reviewReason()[0]);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertSee('Needs review')->assertSee('Paid twice')->assertSee('charged twice');
+        $this->actingAs($viewer)->get(route('admin.payments.index'))->assertOk()->assertSee('Needs review')->assertSee('Paid twice');
+        $this->assertNull($this->attempt($acc, 'fawaterak_card')->reviewReason());
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);
