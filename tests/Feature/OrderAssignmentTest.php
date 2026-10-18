@@ -269,21 +269,38 @@ class OrderAssignmentTest extends TestCase
         $this->assertNull($o2->fresh()->assigned_user_id);
     }
 
-    public function test_agent_dashboard_and_global_screens_are_isolated(): void
+    public function test_agent_sees_the_ordinary_dashboard_with_only_their_numbers_and_global_screens_are_isolated(): void
     {
         $this->on();
         $a = $this->agent(); $b = $this->agent();
         $this->order($a, 'paid', 100); $this->order($b, 'paid', 999);
         $this->order($a, 'pending_payment');
 
-        $page = $this->actingAs($a)->get(route('admin.dashboard'))->assertOk()->assertSee('My dashboard');
-        $page->assertDontSee('999.00');
+        // The agent gets the ordinary dashboard (nothing says it is a special one), computed from their own orders only.
+        $page = $this->actingAs($a)->get(route('admin.dashboard'))->assertOk()->assertDontSee('My dashboard')->assertSee('Total sales');
+        $page->assertSee('100 EGP')->assertDontSee('999')->assertDontSee('1,099');
         foreach (['admin.reports.index', 'admin.guest-list.index'] as $route) {
             $this->actingAs($a)->get(route($route))->assertForbidden();
         }
         $ev = $this->makeEvent();
         $this->actingAs($a)->get(route('admin.events.dashboard', $ev))->assertForbidden();
-        $this->actingAs($this->manager())->get(route('admin.dashboard'))->assertOk()->assertDontSee('My dashboard');
+        $this->actingAs($this->manager())->get(route('admin.dashboard'))->assertOk()->assertSee('1,099 EGP');
+    }
+
+    public function test_the_ordinary_dashboard_only_shows_the_events_the_agent_works_in(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        $mine = $this->makeEvent(['name' => 'Agent Own Night']);
+        $theirs = $this->makeEvent(['name' => 'Someone Elses Gala']);
+        foreach ([[$a, $mine], [$b, $theirs]] as [$agent, $event]) {
+            $o = $this->order($agent, 'paid', 100);
+            \App\Models\OrderItem::create(['order_id' => $o->id, 'event_id' => $event->id, 'ticket_name' => $event->name.' - GA', 'ticket_price' => 100, 'quantity' => 1, 'line_total' => 100, 'holder_name' => 'H', 'holder_email' => 'h@example.test']);
+        }
+
+        $page = $this->actingAs($a)->get(route('admin.dashboard'))->assertOk();
+        $page->assertSee('Agent Own Night')->assertDontSee('Someone Elses Gala')->assertDontSee('My dashboard');
+        $this->actingAs($this->manager())->get(route('admin.dashboard'))->assertOk()->assertSee('Agent Own Night')->assertSee('Someone Elses Gala');
     }
 
     public function test_customers_tickets_and_search_are_limited_to_visible_orders(): void

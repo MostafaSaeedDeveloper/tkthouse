@@ -13,7 +13,7 @@ class EnsureNotOrderScoped
     public function handle(Request $request, Closure $next): Response
     {
         if (OrderAccess::scoped($request->user())) {
-            abort(403, 'This screen shows data for all orders. Use My dashboard / My report instead.');
+            abort(403, 'This screen shows data for all orders and is not available for your access level.');
         }
 
         return $next($request);
