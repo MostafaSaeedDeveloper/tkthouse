@@ -69,9 +69,11 @@ class AdminOrdersListTest extends TestCase
         $response = $this->get(route('admin.orders.index'))->assertOk();
         $response->assertSee('The Very Long Winter Open Air Festival 2026 Featuring Many International Headliners', false)
             ->assertSee('class="a-ord-clamp"', false)
-            ->assertSee('2 types')                                  // distinct ticket names, no names dumped into the row
+            ->assertSee('2 types')                                  // distinct ticket names
             ->assertDontSee('a-ord-tag')                            // the old coloured ticket badges are gone
-            ->assertDontSee('VIP Table For Ten With Bottle Service'); // ticket names stay in Order Details
+            ->assertSee('class="a-table__sub a-ord-type"', false)   // ticket types are listed under the event, one line each...
+            ->assertSee('<b>2×</b>', false)                         // ...with their quantity
+            ->assertSee('VIP Table For Ten With Bottle Service');
 
         $summary = $response->viewData('summary');
         $this->assertSame(4, $summary['all']);

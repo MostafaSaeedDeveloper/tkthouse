@@ -90,6 +90,7 @@
                 $eventNames = \App\Support\OrderPresenter::eventNames($order);
                 $ticketCount = \App\Support\OrderPresenter::ticketCount($order);
                 $typeCount = \App\Support\OrderPresenter::ticketTypeCount($order);
+                $ticketTypes = \App\Support\OrderPresenter::ticketTypes($order);
                 $secondsLeft = $order->paymentSecondsRemaining();
                 $attempt = $order->latestPaymentAttempt;
                 $showAttempt = $attempt && ($order->status !== 'paid' || $attempt->status !== 'paid');
@@ -107,6 +108,10 @@
                         <span class="a-ord-clamp" title="{{ $eventNames->implode(' · ') }}">{{ $eventNames->first() }}</span>
                         @if($eventNames->count() > 1)<span class="a-table__sub">+{{ $eventNames->count() - 1 }} more {{ \Illuminate\Support\Str::plural('event', $eventNames->count() - 1) }}</span>@endif
                     @endif
+                    @foreach($ticketTypes->take(2) as $type)
+                        <span class="a-table__sub a-ord-type" title="{{ $type['qty'] }} × {{ $type['name'] }}"><b>{{ $type['qty'] }}×</b> {{ $type['name'] }}</span>
+                    @endforeach
+                    @if($ticketTypes->count() > 2)<span class="a-table__sub">+{{ $ticketTypes->count() - 2 }} more {{ \Illuminate\Support\Str::plural('type', $ticketTypes->count() - 2) }}</span>@endif
                     <span class="a-table__sub a-ord-inline-tix">{{ $ticketCount }} {{ \Illuminate\Support\Str::plural('ticket', $ticketCount) }}@if($typeCount > 1) · {{ $typeCount }} types @endif</span>
                 </td>
                 <td data-label="Tickets" class="c-tickets a-num"><span class="a-table__main">{{ $ticketCount }}</span>@if($typeCount > 1)<span class="a-table__sub">{{ $typeCount }} types</span>@endif</td>

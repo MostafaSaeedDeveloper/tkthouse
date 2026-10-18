@@ -105,6 +105,9 @@
 .a-ordt th[aria-sort="ascending"] i, .a-ordt th[aria-sort="descending"] i { opacity: 1; color: var(--a-ink); }
 .a-ordt th.a-num .a-ordt__sort { flex-direction: row-reverse; }
 .a-ord-ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Ticket types under the event name: one line each, full text on hover */
+.a-ord-type { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-ord-type b { color: var(--a-ink, #111); font-weight: 700; }
 .a-ord-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-weight: 600; line-height: 1.35; }
 .a-ordt .c-status .a-badge { margin-bottom: 2px; }
 .a-ord-pay { display: block; margin-top: 4px; font-size: 12px; color: var(--a-muted); }

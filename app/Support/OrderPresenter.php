@@ -45,6 +45,20 @@ final class OrderPresenter
         return (int) $order->items->sum(fn ($item) => max(1, (int) $item->quantity));
     }
 
+    /**
+     * Ticket types on the order with their total quantity, in order of first appearance.
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, qty: int}>
+     */
+    public static function ticketTypes(Order $order): \Illuminate\Support\Collection
+    {
+        return $order->items
+            ->groupBy(fn ($item) => trim((string) $item->ticket_name))
+            ->reject(fn ($group, $name) => $name === '')
+            ->map(fn ($group, $name) => ['name' => (string) $name, 'qty' => (int) $group->sum(fn ($item) => max(1, (int) $item->quantity))])
+            ->values();
+    }
+
     /** Number of different ticket names on the order. */
     public static function ticketTypeCount(Order $order): int
     {
