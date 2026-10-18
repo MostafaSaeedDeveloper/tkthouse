@@ -144,7 +144,9 @@
     .a-ordt.a-table--stack tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 16px; }
     .a-ordt.a-table--stack tbody td { padding: 0; text-align: left; display: block; width: auto; }
     .a-ordt.a-table--stack tbody td::before { display: none; }
-    .a-ordt.a-table--stack tbody tr { position: relative; }
+    /* One separate card per order: grey gutter between them, white card with its own border and radius */
+    .a-ordt.a-table--stack tbody { display: grid; gap: 12px; padding: 12px; background: var(--a-surface-2, #f4f4f1); }
+    .a-ordt.a-table--stack tbody tr { position: relative; background: #fff; border: 1px solid var(--a-line); border-radius: 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
     .a-ordt.a-table--stack td.c-check { position: absolute; left: 16px; top: 14px; width: auto; }
     .a-ordt.a-table--stack tbody tr:has(td.c-check) td.c-order { padding-left: 30px; }
     .a-ordt.a-table--stack td.c-order { grid-column: 1; grid-row: 1; }
