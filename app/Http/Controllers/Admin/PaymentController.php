@@ -37,7 +37,7 @@ class PaymentController extends Controller
         ];
 
         $attempts = (clone $base)->with(['order.customer', 'failedWebhookEvent'])
-            ->when($filter === 'review', fn ($q) => $q->where('meta->needs_review', true))
+            ->when($filter === 'review', fn ($q) => $q->whereNotNull('meta->needs_review'))
             ->when(! in_array($filter, ['all', 'review'], true), fn ($q) => $q->where('status', $filter))
             ->when($provider !== '', fn ($q) => $q->where('provider', $provider))
             ->when($search !== '', function ($q) use ($search) {

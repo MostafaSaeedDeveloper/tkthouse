@@ -119,4 +119,27 @@ class TransactionController extends Controller
 
         return back()->with('success', 'Checked with the gateway: '.str_replace('_', ' ', $outcome).'.');
     }
+
+    /**
+     * "Mark as reviewed": clears the Needs review flag once someone has looked at the payment. Only the flag changes (never the
+     * payment, the order or any money); who cleared it and what the flag said are kept in the attempt and the activity log.
+     */
+    public function dismissReview(Request $request, PaymentAttempt $attempt)
+    {
+        abort_unless(self::visible($request->user())->whereKey($attempt->id)->exists(), 404);
+        abort_unless(OrderAccess::canManage($attempt->order, $request->user()), 403);
+
+        $meta = $attempt->meta ?? [];
+        $reason = $meta['needs_review'] ?? null;
+        if (! $reason) {
+            return back()->with('success', 'This payment was not flagged.');
+        }
+
+        unset($meta['needs_review'], $meta['flagged_at']);
+        $meta['review_dismissed'] = ['reason' => $reason, 'by' => $request->user()->name, 'by_id' => $request->user()->id, 'at' => now()->toIso8601String()];
+        $attempt->forceFill(['meta' => $meta])->saveQuietly();
+        activity('orders')->performedOn($attempt->order)->causedBy($request->user())->withProperties(['attempt_id' => $attempt->id, 'reason' => $reason])->log('Payment review dismissed');
+
+        return back()->with('success', 'Marked as reviewed.');
+    }
 }

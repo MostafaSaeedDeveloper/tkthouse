@@ -206,6 +206,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('payments/sync/{account}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'sync'])->whereNumber('account')->middleware('permission:payments.transactions.inquire')->name('payments.sync');
     Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
     Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
+    Route::post('payments/transactions/{attempt}/review-dismiss', [\App\Http\Controllers\Admin\TransactionController::class, 'dismissReview'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.review.dismiss');
     Route::post('payments/transactions/{attempt}/inquire', [\App\Http\Controllers\Admin\TransactionController::class, 'inquire'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.inquire');
     $rc = \App\Http\Controllers\Admin\RefundController::class;
     Route::get('payments/refunds', [$rc, 'index'])->middleware('permission:payments.refunds.view')->name('payments.refunds');

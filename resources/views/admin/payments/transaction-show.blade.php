@@ -61,7 +61,7 @@
             <div><dt>Paid at</dt><dd>{{ ($attempt->paid_at ?? $attempt->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
             <div><dt>Last checked</dt><dd>{{ $attempt->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>
             @if($attempt->failure_reason)<div><dt>Failure reason</dt><dd>{{ $attempt->failure_reason }}</dd></div>@endif
-            @if($rr = $attempt->reviewReason())<div><dt>Needs review</dt><dd class="a-wrap"><strong>{{ $rr[0] }}</strong><span class="a-table__sub">{{ $rr[1] }}</span></dd></div>@endif
+            @if($rr = $attempt->reviewReason())<div><dt>Needs review</dt><dd class="a-wrap"><strong>{{ $rr[0] }}</strong><span class="a-table__sub">{{ $rr[1] }}</span>@can('payments.transactions.inquire')<form method="POST" action="{{ route('admin.payments.transactions.review.dismiss', $attempt) }}" data-a-confirm="Mark this payment as reviewed? The Needs review flag is removed; the payment and the order are not changed." data-a-confirm-title="Mark as reviewed" data-a-confirm-ok="Mark as reviewed" style="margin-top:6px">@csrf<button type="submit" class="a-btn a-btn--outline a-btn--sm">Mark as reviewed</button></form>@endcan</dd></div> @endif
             @if($attempt->status === 'initiated' && ($li = data_get($attempt->meta, 'last_inquiry')))
                 <div><dt>Provider answer</dt><dd class="a-wrap">
                     {{ $li['message'] ?? 'Not confirmed as paid' }}

@@ -381,6 +381,34 @@ class WebhookTrackingTest extends TestCase
         $this->assertNull($this->attempt($acc, 'fawaterak_card')->reviewReason());
     }
 
+    public function test_a_reviewed_payment_loses_its_flag_without_touching_the_payment_or_the_order(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $a->forceFill(['status' => 'paid', 'meta' => ['needs_review' => 'duplicate_payment', 'flagged_at' => now()->toIso8601String()]])->saveQuietly();
+        $orderStatus = $a->order->fresh()->status;
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view', 'payments.reports.view']);
+        $ops = $this->staff(['payments.transactions.view', 'payments.transactions.inquire', 'orders.view', 'payments.reports.view']);
+        $url = route('admin.payments.transactions.review.dismiss', $a);
+
+        // the review filter finds it; people without the inquire permission cannot clear it (and do not see the button)
+        $this->actingAs($ops)->get(route('admin.payments.index', ['status' => 'review']))->assertOk()->assertSee($a->order->order_number)->assertSee('Mark as reviewed');
+        $this->actingAs($viewer)->get(route('admin.payments.index'))->assertOk()->assertDontSee('Mark as reviewed');
+        $this->actingAs($viewer)->post($url)->assertForbidden();
+        $this->assertSame('duplicate_payment', data_get($a->fresh()->meta, 'needs_review'));
+
+        $this->actingAs($ops)->post($url)->assertRedirect()->assertSessionHas('success');
+
+        $fresh = $a->fresh();
+        $this->assertNull(data_get($fresh->meta, 'needs_review'));
+        $this->assertSame('duplicate_payment', data_get($fresh->meta, 'review_dismissed.reason'));
+        $this->assertSame($ops->id, data_get($fresh->meta, 'review_dismissed.by_id'));
+        $this->assertSame('paid', $fresh->status);
+        $this->assertSame($orderStatus, $a->order->fresh()->status);
+        $this->actingAs($ops)->get(route('admin.payments.index'))->assertOk()->assertDontSee('Paid twice')->assertDontSee('Mark as reviewed');   // (the filter menu itself still lists "Needs review")
+        $this->actingAs($ops)->get(route('admin.payments.index', ['status' => 'review']))->assertOk()->assertDontSee($a->order->order_number);
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);
