@@ -44,13 +44,11 @@
 </x-admin.form-section>
 
 <x-admin.form-section title="Event scope" description="Limit which events this user can manage. Tick none for no restriction (all events)." cols="1">
-    <div class="a-chips" role="group" aria-label="Managed events">
-        @forelse(($events ?? collect()) as $event)
-            <label class="a-m-perm"><input type="checkbox" name="managed_event_ids[]" value="{{ $event->id }}" @checked(in_array((string) $event->id, $selectedEventIds))><span>{{ $event->name }}</span></label>
-        @empty
-            <span class="a-table__sub">No events yet.</span>
-        @endforelse
-    </div>
+    @if(($events ?? collect())->isEmpty())
+        <span class="a-table__sub">No events yet.</span>
+    @else
+        <x-admin.multiselect name="managed_event_ids" label="Managed events" :options="$events->pluck('name', 'id')->all()" :selected="$selectedEventIds" placeholder="Search events…" empty-text="All events (no restriction)" />
+    @endif
 </x-admin.form-section>
 
 <x-admin.form-section title="Status & orders" description="Inactive users cannot sign in or receive orders; their history is kept." cols="1">

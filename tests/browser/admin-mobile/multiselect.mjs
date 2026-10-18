@@ -1,0 +1,37 @@
+import { chromium } from 'playwright-core';
+const BASE = process.env.BASE_URL || 'http://localhost:8000';
+const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
+let pass=0, fail=0; const t=(n,ok,x='')=>{ok?pass++:fail++;console.log(`${ok?'PASS':'FAIL'}  ${n}${x?'  -> '+x:''}`)};
+for (const [name, opts] of [['desk',{viewport:{width:1100,height:900}}],['mob',{viewport:{width:390,height:844},isMobile:true,hasTouch:true}]]) {
+  const ctx = await b.newContext(opts); const p = await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message)); await p.route(/^https?:\/\/(?!localhost)/, r=>r.abort());
+  await p.goto(BASE+'/login'); await p.fill('input[name=username]','auditadmin'); await p.fill('input[name=password]','Passw0rd!aud'); await Promise.all([p.waitForURL(u=>!u.pathname.startsWith('/login')),p.click('button[type=submit]')]);
+  await p.goto(BASE+'/dashboard/users/create'); await p.waitForTimeout(500);
+  const ms = p.locator('[data-a-msel]');
+  t(`${name}: enhanced, native select hidden`, (await ms.evaluate(e=>e.classList.contains('is-enhanced'))) && !(await p.locator('.a-msel__native').isVisible()));
+  t(`${name}: empty state says all events`, (await p.locator('.a-msel__search').getAttribute('placeholder'))==='All events (no restriction)');
+  await p.locator('.a-msel__search').click(); await p.waitForTimeout(150);
+  t(`${name}: panel opens with all options`, (await p.locator('.a-msel__panel').isVisible()) && (await p.locator('.a-msel__opt').count())===2, String(await p.locator('.a-msel__opt').count()));
+  await p.locator('.a-msel__opt').first().click();
+  t(`${name}: click selects -> chip + native option selected`, (await p.locator('.a-msel__chip').count())===1 && (await p.evaluate(()=>document.querySelectorAll('.a-msel__native option:checked').length))===1);
+  await p.fill('.a-msel__search','pul'); await p.waitForTimeout(100);
+  t(`${name}: search filters`, (await p.locator('.a-msel__opt:visible').count())===1);
+  const before = await p.evaluate(()=>document.querySelectorAll('.a-msel__native option:checked').length);
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter');
+  const after = await p.evaluate(()=>document.querySelectorAll('.a-msel__native option:checked').length);
+  t(`${name}: keyboard (ArrowDown + Enter) toggles the active option`, Math.abs(after-before)===1, `${before}->${after}`);
+  await p.click('.a-msel__allBtn, .a-msel__link >> text=Select all'); await p.waitForTimeout(100);
+  t(`${name}: select all (filtered) works`, (await p.evaluate(()=>document.querySelectorAll('.a-msel__native option:checked').length))>=1);
+  await p.fill('.a-msel__search',''); await p.click('.a-msel__link >> text=Clear'); await p.waitForTimeout(100);
+  t(`${name}: Clear empties the selection`, (await p.evaluate(()=>document.querySelectorAll('.a-msel__native option:checked').length))===0);
+  await p.locator('.a-msel__opt').nth(1).click(); await p.keyboard.press('Escape');
+  t(`${name}: Esc closes the panel`, !(await p.locator('.a-msel__panel').isVisible()));
+  await p.locator('.a-msel__x').first().click();
+  t(`${name}: chip × removes`, (await p.locator('.a-msel__chip').count())===0);
+  await p.locator('.a-msel__search').click(); await p.locator('.a-msel__opt').first().click(); await p.locator('h1').first().click();
+  t(`${name}: click outside closes`, !(await p.locator('.a-msel__panel').isVisible()));
+  await p.locator('.a-msel__search').click(); await ms.scrollIntoViewIfNeeded(); await p.waitForTimeout(150);
+  await p.screenshot({ path:`msel_${name}.png` });
+  t(`${name}: no JS errors`, errs.length===0, errs.join(';'));
+  await ctx.close();
+}
+console.log(`\n${pass} passed, ${fail} failed`); await b.close();

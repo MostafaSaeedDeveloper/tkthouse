@@ -191,6 +191,19 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringContainsString(route('admin.orders.bulk.delete'), $this->get(route('admin.orders.index'))->getContent());
     }
 
+    public function test_user_form_event_scope_is_a_multiselect_that_still_posts_managed_event_ids(): void
+    {
+        $this->staff(['users.create']);
+
+        $html = $this->get(route('admin.users.create'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-a-msel', $html);
+        $this->assertMatchesRegularExpression('#<select multiple name="managed_event_ids\[\]"#', $html);
+        $this->assertStringContainsString('<option value="'.$this->eventA->id.'"', $html);
+        $this->assertStringNotContainsString('type="checkbox" name="managed_event_ids[]"', $html);
+        $this->assertStringContainsString('admin-v2/multiselect.js', $html);
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();

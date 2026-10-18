@@ -101,6 +101,7 @@
 <script src="{{ asset('admin/assets/js/dashmix.app.min.js') }}"></script>
 <script src="{{ asset('admin-v2/admin-v2.js') }}?v={{ filemtime(public_path('admin-v2/admin-v2.js')) }}"></script>
 <script src="{{ asset('admin-v2/custom-select.js') }}?v={{ filemtime(public_path('admin-v2/custom-select.js')) }}"></script>
+<script src="{{ asset('admin-v2/multiselect.js') }}?v={{ filemtime(public_path('admin-v2/multiselect.js')) }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
