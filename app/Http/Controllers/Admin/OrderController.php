@@ -96,7 +96,7 @@ class OrderController extends Controller
         $statusOptions = self::ORDER_STATUS_OPTIONS;
         $perPageOptions = self::PER_PAGE_OPTIONS;
 
-        $assignmentOn = \App\Orders\OrderAccess::enabled();
+        $assignmentOn = \App\Orders\OrderAccess::canSeeAssignment($request->user());
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user()) || \App\Orders\OrderAccess::canAssign($request->user(), true);
         $assignees = $assignmentOn && (\App\Orders\OrderAccess::level($request->user()) === \App\Orders\OrderAccess::ALL)
             ? \App\Models\User::query()->whereIn('id', Order::query()->whereNotNull('assigned_user_id')->distinct()->pluck('assigned_user_id')->merge(app(\App\Orders\OrderAssignmentService::class)->eligibleUsers()->pluck('id'))->unique())->orderBy('name')->get(['id', 'name', 'allowed_payment_methods'])
@@ -169,6 +169,8 @@ class OrderController extends Controller
         $history = $activities
             ->where('log_name', '!=', 'order_notes')
             ->reject(fn (Activity $activity) => in_array($activity->description, self::HIDDEN_ORDER_HISTORY_DESCRIPTIONS, true))
+            // agents who only see their own orders must not learn that/by whom an order was (re)assigned
+            ->reject(fn (Activity $activity) => ! \App\Orders\OrderAccess::canSeeAssignment($request->user()) && in_array($activity->description, ['Order assigned', 'Order reassigned', 'Order unassigned'], true))
             ->values();
 
         $statusTransitions = $history
@@ -212,7 +214,7 @@ class OrderController extends Controller
             ? \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->where('enabled', true)->get()->filter(fn ($a) => \App\Services\Payments\Routing\PaymentAccountResolver::usable($a) && $a->id !== $order->integration_account_id)->values()
             : collect();
         $accountNames = $canSeeAccounts ? \App\Models\IntegrationAccount::query()->whereIn('id', $paymentAttempts->pluck('integration_account_id')->filter())->pluck('name', 'id') : collect();
-        $assignmentOn = \App\Orders\OrderAccess::enabled();
+        $assignmentOn = \App\Orders\OrderAccess::canSeeAssignment($request->user());
         $assignmentHistory = $assignmentOn ? $order->assignments()->get() : collect();
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user(), $order->assigned_user_id !== null);
         $assignees = $canAssign ? app(\App\Orders\OrderAssignmentService::class)->eligibleUsers() : collect();

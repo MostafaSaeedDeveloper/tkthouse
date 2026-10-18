@@ -95,6 +95,17 @@ final class OrderAccess
         };
     }
 
+    /**
+     * Who may see assignment details (who an order is assigned to, the assignment history). Agents who only see their own orders
+     * must not learn which colleagues are on an order, or that it was assigned at all: only people with the full order view or
+     * assignment rights see it.
+     */
+    public static function canSeeAssignment(?User $user): bool
+    {
+        return self::enabled() && $user !== null
+            && (self::level($user) === self::ALL || self::canAssign($user) || self::canAssign($user, true));
+    }
+
     public static function canAssign(?User $user, bool $reassign = false): bool
     {
         if (! self::enabled() || ! $user) {

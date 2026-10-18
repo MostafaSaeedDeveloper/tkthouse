@@ -682,4 +682,24 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => ['']])->assertSessionHasNoErrors();
         $this->assertNull(SystemSettings::get('order_default_assignee_ids'));
     }
+
+    public function test_agents_never_learn_who_else_is_on_an_order_or_that_it_was_assigned(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $a->forceFill(['name' => 'Alice Agentone'])->save();
+        $b->forceFill(['name' => 'Bobby Colleague'])->save();
+        $order = $this->order();
+        $this->actingAs($manager);
+        app(OrderAssignmentService::class)->assignMany($order, [$a, $b], $manager);
+
+        // the agent sees the order, but nothing about assignment: no card, no names, no assignment events, no column
+        $page = $this->actingAs($a)->get(route('admin.orders.show', $order))->assertOk();
+        $page->assertDontSee('Bobby Colleague')->assertDontSee('Assigned agents')->assertDontSee('Order assigned')->assertDontSee('Order reassigned')->assertDontSee('First agent = primary');
+        $this->actingAs($a)->get(route('admin.orders.index'))->assertOk()->assertSee($order->order_number)->assertDontSee('Bobby Colleague')->assertDontSee('Assigned to');
+
+        // people with the full order view (or assignment rights) still see everything
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned agents')->assertSee('Order assigned');
+        $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned to');
+    }
 }
