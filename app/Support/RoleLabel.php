@@ -20,6 +20,7 @@ final class RoleLabel
         'scanner' => ['Scanner Staff', 'Gate staff: scans tickets and sees the basic ticket and order information.'],
         'Order Manager' => ['Order Manager', 'Assigns and reassigns orders, sees every order and the agents\' statistics.'],
         'Order Agent' => ['Order Agent', 'Works only the orders assigned to them.'],
+        'agent' => ['Agent', 'Sales/booking agent: works only the orders assigned to them, sees their own transactions and stats. Turn on "Can receive assigned orders" on the user to include them in automatic assignment.'],
     ];
 
     public static function of(Role|string|null $role): string

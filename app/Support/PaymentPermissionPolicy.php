@@ -24,6 +24,7 @@ final class PaymentPermissionPolicy
         'ordermanager' => ['payments.transactions.view', 'payments.refunds.view', 'payments.refunds.create'],
         // Own orders' transactions only (scoping is enforced by OrderAccess). No refund rights by default.
         'orderagent' => ['payments.transactions.view'],
+        'agent' => ['payments.transactions.view'],
     ];
 
     public static function normalise(string $roleName): string

@@ -39,6 +39,26 @@ class RoleDisplayNameTest extends TestCase
         $this->assertSame('My Custom Thing', RoleLabel::of('my_custom_thing'));   // readable fallback for any key
     }
 
+    public function test_the_agent_role_exists_with_assigned_orders_only_permissions(): void
+    {
+        (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
+
+        $role = Role::findByName('agent', 'web');
+        $this->assertSame('Agent', RoleLabel::of($role));
+        $this->assertTrue((bool) $role->is_system);
+        foreach (['orders.view_assigned', 'orders.manage_assigned', 'orders.update', 'dashboard.view', 'payments.transactions.view'] as $p) {
+            $this->assertTrue($role->hasPermissionTo($p), $p);
+        }
+        foreach (['orders.assign', 'orders.reassign', 'orders.view_all', 'orders.delete', 'payments.refunds.approve', 'users.update'] as $p) {
+            $this->assertFalse($role->hasPermissionTo($p), "agent must not have $p");
+        }
+
+        $user = User::factory()->create(['can_receive_orders' => true]);
+        $user->assignRole('agent');
+        $this->assertTrue(app(\App\Orders\OrderAssignmentService::class)->isEligible($user->fresh()), 'an agent can be picked by automatic assignment');
+        $this->actingAs($this->manager())->delete(route('admin.roles.destroy', $role))->assertSessionHas('error');
+    }
+
     public function test_renaming_the_display_name_never_changes_the_key_or_what_the_code_sees(): void
     {
         (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
