@@ -343,6 +343,18 @@ class AdminOrdersListTest extends TestCase
         $this->get(route('admin.orders.deleted', ['customer' => 'bob']))->assertOk()->assertDontSee('950001');
     }
 
+    public function test_deleted_orders_is_not_in_the_menu_and_its_button_on_orders_needs_the_permission(): void
+    {
+        $url = route('admin.orders.deleted');
+
+        $this->staff();
+        $this->get(route('admin.orders.index'))->assertOk()->assertDontSee($url)->assertDontSee('Deleted orders');
+
+        $this->staff(['orders.deleted.view']);
+        $this->get(route('admin.orders.index'))->assertOk()->assertSee($url)->assertSee('Deleted Orders')->assertDontSee('Deleted orders');
+        $this->get($url)->assertOk()->assertDontSee('>Deleted orders<', false);
+    }
+
     public function test_order_details_show_separate_sections_and_full_ticket_names(): void
     {
         $this->staff();
