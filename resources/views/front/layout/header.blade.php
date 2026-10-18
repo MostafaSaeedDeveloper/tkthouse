@@ -39,8 +39,6 @@
         <title>{{ $siteName }} | Techno Events & Ticket Booking</title>
         <!-- Bootstrap core CSS -->
         <link href="{{ asset('css/bootstrap.css') }}" rel="stylesheet">
-        <!-- Preloader CSS -->
-        <link rel="stylesheet" href="{{ asset('css/preloader.css') }}">
         <!-- DL Menu CSS -->
         <link href="{{ asset('js/dl-menu/component.css') }}" rel="stylesheet">
         <!-- Slick Slider CSS -->
@@ -87,12 +85,6 @@
                  src="https://www.facebook.com/tr?id=1320872626597581&ev=PageView&noscript=1"
                  alt="" />
         </noscript>
-        <div id="loader-wrapper">
-            <div id="loader"></div>
-            <div class="loader-section section-left"></div>
-            <div class="loader-section section-right"></div>
-        </div>
-
         <div class="kode_wrapper">
             <header class="header-style-3">
                 <div class="header-2st-row ">
