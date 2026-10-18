@@ -10,7 +10,7 @@ class AppMaintenance
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('app.app_maintenance')) {
+        if ((config('app.app_maintenance')) && ! \App\Support\MaintenanceBypass::allows($request)) {
             return response(file_get_contents(public_path('index_maintenance.html')), 503)
                 ->header('Content-Type', 'text/html; charset=utf-8')
                 ->header('Retry-After', '3600')

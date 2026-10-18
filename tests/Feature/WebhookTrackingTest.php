@@ -203,6 +203,53 @@ class WebhookTrackingTest extends TestCase
         $this->assertSame('initiated', $a->fresh()->status);
     }
 
+    public function test_two_fawaterak_accounts_share_one_webhook_url_and_each_is_verified_with_its_own_vendor_key(): void
+    {
+        $A = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $B = $this->account('fawaterak', 'FB', [], ['vendor_key' => 'VENDOR-B']);
+        $a = $this->attempt($A, 'fawaterak_card');
+        $b = $this->attempt($B, 'fawaterak_card');
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+        $this->fawInvoices[$b->transaction_id]['paid'] = true;
+
+        $pa = ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IKA', 'payment_method' => 'Card', 'invoice_status' => 'paid'];
+        $pb = ['invoice_id' => $b->transaction_id, 'invoice_key' => 'IKB', 'payment_method' => 'Card', 'invoice_status' => 'paid'];
+
+        $this->postJson(route('front.fawaterak.webhook'), $pa + ['hashKey' => $this->fawHash($pa, 'VENDOR-A')])->assertOk()->assertJson(['authenticated' => true]);
+        $this->postJson(route('front.fawaterak.webhook'), $pb + ['hashKey' => $this->fawHash($pb, 'VENDOR-B')])->assertOk()->assertJson(['authenticated' => true]);
+
+        $this->assertSame('paid', $a->order->fresh()->status);
+        $this->assertSame('paid', $b->order->fresh()->status);
+        $this->assertSame($A->id, WebhookEvent::where('transaction_reference', $a->transaction_id)->value('integration_account_id'));
+        $this->assertSame($B->id, WebhookEvent::where('transaction_reference', $b->transaction_id)->value('integration_account_id'));
+    }
+
+    public function test_fawaterak_paid_webhook_without_a_hash_is_rejected_when_a_vendor_key_is_stored(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'invoice_status' => 'paid'])->assertStatus(403);
+
+        $this->assertSame('pending_payment', $a->order->fresh()->status);
+    }
+
+    public function test_fawaterak_cancel_webhook_checks_its_hash_and_never_pays_the_order(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        PaymentAttempt::whereKey($a->id)->update(['provider_reference' => 'FAW-REF-1']);
+        $p = ['referenceId' => 'FAW-REF-1', 'paymentMethod' => 'Fawry', 'status' => 'EXPIRED'];
+        $hash = fn (string $key) => hash_hmac('sha256', 'referenceId=FAW-REF-1&PaymentMethod=Fawry', $key);
+
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $hash('WRONG')])->assertStatus(403);
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $hash('VENDOR-A')])->assertOk()->assertJson(['authenticated' => true]);
+
+        $this->assertSame('valid', WebhookEvent::where('event_type', 'payment.cancelled')->latest('id')->value('signature_status'));
+        $this->assertNotSame('paid', $a->order->fresh()->status);
+    }
+
     public function test_unmatched_fawaterak_events_are_kept_for_review(): void
     {
         $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => 'UNKNOWN', 'invoice_key' => 'k', 'payment_method' => 'Card', 'invoice_status' => 'paid'])->assertOk()->assertJson(['matched' => false]);
