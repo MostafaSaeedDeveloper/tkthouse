@@ -26,7 +26,12 @@
                     <td data-label="Provider method ID">{{ $method->providerMethodIdentifier() ?? '—' }}</td>
                     <td data-label="Status"><x-admin.badge :variant="$method->is_active ? 'success' : 'default'" dot>{{ $method->is_active ? 'Active' : 'Disabled' }}</x-admin.badge>@if($method->is_default)<x-admin.badge variant="warning">Default</x-admin.badge>@endif</td>
                     <td data-label="Actions"><div class="a-table__actions">
-                        @can('payment-methods.update')<a href="{{ route('admin.payment-methods.edit', $method) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>@endcan
+                        @can('payment-methods.update')
+                            <form method="POST" action="{{ route('admin.payment-methods.default', $method) }}">@csrf
+                                <button type="submit" class="a-btn a-btn--outline a-btn--sm" title="{{ $method->is_default ? 'Stop showing this method by default' : 'Show this method by default when no agent selection applies' }}" aria-pressed="{{ $method->is_default ? 'true' : 'false' }}"><i class="fa {{ $method->is_default ? 'fa-star' : 'fa-star-half-stroke' }}" aria-hidden="true"></i> {{ $method->is_default ? 'Remove default' : 'Set default' }}</button>
+                            </form>
+                            <a href="{{ route('admin.payment-methods.edit', $method) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>
+                        @endcan
                         @can('payment-methods.delete')
                             @unless(in_array($method->code, $used, true))<form method="POST" action="{{ route('admin.payment-methods.destroy', $method) }}" data-a-confirm="Delete this payment method?" data-a-confirm-title="Delete payment method" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-btn a-btn--danger a-btn--sm" type="submit">Delete</button></form>@endunless
                         @endcan

@@ -41,6 +41,18 @@ class PaymentMethodController extends Controller
         return view('admin/settings/payment-methods/form', ['method' => $paymentMethod]);
     }
 
+    /** One-click Default on/off from the list (the same flag as the edit form). */
+    public function toggleDefault(PaymentMethod $paymentMethod)
+    {
+        if (! $paymentMethod->is_default && ! $paymentMethod->is_active) {
+            return back()->with('error', '"'.$paymentMethod->name.'" is disabled. Activate it before making it a default method.');
+        }
+
+        $paymentMethod->update(['is_default' => ! $paymentMethod->is_default]);
+
+        return back()->with('success', '"'.$paymentMethod->name.'" '.($paymentMethod->is_default ? 'is now a default method.' : 'is no longer a default method.'));
+    }
+
     public function update(Request $request, PaymentMethod $paymentMethod)
     {
         $validated = $this->validateRequest($request, $paymentMethod);

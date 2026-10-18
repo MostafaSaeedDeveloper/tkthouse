@@ -253,6 +253,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor(['create', 'store'], 'permission:payment-methods.create')
         ->middlewareFor(['edit', 'update'], 'permission:payment-methods.update')
         ->middlewareFor('destroy', 'permission:payment-methods.delete');
+    Route::post('payment-methods/{payment_method}/default', [PaymentMethodController::class, 'toggleDefault'])->middleware('permission:payment-methods.update')->name('payment-methods.default');
     Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->middleware('permission:payment-methods.view')->name('payment-methods.fawaterak-methods');
 
     Route::resource('promo-codes', PromoCodeController::class)->except('show')

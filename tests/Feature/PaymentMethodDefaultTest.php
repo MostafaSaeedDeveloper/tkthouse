@@ -90,4 +90,38 @@ class PaymentMethodDefaultTest extends TestCase
         $this->actingAs($u)->put(route('admin.payment-methods.update', $method), ['name' => $method->name, 'code' => 'fake_card', 'provider' => 'manual', 'is_active' => 1])->assertSessionHasNoErrors();
         $this->assertFalse($method->fresh()->is_default);
     }
+
+    public function test_the_list_button_toggles_default_and_needs_the_update_permission(): void
+    {
+        foreach (['payment-methods.view', 'payment-methods.update'] as $p) {
+            Permission::findOrCreate($p, 'web');
+        }
+        $editor = tap(User::factory()->create(), fn ($u) => $u->givePermissionTo(['payment-methods.view', 'payment-methods.update']));
+        $viewer = tap(User::factory()->create(), fn ($u) => $u->givePermissionTo(['payment-methods.view']));
+        $method = PaymentMethod::where('code', 'fake_wallet')->firstOrFail();
+        $url = route('admin.payment-methods.default', $method);
+
+        $this->actingAs($viewer)->post($url)->assertForbidden();
+        $this->actingAs($viewer)->get(route('admin.payment-methods.index'))->assertOk()->assertDontSee('Set default');
+
+        $this->actingAs($editor)->get(route('admin.payment-methods.index'))->assertOk()->assertSee('Set default');
+        $this->actingAs($editor)->post($url)->assertRedirect()->assertSessionHas('success');
+        $this->assertTrue($method->fresh()->is_default);
+        $this->assertSame(['fake_wallet'], $this->codes());
+        $this->actingAs($editor)->get(route('admin.payment-methods.index'))->assertSee('Remove default');
+
+        $this->actingAs($editor)->post($url)->assertRedirect();
+        $this->assertFalse($method->fresh()->is_default);
+    }
+
+    public function test_a_disabled_method_cannot_be_made_default_from_the_list(): void
+    {
+        Permission::findOrCreate('payment-methods.update', 'web');
+        $editor = tap(User::factory()->create(), fn ($u) => $u->givePermissionTo('payment-methods.update'));
+        $method = PaymentMethod::where('code', 'fake_wallet')->firstOrFail();
+        $method->update(['is_active' => false]);
+
+        $this->actingAs($editor)->post(route('admin.payment-methods.default', $method))->assertSessionHas('error');
+        $this->assertFalse($method->fresh()->is_default);
+    }
 }
