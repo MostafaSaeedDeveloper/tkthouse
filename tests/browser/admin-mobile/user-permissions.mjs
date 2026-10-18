@@ -20,6 +20,18 @@ await p.locator('[data-perm-row="scanner.access"] input').uncheck();
 t('unticking a role permission shows the warning', await p.locator('[data-perm-warn]').isVisible(), (await p.locator('[data-perm-warn]').textContent()));
 await p.locator('[data-perm-reset]').click();
 t('Reset to role restores exactly the role permissions', JSON.stringify(await ticked())===JSON.stringify([...(await p.evaluate(()=>JSON.parse(document.getElementById('u-role').dataset.rolePerms).scanner))].sort()) && !(await p.locator('[data-perm-warn]').isVisible()));
+// agent role turns "Can receive assigned orders" on by default
+await p.goto(BASE+'/dashboard/users/create'); await p.waitForTimeout(400);
+t('receive-orders is off with no role', !(await p.locator('#u-orders').isChecked()));
+await p.selectOption('#u-role', 'agent'); await p.waitForTimeout(200);
+t('choosing Agent ticks "Can receive assigned orders"', await p.locator('#u-orders').isChecked());
+await p.selectOption('#u-role', 'support'); await p.waitForTimeout(200);
+t('switching to a non-agent role does not silently untick it', await p.locator('#u-orders').isChecked());
+await p.goto(BASE+'/dashboard/users/create'); await p.waitForTimeout(400);
+await p.selectOption('#u-role', 'support'); await p.waitForTimeout(200);
+t('a non-agent role leaves it off', !(await p.locator('#u-orders').isChecked()));
+await p.selectOption('#u-role', 'scanner'); await p.selectOption('#u-role', 'scanner');
+await p.selectOption('#u-role', 'scanner'); await p.waitForTimeout(100);
 // save with the role intact
 const uname='permuser'+Date.now();
 await p.fill('#u-name','Perm UI'); await p.fill('#u-username',uname); await p.fill('#u-email',uname+'@example.test'); await p.fill('#u-password','Secret123!');

@@ -112,6 +112,9 @@
             var keep = ticked().filter(function (n) { return granted(prev).indexOf(n) === -1; });
             setTicks(granted(role.value).concat(keep));
             prev = role.value;
+            // A role that works assigned orders (Agent, Order Agent) means this person should receive them: on by default, never turned off here.
+            var receive = document.getElementById('u-orders');
+            if (receive && granted(role.value).indexOf('orders.view_assigned') !== -1) receive.checked = true;
             refresh();
         });
         root.addEventListener('change', refresh);
