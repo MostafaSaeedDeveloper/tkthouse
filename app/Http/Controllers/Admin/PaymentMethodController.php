@@ -17,13 +17,9 @@ class PaymentMethodController extends Controller
     {
         $methods = PaymentMethod::query()->orderByDesc('is_active')->orderBy('sort_order')->orderBy('id')->get();
 
-        // Which merchant accounts can take each method (read from the accounts' own supported-method lists).
-        $accounts = \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->get();
-        $byMethod = $methods->mapWithKeys(fn ($m) => [$m->code => $accounts->filter(fn ($a) => in_array($m->code, $a->supportedMethods(), true))->values()]);
-
         $used = \App\Models\Order::withTrashed()->whereIn('payment_method', $methods->pluck('code'))->distinct()->pluck('payment_method')->all();
 
-        return view('admin/settings/payment-methods/index', compact('methods', 'byMethod', 'used'));
+        return view('admin/settings/payment-methods/index', compact('methods', 'used'));
     }
 
     public function create()
@@ -160,6 +156,7 @@ class PaymentMethodController extends Controller
             ],
             'provider' => ['required', Rule::in(['manual', 'paymob', 'fawaterak'])],
             'is_active' => ['nullable', 'boolean'],
+            'is_default' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'paymob_api_key' => ['nullable', 'string'],
             'paymob_iframe_id' => ['nullable', 'string', 'max:50'],
@@ -214,6 +211,7 @@ class PaymentMethodController extends Controller
             'code' => strtolower($validated['code']),
             'provider' => $validated['provider'],
             'is_active' => $request->boolean('is_active'),
+            'is_default' => $request->boolean('is_default'),
             'sort_order' => (int) ($validated['sort_order'] ?? 0),
             'config' => $config,
         ];
