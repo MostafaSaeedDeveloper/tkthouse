@@ -409,6 +409,37 @@ class WebhookTrackingTest extends TestCase
         $this->actingAs($ops)->get(route('admin.payments.index', ['status' => 'review']))->assertOk()->assertDontSee($a->order->order_number);
     }
 
+    public function test_the_confirmation_page_polls_and_learns_the_result_straight_away(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $number = $a->order->order_number;
+        $status = fn () => $this->actingAs($this->customer)->getJson(route('front.checkout.confirmation.status', $number));
+
+        // the customer is back but the provider has not marked the invoice paid yet
+        $status()->assertOk()->assertJson(['state' => 'pending']);
+        $this->actingAs($this->customer)->get(route('front.checkout.confirmation', $number))->assertOk()->assertSee('data-poll-url', false);
+
+        // the moment the provider confirms, the next poll says paid (no page reload needed to ask)
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+        \Illuminate\Support\Facades\Cache::forget('order-refresh:'.$a->order_id);
+        $status()->assertOk()->assertJson(['state' => 'paid']);
+        $this->assertSame('paid', $a->order->fresh()->status);
+        $this->actingAs($this->customer)->get(route('front.checkout.confirmation', $number))->assertOk()->assertDontSee('data-poll-url', false)->assertSee('Your payment was confirmed');
+
+        // somebody else's browser cannot poll an order that is not theirs
+        $this->actingAs(User::factory()->create())->getJson(route('front.checkout.confirmation.status', $number))->assertNotFound();
+    }
+
+    public function test_a_failure_reported_only_by_webhook_ends_the_pending_page_with_a_failed_state(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'amount' => 300, 'errorMessage' => '3DS failed', 'response' => ['gatewayCode' => 'X']])->assertOk();
+
+        $this->actingAs($this->customer)->getJson(route('front.checkout.confirmation.status', $a->order->order_number))->assertOk()->assertJson(['state' => 'failed']);
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);

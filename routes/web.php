@@ -72,6 +72,7 @@ Route::group([], function () {
     Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->middleware('throttle:30,1,checkout-promo')->name('front.checkout.promo');
     Route::redirect('/checkout/review', '/checkout');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
+    Route::get('/checkout/confirmation/{orderNumber}/status', [CheckoutController::class, 'confirmationStatus'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:120,1,checkout-status')->name('front.checkout.confirmation.status');
     Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
     Route::post('/checkout/confirmation/{orderNumber}/email', [CheckoutController::class, 'changeEmail'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:6,1,checkout-email')->name('front.checkout.change-email');
     Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
