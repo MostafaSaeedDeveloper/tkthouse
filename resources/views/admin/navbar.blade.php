@@ -17,7 +17,7 @@
     ]));
 
     $ops = array_values(array_filter([
-        $can('tickets.view') ? ['Guest list', 'admin.guest-list.index', 'fa-clipboard-list', ['admin.guest-list.*']] : null,
+        $can('guest-list.view') ? ['Guest list', 'admin.guest-list.index', 'fa-clipboard-list', ['admin.guest-list.*']] : null,
         $can('scanner.access') ? ['Ticket scanner', 'admin.tickets.scanner', 'fa-qrcode', ['admin.tickets.scanner*']] : null,
         $can('scanners.view') ? ['Scanner staff', 'admin.scanners.index', 'fa-id-badge', ['admin.scanners.*']] : null,
         $can('attendees.view') ? ['Affiliates', 'admin.affiliates.index', 'fa-link', ['admin.affiliates.*']] : null,

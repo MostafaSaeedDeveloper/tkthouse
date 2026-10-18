@@ -147,12 +147,12 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor('destroy', 'permission:tickets.delete');
 
 
-    Route::get('guest-list', [GuestListController::class, 'index'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.index');
-    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.create');
-    Route::post('guest-list', [GuestListController::class, 'store'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.store');
-    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.import');
-    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.export');
-    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.template');
+    Route::get('guest-list', [GuestListController::class, 'index'])->middleware('permission:guest-list.view')->name('guest-list.index');
+    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware('permission:guest-list.create')->name('guest-list.create');
+    Route::post('guest-list', [GuestListController::class, 'store'])->middleware('permission:guest-list.create')->name('guest-list.store');
+    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware('permission:guest-list.create')->name('guest-list.import');
+    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware('permission:guest-list.view')->name('guest-list.export');
+    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware('permission:guest-list.view')->name('guest-list.template');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
     Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
