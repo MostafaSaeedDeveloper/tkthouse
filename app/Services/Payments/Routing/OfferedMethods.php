@@ -86,7 +86,10 @@ class OfferedMethods
                 continue;
             }
             if ($account === null) {
-                $out[] = $m->name.': the gateway has no credentials on the method itself and no default merchant account is set.';
+                $cfg = is_array($m->config) ? $m->config : [];
+                $out[] = $m->name.' (legacy configuration): '.($m->provider === 'fawaterak'
+                    ? (blank($cfg['api_key'] ?? config('services.fawaterak.api_key')) ? 'no Fawaterak API key (set FAWATERAK_API_KEY in the env or on the method).' : 'provider key "'.($cfg['provider_key'] ?? '').'" is missing or not a number.')
+                    : 'its credentials are incomplete.');
             } elseif ($account->provider !== $m->provider) {
                 $out[] = $m->name.': the account "'.$account->name.'" belongs to '.$account->provider.', not '.$m->provider.'.';
             } elseif (! in_array($m->code, $account->supportedMethods(), true)) {
