@@ -29,10 +29,7 @@ class OrderAssignmentController extends Controller
         ]);
 
         $this->authorizeChange($actor, $order);
-        // assignee_ids[] = several agents (they must share the same payment methods); assignee_id = the old single-agent field.
-        $ids = collect($request->has('assignee_ids') ? $data['assignee_ids'] ?? [] : (filled($data['assignee_id'] ?? null) ? [$data['assignee_id']] : []))->map(fn ($id) => (int) $id)->unique()->values();
-        $found = User::query()->whereIn('id', $ids)->get()->keyBy('id');
-        $users = $ids->map(fn ($id) => $found[$id])->all();
+        $users = $this->resolveAgents($request, $data);
         $this->service->assignMany($order, $users, $actor, $data['reason'] ?? null);
 
         $names = collect($users)->pluck('name')->implode(', ');
@@ -47,17 +44,21 @@ class OrderAssignmentController extends Controller
             'order_ids' => ['required', 'array', 'min:1', 'max:200'],
             'order_ids.*' => ['integer'],
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
+            'assignee_ids' => ['nullable', 'array', 'max:20'],
+            'assignee_ids.*' => ['integer', 'exists:users,id'],
             'reason' => ['nullable', 'string', 'max:300'],
         ]);
 
-        $to = filled($data['assignee_id'] ?? null) ? User::query()->findOrFail((int) $data['assignee_id']) : null;
+        $users = $this->resolveAgents($request, $data);
+        // The same agents go on every selected order, so a bad combination is refused once, up front, instead of skipping every order.
+        $this->service->assertSamePaymentMethods(collect($users));
         $done = 0;
         $skipped = 0;
 
         foreach (Order::query()->visibleTo($actor)->whereIn('id', $data['order_ids'])->get() as $order) {
             try {
                 $this->authorizeChange($actor, $order);
-                $this->service->assign($order, $to, $actor, $data['reason'] ?? null);
+                $this->service->assignMany($order, $users, $actor, $data['reason'] ?? null);
                 $done++;
             } catch (ValidationException|\Symfony\Component\HttpKernel\Exception\HttpException) {
                 $skipped++;
@@ -65,6 +66,15 @@ class OrderAssignmentController extends Controller
         }
 
         return back()->with('success', "{$done} order(s) updated".($skipped ? ", {$skipped} skipped (not allowed)." : '.'));
+    }
+
+    /** assignee_ids[] = several agents; assignee_id = the old single-agent field. Order of the list is kept (first = primary for new assignments). @return list<User> */
+    private function resolveAgents(Request $request, array $data): array
+    {
+        $ids = collect($request->has('assignee_ids') ? $data['assignee_ids'] ?? [] : (filled($data['assignee_id'] ?? null) ? [$data['assignee_id']] : []))->map(fn ($id) => (int) $id)->unique()->values();
+        $found = User::query()->whereIn('id', $ids)->get()->keyBy('id');
+
+        return $ids->map(fn ($id) => $found[$id])->all();
     }
 
     /** First assignment needs orders.assign; changing an existing assignee needs orders.reassign. */

@@ -575,4 +575,37 @@ class OrderAssignmentTest extends TestCase
         $report = app(AgentReport::class)->build($this->superAdmin(), now()->subDay(), now()->addDay());
         $this->assertSame([$a->id], $report['rows']->pluck('user_id')->map(fn ($id) => (int) $id)->all(), 'only the primary agent is a row');
     }
+
+    public function test_bulk_assign_puts_several_agents_on_every_selected_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $o1 = $this->order(); $o2 = $this->order($a); $skipMe = $this->order();
+
+        $this->actingAs($manager)->post(route('admin.orders.assign.bulk'), ['order_ids' => [$o1->id, $o2->id], 'assignee_ids' => [$a->id, $b->id]])
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        foreach ([$o1, $o2] as $o) {
+            $this->assertEqualsCanonicalizing([$a->id, $b->id], $o->fresh()->assigneeIds());
+        }
+        $this->assertSame($a->id, $o1->fresh()->assigned_user_id);
+        $this->assertSame([], $skipMe->fresh()->assigneeIds());
+        $this->actingAs($b)->get(route('admin.orders.show', $o2))->assertOk();
+
+        // the old single-agent field replaces everyone on the selected orders
+        $this->actingAs($manager)->post(route('admin.orders.assign.bulk'), ['order_ids' => [$o1->id], 'assignee_id' => $b->id])->assertSessionHasNoErrors();
+        $this->assertSame([$b->id], $o1->fresh()->assigneeIds());
+    }
+
+    public function test_bulk_assign_refuses_agents_with_different_payment_methods_before_touching_any_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        $b->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        $o1 = $this->order();
+
+        $this->actingAs($this->superAdmin())->post(route('admin.orders.assign.bulk'), ['order_ids' => [$o1->id], 'assignee_ids' => [$a->id, $b->id]])->assertSessionHasErrors('assignee');
+
+        $this->assertSame([], $o1->fresh()->assigneeIds());
+    }
 }

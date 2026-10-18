@@ -202,6 +202,8 @@
 .a-ord-bulk__assign .a-sel { flex: 0 1 190px; min-width: 0; width: auto; }
 .a-ord-bulk__assign .a-sel__btn { min-height: 36px; padding: 6px 12px; font-size: 13px; }
 .a-ord-bulk__assign .a-btn { flex: none; }
+.a-ord-bulk__assign .a-msel { flex: 1 1 260px; max-width: 420px; min-width: 0; }
+.a-ord-bulk__assign .a-msel__box { min-height: 36px; padding-top: 3px; padding-bottom: 3px; }
 .a-ord-bulk__delete { color: #b42318; border-color: #f0c4c0; }
 .a-ord-bulk__decide { display: inline-flex; gap: 8px; margin-left: auto; padding-left: 16px; border-left: 1px solid rgba(0, 0, 0, .12); }
 @media (max-width: 767.98px) {

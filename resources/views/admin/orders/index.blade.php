@@ -68,8 +68,8 @@
         @if($canAssign)
         <span class="a-ord-bulk__assign">
         <label class="a-sr-only" for="bulkAssignee">Assign selected orders to</label>
-        <select id="bulkAssignee" class="form-select form-select-sm" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach</select>
-        <button type="submit" class="a-btn a-btn--primary a-btn--sm">Assign</button>
+        <x-admin.multiselect name="assignee_ids" id="bulkAssignee" label="Assign selected orders to" :options="$assigneeOptions" :selected="[]" placeholder="Search agents…" empty-text="Unassigned" />
+        <button type="submit" class="a-btn a-btn--primary a-btn--sm" title="Replaces the agents on the selected orders. Several agents must share the same payment methods.">Assign</button>
         </span>
         @endif
         <span class="a-ord-bulk__decide">
