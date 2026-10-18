@@ -767,6 +767,7 @@ class OrderController extends Controller
             'items.eventTicket:id,color',
             'assignedUser:id,name',
             'assignees:users.id,users.name',
+            'latestPaymentAttempt',
         ];
     }
 
