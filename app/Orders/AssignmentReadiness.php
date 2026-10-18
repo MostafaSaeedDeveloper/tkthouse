@@ -9,7 +9,7 @@ use Spatie\Permission\Models\Permission;
 class AssignmentReadiness
 {
     /** @return array{blockers: list<string>, lockedOut: \Illuminate\Support\Collection} */
-    public function check(User $actor, string $mode, ?int $defaultAssigneeId): array
+    public function check(User $actor, string $mode, array $defaultAssigneeIds): array
     {
         $blockers = [];
 
@@ -19,14 +19,28 @@ class AssignmentReadiness
         if (! (OrderAccess::isSuper($actor) || $actor->can('orders.view_all'))) {
             $blockers[] = 'You need the orders.view_all permission (or Super Admin) yourself, otherwise you would lose access to the orders.';
         }
-        if ($mode === 'default_assignee') {
-            $user = $defaultAssigneeId ? User::query()->find($defaultAssigneeId) : null;
-            if (! $user || ! app(OrderAssignmentService::class)->isEligible($user)) {
-                $blockers[] = 'Choose an active default assignee who is allowed to receive orders.';
-            }
+        if ($mode === 'default_assignee' && ($problem = $this->defaultAssigneeProblem($defaultAssigneeIds))) {
+            $blockers[] = $problem;
         }
 
         return ['blockers' => $blockers, 'lockedOut' => $this->lockedOut()];
+    }
+
+    /** Why this list cannot be the default assignees, or null when it is fine (all eligible, same payment methods). @param list<int> $ids */
+    public function defaultAssigneeProblem(array $ids): ?string
+    {
+        $service = app(OrderAssignmentService::class);
+        $users = User::query()->whereIn('id', $ids)->get();
+        if ($users->isEmpty() || $users->contains(fn (User $u) => ! $service->isEligible($u))) {
+            return 'Choose active default assignees who are allowed to receive orders.';
+        }
+        try {
+            $service->assertSamePaymentMethods($users);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $e->errors()['assignee'][0];
+        }
+
+        return null;
     }
 
     /** Active staff who can open Orders today but would see nothing once assignment is on. */

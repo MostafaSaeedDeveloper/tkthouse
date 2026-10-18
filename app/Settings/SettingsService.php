@@ -119,6 +119,7 @@ class SettingsService
             'int' => $value === null || $value === '' ? null : (int) $value,
             'account' => $value === null || $value === '' ? null : (int) $value,
             'user' => $value === null || $value === '' ? null : (int) $value,
+            'users' => ($ids = array_values(array_unique(array_map('intval', array_filter((array) $value, fn ($v) => $v !== '' && $v !== null))))) === [] ? null : $ids,
             default => is_string($value) && trim($value) === '' ? null : (is_string($value) ? trim($value) : $value),
         };
     }

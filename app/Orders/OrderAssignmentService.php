@@ -26,6 +26,31 @@ class OrderAssignmentService
             ->sortBy('id')->values();
     }
 
+    /**
+     * The configured default assignees (several are allowed; the old single-assignee setting still counts until it is replaced).
+     * Only agents who are eligible right now; if they no longer share the same payment methods the order waits in the queue
+     * instead (the same rule as manual assignment), never someone else.
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    public function defaultAssignees()
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) (SystemSettings::get('order_default_assignee_ids') ?: [SystemSettings::get('order_default_assignee_id')]))));
+        if ($ids === []) {
+            return collect();
+        }
+        $found = User::query()->whereIn('id', $ids)->get()->keyBy('id');
+        $users = collect($ids)->map(fn ($id) => $found[$id] ?? null)->filter(fn ($u) => $u && $this->isEligible($u))->values();
+
+        try {
+            $this->assertSamePaymentMethods($users);
+        } catch (ValidationException) {
+            return collect();
+        }
+
+        return $users;
+    }
+
     public function isEligible(User $user): bool
     {
         return $user->is_active && $user->can_receive_orders
@@ -119,7 +144,15 @@ class OrderAssignmentService
         if ($locked->assigned_user_id) {
             return;
         }
-        $this->write($locked, [$to], $to->id, null, $source, null);
+        $users = [$to];
+        if ($source === 'default_assignee') {
+            // the customer was shown the first default agent; every default agent goes on the order
+            $defaults = $this->defaultAssignees();
+            if ($defaults->contains('id', $to->id)) {
+                $users = $defaults->sortBy(fn (User $u) => $u->id === $to->id ? 0 : 1)->values()->all();
+            }
+        }
+        $this->write($locked, $users, $to->id, null, $source, null);
         $order->setRawAttributes($locked->getAttributes(), true);
     }
 
@@ -137,9 +170,8 @@ class OrderAssignmentService
 
             DB::transaction(function () use ($order, $mode, &$target) {
                 if ($mode === 'default_assignee') {
-                    $id = (int) SystemSettings::get('order_default_assignee_id', 0);
-                    $user = $id ? User::query()->find($id) : null;
-                    $target = $user && $this->isEligible($user) ? $user : null; // ineligible default => queue, never someone else
+                    $defaults = $this->defaultAssignees(); // none eligible (or mixed payment methods) => queue, never someone else
+                    $target = $defaults->first();
                 } elseif ($mode === 'round_robin') {
                     $target = $this->nextRoundRobin();
                 }
@@ -151,7 +183,7 @@ class OrderAssignmentService
                     return;
                 }
                 if ($target) {
-                    $this->write($locked, [$target], $target->id, null, $mode, null);
+                    $this->write($locked, $mode === 'default_assignee' ? $this->defaultAssignees()->all() : [$target], $target->id, null, $mode, null);
                     $order->setRawAttributes($locked->getAttributes(), true);
                 }
             });

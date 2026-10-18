@@ -608,4 +608,78 @@ class OrderAssignmentTest extends TestCase
 
         $this->assertSame([], $o1->fresh()->assigneeIds());
     }
+
+    public function test_several_default_assignees_all_land_on_a_new_order_and_the_old_single_setting_still_works(): void
+    {
+        $this->on();
+        SystemSettings::set('order_assignment_mode', 'default_assignee');
+        $a = $this->agent(); $b = $this->agent();
+        SystemSettings::set('order_default_assignee_ids', [$a->id, $b->id]);
+        $svc = app(OrderAssignmentService::class);
+
+        $o = $this->order(); $svc->assignOnCreate($o);
+        $this->assertSame($a->id, $o->fresh()->assigned_user_id);
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $o->fresh()->assigneeIds());
+        $this->assertSame(1, OrderAssignment::where('order_id', $o->id)->count());
+
+        // an ineligible one is skipped, the others still get the order
+        $b->forceFill(['is_active' => false])->save();
+        $o2 = $this->order(); $svc->assignOnCreate($o2);
+        $this->assertSame([$a->id], $o2->fresh()->assigneeIds());
+
+        // the old single setting is honoured until the new list is saved
+        SystemSettings::set('order_default_assignee_ids', null);
+        SystemSettings::set('order_default_assignee_id', $a->id);
+        $o3 = $this->order(); $svc->assignOnCreate($o3);
+        $this->assertSame([$a->id], $o3->fresh()->assigneeIds());
+    }
+
+    public function test_a_checkout_reservation_for_the_default_agent_puts_every_default_agent_on_the_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        SystemSettings::set('order_default_assignee_ids', [$a->id, $b->id]);
+        $o = $this->order();
+
+        app(OrderAssignmentService::class)->assignFromReservation($o, $b, 'default_assignee');
+
+        $this->assertSame($b->id, $o->fresh()->assigned_user_id, 'the agent the customer was shown stays primary');
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $o->fresh()->assigneeIds());
+    }
+
+    public function test_default_assignees_with_different_payment_methods_leave_the_order_in_the_queue(): void
+    {
+        $this->on();
+        SystemSettings::set('order_assignment_mode', 'default_assignee');
+        $a = $this->agent(); $b = $this->agent();
+        $b->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        SystemSettings::set('order_default_assignee_ids', [$a->id, $b->id]);
+
+        $o = $this->order(); app(OrderAssignmentService::class)->assignOnCreate($o);
+
+        $this->assertNull($o->fresh()->assigned_user_id, 'never a partial or arbitrary assignment');
+    }
+
+    public function test_the_settings_page_saves_several_default_assignees_and_refuses_mixed_payment_methods(): void
+    {
+        $this->on();
+        foreach (['settings.update', 'settings.orders'] as $p) {
+            Permission::findOrCreate($p, 'web');
+        }
+        $admin = $this->superAdmin();
+        $admin->givePermissionTo(['settings.update', 'settings.orders']);
+        $a = $this->agent(); $b = $this->agent(); $c = $this->agent();
+        $c->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        $base = ['order_assignment_mode' => 'default_assignee', 'order_assignment_enabled' => 1];
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => ['', (string) $a->id, (string) $b->id]])->assertSessionHasNoErrors();
+        $this->assertSame([$a->id, $b->id], SystemSettings::get('order_default_assignee_ids'));
+        $this->actingAs($admin)->get(route('admin.settings.section', 'orders'))->assertOk()->assertSee('Default assignees')->assertSee($a->name);
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => [(string) $a->id, (string) $c->id]])->assertSessionHasErrors('order_default_assignee_ids');
+        $this->assertSame([$a->id, $b->id], SystemSettings::get('order_default_assignee_ids'), 'unchanged');
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => ['']])->assertSessionHasNoErrors();
+        $this->assertNull(SystemSettings::get('order_default_assignee_ids'));
+    }
 }
