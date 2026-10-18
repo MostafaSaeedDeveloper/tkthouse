@@ -133,7 +133,7 @@ class AdminOrdersListTest extends TestCase
 
         $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('#<td data-label="Tickets" class="c-tickets">.*?data-ord-tix-open.*?View tickets.*?</td>#s', $html);
+        $this->assertMatchesRegularExpression('#<td data-label="Tickets" class="c-tickets">.*?data-ord-tix-open.*?title="View tickets".*?fa-ticket.*?</td>#s', $html);
         $this->assertStringContainsString('id="ordTixModal"', $html);
 
         preg_match('#data-types="([^"]*)"#', $html, $m);
