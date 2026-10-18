@@ -284,7 +284,7 @@
             <div class="a-field is-full">
                 <label class="form-label" for="oa-assignee">Assigned agents</label>
                 <x-admin.multiselect name="assignee_ids" id="oa-assignee" label="Assigned agents" :options="$assigneeOptions" :selected="$order->assigneeIds()" placeholder="Search agents…" empty-text="Unassigned" />
-                <p class="a-hint">You can pick several agents, but they must all have the same payment methods (shown next to each name). Leave empty to unassign.</p>
+                <p class="a-hint">You can pick several agents, but they must all have the same payment methods. Leave empty to unassign.</p>
             </div>
             <x-admin.field label="Reason (optional)" name="reason" for="oa-reason"><input id="oa-reason" class="form-control" name="reason" maxlength="300"></x-admin.field>
             <p class="a-hint is-full">Changing agents never changes the payment account or any payment attempt of this order.</p>

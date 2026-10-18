@@ -1003,16 +1003,9 @@ class OrderController extends Controller
     }
 
 
-    /** [user id => "Name — payment methods"]: agents on one order must share the same list, so it is shown next to each name. */
+    /** [user id => name] for the agent pickers. */
     private function assigneeOptions($users): array
     {
-        $service = app(\App\Orders\OrderAssignmentService::class);
-        $names = \App\Models\PaymentMethod::query()->pluck('name', 'code');
-
-        return collect($users)->mapWithKeys(function ($u) use ($service, $names) {
-            $set = $service->paymentMethodSet($u);
-
-            return [$u->id => $u->name.' — '.($set === null ? 'all methods' : collect($set)->map(fn ($c) => $names[$c] ?? $c)->implode(', '))];
-        })->all();
+        return collect($users)->mapWithKeys(fn ($u) => [$u->id => $u->name])->all();
     }
 }
