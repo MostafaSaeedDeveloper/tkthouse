@@ -154,6 +154,9 @@
                         @endif
                     @endcan
                     <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.orders.show', $order) }}" title="View" aria-label="View order {{ $number }}"><i class="fa fa-eye"></i><span class="a-ord-btn-text">View</span></a>
+                    @if($canAssign)
+                        <button type="button" class="a-btn a-btn--outline a-btn--sm" data-ord-assign-open data-action="{{ route('admin.orders.assign', $order) }}" data-current="{{ $order->assigned_user_id }}" data-number="{{ $number }}" title="{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}" aria-label="{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }} order {{ $number }}" aria-haspopup="dialog"><i class="fa fa-user-plus" aria-hidden="true"></i><span class="a-ord-btn-text">{{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}</span></button>
+                    @endif
                     @if(\App\Orders\OrderAccess::canManage($order, auth()->user()) || $canAssign)
                     @canany(['orders.update', 'update_status', 'orders.delete'])
                     <div class="a-menu a-menu--fixed">
@@ -162,9 +165,6 @@
                             @can('orders.update')
                                 <a class="a-menu__item" role="menuitem" href="{{ route('admin.orders.edit', $order) }}"><i class="fa fa-pen" aria-hidden="true"></i> Edit order</a>
                             @endcan
-                            @if($canAssign)
-                                <button type="button" class="a-menu__item" role="menuitem" data-ord-assign-open data-action="{{ route('admin.orders.assign', $order) }}" data-current="{{ $order->assigned_user_id }}" data-number="{{ $number }}"><i class="fa fa-user-check" aria-hidden="true"></i> {{ $order->assigned_user_id ? 'Reassign' : 'Assign' }}</button>
-                            @endif
                             @can('update_status')
                                 <button type="button" class="a-menu__item" role="menuitem" data-ord-status-open data-action="{{ route('admin.orders.status.update', $order) }}" data-current="{{ $order->status }}" data-number="{{ $number }}"><i class="fa fa-arrows-rotate" aria-hidden="true"></i> Change status</button>
                             @endcan

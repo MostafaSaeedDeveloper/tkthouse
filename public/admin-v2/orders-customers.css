@@ -94,7 +94,7 @@
 .a-ordt td, .a-ordt th { white-space: normal; }
 .a-ordt tbody td { vertical-align: middle; } /* every cell is centred on the row's height */
 .a-ordt .c-check { width: 44px; padding-right: 0; text-align: center; } .a-ordt .c-order { width: 136px; } .a-ordt .c-customer { width: 19%; } .a-ordt .c-event { width: auto; min-width: 240px; }
-.a-ordt .c-tickets { width: 104px; } .a-ordt .c-total { width: 116px; } .a-ordt .c-status { width: 156px; } .a-ordt .c-actions { width: 112px; }
+.a-ordt .c-tickets { width: 104px; } .a-ordt .c-total { width: 116px; } .a-ordt .c-status { width: 156px; } .a-ordt .c-actions { width: 154px; }
 .a-ordt .a-table__main { white-space: nowrap; }
 .a-ordt .a-btn--sm { min-height: 32px; min-width: 32px; padding: 0 9px; }
 .a-ordt .a-table__actions { gap: 4px; }
@@ -135,7 +135,7 @@
 
 /* 768-1279px: the content area is narrow, so the Tickets column folds into the Event cell */
 @media (min-width: 768px) and (max-width: 1279.98px) {
-    .a-ordt .c-order { width: 124px; } .a-ordt .c-customer { width: 20%; } .a-ordt .c-total { width: 92px; } .a-ordt .c-status { width: 118px; } .a-ordt .c-actions { width: 108px; }
+    .a-ordt .c-order { width: 124px; } .a-ordt .c-customer { width: 20%; } .a-ordt .c-total { width: 92px; } .a-ordt .c-status { width: 118px; } .a-ordt .c-actions { width: 150px; }
     .a-ordt .c-tickets { width: 96px; }
     .a-ordt thead th, .a-ordt tbody td { padding-left: 8px; padding-right: 8px; }
 }

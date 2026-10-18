@@ -204,6 +204,25 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringContainsString('admin-v2/multiselect.js', $html);
     }
 
+    public function test_assign_is_a_direct_row_action_for_users_who_can_assign_not_hidden_in_the_menu(): void
+    {
+        \App\Support\SystemSettings::set('order_assignment_enabled', true);
+        \Spatie\Permission\Models\Role::findOrCreate('super_admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('super_admin');
+        Permission::findOrCreate('orders.view', 'web');
+        $admin->givePermissionTo('orders.view');
+        $this->actingAs($admin);
+        $order = $this->order('940001', 'paid', 'Lee', $this->eventA);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('fa-user-plus', $html);
+        $this->assertStringContainsString('data-action="'.route('admin.orders.assign', $order).'"', $html);
+        // the button is a row action, not an item of the ⋮ menu
+        $this->assertDoesNotMatchRegularExpression('#class="a-menu__item"[^>]*data-ord-assign-open#', $html);
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();
