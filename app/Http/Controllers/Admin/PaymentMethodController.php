@@ -184,15 +184,17 @@ class PaymentMethodController extends Controller
             ];
         }
 
-        // Unintended duplicates: same provider + same name, or same provider + same provider-side identifier.
+        // Unintended duplicates: same provider + same name, or the same provider-side identifier with the same credentials.
+        // Several methods may share a Fawaterak/Paymob method id as long as their API keys differ (one method per merchant account).
         $identifier = $validated['provider'] === 'paymob' ? ($config['integration_id'] ?? '') : ($validated['provider'] === 'fawaterak' ? ($config['provider_key'] ?? '') : '');
+        $apiKey = (string) ($config['api_key'] ?? '');
         $others = PaymentMethod::query()->where('provider', $validated['provider'])->when($method, fn ($q) => $q->where('id', '!=', $method->id))->get();
         $errors = [];
         if ($others->contains(fn ($o) => mb_strtolower($o->name) === mb_strtolower($validated['name']))) {
             $errors['name'] = 'Another '.$validated['provider'].' method already has this name.';
         }
-        if ($identifier !== '' && $others->contains(fn ($o) => $o->providerMethodIdentifier() === $identifier)) {
-            $errors[$validated['provider'] === 'paymob' ? 'paymob_integration_id' : 'fawaterak_provider_key'] = 'Another method of this provider already uses this provider identifier.';
+        if ($identifier !== '' && $others->contains(fn ($o) => $o->providerMethodIdentifier() === $identifier && (string) (($o->config ?? [])['api_key'] ?? '') === $apiKey)) {
+            $errors[$validated['provider'] === 'paymob' ? 'paymob_integration_id' : 'fawaterak_provider_key'] = 'Another method of this provider already uses this provider identifier with the same API key. Use a different API key (another merchant account) or a different method.';
         }
         if ($errors) {
             throw \Illuminate\Validation\ValidationException::withMessages($errors);
