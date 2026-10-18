@@ -85,8 +85,10 @@ class AdminReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Halloween Event')
             ->assertSee('3 sold')
-            // Revenue figures were intentionally removed from event reports (commit 6dfc034).
-            ->assertDontSee('450.00 EGP')
             ->assertDontSee('Ignored Event');
+
+        // Revenue figures were intentionally removed from event reports (commit 6dfc034). Only the report itself is checked:
+        // the top-bar bell may legitimately mention an order amount in a notification.
+        $this->assertStringNotContainsString('450.00 EGP', substr($response->getContent(), (int) strpos($response->getContent(), '<main')));
     }
 }

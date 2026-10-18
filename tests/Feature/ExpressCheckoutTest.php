@@ -629,16 +629,15 @@ class ExpressCheckoutTest extends TestCase
         $this->get(route('front.checkout.thank-you', ['order' => $order->order_number]))->assertRedirect(route('front.events'));
 
         $link = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
-        $this->get($link)->assertStatus(401)->assertSee('Confirm it')->assertDontSee($order->customer->email)->assertSee('n••');   // e-mail only masked
+        // The emailed payment link is the credential and opens from any browser (no confirmation code); the order itself stays private.
+        $this->get($link)->assertOk()->assertSee('Complete your payment')->assertDontSee('Confirm it');
         $this->get(route('front.orders.payment', ['order' => $order, 'token' => 'wrong-token']))->assertNotFound();
-        $this->get(route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token, 'method' => 'fake_card']))->assertStatus(401);
 
-        // A different signed-in customer is no better off.
+        // A different signed-in customer cannot read the order through its confirmation page.
         $this->actingAs(User::factory()->create())->get(route('front.checkout.confirmation', $order->order_number))->assertNotFound();
-        $this->assertSame(0, PaymentAttempt::count());
     }
 
-    public function test_an_emailed_payment_link_works_after_the_owner_proves_the_mailbox(): void
+    public function test_an_emailed_payment_link_needs_no_confirmation_code(): void
     {
         $this->begin($this->ticketRows(1));
         $this->place($this->payload(1));
@@ -646,17 +645,8 @@ class ExpressCheckoutTest extends TestCase
         $this->browser('b');
         $link = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
 
-        $this->get($link)->assertStatus(401);
-
-        // The code goes to the order's account address, which the browser never supplies.
-        $this->postJson(route('front.auth.otp.send'), ['order' => $order->order_number, 'token' => $order->payment_link_token, 'email' => 'attacker@example.test'])->assertOk();
-        Mail::assertSent(LoginOtpMail::class, fn ($m) => $m->hasTo('nour@example.test'));
-        Mail::assertNotSent(LoginOtpMail::class, fn ($m) => $m->hasTo('attacker@example.test'));
-
-        $this->postJson(route('front.auth.otp.verify'), ['order' => $order->order_number, 'token' => 'wrong', 'email' => 'x@example.test', 'code' => '123456'])->assertNotFound();
-        $this->postJson(route('front.auth.otp.verify'), ['order' => $order->order_number, 'token' => $order->payment_link_token, 'email' => 'x@example.test', 'code' => $this->lastCode()])->assertOk();
-
-        $this->get($link)->assertOk()->assertSee('Complete your payment');
+        $this->get($link)->assertOk()->assertSee('Complete your payment')->assertDontSee('Confirm it');
+        Mail::assertNotSent(LoginOtpMail::class);   // opening the link sends nothing
     }
 
     public function test_existing_customers_orders_and_tickets_stay_private(): void

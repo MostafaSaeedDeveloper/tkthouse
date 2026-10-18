@@ -23,7 +23,7 @@
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
     }
 
-    var bar = document.getElementById('bulkAssignBar');
+    var bar = document.getElementById('bulkAssignForm');
     if (bar) {
         var boxes = function () { return Array.prototype.slice.call(document.querySelectorAll('input[name="order_ids[]"]')); };
         var count = bar.querySelector('[data-bulk-count]');
@@ -32,6 +32,11 @@
             count.textContent = n;
             bar.hidden = n === 0;
         };
+        // Approve / Reject buttons post the same selection to their own route after a confirmation.
+        bar.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-bulk-confirm]');
+            if (btn && !window.confirm(btn.dataset.bulkConfirm)) e.preventDefault();
+        });
         document.addEventListener('change', function (e) {
             if (e.target.matches('[data-bulk-all]')) { boxes().forEach(function (b) { b.checked = e.target.checked; }); }
             if (e.target.matches('input[name="order_ids[]"], [data-bulk-all]')) sync();

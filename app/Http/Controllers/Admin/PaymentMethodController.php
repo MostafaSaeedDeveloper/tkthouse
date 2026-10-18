@@ -21,15 +21,9 @@ class PaymentMethodController extends Controller
         $accounts = \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->get();
         $byMethod = $methods->mapWithKeys(fn ($m) => [$m->code => $accounts->filter(fn ($a) => in_array($m->code, $a->supportedMethods(), true))->values()]);
 
-        // Potential duplicates among EXISTING rows are only flagged, never merged or renamed.
-        $dupes = $methods->filter(fn ($m) => $methods->where('id', '!=', $m->id)->contains(
-            fn ($o) => $o->provider === $m->provider && (mb_strtolower($o->name) === mb_strtolower($m->name)
-                || ($m->providerMethodIdentifier() && $o->providerMethodIdentifier() === $m->providerMethodIdentifier()))
-        ))->pluck('id');
-
         $used = \App\Models\Order::withTrashed()->whereIn('payment_method', $methods->pluck('code'))->distinct()->pluck('payment_method')->all();
 
-        return view('admin/settings/payment-methods/index', compact('methods', 'byMethod', 'dupes', 'used'));
+        return view('admin/settings/payment-methods/index', compact('methods', 'byMethod', 'used'));
     }
 
     public function create()

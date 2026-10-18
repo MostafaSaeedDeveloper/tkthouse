@@ -53,12 +53,29 @@ class PaymentAccountResolver
         if ($id = $this->defaultAccountId()) {
             $account = IntegrationAccount::query()->find($id);
 
+            // A default account that is disabled/unverified/deleted must not take checkout down: each method's own configuration is used.
             return self::usable($account)
                 ? new Resolution($account, 'default_account', assigneeId: $assigneeId, allowedMethods: $allowed)
-                : new Resolution(null, 'blocked', true, 'default_account_unavailable', $assigneeId, $allowed);
+                : new Resolution(null, 'legacy', false, 'default_account_unavailable', $assigneeId, $allowed);
         }
 
         return new Resolution(null, 'legacy', assigneeId: $assigneeId, allowedMethods: $allowed);
+    }
+
+    /**
+     * Payment methods the assigned agent's customers may choose (null = no restriction = every active method). One merchant
+     * account serves everyone: agents only narrow which METHODS are shown, never which account collects. The restriction only
+     * applies while the routing switch is on, so turning that switch off always restores "everything for everyone".
+     */
+    public function allowedMethodsFor(?User $assignee): ?array
+    {
+        if (! self::routingEnabled() || ! $assignee) {
+            return null;
+        }
+
+        $allowed = $assignee->allowed_payment_methods;
+
+        return is_array($allowed) && $allowed ? array_values($allowed) : null;
     }
 
     /** What a *new* routing decision looks like for an agent (or none). Used by reservations and fresh orders. */
@@ -75,20 +92,7 @@ class PaymentAccountResolver
                 : $this->defaultPolicy();
         }
 
-        $allowed = is_array($assignee->allowed_payment_methods) && $assignee->allowed_payment_methods ? $assignee->allowed_payment_methods : null;
-
-        if (self::routingEnabled() && $assignee->payment_routing_enabled && $assignee->payment_routing_mode === 'custom' && $assignee->payment_account_id) {
-            $account = IntegrationAccount::query()->find($assignee->payment_account_id);
-            if (self::usable($account)) {
-                return new Resolution($account, 'agent_account', assigneeId: $assignee->id, allowedMethods: $allowed);
-            }
-            // The agent's account cannot take payments right now: fall back to the default policy (recorded in the snapshot).
-            $fallback = $this->defaultPolicy($assignee->id, $allowed);
-
-            return new Resolution($fallback->account, $fallback->source, $fallback->blocked, 'agent_account_unavailable', $assignee->id, $allowed);
-        }
-
-        return $this->defaultPolicy($assignee->id, self::routingEnabled() ? $allowed : null);
+        return $this->defaultPolicy($assignee->id, $this->allowedMethodsFor($assignee));
     }
 
     /**
@@ -97,12 +101,15 @@ class PaymentAccountResolver
      */
     public function forOrder(Order $order): Resolution
     {
+        // The methods follow the order's CURRENT assignee, whichever account the order is pinned to.
+        $allowed = $this->allowedMethodsFor($order->assigned_user_id ? User::query()->find($order->assigned_user_id) : null);
+
         if ($order->integration_account_id) {
             $account = $order->integrationAccount;
 
             return self::usable($account)
-                ? new Resolution($account, 'pinned', assigneeId: $order->assigned_user_id)
-                : new Resolution(null, 'blocked', true, 'pinned_account_unavailable', $order->assigned_user_id);
+                ? new Resolution($account, 'pinned', assigneeId: $order->assigned_user_id, allowedMethods: $allowed)
+                : new Resolution(null, 'blocked', true, 'pinned_account_unavailable', $order->assigned_user_id, $allowed);
         }
 
         $latest = $order->paymentAttempts()->orderByDesc('id')->first();
@@ -110,9 +117,9 @@ class PaymentAccountResolver
             // Sticky: legacy attempts (NULL) keep the legacy path; account attempts keep their account (history stays verifiable even if disabled).
             return $latest->integration_account_id
                 ? (self::usable($latest->integrationAccount)
-                    ? new Resolution($latest->integrationAccount, 'sticky', assigneeId: $order->assigned_user_id)
-                    : new Resolution(null, 'blocked', true, 'attempt_account_unavailable', $order->assigned_user_id))
-                : new Resolution(null, 'legacy', assigneeId: $order->assigned_user_id);
+                    ? new Resolution($latest->integrationAccount, 'sticky', assigneeId: $order->assigned_user_id, allowedMethods: $allowed)
+                    : new Resolution(null, 'blocked', true, 'attempt_account_unavailable', $order->assigned_user_id, $allowed))
+                : new Resolution(null, 'legacy', assigneeId: $order->assigned_user_id, allowedMethods: $allowed);
         }
 
         return $this->forAssignee($order->assigned_user_id ? User::query()->find($order->assigned_user_id) : null);

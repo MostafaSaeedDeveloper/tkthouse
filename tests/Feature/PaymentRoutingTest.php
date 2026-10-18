@@ -50,11 +50,13 @@ class PaymentRoutingTest extends TestCase
         return $u->fresh();
     }
 
-    private function order(?User $agent = null, string $method = 'paymob_card'): Order
+    private function order(?User $agent = null, string $method = 'paymob_card', bool $pin = true): Order
     {
         $o = $this->makePendingOrder($this->customer, null, 2, 150, $method);
         if ($agent) {
-            $o->forceFill(['assigned_user_id' => $agent->id])->save();
+            // Merchant accounts are no longer chosen by the agent. Where a test needs an order on a particular account, it is
+            // pinned to it explicitly (what the "switch payment account" action does); the agent only drives the visible methods.
+            $o->forceFill(['assigned_user_id' => $agent->id, 'integration_account_id' => $pin ? $agent->payment_account_id : null])->save();
         }
 
         return $o->fresh();
@@ -95,38 +97,75 @@ class PaymentRoutingTest extends TestCase
         $this->assertNotContains('LEGACY-KEY', collect($this->httpLog)->pluck('key')->all());
     }
 
-    public function test_agent_accounts_are_ignored_while_routing_is_disabled(): void
+    public function test_a_users_old_custom_account_setting_never_chooses_the_merchant_account(): void
     {
+        // Per-agent merchant accounts no longer exist: whatever an older save left on the user row is ignored, routing on or off.
         $agent = $this->agent($this->B);
         SystemSettings::set('default_payment_account_id', $this->A->id);
 
-        $attempt = $this->start($this->order($agent));
-        $this->assertSame($this->A->id, $attempt->integration_account_id);
+        $this->assertSame($this->A->id, $this->start($this->order($agent, pin: false))->integration_account_id);
+
+        $this->routingOn();
+        $this->assertSame($this->A->id, $this->start($this->order($agent, pin: false))->integration_account_id);
     }
 
     /* ---------------------------------------------------------------- routing per user */
 
-    public function test_different_agents_route_to_different_accounts_with_the_right_credentials_and_snapshot(): void
+    public function test_every_agent_pays_into_the_same_account_but_customers_see_only_their_agents_methods(): void
     {
         $this->routingOn();
-        $ahmed = $this->agent($this->A);
-        $mohamed = $this->agent($this->B);
+        $this->makeMethod('paymob', 'paymob_wallet', ['api_key' => 'x', 'iframe_id' => 'x', 'integration_id' => 'x']);
+        SystemSettings::set('default_payment_account_id', $this->A->id);
+        $cards = $this->agent(null, ['allowed_payment_methods' => ['paymob_card']]);
+        $wallets = $this->agent(null, ['allowed_payment_methods' => ['paymob_wallet']]);
+        $everything = $this->agent(null);
 
-        $a1 = $this->start($this->order($ahmed));
-        $a2 = $this->start($this->order($mohamed));
+        $offered = fn (Order $o) => app(\App\Services\Payments\Routing\OfferedMethods::class)
+            ->for(app(PaymentAccountResolver::class)->forOrder($o))->pluck('code')->all();
 
+        $this->assertSame(['paymob_card'], $offered($this->order($cards, pin: false)));
+        $this->assertSame(['paymob_wallet'], $offered($this->order($wallets, pin: false)));
+        foreach ([$this->order($everything, pin: false), $this->order(null)] as $unrestricted) {   // no selection / unassigned = every active method
+            $this->assertEqualsCanonicalizing([], array_diff(['paymob_card', 'paymob_wallet'], $offered($unrestricted)));
+            $this->assertGreaterThan(1, count($offered($unrestricted)));
+        }
+
+        // Same merchant account for everyone; the method the agent does not offer cannot be opened either.
+        $a1 = $this->start($this->order($cards, pin: false));
+        $a2 = $this->start($this->order($wallets, 'paymob_wallet', pin: false), 'paymob_wallet');
         $this->assertSame($this->A->id, $a1->integration_account_id);
-        $this->assertSame($this->B->id, $a2->integration_account_id);
-        $this->assertSame($this->A->id, $a1->order->fresh()->integration_account_id, 'order pinned at its first attempt');
-        $this->assertSame('agent_account', $a1->routing_snapshot['source']);
-        $this->assertSame($ahmed->id, $a1->routing_snapshot['assignee_id']);
-        $this->assertSame('A', $a1->routing_snapshot['account_name']);
+        $this->assertSame($this->A->id, $a2->integration_account_id);
 
-        $reqs = collect($this->httpLog);
-        $this->assertTrue($reqs->contains(fn ($r) => str_contains($r['url'], 'payment_keys') && $r['data']['integration_id'] === $this->numericId('A')));
-        $this->assertTrue($reqs->contains(fn ($r) => str_contains($r['url'], 'payment_keys') && $r['data']['integration_id'] === $this->numericId('B')));
-        $this->assertStringContainsString('IF-A', (string) $a1->meta['url']);
-        $this->assertStringContainsString('IF-B', (string) $a2->meta['url']);
+        $this->expectException(\RuntimeException::class);
+        $this->start($this->order($cards, 'paymob_wallet', pin: false), 'paymob_wallet');
+    }
+
+    public function test_reassigning_an_order_changes_the_methods_its_customer_sees(): void
+    {
+        $this->routingOn();
+        $this->makeMethod('paymob', 'paymob_wallet', ['api_key' => 'x', 'iframe_id' => 'x', 'integration_id' => 'x']);
+        SystemSettings::set('default_payment_account_id', $this->A->id);
+        $cards = $this->agent(null, ['allowed_payment_methods' => ['paymob_card']]);
+        $wallets = $this->agent(null, ['allowed_payment_methods' => ['paymob_wallet']]);
+        $order = $this->order($cards, pin: false);
+        $offered = fn () => app(\App\Services\Payments\Routing\OfferedMethods::class)
+            ->for(app(PaymentAccountResolver::class)->forOrder($order->fresh()))->pluck('code')->all();
+
+        $this->assertSame(['paymob_card'], $offered());
+        $order->forceFill(['assigned_user_id' => $wallets->id])->save();
+        $this->assertSame(['paymob_wallet'], $offered());
+    }
+
+    public function test_an_order_pinned_to_an_account_still_follows_its_agents_methods(): void
+    {
+        $this->routingOn();
+        $this->makeMethod('paymob', 'paymob_wallet', ['api_key' => 'x', 'iframe_id' => 'x', 'integration_id' => 'x']);
+        $cards = $this->agent(null, ['allowed_payment_methods' => ['paymob_card']]);
+        $order = $this->order($cards, pin: false);
+        $order->forceFill(['integration_account_id' => $this->B->id])->save();
+
+        $this->assertSame(['paymob_card'], app(\App\Services\Payments\Routing\OfferedMethods::class)
+            ->for(app(PaymentAccountResolver::class)->forOrder($order->fresh()))->pluck('code')->all());
     }
 
     public function test_methods_not_supported_by_the_account_are_not_offered_or_openable(): void
@@ -163,15 +202,17 @@ class PaymentRoutingTest extends TestCase
         $this->start($this->order());
     }
 
-    public function test_disabled_or_unverified_agent_account_falls_back_to_default_policy_visibly(): void
+    public function test_an_agent_whose_methods_are_all_unavailable_never_leaves_the_customer_unable_to_pay(): void
     {
         $this->routingOn();
-        SystemSettings::set('default_payment_account_id', $this->B->id);
-        $this->A->forceFill(['enabled' => false])->save();
-        $attempt = $this->start($this->order($this->agent($this->A)));
+        SystemSettings::set('default_payment_account_id', $this->A->id);
+        $agent = $this->agent(null, ['allowed_payment_methods' => ['paymob_wallet']]);   // that method does not exist / is not active here
 
-        $this->assertSame($this->B->id, $attempt->integration_account_id);
-        $this->assertSame('agent_account_unavailable', $attempt->routing_snapshot['reason']);
+        $offered = app(\App\Services\Payments\Routing\OfferedMethods::class)
+            ->for(app(PaymentAccountResolver::class)->forOrder($this->order($agent, pin: false)))->pluck('code')->all();
+
+        $this->assertContains('paymob_card', $offered);
+        $this->assertSame($this->A->id, $this->start($this->order($agent, pin: false))->integration_account_id);
     }
 
     public function test_missing_or_invalid_credentials_never_open_a_payment(): void
@@ -267,16 +308,20 @@ class PaymentRoutingTest extends TestCase
         $this->assertNull($retry->integration_account_id, 'sticky to the legacy path: no silent merchant change');
     }
 
-    public function test_turning_routing_off_changes_new_orders_only(): void
+    public function test_turning_the_switch_off_shows_every_method_to_everyone_again(): void
     {
         $this->routingOn();
-        $ahmed = $this->agent($this->A);
-        $old = $this->start($this->order($ahmed));
+        $this->makeMethod('paymob', 'paymob_wallet', ['api_key' => 'x', 'iframe_id' => 'x', 'integration_id' => 'x']);
+        $cards = $this->agent(null, ['allowed_payment_methods' => ['paymob_card']]);
+        $order = $this->order($cards, pin: false);
+        $offered = fn () => app(\App\Services\Payments\Routing\OfferedMethods::class)
+            ->for(app(PaymentAccountResolver::class)->forOrder($order->fresh()))->pluck('code')->all();
+
+        $this->assertSame(['paymob_card'], $offered());
 
         SystemSettings::set('payment_routing_enabled', false);
-        $this->assertSame($this->A->id, $old->fresh()->integration_account_id);
-        $new = $this->start($this->order($ahmed));
-        $this->assertNull($new->integration_account_id, 'back to the default policy (legacy: no default account)');
+        $this->assertEqualsCanonicalizing([], array_diff(['paymob_card', 'paymob_wallet'], $offered()));
+        $this->assertGreaterThan(1, count($offered()));
     }
 
     /* ---------------------------------------------------------------- disabled accounts, inquiry, reconcile, callbacks */
@@ -444,5 +489,29 @@ class PaymentRoutingTest extends TestCase
         config(['payments.fawaterak.verified' => false]);
         $this->app->detectEnvironment(fn () => 'production');
         $this->assertFalse(PaymentAccountResolver::usable($fA));
+    }
+
+    public function test_unusable_default_account_falls_back_to_the_methods_own_configuration(): void
+    {
+        SystemSettings::set('default_payment_account_id', $this->A->id);
+        $this->A->forceFill(['enabled' => false])->save();
+        $order = $this->order();
+
+        $this->actingAs($this->customer)->get(route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]))
+            ->assertOk()->assertDontSee('No payment methods are available');
+    }
+
+    public function test_empty_checkout_explains_itself_to_payment_admins_only(): void
+    {
+        \App\Models\PaymentMethod::query()->update(['is_active' => false]);
+        $order = $this->order();
+        $url = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
+
+        $this->actingAs($this->customer)->get($url)->assertOk()
+            ->assertSee('No payment methods are available')->assertDontSee('Admin only');
+
+        Permission::findOrCreate('payments.transactions.view', 'web');
+        $this->customer->givePermissionTo('payments.transactions.view');
+        $this->actingAs($this->customer->fresh())->get($url)->assertOk()->assertSee('Admin only')->assertSee('No payment method is active');
     }
 }

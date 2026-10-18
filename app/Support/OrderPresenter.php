@@ -45,6 +45,40 @@ final class OrderPresenter
         return (int) $order->items->sum(fn ($item) => max(1, (int) $item->quantity));
     }
 
+    /**
+     * Ticket types on the order with their total quantity, in order of first appearance.
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, qty: int, price: float, total: float, color: string}>
+     */
+    public static function ticketTypes(Order $order): \Illuminate\Support\Collection
+    {
+        return $order->items
+            // ticket_name is stored as "<event name> - <ticket>"; the list already shows the event, so keep just the ticket.
+            ->groupBy(function ($item) {
+                $name = trim((string) $item->ticket_name);
+                $prefix = trim((string) $item->event?->name).' - ';
+                if ($prefix !== ' - ' && str_starts_with($name, $prefix)) {
+                    $name = trim(substr($name, strlen($prefix)));
+                }
+
+                return $name;
+            })
+            ->reject(fn ($group, $name) => $name === '')
+            ->map(function ($group, $name) {
+                $color = (string) $group->first()->eventTicket?->color;
+
+                return [
+                    'name' => (string) $name,
+                    'qty' => (int) $group->sum(fn ($item) => max(1, (int) $item->quantity)),
+                    'price' => (float) $group->first()->ticket_price,
+                    'total' => (float) $group->sum(fn ($item) => (float) $item->line_total),
+                    // The ticket's own colour from the event setup; only a plain #rrggbb is ever put into a style attribute.
+                    'color' => preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : '#9a9a94',
+                ];
+            })
+            ->values();
+    }
+
     /** Number of different ticket names on the order. */
     public static function ticketTypeCount(Order $order): int
     {

@@ -10,11 +10,12 @@ use App\Support\SystemSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\Support\BuildsMerchantAccounts;
+use Tests\Support\BuildsOrders;
 use Tests\TestCase;
 
 class PaymentConfigurationUiTest extends TestCase
 {
-    use BuildsMerchantAccounts, RefreshDatabase;
+    use BuildsMerchantAccounts, BuildsOrders, RefreshDatabase;
 
     private function staff(array $perms): User
     {
@@ -38,33 +39,33 @@ class PaymentConfigurationUiTest extends TestCase
         $this->assertSame('default_account', SystemSettings::get('unassigned_order_payment_policy'));
     }
 
-    public function test_only_authorised_staff_can_change_a_users_payment_configuration_and_keys_are_never_shown(): void
+    public function test_only_authorised_staff_can_change_a_users_payment_methods_and_there_is_no_per_user_account(): void
     {
-        $acc = $this->account('paymob', 'Main');
+        $this->account('paymob', 'Main');
+        $this->makeMethod('paymob', 'paymob_card', ['api_key' => 'x', 'iframe_id' => 'x', 'integration_id' => 'x']);
         $target = User::factory()->create();
         $editor = $this->staff(['users.update', 'users.view', 'settings.payment-accounts.manage']);
         $plain = $this->staff(['users.update', 'users.view']);
 
         // not authorised: the section is absent and a forged request is ignored
-        $this->actingAs($plain)->get(route('admin.users.edit', $target))->assertOk()->assertDontSee('Payment configuration');
-        $this->actingAs($plain)->put(route('admin.users.update', $target), $this->body($target, ['payment_flags' => 1, 'payment_routing_mode' => 'custom', 'payment_account_id' => $acc->id]))->assertRedirect();
-        $this->assertSame('default', $target->fresh()->payment_routing_mode);
+        $this->actingAs($plain)->get(route('admin.users.edit', $target))->assertOk()->assertDontSee('Payment methods');
+        $this->actingAs($plain)->put(route('admin.users.update', $target), $this->body($target, ['payment_flags' => 1, 'allowed_payment_methods' => ['paymob_card']]))->assertRedirect();
+        $this->assertNull($target->fresh()->allowed_payment_methods);
 
-        // authorised
-        $page = $this->actingAs($editor)->get(route('admin.users.edit', $target))->assertOk()->assertSee('Payment configuration')->assertSee('Main');
-        $page->assertDontSee('KEY-Main')->assertDontSee('HMAC-Main');
+        // authorised: a multiselect of the payment methods, and no merchant-account / routing controls at all
+        $page = $this->actingAs($editor)->get(route('admin.users.edit', $target))->assertOk()->assertSee('Payment methods')->assertSee('name="allowed_payment_methods[]"', false);
+        $page->assertDontSee('Merchant account')->assertDontSee('payment_account_id')->assertDontSee('Routing enabled for this user')->assertDontSee('KEY-Main');
 
-        $this->actingAs($editor)->put(route('admin.users.update', $target), $this->body($target, [
-            'payment_flags' => 1, 'payment_routing_mode' => 'custom', 'payment_account_id' => $acc->id, 'payment_routing_enabled' => 1, 'allowed_payment_methods' => ['paymob_card'],
-        ]))->assertRedirect();
-        $t = $target->fresh();
-        $this->assertSame([$acc->id, 'custom', true, ['paymob_card']], [$t->payment_account_id, $t->payment_routing_mode, $t->payment_routing_enabled, $t->allowed_payment_methods]);
-        $this->assertDatabaseHas('activity_log', ['description' => 'User payment configuration changed']);
+        $this->actingAs($editor)->put(route('admin.users.update', $target), $this->body($target, ['payment_flags' => 1, 'allowed_payment_methods' => ['paymob_card']]))->assertRedirect();
+        $this->assertSame(['paymob_card'], $target->fresh()->allowed_payment_methods);
+        $this->assertDatabaseHas('activity_log', ['description' => 'User payment methods changed']);
 
-        // custom needs a real, non-archived account; a request without the marker never touches the setting
-        $this->actingAs($editor)->put(route('admin.users.update', $target), $this->body($target, ['payment_flags' => 1, 'payment_routing_mode' => 'custom']))->assertSessionHasErrors('payment_account_id');
+        // unknown codes are refused; a request without the marker never touches the setting; clearing the selection = every method
+        $this->actingAs($editor)->put(route('admin.users.update', $target), $this->body($target, ['payment_flags' => 1, 'allowed_payment_methods' => ['nope']]))->assertSessionHasErrors('allowed_payment_methods.0');
         $this->actingAs($editor)->put(route('admin.users.update', $target), $this->body($target))->assertRedirect();
-        $this->assertSame('custom', $target->fresh()->payment_routing_mode);
+        $this->assertSame(['paymob_card'], $target->fresh()->allowed_payment_methods);
+        $this->actingAs($editor)->put(route('admin.users.update', $target), $this->body($target, ['payment_flags' => 1]))->assertRedirect();
+        $this->assertNull($target->fresh()->allowed_payment_methods);
     }
 
     public function test_default_merchant_account_must_be_usable_and_only_managers_save_payment_settings(): void

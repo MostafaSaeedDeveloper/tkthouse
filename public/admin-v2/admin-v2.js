@@ -99,5 +99,15 @@
         });
     }, true);
 
+    /* Collapsible filters (phones): the toggle is hidden on wider screens, where the filters are always shown. */
+    document.addEventListener('click', function (e) {
+        var toggle = e.target.closest('.a-filters__toggle');
+        if (!toggle) return;
+        var form = toggle.closest('[data-a-filters]');
+        var open = !form.classList.contains('is-open');
+        form.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
     function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
 })();

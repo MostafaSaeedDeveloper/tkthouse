@@ -23,7 +23,7 @@ class DashboardMetrics
     public const RANGES = ['7d' => 'Last 7 days', '30d' => 'Last 30 days', '3m' => 'Last 3 months', '1y' => 'Last year', 'custom' => 'Custom'];
 
     /** @param array<int> $managedEventIds events this user is limited to (empty = all) */
-    public function __construct(private readonly array $managedEventIds = [], private readonly ?Event $event = null)
+    public function __construct(private readonly array $managedEventIds = [], private readonly ?Event $event = null, private readonly ?\App\Models\User $user = null, private readonly array $workEventIds = [])
     {
     }
 
@@ -63,7 +63,7 @@ class DashboardMetrics
     /** Orders limited to this user's scope (managed events / the selected event) and to statistics-included ones. */
     private function orders(): Builder
     {
-        $q = Order::query()->includedInStatistics();
+        $q = Order::query()->includedInStatistics()->assignedScope($this->user);
         $ids = $this->event ? [$this->event->id] : $this->managedEventIds;
         if ($ids) {
             $q->whereHas('items', fn ($i) => $i->whereIn('event_id', $ids));
@@ -79,9 +79,10 @@ class DashboardMetrics
         });
     }
 
+    /** Events for lists/counters: the selected one, else the managed ones, else (order-scoped users) the events they work in. */
     private function eventIds(): array
     {
-        return $this->event ? [$this->event->id] : $this->managedEventIds;
+        return $this->event ? [$this->event->id] : ($this->managedEventIds ?: $this->workEventIds);
     }
 
     public function kpis(Carbon $start, Carbon $end): array
@@ -113,7 +114,7 @@ class DashboardMetrics
         return (int) OrderItem::query()
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('event_id', $ids))
             ->whereHas('order', function ($o) use ($start, $end) {
-                $o->where('status', 'paid')->includedInStatistics()->where(function ($q) use ($start, $end) {
+                $o->where('status', 'paid')->includedInStatistics()->assignedScope($this->user)->where(function ($q) use ($start, $end) {
                     $q->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
                 });
             })->sum('quantity');
@@ -202,7 +203,7 @@ class DashboardMetrics
 
         $sold = OrderItem::query()->selectRaw('event_id, SUM(quantity) as qty')
             ->whereIn('event_id', $events->pluck('id'))
-            ->whereHas('order', fn ($o) => $o->where('status', 'paid')->includedInStatistics())
+            ->whereHas('order', fn ($o) => $o->where('status', 'paid')->includedInStatistics()->assignedScope($this->user))
             ->groupBy('event_id')->pluck('qty', 'event_id');
 
         return $events->each(fn (Event $e) => $e->setAttribute('tickets_sold', (int) ($sold[$e->id] ?? 0)));
@@ -217,10 +218,13 @@ class DashboardMetrics
     public function scans(): ?array
     {
         $q = Ticket::query()->where('status', '!=', 'canceled');
+        if ($this->user && \App\Orders\OrderAccess::scoped($this->user)) {
+            $q->whereHas('order', fn ($o) => $o->assignedScope($this->user));
+        }
         if ($this->event) {
             $q->where('event_id', $this->event->id);
-        } elseif ($this->managedEventIds) {
-            $q->whereIn('event_id', $this->managedEventIds);
+        } elseif ($ids = ($this->managedEventIds ?: $this->workEventIds)) {
+            $q->whereIn('event_id', $ids);
         } else {
             $q->whereIn('event_id', Event::query()->whereDate('event_date', '>=', now()->toDateString())->pluck('id'));
         }

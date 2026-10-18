@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\RoleLabel;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
@@ -33,30 +35,37 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
-        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
-
         $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                'unique:roles,name',
-                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
-                    if ($this->isProtectedRoleName((string) $value)) {
-                        $fail('The '.$attribute.' is not allowed.');
-                    }
-                }]),
-            ],
+            'display_name' => ['required', 'string', 'max:80'],
+            'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ]);
 
-        $role = Role::create(['name' => $validated['name']]);
+        $key = $this->uniqueKey($validated['display_name']);
+        if (! $this->isSuperAdminAccount($request->user()) && $this->isProtectedRoleName($key)) {
+            return back()->withInput()->withErrors(['display_name' => 'This name is not allowed.']);
+        }
+
+        $role = Role::create(['name' => $key]);
+        $role->forceFill(['display_name' => trim($validated['display_name']), 'description' => $validated['description'] ?? null])->save();
         $role->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('roles')->performedOn($role)->causedBy(auth()->user())->log('Role created');
 
         return redirect()->route('admin.roles.index')->with('success', 'Role created successfully.');
+    }
+
+    /** The stable key is generated once from the display name (snake_case, unique) and never edited afterwards. */
+    private function uniqueKey(string $displayName): string
+    {
+        $base = Str::slug($displayName, '_') ?: 'role';
+        $key = $base;
+        for ($i = 2; Role::query()->where('name', $key)->exists(); $i++) {
+            $key = $base.'_'.$i;
+        }
+
+        return $key;
     }
 
     public function edit(Role $role)
@@ -71,25 +80,16 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         $this->ensureCanManageRole($request->user(), $role);
-        $isSuperAdmin = $this->isSuperAdminAccount($request->user());
 
+        // The key (`name`) is what the code refers to: it is never changed here, whatever the form sends.
         $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                'unique:roles,name,'.$role->id,
-                Rule::when(! $isSuperAdmin, [function (string $attribute, mixed $value, \Closure $fail): void {
-                    if ($this->isProtectedRoleName((string) $value)) {
-                        $fail('The '.$attribute.' is not allowed.');
-                    }
-                }]),
-            ],
+            'display_name' => ['required', 'string', 'max:80'],
+            'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['exists:permissions,name'],
         ]);
 
-        $role->update(['name' => $validated['name']]);
+        $role->forceFill(['display_name' => trim($validated['display_name']), 'description' => $validated['description'] ?? null])->save();
         $role->syncPermissions($validated['permissions'] ?? []);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         activity('roles')->performedOn($role)->causedBy(auth()->user())->log('Role updated');
@@ -100,6 +100,13 @@ class RoleController extends Controller
     public function destroy(Role $role)
     {
         $this->ensureCanManageRole(auth()->user(), $role);
+
+        if (RoleLabel::isSystem($role)) {
+            return back()->with('error', 'System roles are used by the application and cannot be deleted. Edit their permissions instead.');
+        }
+        if ($role->users()->exists()) {
+            return back()->with('error', 'This role is assigned to '.$role->users()->count().' user(s). Move them to another role first.');
+        }
 
         $roleName = $role->name;
         $role->delete();

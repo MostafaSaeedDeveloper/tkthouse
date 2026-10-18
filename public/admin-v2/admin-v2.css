@@ -207,6 +207,19 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 @media (min-width: 1100px) { .a-filters { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; } }
 .a-filters__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .a-filters .a-field { min-width: 0; }
+/* The body is transparent to the grid on tablets/desktops (layout unchanged); on phones it collapses behind the toggle. */
+.a-filters__body { display: contents; }
+.a-filters__toggle { display: none; }
+@media (max-width: 639.98px) {
+    .a-filters { padding: 0; gap: 0; }
+    .a-filters__toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 50px; padding: 0 18px; border: 0; background: none; font: inherit; font-weight: 700; color: var(--a-ink); cursor: pointer; }
+    .a-filters__toggle > span { display: inline-flex; align-items: center; gap: 8px; }
+    .a-filters__count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--a-yellow); color: #000; font-size: 12px; line-height: 20px; text-align: center; }
+    .a-filters__chev { font-size: 12px; color: var(--a-muted); transition: transform .15s; }
+    .a-filters.is-open .a-filters__chev { transform: rotate(180deg); }
+    .a-filters__body { display: none; gap: 12px; padding: 4px 18px 18px; border-top: 1px solid var(--a-line); padding-top: 16px; }
+    .a-filters.is-open .a-filters__body { display: grid; }
+}
 
 /* ---------- tables ---------- */
 .a-table-wrap, .a-body .table-responsive { position: relative; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: inherit; }
@@ -351,9 +364,84 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 .a-body .a-btn--primary i, .a-body .a-btn--dark i { color: inherit; }
 
 /* Very narrow screens: money KPIs stack one per row instead of overflowing two columns. */
-@media (max-width: 480px) { .a-grid--4 { grid-template-columns: minmax(0, 1fr); } .a-kpi__value { white-space: normal; overflow-wrap: anywhere; } }
+@media (max-width: 480px) {
+    /* Stat cards: two per row (a stack of four full-width cards pushed the real content far down the page) */
+    .a-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .a-grid--4 .a-kpi { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; }
+    .a-grid--4 .a-kpi__icon { width: 38px; height: 38px; border-radius: 11px; font-size: 16px; }
+    .a-kpi__value { white-space: normal; overflow-wrap: anywhere; }
+}
+/* Bigger touch areas for small text links on phones (hit area grows, layout does not) */
+@media (max-width: 767.98px) {
+    .a-crumbs a, .a-sidebar__foot a { display: inline-block; padding: 8px 4px; margin: -8px -4px; }
+    /* A value with a sub-line (e.g. date + time) is one block, so stacked rows right-align it as a unit */
+    .a-table--stack .a-cellstack { text-align: right; }
+}
 
 /* Users list: long emails truncate instead of pushing the Actions column out of view. */
 .a-user-id { min-width: 0; display: block; }
 .a-user-sub { display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 991px) { .a-user-sub { max-width: 100%; white-space: normal; overflow-wrap: anywhere; } }
+
+/* ---------- multiselect (multiselect.js; the native <select multiple> shows as-is without JavaScript) ---------- */
+.a-msel { position: relative; max-width: 640px; }
+.a-msel__native { width: 100%; min-height: 140px; }
+.a-msel.is-enhanced .a-msel__native { display: none; }
+.a-msel__box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 44px; padding: 6px 36px 6px 10px; background: var(--a-surface); border: 1px solid var(--a-line-strong); border-radius: 12px; cursor: text; position: relative; }
+.a-msel.is-open .a-msel__box, .a-msel__box:focus-within { border-color: var(--a-ink); box-shadow: var(--a-focus); }
+.a-msel__chips { display: contents; }
+.a-msel__chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--a-yellow-soft); border: 1px solid #ecd98a; font-size: 13px; font-weight: 600; color: var(--a-ink); }
+.a-msel__chiptext { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.a-msel__x { flex: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .08); color: inherit; font-size: 15px; line-height: 20px; cursor: pointer; }
+.a-msel__x:hover { background: rgba(0, 0, 0, .18); }
+.a-msel__search { flex: 1 1 120px; min-width: 80px; height: 30px; padding: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--a-ink); }
+.a-msel__chev { position: absolute; right: 14px; top: 50%; margin-top: -6px; font-size: 12px; color: var(--a-muted); pointer-events: none; transition: transform .15s; }
+.a-msel.is-open .a-msel__chev { transform: rotate(180deg); }
+.a-msel__panel { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px); background: var(--a-surface); border: 1px solid var(--a-line-strong); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .14); overflow: hidden; }
+.a-msel__tools { display: flex; align-items: center; gap: 14px; padding: 9px 14px; border-bottom: 1px solid var(--a-line); font-size: 12.5px; }
+.a-msel__count { margin-right: auto; color: var(--a-muted); }
+.a-msel__link { padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--a-ink); text-decoration: underline; cursor: pointer; }
+.a-msel__list { list-style: none; margin: 0; padding: 4px; max-height: 260px; overflow: auto; }
+.a-msel__opt { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.a-msel__opt[hidden] { display: none; }
+.a-msel__opt.is-active, .a-msel__opt:hover { background: var(--a-surface-2, #f4f4f1); }
+.a-msel__tick { flex: none; width: 18px; height: 18px; border: 1.5px solid var(--a-line-strong); border-radius: 5px; background: #fff; position: relative; }
+.a-msel__opt.is-selected .a-msel__tick { background: #111; border-color: #111; }
+.a-msel__opt.is-selected .a-msel__tick::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.a-msel__lbl { min-width: 0; overflow-wrap: anywhere; }
+.a-msel__none { margin: 0; padding: 14px; color: var(--a-muted); font-size: 13px; }
+@media (max-width: 639.98px) { .a-msel__chiptext { max-width: 200px; } .a-msel__panel { position: static; margin-top: 6px; } }
+
+/* ---------- notifications bell (notifications.js) ---------- */
+.a-notif { position: relative; }
+.a-notif__btn { position: relative; width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--a-dark-line, rgba(255,255,255,.14)); border-radius: 12px; background: rgba(255,255,255,.06); color: #fff; font-size: 17px; cursor: pointer; }
+.a-notif__btn:hover, .a-notif.is-open .a-notif__btn { background: rgba(255,255,255,.14); }
+.a-notif__btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(255,210,0,.5); }
+.a-notif__badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #e5484d; color: #fff; border: 2px solid #0b0b0b; font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+.a-notif__badge[hidden] { display: none; }
+.a-notif__panel { position: absolute; z-index: 60; right: 0; top: calc(100% + 10px); width: 380px; max-width: calc(100vw - 24px); background: var(--a-surface, #fff); color: var(--a-ink, #111); border: 1px solid var(--a-line-strong, #d9d9d3); border-radius: 14px; box-shadow: 0 18px 48px rgba(0,0,0,.28); overflow: hidden; }
+.a-notif__panel[hidden] { display: none; }
+.a-notif__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--a-line); }
+.a-notif__link { padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--a-ink); text-decoration: underline; cursor: pointer; }
+.a-notif__list { max-height: 420px; overflow: auto; }
+.a-notif__list--page { max-height: none; }
+.a-notif__item { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 13px 16px; border-top: 1px solid var(--a-line); color: inherit; text-decoration: none; }
+.a-notif__item:first-child { border-top: 0; }
+.a-notif__item:hover { background: var(--a-surface-2, #f4f4f1); }
+.a-notif__item.is-unread { background: var(--a-yellow-soft, #fff7d1); }
+.a-notif__item.is-unread:hover { filter: brightness(.98); }
+.a-notif__icon { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--a-yellow-soft, #fff3bf); color: #7a5b00; font-size: 15px; }
+.a-notif__text { display: grid; gap: 2px; min-width: 0; }
+.a-notif__text b { font-size: 13.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.a-notif__item:not(.is-unread) .a-notif__text b { font-weight: 600; }
+.a-notif__text small { font-size: 12.5px; color: var(--a-muted); overflow-wrap: anywhere; }
+.a-notif__time { font-size: 12px; color: var(--a-muted); white-space: nowrap; padding-top: 2px; }
+.a-notif__dot { position: absolute; right: 16px; bottom: 14px; width: 8px; height: 8px; border-radius: 50%; background: #e5484d; }
+.a-notif__empty { margin: 0; padding: 34px 16px; text-align: center; color: var(--a-muted); font-size: 13.5px; }
+.a-notif__foot { display: block; padding: 12px 16px; border-top: 1px solid var(--a-line); text-align: center; font-weight: 700; font-size: 13px; color: var(--a-ink); text-decoration: none; background: var(--a-surface-2, #f4f4f1); }
+.a-notif__foot:hover { text-decoration: underline; }
+@media (max-width: 575.98px) {
+    .a-notif { position: static; }
+    .a-notif__panel { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; max-width: none; }
+    .a-notif__list { max-height: calc(100vh - 220px); }
+}

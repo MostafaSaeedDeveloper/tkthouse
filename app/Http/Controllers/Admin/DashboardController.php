@@ -18,14 +18,22 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // Order Assignment: agents get their own dashboard (never the global numbers).
-        if (\App\Orders\OrderAccess::scoped($request->user())) {
-            return $this->agentDashboard($request);
-        }
+        $user = $request->user();
+        // Order Assignment: a user who only sees their own orders gets the very same dashboard, computed from those orders
+        // (and the events they work in). Nothing on the page says so, and nobody else's orders are visible or counted.
+        $scoped = \App\Orders\OrderAccess::scoped($user);
 
-        $userManagedEvents = $request->user()?->managedEvents ?? collect();
+        $userManagedEvents = $user?->managedEvents ?? collect();
         $userManagedEventIds = $userManagedEvents->pluck('id')->all();
-        if ($userManagedEvents->count() === 1) {
+        // Events this user works in (managed ones, else those with their orders). Only used to limit event lists/counters:
+        // order figures are limited by the assignment scope itself. [0] = "none", so an empty list can never mean "all events".
+        $workEventIds = $userManagedEventIds;
+        if ($scoped && empty($workEventIds)) {
+            $workEventIds = OrderItem::query()
+                ->whereHas('order', fn ($q) => $q->assignedScope($user))
+                ->whereNotNull('event_id')->distinct()->pluck('event_id')->all() ?: [0];
+        }
+        if (! $scoped && $userManagedEvents->count() === 1) {
             return app(EventInsightsController::class)->dashboard($request, $userManagedEvents->first());
         }
 
@@ -40,7 +48,7 @@ class DashboardController extends Controller
         // archived events stay selectable (historical numbers) but come last and are marked
         $eventOptions = Event::query()
             ->whereIn('status', ['active', 'sold_out', Event::ARCHIVED])
-            ->when(! empty($userManagedEventIds), fn ($q) => $q->whereIn('id', $userManagedEventIds))
+            ->when(! empty($workEventIds), fn ($q) => $q->whereIn('id', $workEventIds))
             ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'sold_out' THEN 1 ELSE 2 END")
             ->orderBy('event_date')
             ->orderBy('name')
@@ -51,8 +59,8 @@ class DashboardController extends Controller
             ? $eventOptions->firstWhere('id', $selectedEventId)
             : null;
 
-        $ordersQuery = Order::query()->includedInStatistics();
-        $customersQuery = Customer::query();
+        $ordersQuery = Order::query()->includedInStatistics()->assignedScope($user);
+        $customersQuery = Customer::query()->when($scoped, fn ($q) => $q->whereHas('orders', fn ($o) => $o->assignedScope($user)));
 
         // Apply managed scope first, then optional manual filter
         if (! empty($userManagedEventIds) && ! $selectedEvent) {
@@ -67,7 +75,7 @@ class DashboardController extends Controller
         }
 
         $totalOrders = (clone $ordersQuery)->count();
-        $paidOrdersQuery = Order::query()->includedInStatistics()->where('status', 'paid');
+        $paidOrdersQuery = Order::query()->includedInStatistics()->assignedScope($user)->where('status', 'paid');
         if (! empty($userManagedEventIds) && ! $selectedEvent) {
             $this->applyManagedEventsScope($paidOrdersQuery, $userManagedEventIds);
         } else {
@@ -94,9 +102,9 @@ class DashboardController extends Controller
         } else {
             $this->applyEventScopeToOrderItemsQuery($ticketsSoldQuery, $selectedEvent);
         }
-        $ticketsSoldQuery->whereHas('order', function ($query) use ($startAt, $endAt) {
+        $ticketsSoldQuery->whereHas('order', function ($query) use ($startAt, $endAt, $user) {
             $query->where('status', 'paid')
-                ->includedInStatistics();
+                ->includedInStatistics()->assignedScope($user);
 
             if ($startAt && $endAt) {
                 $query->where(function ($inner) use ($startAt, $endAt) {
@@ -114,7 +122,7 @@ class DashboardController extends Controller
         $totalEvents = $selectedEvent
             ? Event::query()->whereKey($selectedEvent->id)->where('status', 'active')->count()
             : Event::query()->where('status', 'active')
-                ->when(! empty($userManagedEventIds), fn ($q) => $q->whereIn('id', $userManagedEventIds))
+                ->when(! empty($workEventIds), fn ($q) => $q->whereIn('id', $workEventIds))
                 ->count();
 
         $guestInvitationsQuery = Ticket::query()->where('source', 'guest_list');
@@ -154,9 +162,9 @@ class DashboardController extends Controller
         } else {
             $this->applyEventScopeToOrderItemsQuery($topEventsQuery, $selectedEvent);
         }
-        $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt) {
+        $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt, $user) {
             $q->where('status', 'paid')
-                ->includedInStatistics();
+                ->includedInStatistics()->assignedScope($user);
 
             if ($startAt && $endAt) {
                 $q->where(function ($query) use ($startAt, $endAt) {
@@ -186,7 +194,7 @@ class DashboardController extends Controller
             ->take(4)
             ->values();
 
-        [$labels, $ordersData, $revenueData] = $this->buildChartSeries($startAt, $endAt, $selectedRange, $selectedEvent, $userManagedEventIds);
+        [$labels, $ordersData, $revenueData] = $this->buildChartSeries($startAt, $endAt, $selectedRange, $selectedEvent, $userManagedEventIds, $user);
 
         $rangeOptions = [
             'today' => 'Today',
@@ -201,7 +209,7 @@ class DashboardController extends Controller
         // Admin V2 dashboard blocks (same scope + range as the figures above)
         $metricsStart = $startAt ?? now()->subYear()->startOfDay();
         $metricsEnd = $endAt ?? now()->endOfDay();
-        $metrics = new DashboardMetrics($userManagedEventIds, $selectedEvent ? Event::find($selectedEvent->id) : null);
+        $metrics = new DashboardMetrics($userManagedEventIds, $selectedEvent ? Event::find($selectedEvent->id) : null, $user, $workEventIds);
         $kpis = $metrics->kpis($metricsStart, $metricsEnd);
         $series = $metrics->series($metricsStart, $metricsEnd);
         $revenue = $metrics->revenue($metricsStart, $metricsEnd);
@@ -282,7 +290,7 @@ class DashboardController extends Controller
         return [$start, $end, 'Custom Range'];
     }
 
-    private function buildChartSeries(?Carbon $startAt, ?Carbon $endAt, string $selectedRange, ?Event $selectedEvent, array $userManagedEventIds = []): array
+    private function buildChartSeries(?Carbon $startAt, ?Carbon $endAt, string $selectedRange, ?Event $selectedEvent, array $userManagedEventIds = [], ?\App\Models\User $user = null): array
     {
         if (! $startAt || ! $endAt) {
             $startAt = now()->startOfMonth()->subMonths(6);
@@ -290,7 +298,7 @@ class DashboardController extends Controller
         }
 
         $ordersWindowQuery = Order::query()
-            ->includedInStatistics()
+            ->includedInStatistics()->assignedScope($user)
             ->whereBetween('created_at', [$startAt, $endAt]);
         if (! empty($userManagedEventIds) && ! $selectedEvent) {
             $this->applyManagedEventsScope($ordersWindowQuery, $userManagedEventIds);
@@ -300,7 +308,7 @@ class DashboardController extends Controller
         $ordersWindow = $ordersWindowQuery->get(['created_at']);
 
         $revenueWindowQuery = Order::query()
-            ->includedInStatistics()
+            ->includedInStatistics()->assignedScope($user)
             ->whereBetween('created_at', [$startAt, $endAt]);
         if (! empty($userManagedEventIds) && ! $selectedEvent) {
             $this->applyManagedEventsScope($revenueWindowQuery, $userManagedEventIds);
@@ -404,26 +412,5 @@ class DashboardController extends Controller
         }
 
         $query->where('event_id', $event->id);
-    }
-
-
-    private function agentDashboard(Request $request)
-    {
-        $user = $request->user();
-        abort_if(\App\Orders\OrderAccess::level($user) === \App\Orders\OrderAccess::NONE, 403, 'You have no order access. Ask an administrator for the orders.view_assigned permission.');
-
-        $from = now()->startOfMonth();
-        $to = now()->endOfDay();
-        $report = app(\App\Orders\AgentReport::class)->mine($user, $from, $to);
-
-        $orders = \App\Models\Order::query()->visibleTo($user);
-        $totals = [
-            'all' => (clone $orders)->count(),
-            'pending' => (clone $orders)->whereIn('status', \App\Orders\AgentReport::PENDING)->count(),
-            'paid' => (clone $orders)->where('status', 'paid')->count(),
-            'canceled' => (clone $orders)->whereIn('status', \App\Orders\AgentReport::CANCELED)->count(),
-        ];
-
-        return view('admin.agent-dashboard', ['totals' => $totals, 'row' => $report['row'], 'from' => $from, 'to' => $to]);
     }
 }

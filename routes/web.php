@@ -101,6 +101,13 @@ Route::middleware('auth')->group(function () {
 Auth::routes(['register' => false]);
 
 Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::class])->prefix('dashboard')->name('admin.')->group(function () {
+    // Bell notifications: every signed-in panel user, own notifications only.
+    Route::get('notifications', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/feed', [\App\Http\Controllers\Admin\NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::post('notifications/read-all', [\App\Http\Controllers\Admin\NotificationController::class, 'readAll'])->name('notifications.read-all');
+    Route::get('notifications/{id}/open', [\App\Http\Controllers\Admin\NotificationController::class, 'open'])->name('notifications.open');
+    Route::post('notifications/{id}/read', [\App\Http\Controllers\Admin\NotificationController::class, 'read'])->name('notifications.read');
+
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
     Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware(['permission:dashboard.view', 'orders.global'])->name('events.dashboard');
@@ -164,6 +171,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('orders', [OrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
     Route::get('orders/export', [OrderController::class, 'export'])->middleware('permission:orders.view')->name('orders.export');
     Route::get('orders/deleted', [OrderController::class, 'deleted'])->middleware('permission:orders.deleted.view')->name('orders.deleted');
+    Route::post('orders/bulk-delete', [OrderController::class, 'bulkDestroy'])->middleware('permission:orders.delete')->name('orders.bulk.delete');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.delete')->name('orders.destroy');
     Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.restore')->name('orders.restore');
     Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
@@ -171,6 +179,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.update')->name('orders.update');
     Route::post('orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('permission:update_status')->name('orders.status.update');
     Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->middleware('permission:orders.update')->name('orders.notes.store');
+    Route::post('orders/bulk-approve', [OrderController::class, 'bulkApprove'])->middleware('permission:orders.update')->name('orders.bulk.approve');
+    Route::post('orders/bulk-reject', [OrderController::class, 'bulkReject'])->middleware('permission:orders.update')->name('orders.bulk.reject');
     Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->middleware('permission:orders.update')->name('orders.approve');
     Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.update')->name('orders.reject');
 

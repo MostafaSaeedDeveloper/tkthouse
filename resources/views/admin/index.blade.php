@@ -22,6 +22,14 @@
     .a-seg a, .a-seg button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 13px; font-weight: 700; color: var(--a-muted); cursor: pointer; display: inline-flex; align-items: center; }
     .a-seg a:hover, .a-seg button:hover { color: var(--a-ink); }
     .a-seg .is-active { background: var(--a-yellow); color: #000; }
+    @media (max-width: 640px) {
+        .a-range { width: 100%; }
+        .a-seg { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; }
+        .a-seg a, .a-seg button { padding: 0 2px; justify-content: center; white-space: nowrap; font-size: 12px; }
+        .a-range > form { width: 100%; }
+        .a-range .form-select { min-width: 0 !important; max-width: none !important; width: 100%; }
+        .a-custom.is-open input[type="date"] { flex: 1 1 130px; min-width: 0; }
+    }
     .a-custom { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
     .a-custom.is-open { display: flex; }
     .a-custom input { min-height: 40px; padding: 0 12px; border: 1px solid var(--a-line-strong); border-radius: 10px; font: inherit; font-size: 13px; }

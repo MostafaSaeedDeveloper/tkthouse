@@ -59,8 +59,8 @@ final class Registry
             'order_default_assignee_id' => ['group' => 'orders', 'type' => 'user', 'label' => 'Default assignee', 'default' => null, 'rules' => ['nullable', 'integer']],
 
             // ---- Payment routing (all off / empty by default => today's payment behaviour is unchanged)
-            'payment_routing_enabled' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Enable per-user payment routing', 'default' => false,
-                'help' => 'When on, an agent with a custom merchant account collects the payments of the orders shown to their customers. Existing payment attempts are never affected.', 'rules' => ['boolean']],
+            'payment_routing_enabled' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Show each agent\'s payment methods', 'default' => false,
+                'help' => 'When on, a customer paying an order sees only the payment methods allowed for the agent the order is assigned to (set per user). Everyone still pays into the same merchant account; agents with no selection show every active method. Off = every method for everyone.', 'rules' => ['boolean']],
             'default_payment_account_id' => ['group' => 'payments', 'type' => 'account', 'label' => 'Default merchant account', 'default' => null,
                 'help' => 'Used when no agent-specific account applies. Leave empty to keep using the existing payment-method configuration.', 'rules' => ['nullable', 'integer']],
             'unassigned_order_payment_policy' => ['group' => 'payments', 'type' => 'select', 'label' => 'Unassigned order payment policy', 'default' => 'default_account',

@@ -58,6 +58,171 @@ class AdminOrdersListTest extends TestCase
         return $order;
     }
 
+    public function test_bulk_bar_markup_matches_the_id_the_script_looks_for(): void
+    {
+        \App\Support\SystemSettings::set('order_assignment_enabled', true);
+        \Spatie\Permission\Models\Role::findOrCreate('super_admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('super_admin');
+        Permission::findOrCreate('orders.view', 'web');
+        $admin->givePermissionTo('orders.view');
+        $this->actingAs($admin);
+        $this->order('900010', 'paid', 'Eve', $this->eventA);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="bulkAssignForm"', $html);
+        $this->assertStringContainsString('data-bulk-all', $html);
+        $this->assertStringContainsString("getElementById('bulkAssignForm')", file_get_contents(public_path('admin-v2/orders-assign.js')));
+    }
+
+    public function test_bulk_approve_and_reject_only_touch_orders_awaiting_approval(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $this->staff(['orders.update']);
+        $a = $this->order('910001', 'pending_approval', 'Ann', $this->eventA);
+        $b = $this->order('910002', 'pending_approval', 'Ben', $this->eventA);
+        $c = $this->order('910003', 'pending_approval', 'Cy', $this->eventA);
+        $paid = $this->order('910004', 'paid', 'Dee', $this->eventA);
+
+        $this->post(route('admin.orders.bulk.approve'), ['order_ids' => [$a->id, $paid->id]])
+            ->assertRedirect()->assertSessionHas('success');
+        $this->assertSame('pending_payment', $a->fresh()->status);
+        $this->assertNotNull($a->fresh()->payment_link_token);
+        $this->assertSame('paid', $paid->fresh()->status);           // not pending approval: skipped, untouched
+
+        $this->post(route('admin.orders.bulk.reject'), ['order_ids' => [$b->id, $a->id]])->assertRedirect();
+        $this->assertSame('rejected', $b->fresh()->status);
+        $this->assertSame('pending_payment', $a->fresh()->status);   // already approved: not rejected afterwards
+        $this->assertSame('pending_approval', $c->fresh()->status);  // not selected: untouched
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\OrderApprovedMail::class, 1);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\OrderRejectedMail::class, 1);
+    }
+
+    public function test_bulk_approve_and_reject_require_the_update_permission_and_a_selection(): void
+    {
+        $this->staff();   // orders.view only
+        $o = $this->order('910010', 'pending_approval', 'Eli', $this->eventA);
+
+        $this->post(route('admin.orders.bulk.approve'), ['order_ids' => [$o->id]])->assertForbidden();
+        $this->post(route('admin.orders.bulk.reject'), ['order_ids' => [$o->id]])->assertForbidden();
+        $this->assertSame('pending_approval', $o->fresh()->status);
+
+        $this->staff(['orders.update']);
+        $this->post(route('admin.orders.bulk.approve'), [])->assertSessionHasErrors('order_ids');
+    }
+
+    public function test_bulk_bar_offers_approve_and_reject_to_users_who_can_update(): void
+    {
+        $this->staff(['orders.update']);
+        $this->order('910020', 'pending_approval', 'Fay', $this->eventA);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+        $this->assertStringContainsString('id="bulkAssignForm"', $html);
+        $this->assertStringContainsString(route('admin.orders.bulk.approve'), $html);
+        $this->assertStringContainsString('admin-v2/orders-assign.js', $html);   // the script that shows the bar must load without the assign permission too
+        $this->assertStringContainsString(route('admin.orders.bulk.reject'), $html);
+    }
+
+    public function test_tickets_column_has_a_view_tickets_button_carrying_the_types_colours_and_prices(): void
+    {
+        $this->staff();
+        $vip = \App\Models\EventTicket::create(['event_id' => $this->eventA->id, 'name' => 'VIP', 'price' => 500, 'status' => 'active', 'color' => '#ff0055']);
+        $order = $this->order('920001', 'paid', 'Gus', $this->eventA, [], [['VIP', 500, 2], ['Early Bird', 100, 1]]);
+        $order->items()->where('ticket_name', 'like', '%- VIP')->update(['event_ticket_id' => $vip->id]);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('#<td data-label="Tickets" class="c-tickets">.*?data-ord-tix-open.*?title="View tickets".*?fa-ticket.*?</td>#s', $html);
+        $this->assertStringContainsString('id="ordTixModal"', $html);
+
+        preg_match('#data-types="([^"]*)"#', $html, $m);
+        $types = json_decode(html_entity_decode($m[1]), true);
+        $this->assertSame(['VIP', 'Early Bird'], array_column($types, 'name'));      // event prefix stripped
+        $this->assertSame([2, 1], array_column($types, 'qty'));
+        $this->assertEquals([1000, 100], array_column($types, 'total'));
+        $this->assertSame('#ff0055', $types[0]['color']);                             // the ticket's own colour
+        $this->assertSame('#9a9a94', $types[1]['color']);                             // not linked to an event ticket: neutral grey
+        $this->assertStringNotContainsString('a-ord-type', $html);                    // no ticket lines in the cells any more
+    }
+
+    public function test_shared_filters_render_a_collapsible_toggle_with_an_applied_count(): void
+    {
+        $this->staff(['attendees.view']);
+
+        $html = $this->get(route('admin.customers.index', ['search' => 'abc']))->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-a-filters', $html);
+        $this->assertStringContainsString('class="a-filters__toggle"', $html);
+        $this->assertMatchesRegularExpression('#a-filters__count"[^>]*>1</b>#', $html);   // one filter applied
+        $this->assertStringContainsString('class="a-filters__body"', $html);
+    }
+
+    public function test_bulk_delete_soft_deletes_selected_orders_and_needs_the_delete_permission(): void
+    {
+        $this->staff(['orders.update']);   // no orders.delete
+        $a = $this->order('930001', 'paid', 'Hal', $this->eventA);
+        $this->post(route('admin.orders.bulk.delete'), ['order_ids' => [$a->id]])->assertForbidden();
+        $this->assertNull($a->fresh()->deleted_at);
+
+        $this->staff(['orders.delete']);
+        $b = $this->order('930002', 'pending_approval', 'Ivy', $this->eventA);
+        $keep = $this->order('930003', 'paid', 'Jon', $this->eventA);
+
+        $this->post(route('admin.orders.bulk.delete'), ['order_ids' => [$a->id, $b->id]])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSoftDeleted('orders', ['id' => $a->id]);
+        $this->assertSoftDeleted('orders', ['id' => $b->id]);
+        $this->assertNull($keep->fresh()->deleted_at);                                // not selected
+        $this->post(route('admin.orders.bulk.delete'), [])->assertSessionHasErrors('order_ids');
+    }
+
+    public function test_bulk_bar_has_no_reason_field_and_shows_delete_only_with_the_permission(): void
+    {
+        $this->staff(['orders.update']);
+        $this->order('930010', 'pending_approval', 'Kim', $this->eventA);
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+        $bar = substr($html, strpos($html, 'id="bulkAssignForm"'), 2500);
+        $this->assertStringNotContainsString('name="reason"', $bar);
+        $this->assertStringNotContainsString(route('admin.orders.bulk.delete'), $html);
+
+        $this->staff(['orders.update', 'orders.delete']);
+        $this->assertStringContainsString(route('admin.orders.bulk.delete'), $this->get(route('admin.orders.index'))->getContent());
+    }
+
+    public function test_user_form_event_scope_is_a_multiselect_that_still_posts_managed_event_ids(): void
+    {
+        $this->staff(['users.create']);
+
+        $html = $this->get(route('admin.users.create'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-a-msel', $html);
+        $this->assertMatchesRegularExpression('#<select multiple name="managed_event_ids\[\]"#', $html);
+        $this->assertStringContainsString('<option value="'.$this->eventA->id.'"', $html);
+        $this->assertStringNotContainsString('type="checkbox" name="managed_event_ids[]"', $html);
+        $this->assertStringContainsString('admin-v2/multiselect.js', $html);
+    }
+
+    public function test_assign_is_a_direct_row_action_for_users_who_can_assign_not_hidden_in_the_menu(): void
+    {
+        \App\Support\SystemSettings::set('order_assignment_enabled', true);
+        \Spatie\Permission\Models\Role::findOrCreate('super_admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('super_admin');
+        Permission::findOrCreate('orders.view', 'web');
+        $admin->givePermissionTo('orders.view');
+        $this->actingAs($admin);
+        $order = $this->order('940001', 'paid', 'Lee', $this->eventA);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('fa-user-plus', $html);
+        $this->assertStringContainsString('data-action="'.route('admin.orders.assign', $order).'"', $html);
+        // the button is a row action, not an item of the ⋮ menu
+        $this->assertDoesNotMatchRegularExpression('#class="a-menu__item"[^>]*data-ord-assign-open#', $html);
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();
@@ -69,9 +234,10 @@ class AdminOrdersListTest extends TestCase
         $response = $this->get(route('admin.orders.index'))->assertOk();
         $response->assertSee('The Very Long Winter Open Air Festival 2026 Featuring Many International Headliners', false)
             ->assertSee('class="a-ord-clamp"', false)
-            ->assertSee('2 types')                                  // distinct ticket names, no names dumped into the row
             ->assertDontSee('a-ord-tag')                            // the old coloured ticket badges are gone
-            ->assertDontSee('VIP Table For Ten With Bottle Service'); // ticket names stay in Order Details
+            ->assertSee('VIP Table For Ten With Bottle Service')            // in the popup data (View tickets)
+            ->assertDontSee($this->eventA->name.' - VIP Table', false); // the stored "<event> - <ticket>" prefix is stripped in the list
+
 
         $summary = $response->viewData('summary');
         $this->assertSame(4, $summary['all']);

@@ -219,8 +219,8 @@ class PaymentSettlementTest extends TestCase
         $other = User::factory()->create();
         $url = route('front.orders.payment.gateway', ['order' => $this->order, 'token' => $this->order->payment_link_token, 'method' => 'fake_card']);
 
-        // Someone else holding the link is asked to prove they own the order's mailbox, never let in.
-        $this->actingAs($other)->get($url)->assertStatus(401)->assertSee('Confirm it');
+        // The emailed link is the credential: any browser holding it may continue to the gateway (no extra code step).
+        $this->actingAs($other)->get($url)->assertRedirect();
         $this->actingAs($this->user)->get(route('front.orders.payment.gateway', ['order' => $this->order, 'token' => 'wrong', 'method' => 'fake_card']))->assertNotFound();
         $this->order->update(['status' => 'canceled']);
         $this->actingAs($this->user)->get($url)->assertNotFound();

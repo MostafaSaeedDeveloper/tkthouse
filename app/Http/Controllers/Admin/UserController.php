@@ -137,15 +137,14 @@ class UserController extends Controller
         ]);
 
         $user->managedEvents()->sync($validated['managed_event_ids'] ?? []);
-        $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
-        $user->syncPermissions($validated['permissions'] ?? []);
+        $note = $this->applyRoleAndPermissions($request, $user, $validated);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->applyAccountFlags($request, $user->fresh());
         $this->applyPaymentConfiguration($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
-        return $this->afterSave($user)->with('success', 'User created successfully.');
+        return $this->afterSave($user)->with('success', 'User created successfully.'.$note);
     }
 
     public function show(User $user)
@@ -255,15 +254,14 @@ class UserController extends Controller
         $user->update($data);
 
         $user->managedEvents()->sync($validated['managed_event_ids'] ?? []);
-        $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
-        $user->syncPermissions($validated['permissions'] ?? []);
+        $note = $this->applyRoleAndPermissions($request, $user, $validated);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->applyAccountFlags($request, $user->fresh());
         $this->applyPaymentConfiguration($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
-        return $this->afterSave($user)->with('success', 'User updated successfully.');
+        return $this->afterSave($user)->with('success', 'User updated successfully.'.$note);
     }
 
     public function destroy(User $user)
@@ -308,9 +306,54 @@ class UserController extends Controller
     }
 
     /**
-     * Per-user payment configuration. Only super admin / settings.payment-accounts.manage may change it (the section is not even
-     * rendered for anyone else, and a forged request is ignored). The user row stores a reference to an account, never keys.
-     * Past orders and payment attempts are unaffected: they stay bound to the account they were opened with.
+     * Role + permissions. The form (`permissions_effective=1`) shows the EFFECTIVE permission set: choosing a role ticks what the
+     * role grants and the admin may tick more or untick some.
+     *  - every permission of the role is still ticked  -> the user gets the role, plus the extra ticked ones directly;
+     *  - some permission of the role was unticked      -> a role cannot grant "less", so the user gets exactly the ticked
+     *    permissions directly and no role (the returned note tells the admin).
+     * Requests without the marker (older clients/tests) keep the previous meaning: the role as chosen + the permissions as direct ones.
+     *
+     * @return string sentence to append to the success message ('' when nothing special happened)
+     */
+    private function applyRoleAndPermissions(Request $request, User $user, array $validated): string
+    {
+        $roleName = filled($validated['role'] ?? null) ? (string) $validated['role'] : null;
+        $ticked = array_values(array_unique($validated['permissions'] ?? []));
+
+        if (! $request->boolean('permissions_effective')) {
+            $user->syncRoles($roleName ? [$roleName] : []);
+            $user->syncPermissions($ticked);
+
+            return '';
+        }
+
+        if (! $roleName) {
+            $user->syncRoles([]);
+            $user->syncPermissions($ticked);
+
+            return '';
+        }
+
+        $granted = \Spatie\Permission\Models\Role::findByName($roleName, 'web')->permissions->pluck('name')->all();
+        $removed = array_values(array_diff($granted, $ticked));
+
+        if ($removed) {
+            $user->syncRoles([]);
+            $user->syncPermissions($ticked);
+
+            return ' '.count($removed).' permission(s) of the role were unticked, so this user has custom permissions instead of the role "'.\App\Support\RoleLabel::of($roleName).'".';
+        }
+
+        $user->syncRoles([$roleName]);
+        $user->syncPermissions(array_values(array_diff($ticked, $granted)));
+
+        return '';
+    }
+
+    /**
+     * Per-user payment methods: which methods the customers of this agent's orders are offered. Only super admin /
+     * settings.payment-accounts.manage may change it (the section is not even rendered for anyone else, and a forged request
+     * is ignored). There are no per-user merchant accounts: everyone pays into the same account.
      */
     private function applyPaymentConfiguration(Request $request, User $user): void
     {
@@ -320,30 +363,18 @@ class UserController extends Controller
         }
 
         $data = $request->validate([
-            'payment_routing_mode' => ['required', 'in:default,custom'],
-            'payment_account_id' => ['nullable', 'integer', 'exists:integration_accounts,id'],
             'allowed_payment_methods' => ['nullable', 'array'],
             'allowed_payment_methods.*' => ['string', 'exists:payment_methods,code'],
         ]);
 
-        $account = ! empty($data['payment_account_id']) ? \App\Models\IntegrationAccount::query()->find($data['payment_account_id']) : null;
-        if ($data['payment_routing_mode'] === 'custom') {
-            if (! $account || $account->archived_at !== null || ! in_array($account->provider, ['paymob', 'fawaterak', 'fake'], true)) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['payment_account_id' => 'Choose an active merchant account for custom routing.']);
-            }
+        $before = $user->allowed_payment_methods;
+        $user->forceFill(['allowed_payment_methods' => array_values($data['allowed_payment_methods'] ?? []) ?: null])->save();
+
+        if ($before !== $user->allowed_payment_methods) {
+            activity('users')->performedOn($user)->causedBy($actor)->withProperties([
+                'from' => $before, 'to' => $user->allowed_payment_methods,
+            ])->log('User payment methods changed');
         }
-
-        $before = [$user->payment_routing_mode, $user->payment_account_id, $user->payment_routing_enabled];
-        $user->forceFill([
-            'payment_routing_mode' => $data['payment_routing_mode'],
-            'payment_account_id' => $data['payment_routing_mode'] === 'custom' ? $account->id : null,
-            'allowed_payment_methods' => $data['allowed_payment_methods'] ?? null ?: null,
-            'payment_routing_enabled' => $data['payment_routing_mode'] === 'custom' && $request->boolean('payment_routing_enabled'),
-        ])->save();
-
-        activity('users')->performedOn($user)->causedBy($actor)->withProperties([
-            'from' => $before, 'mode' => $user->payment_routing_mode, 'account' => $account?->name, 'routing_enabled' => $user->payment_routing_enabled,
-        ])->log('User payment configuration changed');
     }
 
     private function ensureCanManageUser(?User $actor, User $target): void

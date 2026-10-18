@@ -13,7 +13,7 @@
         $can('promo-codes.view') ? ['Promo Codes', 'admin.promo-codes.index', 'fa-tags', ['admin.promo-codes.*']] : null,
         ($can('orders.view') || $can('payments.transactions.view')) ? ['Payments', 'admin.payments.index', 'fa-credit-card', ['admin.payments.index', 'admin.payments.transactions*', 'admin.payments.refunds*']] : null,
         ($can('reports.view') && ! \App\Orders\OrderAccess::scoped($u)) ? ['Reports', 'admin.reports.index', 'fa-chart-column', ['admin.reports.index']] : null,
-        (\App\Orders\OrderAccess::enabled() && \App\Orders\OrderAccess::level($u) !== \App\Orders\OrderAccess::NONE && $can('orders.view')) ? [\App\Orders\OrderAccess::scoped($u) ? 'My report' : 'Agent report', 'admin.reports.agents', 'fa-chart-line', ['admin.reports.agents']] : null,
+        (\App\Orders\OrderAccess::enabled() && \App\Orders\OrderAccess::level($u) !== \App\Orders\OrderAccess::NONE && $can('orders.view')) ? [\App\Orders\OrderAccess::scoped($u) ? 'Report' : 'Agent report', 'admin.reports.agents', 'fa-chart-line', ['admin.reports.agents']] : null,
     ]));
 
     $ops = array_values(array_filter([

@@ -35,6 +35,11 @@ class OrderItem extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function eventTicket()
+    {
+        return $this->belongsTo(EventTicket::class, 'event_ticket_id');
+    }
+
     public function ticket()
     {
         return $this->belongsTo(Ticket::class);
