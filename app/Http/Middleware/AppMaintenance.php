@@ -13,7 +13,8 @@ class AppMaintenance
         if (config('app.app_maintenance')) {
             return response(file_get_contents(public_path('index_maintenance.html')), 503)
                 ->header('Content-Type', 'text/html; charset=utf-8')
-                ->header('Retry-After', '3600');
+                ->header('Retry-After', '3600')
+                ->header('Cache-Control', 'no-store, max-age=0');
         }
 
         return $next($request);
