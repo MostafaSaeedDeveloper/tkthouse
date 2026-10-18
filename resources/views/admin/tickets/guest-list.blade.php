@@ -3,7 +3,7 @@
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<x-admin.page-header title="Guest List" subtitle="Invitation tickets issued outside of paid orders." :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
+<x-admin.page-header title="Guest List" :subtitle="\App\Orders\OrderAccess::isSuper(auth()->user()) ? 'Invitation tickets issued outside of paid orders (all users).' : 'Invitation tickets you added, issued outside of paid orders.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
     <a href="{{ route('admin.guest-list.template') }}" class="a-btn a-btn--outline"><i class="fa fa-file-arrow-down"></i> Import Template</a>
     <a href="{{ route('admin.guest-list.export') }}" class="a-btn a-btn--outline"><i class="fa fa-file-export"></i> Export</a>
     <button type="button" class="a-btn a-btn--outline" data-bs-toggle="modal" data-bs-target="#importGuestListModal"><i class="fa fa-file-import"></i> Import</button>
@@ -43,14 +43,14 @@
             <tbody>
             @foreach($tickets as $ticket)
                 <tr>
-                    <td data-label="Ticket Number"><a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a></td>
+                    <td data-label="Ticket Number">@can('tickets.view')<a class="a-table__main" href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a>@else<span class="a-table__main">{{ $ticket->ticket_number }}</span>@endcan</td>
                     <td data-label="Name" class="a-wrap">{{ $ticket->holder_name }}</td>
                     <td data-label="Event" class="a-wrap">{{ $ticket->eventLabel() }}</td>
                     <td data-label="Guest Type" class="a-wrap">{{ $ticket->guest_type }}</td>
                     <td data-label="Status"><x-admin.status :status="$ticket->status" kind="ticket" /></td>
                     <td data-label="Actions">
                         <div class="a-table__actions">
-                            <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>
+                            @can('tickets.view')<a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>@endcan
                             @can('tickets.delete')
                                 <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete guest ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
                                     @csrf

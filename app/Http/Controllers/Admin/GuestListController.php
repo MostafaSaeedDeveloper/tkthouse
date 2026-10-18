@@ -20,7 +20,7 @@ class GuestListController extends Controller
     {
         $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
 
-        $ticketsQuery = Ticket::query()->with('order')->where('source', 'guest_list');
+        $ticketsQuery = Ticket::query()->with('order')->where('source', 'guest_list')->guestListVisibleTo($request->user());
         $this->applyManagedEventScopeToGuestTicketsQuery($ticketsQuery, $managedEventNames);
 
         if ($request->filled('event_name')) {
@@ -51,7 +51,7 @@ class GuestListController extends Controller
             ->orderBy('name')
             ->pluck('name');
 
-        $guestTypesQuery = Ticket::query()->where('source', 'guest_list')->whereNotNull('guest_type');
+        $guestTypesQuery = Ticket::query()->where('source', 'guest_list')->guestListVisibleTo($request->user())->whereNotNull('guest_type');
         $this->applyManagedEventScopeToGuestTicketsQuery($guestTypesQuery, $managedEventNames);
         $guestTypes = $guestTypesQuery->distinct()->orderBy('guest_type')->pluck('guest_type');
 
@@ -194,7 +194,7 @@ class GuestListController extends Controller
     {
         $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
 
-        $ticketsQuery = Ticket::query()->where('source', 'guest_list');
+        $ticketsQuery = Ticket::query()->where('source', 'guest_list')->guestListVisibleTo($request->user());
         $this->applyManagedEventScopeToGuestTicketsQuery($ticketsQuery, $managedEventNames);
 
         $tickets = $ticketsQuery->latest()->get();
@@ -272,6 +272,7 @@ class GuestListController extends Controller
             'ticket_number' => $ticketNumber,
             'qr_payload' => $ticketNumber,
             'issued_at' => now(),
+            'created_by_user_id' => auth()->id(),
         ]);
 
         $this->sendTicketEmailIfProvided($ticket);

@@ -93,4 +93,51 @@ class GuestListPermissionTest extends TestCase
         $this->assertFalse($agentRole->fresh()->hasPermissionTo('guest-list.view'), 'agent-only roles never had it under assignment');
         $this->assertTrue($direct->fresh()->hasDirectPermission('guest-list.create'));
     }
+
+    private function guestTicket(?User $by, string $name): \App\Models\Ticket
+    {
+        $n = 'GL-'.strtoupper(substr(md5($name), 0, 6));
+
+        return \App\Models\Ticket::create(['name' => 'Night - Guest VIP', 'source' => 'guest_list', 'guest_type' => 'Guest VIP', 'status' => 'not_checked_in', 'holder_name' => $name,
+            'ticket_number' => $n, 'qr_payload' => $n, 'issued_at' => now(), 'created_by_user_id' => $by?->id]);
+    }
+
+    public function test_everyone_sees_only_the_guests_they_added_and_super_admin_sees_all(): void
+    {
+        Role::findOrCreate('super_admin', 'web');
+        $a = $this->user(['guest-list.view', 'tickets.view', 'tickets.delete']);
+        $b = $this->user(['guest-list.view', 'tickets.view']);
+        $super = $this->user(['guest-list.view', 'tickets.view']);
+        $super->assignRole('super_admin');
+        $mine = $this->guestTicket($a, 'Alice Guest');
+        $theirs = $this->guestTicket($b, 'Bob Guest');
+        $legacy = $this->guestTicket(null, 'Legacy Guest');   // no creator on record (added before this rule)
+
+        $this->actingAs($a)->get(route('admin.guest-list.index'))->assertOk()->assertSee('Alice Guest')->assertDontSee('Bob Guest')->assertDontSee('Legacy Guest');
+        $this->actingAs($b)->get(route('admin.guest-list.index'))->assertOk()->assertSee('Bob Guest')->assertDontSee('Alice Guest');
+        $this->actingAs($super)->get(route('admin.guest-list.index'))->assertOk()->assertSee('Alice Guest')->assertSee('Bob Guest')->assertSee('Legacy Guest');
+
+        $csv = fn (User $u) => $this->actingAs($u)->get(route('admin.guest-list.export'))->streamedContent();
+        $this->assertStringContainsString('Alice Guest', $csv($a));
+        $this->assertStringNotContainsString('Bob Guest', $csv($a));
+        $this->assertStringContainsString('Legacy Guest', $csv($super));
+
+        // other people's guest tickets are not reachable by id either
+        $this->actingAs($a)->get(route('admin.tickets.show', $theirs))->assertNotFound();
+        $this->actingAs($a)->delete(route('admin.tickets.destroy', $theirs))->assertNotFound();
+        $this->assertNotNull(\App\Models\Ticket::find($theirs->id));
+        $this->actingAs($a)->get(route('admin.tickets.show', $mine))->assertOk();
+        $this->actingAs($super)->get(route('admin.tickets.show', $theirs))->assertOk();
+    }
+
+    public function test_new_guest_tickets_record_who_added_them(): void
+    {
+        Mail::fake();
+        $a = $this->user(['guest-list.view', 'guest-list.create']);
+
+        $this->actingAs($a)->post(route('admin.guest-list.store'), ['event_name' => 'E', 'guest_type' => 'VIP', 'guests' => [['name' => 'New Guest']]])->assertRedirect();
+
+        $this->assertSame($a->id, \App\Models\Ticket::where('holder_name', 'New Guest')->value('created_by_user_id'));
+        $this->actingAs($a)->get(route('admin.guest-list.index'))->assertOk()->assertSee('New Guest');
+    }
 }
