@@ -20,7 +20,7 @@
                     <td data-label="Order" class="a-num">{{ $method->sort_order }}</td>
                     <td data-label="Method" class="a-wrap">@if($method->checkout_icon_url)<img class="a-m-icon" src="{{ $method->checkout_icon_url }}" alt="">@endif <span class="a-table__main" style="display:inline">{{ $method->name }}</span>
                         <span class="a-table__sub">Customers see: {{ $method->checkout_label ?: $method->name }}</span>
-                        @if($dupes->contains($method->id))<x-admin.badge variant="warning">Possible duplicate</x-admin.badge>@endif</td>
+                        </td>
                     <td data-label="Code"><code>{{ $method->code }}</code></td>
                     <td data-label="Provider">{{ strtoupper($method->provider) }}</td>
                     <td data-label="Provider method ID">{{ $method->providerMethodIdentifier() ?? '—' }}</td>
