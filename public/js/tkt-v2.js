@@ -17,6 +17,8 @@
         burger.addEventListener('click', function () { setMenu(!header.classList.contains('is-open')); });
     }
     window.addEventListener('resize', function () { if (window.innerWidth >= 992) setMenu(false); });
+    // A soft navigation keeps the header, so close whatever the click left open.
+    document.addEventListener('tkt:navigate', function () { setMenu(false); closeBox(); });
 
     /* Account dropdown */
     var account = $('#tktAccount');
@@ -29,6 +31,7 @@
         toggle.addEventListener('click', function (e) { e.stopPropagation(); setAccount(!account.classList.contains('is-open')); });
         document.addEventListener('click', function (e) { if (!account.contains(e.target)) setAccount(false); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setAccount(false); });
+        document.addEventListener('tkt:navigate', function () { setAccount(false); });
     }
 
     /* Open the auth modal on the requested tab (login / register) */
@@ -40,29 +43,31 @@
         if (tab) tab.click();
     });
 
-    /* Tabs */
-    $$('[data-tkt-tabs]').forEach(function (root) {
-        var tabs = $$('[role="tab"]', root);
-        function activate(tab, focus) {
-            tabs.forEach(function (t) {
-                var on = t === tab;
-                t.setAttribute('aria-selected', on ? 'true' : 'false');
-                t.tabIndex = on ? 0 : -1;
-                var panel = document.getElementById(t.getAttribute('aria-controls'));
-                if (panel) panel.classList.toggle('is-active', on);
-            });
-            if (focus) tab.focus();
-        }
-        tabs.forEach(function (tab, i) {
-            tab.addEventListener('click', function () { activate(tab); });
-            tab.addEventListener('keydown', function (e) {
-                var next = null;
-                if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
-                if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
-                if (next) { e.preventDefault(); activate(next, true); }
+    /* Per-page widgets: re-initialised by TktPage after every soft navigation (nodes are discarded with the old content) */
+    function initTabs(scope) {
+        $$('[data-tkt-tabs]', scope).forEach(function (root) {
+            var tabs = $$('[role="tab"]', root);
+            function activate(tab, focus) {
+                tabs.forEach(function (t) {
+                    var on = t === tab;
+                    t.setAttribute('aria-selected', on ? 'true' : 'false');
+                    t.tabIndex = on ? 0 : -1;
+                    var panel = document.getElementById(t.getAttribute('aria-controls'));
+                    if (panel) panel.classList.toggle('is-active', on);
+                });
+                if (focus) tab.focus();
+            }
+            tabs.forEach(function (tab, i) {
+                tab.addEventListener('click', function () { activate(tab); });
+                tab.addEventListener('keydown', function (e) {
+                    var next = null;
+                    if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+                    if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+                    if (next) { e.preventDefault(); activate(next, true); }
+                });
             });
         });
-    });
+    }
 
     /* Toast */
     var toastTimer;
@@ -98,14 +103,16 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeBox(); });
 
     /* Loading state + double-submit guard for plain forms */
-    $$('form[data-tkt-submit]').forEach(function (form) {
-        form.addEventListener('submit', function () {
-            var btn = $('button[type="submit"]', form);
-            if (!btn || btn.classList.contains('is-loading')) return;
-            // Defer so the browser still submits the button's own value/state.
-            setTimeout(function () { btn.classList.add('is-loading'); }, 0);
+    function initSubmitGuards(scope) {
+        $$('form[data-tkt-submit]', scope).forEach(function (form) {
+            form.addEventListener('submit', function () {
+                var btn = $('button[type="submit"]', form);
+                if (!btn || btn.classList.contains('is-loading')) return;
+                // Defer so the browser still submits the button's own value/state.
+                setTimeout(function () { btn.classList.add('is-loading'); }, 0);
+            });
         });
-    });
+    }
 
     /* Payment method icon that fails to load falls back to a generic card glyph */
     document.addEventListener('error', function (e) {
@@ -123,10 +130,16 @@
             if (media) media.classList.add('is-empty');
         }
     }, true);
-    $$('img.tkt-img').forEach(function (img) {
-        if (img.complete && img.naturalWidth === 0) {
-            var media = img.closest('.tkt-media');
-            if (media) media.classList.add('is-empty');
-        }
-    });
+    function initImageFallbacks(scope) {
+        $$('img.tkt-img', scope).forEach(function (img) {
+            if (img.complete && img.naturalWidth === 0) {
+                var media = img.closest('.tkt-media');
+                if (media) media.classList.add('is-empty');
+            }
+        });
+    }
+
+    var mountWidgets = function (scope) { initTabs(scope); initSubmitGuards(scope); initImageFallbacks(scope); };
+    if (window.TktPage) window.TktPage.register('page-ui', mountWidgets);
+    else mountWidgets(document);
 })();

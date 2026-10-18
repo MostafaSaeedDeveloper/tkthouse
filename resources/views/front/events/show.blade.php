@@ -1,6 +1,8 @@
 @extends('front.layout.app')
 
 @section('title', $event->name)
+@section('description', \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags(\App\Support\SafeHtml::clean($event->description)))), 160, '…'))
+@section('og_image', $event->event_banner_url ?: $event->cover_image_url)
 
 @section('content')
 @php
@@ -359,7 +361,3 @@
     </div>
 </div>
 @endsection
-
-@push('scripts')
-    <script src="{{ asset('js/tkt-booking.js') }}?v={{ filemtime(public_path('js/tkt-booking.js')) }}"></script>
-@endpush
