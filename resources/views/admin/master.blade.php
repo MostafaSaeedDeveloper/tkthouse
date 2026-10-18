@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="{{ asset('admin/assets/css/dashmix.min.css') }}">
   <link rel="stylesheet" href="{{ asset('admin-v2/admin-v2.css') }}?v={{ filemtime(public_path('admin-v2/admin-v2.css')) }}">
   <link rel="stylesheet" href="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.css') }}">
+  <link rel="stylesheet" href="{{ asset('admin-v2/datepicker.css') }}?v={{ filemtime(public_path('admin-v2/datepicker.css')) }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
   @stack('styles')
 </head>
@@ -122,6 +123,7 @@
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
+<script src="{{ asset('admin-v2/datepicker.js') }}?v={{ filemtime(public_path('admin-v2/datepicker.js')) }}"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
 (() => {

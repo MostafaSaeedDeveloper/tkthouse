@@ -1,0 +1,31 @@
+/* Admin date picker: styles the flatpickr calendar (all admin date fields) to match the admin design. */
+.a-datepicker__alt { cursor: pointer; padding-right: 40px; background-repeat: no-repeat; background-position: right 14px center; background-size: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='3'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E"); }
+.a-datepicker__alt[readonly] { background-color: var(--a-surface, #fff); }
+
+.flatpickr-calendar { font-family: inherit; border: 1px solid var(--a-line-strong, #dcdcd4); border-radius: 16px; box-shadow: 0 16px 40px rgba(0, 0, 0, .16); padding: 10px 10px 8px; width: 320px; z-index: 1080; }
+.flatpickr-calendar .flatpickr-innerContainer, .flatpickr-calendar .flatpickr-rContainer, .flatpickr-calendar .flatpickr-days, .flatpickr-calendar .dayContainer, .flatpickr-calendar .flatpickr-weekdays, .flatpickr-calendar .flatpickr-weekdaycontainer { width: 100%; min-width: 0; max-width: 100%; }
+.flatpickr-calendar .flatpickr-weekday { flex: 1; }
+.flatpickr-calendar::before, .flatpickr-calendar::after { display: none; }
+.flatpickr-months { align-items: center; margin-bottom: 4px; }
+.flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month { position: static; height: 34px; width: 34px; padding: 0; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: var(--a-ink, #111); }
+.flatpickr-months .flatpickr-prev-month:hover, .flatpickr-months .flatpickr-next-month:hover { background: var(--a-surface-2, #f4f4f1); }
+.flatpickr-months .flatpickr-prev-month svg, .flatpickr-months .flatpickr-next-month svg { width: 14px; height: 14px; fill: none; stroke: currentColor; }
+.flatpickr-current-month { font-size: 15px; font-weight: 800; padding: 0; height: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; position: static; width: auto; flex: 1; }
+.flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year { font-weight: 800; font-family: inherit; color: var(--a-ink, #111); }
+.flatpickr-current-month .flatpickr-monthDropdown-months { border-radius: 8px; padding: 4px 6px; }
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover, .flatpickr-current-month .numInputWrapper:hover { background: var(--a-surface-2, #f4f4f1); }
+span.flatpickr-weekday { font-size: 11.5px; font-weight: 700; color: var(--a-muted, #888); text-transform: uppercase; letter-spacing: .04em; }
+.flatpickr-day { border-radius: 10px; max-width: none; flex-basis: 14.2857%; width: 14.2857%; height: 38px; line-height: 38px; font-weight: 600; color: var(--a-ink, #111); border: 1px solid transparent; }
+.flatpickr-day:hover, .flatpickr-day:focus { background: var(--a-surface-2, #f4f4f1); border-color: transparent; }
+.flatpickr-day.today { border-color: var(--a-yellow, #ffd200); }
+.flatpickr-day.today:hover { background: var(--a-yellow-soft, #fff4c2); border-color: var(--a-yellow, #ffd200); color: var(--a-ink, #111); }
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected:hover { background: var(--a-yellow, #ffd200); border-color: var(--a-yellow, #ffd200); color: #111; font-weight: 800; }
+.flatpickr-day.inRange { background: var(--a-yellow-soft, #fff4c2); border-color: transparent; box-shadow: none; }
+.flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay, .flatpickr-day.flatpickr-disabled { color: #b8b8b0; font-weight: 500; }
+.flatpickr-day.flatpickr-disabled:hover { background: transparent; }
+.a-fp-foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px 2px; margin-top: 6px; border-top: 1px solid var(--a-line, #e8e8e0); }
+.a-fp-foot__btn { border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--a-muted, #777); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.a-fp-foot__btn:hover { background: var(--a-surface-2, #f4f4f1); color: var(--a-ink, #111); }
+.a-fp-foot__btn--primary { color: var(--a-ink, #111); background: var(--a-yellow-soft, #fff4c2); }
+.a-fp-foot__btn--primary:hover { background: var(--a-yellow, #ffd200); }
