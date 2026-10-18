@@ -138,7 +138,7 @@
                 <td data-label="Status" class="c-status">
                     <x-admin.status :status="$order->status" kind="order" />
                     {{-- A failed payment attempt is called out (only while the order is still unpaid); other attempt states stay off this list. --}}
-                    @if($order->status !== 'paid' && $order->latestPaymentAttempt?->status === 'failed')<span class="a-ord-pay"><x-admin.status status="failed" kind="payment" /> payment</span>@endif
+                    @if($order->status !== 'paid' && $order->latestPaymentAttempt && ($order->latestPaymentAttempt->status === 'failed' || in_array($order->latestPaymentAttempt->id, $failedAttemptIds ?? [], true)))<span class="a-ord-pay"><x-admin.status status="failed" kind="payment" /> payment</span>@endif
                     @if($methodLabel)<span class="a-table__sub">{{ $methodLabel }}</span>@endif
                     @if($order->status === 'pending_payment' && $secondsLeft !== null)
                         <span class="a-table__sub a-ord-timer js-admin-order-timer" data-seconds-left="{{ max(0, $secondsLeft) }}">{{ $secondsLeft > 0 ? 'Expires soon' : 'Expired' }}</span>

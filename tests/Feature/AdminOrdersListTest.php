@@ -339,8 +339,14 @@ class AdminOrdersListTest extends TestCase
             \App\Models\PaymentAttempt::create(['order_id' => $o->id, 'provider' => 'fake', 'method_code' => 'fake_card', 'amount' => 100, 'currency' => 'EGP', 'status' => $status,
                 'transaction_id' => 'T'.$o->id, 'internal_reference' => \App\Models\PaymentAttempt::newInternalReference()]);
         }
+        // Fawaterak reports a failure only by webhook; the attempt itself stays "Processing" (initiated)
+        $webhookFailed = $this->order('970004', 'pending_payment', 'Dina', $this->eventA);
+        $attempt = \App\Models\PaymentAttempt::create(['order_id' => $webhookFailed->id, 'provider' => 'fawaterak', 'method_code' => 'fawaterak_card', 'amount' => 100, 'currency' => 'EGP', 'status' => 'initiated',
+            'transaction_id' => 'T4', 'internal_reference' => \App\Models\PaymentAttempt::newInternalReference()]);
+        \App\Models\WebhookEvent::create(['provider' => 'fawaterak', 'payment_attempt_id' => $attempt->id, 'order_id' => $webhookFailed->id, 'event_type' => 'payment.failed', 'dedupe_key' => 'k4', 'signature_status' => 'unsupported', 'processing_status' => 'ignored', 'received_at' => now()]);
         $list = fn (string $ref) => $this->get(route('admin.orders.index', ['reference' => $ref]))->assertOk();
 
+        $list('970004')->assertSee('970004')->assertSee('a-ord-pay', false)->assertSee('Failed');
         $list('970001')->assertSee('970001')->assertSee('a-ord-pay', false)->assertSee('Failed');
         $list('970002')->assertSee('970002')->assertDontSee('a-ord-pay', false);
         $list('970003')->assertSee('970003')->assertDontSee('a-ord-pay', false);   // a paid order never shows an old failed attempt

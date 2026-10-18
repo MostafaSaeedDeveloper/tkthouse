@@ -77,6 +77,12 @@ class OrderController extends Controller
         [$sortKey, $sortDir] = $this->applySorting($ordersQuery, $request);
 
         $orders = $ordersQuery->paginate($this->perPage($request))->withQueryString();
+
+        // Some gateways (Fawaterak) report a failure only through their webhook, which never changes the attempt itself: such an attempt still reads "Processing".
+        // The list calls it out too, for the latest attempt of each order on this page.
+        $failedAttemptIds = \App\Models\WebhookEvent::query()->where('event_type', 'payment.failed')
+            ->whereIn('payment_attempt_id', $orders->getCollection()->pluck('latestPaymentAttempt.id')->filter()->all())
+            ->pluck('payment_attempt_id')->unique()->all();
         $canViewDeletedOrders = $request->user()?->can(self::DELETED_ORDERS_PERMISSION) ?? false;
         $deletedOrdersCount = 0;
         if ($canViewDeletedOrders) {
@@ -104,7 +110,7 @@ class OrderController extends Controller
 
         $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.index', compact('assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
