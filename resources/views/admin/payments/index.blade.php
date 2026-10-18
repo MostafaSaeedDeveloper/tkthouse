@@ -52,7 +52,7 @@
 </x-admin.card>
 @if($t['refunds_in_progress'] > 0)<p class="a-hint">{{ $t['refunds_in_progress'] }} refund(s) worth {{ $m($t['refunds_in_progress_amount']) }} are requested or processing: they are <strong>not</strong> counted as refunded until confirmed.</p>@endif
 <div class="a-grid a-grid--2" style="margin-bottom:20px">
-    @foreach(array_filter(['Provider' => ['rows' => $report['by_provider'], 'label' => fn ($k) => ucfirst($k)], 'Payment method' => ['rows' => $report['by_method'], 'label' => fn ($k) => $methodNames[$k] ?? ($k ?: 'Unknown')], 'Merchant account' => $report['by_account'] === null ? null : ['rows' => $report['by_account'], 'label' => fn ($k) => $k === '' || $k === '0' ? 'Legacy configuration' : ($accountNames[(int) $k] ?? '#'.$k)]]) as $title => $g)
+    @foreach(array_filter(['Provider' => ['rows' => $report['by_provider'], 'label' => fn ($k) => ucfirst($k)], 'Payment method' => ['rows' => $report['by_method'], 'label' => fn ($k) => $methodNames[$k] ?? ($k ?: 'Unknown')]]) as $title => $g)
     <x-admin.card flush :title="$title.' breakdown'">
         <x-admin.table stack compact :caption="$title.' breakdown'"><thead><tr><th>{{ $title }}</th><th class="a-num">Payments</th><th class="a-num">Collected</th><th class="a-num">Refunded</th><th class="a-num">Net</th></tr></thead><tbody>
             @forelse($g['rows'] as $k => $r)<tr><td data-label="{{ $title }}">{{ ($g['label'])($k) }}</td><td data-label="Payments" class="a-num">{{ $r['count'] }}</td><td data-label="Collected" class="a-num">{{ number_format($r['collected'] / 100, 2) }}</td><td data-label="Refunded" class="a-num">{{ number_format($r['refunded'] / 100, 2) }}</td><td data-label="Net" class="a-num">{{ number_format($r['net'] / 100, 2) }}</td></tr>@empty<tr><td colspan="5" class="a-muted">No payments in this period.</td></tr>@endforelse
@@ -61,18 +61,7 @@
     @endforeach
 </div>
 
-@if($imported)
-@php $io = $imported['provider_only']; @endphp
-<x-admin.card title="Imported from the provider (not included in the figures above)" :subtitle="'Looked up or imported from provider exports for the same dates. Never added to the local totals, so nothing is counted twice. '.$imported['already_in_local'].' imported record(s) are linked to a local payment and already counted above.'" style="margin-bottom:20px">
-    <div class="a-grid a-grid--4">
-        <x-admin.kpi label="Provider-only paid" :value="$io['paid_count'].' · '.$m($io['paid_volume'])" icon="fa-file-import" hint="Paid at the provider, no local order" />
-        <x-admin.kpi label="Failed / pending" :value="$io['failed'].' / '.$io['pending']" icon="fa-hourglass-half" hint="Provider-only records" />
-        <x-admin.kpi label="Refunded / voided" :value="$io['refunded'].' / '.$io['voided']" icon="fa-rotate-left" hint="Provider-only records" />
-        <x-admin.kpi label="Unverified (CSV)" :value="$io['unverified']" icon="fa-circle-question" hint="Check them with the provider" />
-    </div>
-    <p class="a-hint" style="margin:10px 0 0">Provider-only paid by provider: @forelse($imported['by_provider'] as $k => $r){{ ucfirst($k) }} {{ $r['count'] }} ({{ $m($r['volume']) }})@if(! $loop->last), @endif @empty none @endforelse · <a href="{{ route('admin.payments.imported') }}">Open imported transactions</a></p>
-</x-admin.card>
-@endif
+
 
 @if(! $liveGateways || $fakeAllowed)
     <x-admin.alert type="warning">

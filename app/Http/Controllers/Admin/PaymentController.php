@@ -53,11 +53,9 @@ class PaymentController extends Controller
         $reports = app(\App\Services\Payments\PaymentReport::class);
         $report = $reports->build($user, $from, $to, $seeAccounts);
         $previous = $reports->previous($user, $from, $to);
-        // provider-side (imported) figures: separate data set, only for staff who may see merchant accounts
-        $imported = $seeAccounts ? $reports->imported($from, $to) : null;
 
         return view('admin.payments.index', [
-            'report' => $report, 'previous' => $previous, 'imported' => $imported, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
+            'report' => $report, 'previous' => $previous, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
             'accountNames' => $seeAccounts ? \App\Models\IntegrationAccount::query()->pluck('name', 'id') : collect(),
             'methodNames' => PaymentMethod::query()->pluck('name', 'code'),
             'attempts' => $attempts,
