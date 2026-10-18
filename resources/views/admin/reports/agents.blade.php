@@ -3,13 +3,13 @@
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 @php $money = fn ($n) => number_format((float) $n, 2); @endphp
-<x-admin.page-header :title="$seesTeam ? 'Agent report' : 'My report'" subtitle="Workflow counts follow the current assignee; collected sales follow who held the order when payment was confirmed." :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports', $seesTeam ? 'Agents' : 'Mine']" />
+<x-admin.page-header :title="$seesTeam ? 'Agent report' : 'Report'" subtitle="Workflow counts follow the current assignee; collected sales follow who held the order when payment was confirmed." :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports', $seesTeam ? 'Agents' : 'Mine']" />
 <x-admin.filters :action="route('admin.reports.agents')" :reset="route('admin.reports.agents')">
     <div class="a-field"><label class="form-label" for="ag-from">From</label><input id="ag-from" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
     <div class="a-field"><label class="form-label" for="ag-to">To</label><input id="ag-to" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
 </x-admin.filters>
 
-<x-admin.card flush :title="$seesTeam ? 'Per agent' : 'My numbers'" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
+<x-admin.card flush :title="$seesTeam ? 'Per agent' : 'Summary'" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
     @if($data['rows']->isEmpty())
         <x-admin.empty title="No activity" text="No assigned orders or attributed sales in this period." icon="fa-chart-column" />
     @else
