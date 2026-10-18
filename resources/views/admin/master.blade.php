@@ -42,7 +42,7 @@
     <nav class="a-sidebar__scroll">
       @include('admin.navbar')
     </nav>
-    <div class="a-sidebar__foot"><a href="{{ route('front.home') }}"><i class="fa fa-arrow-up-right-from-square" aria-hidden="true"></i> View website</a></div>
+    <div class="a-sidebar__foot"><a href="{{ route('front.home') }}" target="_blank" rel="noopener"><i class="fa fa-arrow-up-right-from-square" aria-hidden="true"></i> View website</a></div>
   </aside>
   <div class="a-backdrop" data-a-nav-close></div>
 
@@ -84,7 +84,7 @@
           </button>
           <div class="a-menu__panel" role="menu">
             <div class="a-menu__head"><b>{{ $authUser?->name }}</b><small>{{ $authUser?->email }}</small></div>
-            <a class="a-menu__item" role="menuitem" href="{{ route('front.home') }}"><i class="fa fa-globe" aria-hidden="true"></i> View website</a>
+            <a class="a-menu__item" role="menuitem" href="{{ route('front.home') }}" target="_blank" rel="noopener"><i class="fa fa-globe" aria-hidden="true"></i> View website</a>
             <form method="POST" action="{{ route('logout') }}">@csrf
               <button type="submit" class="a-menu__item" role="menuitem"><i class="fa fa-arrow-right-from-bracket" aria-hidden="true"></i> Sign out</button>
             </form>
