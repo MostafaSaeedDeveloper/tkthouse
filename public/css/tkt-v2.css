@@ -400,6 +400,7 @@
 .tkt-footer__bottom { border-top: 1px solid var(--tkt-line-dark); padding: 18px 0; font-size: var(--tkt-fs-xs); }
 .tkt-footer__bottom .tkt-container { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; }
 .tkt-footer__bottom a { color: #fff; text-decoration: underline !important; text-underline-offset: 2px; }
+@media (max-width: 767.98px) { .tkt-footer__links a, .tkt-footer__bottom a { display: inline-block; padding: 8px 0; margin: -8px 0; } }
 
 /* 10. PAGINATION / TOAST / LIGHTBOX --------------------------------------- */
 .tkt-pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 32px; }

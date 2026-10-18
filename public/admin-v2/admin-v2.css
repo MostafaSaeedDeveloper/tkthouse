@@ -351,7 +351,19 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 .a-body .a-btn--primary i, .a-body .a-btn--dark i { color: inherit; }
 
 /* Very narrow screens: money KPIs stack one per row instead of overflowing two columns. */
-@media (max-width: 480px) { .a-grid--4 { grid-template-columns: minmax(0, 1fr); } .a-kpi__value { white-space: normal; overflow-wrap: anywhere; } }
+@media (max-width: 480px) {
+    /* Stat cards: two per row (a stack of four full-width cards pushed the real content far down the page) */
+    .a-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .a-grid--4 .a-kpi { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; }
+    .a-grid--4 .a-kpi__icon { width: 38px; height: 38px; border-radius: 11px; font-size: 16px; }
+    .a-kpi__value { white-space: normal; overflow-wrap: anywhere; }
+}
+/* Bigger touch areas for small text links on phones (hit area grows, layout does not) */
+@media (max-width: 767.98px) {
+    .a-crumbs a, .a-sidebar__foot a { display: inline-block; padding: 8px 4px; margin: -8px -4px; }
+    /* A value with a sub-line (e.g. date + time) is one block, so stacked rows right-align it as a unit */
+    .a-table--stack .a-cellstack { text-align: right; }
+}
 
 /* Users list: long emails truncate instead of pushing the Actions column out of view. */
 .a-user-id { min-width: 0; display: block; }
