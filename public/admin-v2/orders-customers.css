@@ -194,8 +194,22 @@
 @media (max-width: 1100px) { .a-ordt .c-assignee { width: 112px; } }
 .a-ordt .a-ord-check { width: 18px; height: 18px; margin: 0; vertical-align: middle; accent-color: #111; cursor: pointer; }
 .a-ordt td.c-order .a-table__sub { font-size: 11px; white-space: nowrap; }
-.a-ord-bulk { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--a-line); background: var(--a-yellow-soft); }
+/* Bulk bar: [N selected] [assign: person + reason + Assign] ........ [Approve] [Reject] -- one row on desktop, grouped blocks on phones */
+.a-ord-bulk { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--a-line); background: var(--a-yellow-soft); }
 .a-ord-bulk[hidden] { display: none; }
-.a-ord-bulk__decide { display: inline-flex; gap: 8px; margin-left: auto; }
-.a-ord-bulk .form-select, .a-ord-bulk .form-control { max-width: 240px; }
+.a-ord-bulk__count { flex: none; font-weight: 600; white-space: nowrap; }
+.a-ord-bulk__assign { display: flex; flex: 1 1 420px; align-items: center; gap: 8px; min-width: 0; }
+.a-ord-bulk__assign .form-select { flex: 0 1 190px; min-width: 0; width: auto; }
+.a-ord-bulk__assign .form-control { flex: 1 1 230px; min-width: 0; max-width: 340px; width: auto; }
+.a-ord-bulk__assign .a-btn { flex: none; }
+.a-ord-bulk__decide { display: inline-flex; gap: 8px; margin-left: auto; padding-left: 16px; border-left: 1px solid rgba(0, 0, 0, .12); }
+@media (max-width: 767.98px) {
+    .a-ord-bulk { padding: 12px 14px; gap: 10px; }
+    .a-ord-bulk__count { flex: 1 0 100%; }
+    .a-ord-bulk__assign { flex: 1 0 100%; flex-wrap: wrap; }
+    .a-ord-bulk__assign .form-select, .a-ord-bulk__assign .form-control { flex: 1 0 100%; max-width: none; }
+    .a-ord-bulk__assign .a-btn { flex: 1 0 100%; }
+    .a-ord-bulk__decide { flex: 1 0 100%; margin-left: 0; padding: 10px 0 0; border-left: 0; border-top: 1px solid rgba(0, 0, 0, .12); }
+    .a-ord-bulk__decide .a-btn { flex: 1; justify-content: center; }
+}
 @media (max-width: 767px) { .a-ordt.a-table--stack td.c-assignee { grid-column: 1; grid-row: 5; } }

@@ -52,6 +52,7 @@
 
 @include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o'])
 
+@php $canBulk = $canAssign || auth()->user()->can('orders.update'); @endphp
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
     @if($orders->isEmpty())
         <x-admin.empty icon="fa-receipt" title="No orders found" text="No order matches the current search and filters.">
@@ -60,16 +61,17 @@
             @endif
         </x-admin.empty>
     @else
-    @php $canBulk = $canAssign || auth()->user()->can('orders.update'); @endphp
     @if($canBulk)
     <form method="POST" action="{{ route('admin.orders.assign.bulk') }}" id="bulkAssignForm" class="a-ord-bulk" hidden>
         @csrf
-        <span><strong data-bulk-count>0</strong> selected</span>
+        <span class="a-ord-bulk__count"><strong data-bulk-count>0</strong> selected</span>
         @if($canAssign)
+        <span class="a-ord-bulk__assign">
         <label class="a-sr-only" for="bulkAssignee">Assign selected orders to</label>
         <select id="bulkAssignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach</select>
         <input class="form-control" name="reason" maxlength="300" placeholder="Reason (optional)" aria-label="Reason">
         <button type="submit" class="a-btn a-btn--primary a-btn--sm">Assign</button>
+        </span>
         @endif
         @can('orders.update')
         <span class="a-ord-bulk__decide">
@@ -210,7 +212,6 @@
         </form>
     </div>
 </div>
-<script src="{{ asset('admin-v2/orders-assign.js') }}?v={{ filemtime(public_path('admin-v2/orders-assign.js')) }}" defer></script>
 @endif
 
 @can('update_status')
@@ -243,6 +244,9 @@
     </div>
 </div>
 
+@if($canBulk)
+<script src="{{ asset('admin-v2/orders-assign.js') }}?v={{ filemtime(public_path('admin-v2/orders-assign.js')) }}" defer></script>
+@endif
 <script src="{{ asset('admin-v2/orders-list.js') }}?v={{ filemtime(public_path('admin-v2/orders-list.js')) }}" defer></script>
 
 {{-- Export Orders Modal --}}

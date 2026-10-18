@@ -121,6 +121,7 @@ class AdminOrdersListTest extends TestCase
         $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
         $this->assertStringContainsString('id="bulkAssignForm"', $html);
         $this->assertStringContainsString(route('admin.orders.bulk.approve'), $html);
+        $this->assertStringContainsString('admin-v2/orders-assign.js', $html);   // the script that shows the bar must load without the assign permission too
         $this->assertStringContainsString(route('admin.orders.bulk.reject'), $html);
     }
 
