@@ -134,4 +134,12 @@ class EventDuplicateTest extends TestCase
         $this->actingAs($this->admin())->get(route('admin.events.index'))->assertOk()->assertSee('Duplicate');
         $this->actingAs($this->admin(['events.view']))->get(route('admin.events.index'))->assertOk()->assertDontSee('Duplicate event');
     }
+
+    public function test_the_edit_page_has_a_duplicate_button_for_people_who_can_create(): void
+    {
+        $source = $this->fullEvent();
+
+        $this->actingAs($this->admin(['events.view', 'events.update', 'events.create']))->get(route('admin.events.edit', $source))->assertOk()->assertSee(route('admin.events.duplicate', $source));
+        $this->actingAs($this->admin(['events.view', 'events.update']))->get(route('admin.events.edit', $source))->assertOk()->assertDontSee(route('admin.events.duplicate', $source));
+    }
 }

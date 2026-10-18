@@ -5,6 +5,12 @@
 @section('content')
 <x-admin.page-header title="Edit Event" :subtitle="$event->name" :crumbs="['Dashboard' => route('admin.dashboard'), 'Events' => route('admin.events.index'), $event->name]">
     <a href="{{ route('admin.events.dashboard', $event) }}" class="a-btn a-btn--outline"><i class="fa fa-gauge"></i> Dashboard</a>
+    @can('events.create')
+    <form method="POST" action="{{ route('admin.events.duplicate', $event) }}" data-a-confirm="Duplicate &quot;{{ $event->name }}&quot;? A new draft copy is created from the last SAVED version of this event (unsaved changes on this page are not included). Orders, tickets and payments are not copied." data-a-confirm-title="Duplicate event" data-a-confirm-ok="Duplicate">
+        @csrf
+        <button type="submit" class="a-btn a-btn--outline"><i class="fa fa-copy"></i> Duplicate</button>
+    </form>
+    @endcan
     <a href="{{ route('admin.events.index') }}" class="a-btn a-btn--outline">Back to Events</a>
 </x-admin.page-header>
 
