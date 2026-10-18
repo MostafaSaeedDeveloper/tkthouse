@@ -59,6 +59,76 @@ class RoleDisplayNameTest extends TestCase
         $this->actingAs($this->manager())->delete(route('admin.roles.destroy', $role))->assertSessionHas('error');
     }
 
+    private function userBody(array $extra = []): array
+    {
+        return ['name' => 'Perm Test', 'username' => 'permtest'.random_int(1, 99999), 'email' => 'p'.random_int(1, 99999).'@example.test', 'password' => 'Secret123!', 'permissions_effective' => 1] + $extra;
+    }
+
+    public function test_user_form_ticks_the_effective_permissions_and_ships_the_role_map(): void
+    {
+        (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
+        $manager = $this->manager();
+        Permission::findOrCreate('users.create', 'web');
+        $manager->givePermissionTo('users.create');
+
+        $html = $this->actingAs($manager)->get(route('admin.users.create'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('name="permissions_effective"', $html);
+        $this->assertStringContainsString('data-perm-reset', $html);
+        $this->assertStringContainsString('data-role-perms=', $html);
+        $this->assertStringContainsString('Ticket Manager', $html);   // role names in the picker are the display names
+    }
+
+    public function test_saving_with_the_roles_permissions_ticked_assigns_the_role_plus_only_the_extras(): void
+    {
+        (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
+        $base = Role::findByName('support', 'web')->permissions->pluck('name')->all();
+        Permission::findOrCreate('users.create', 'web');
+        $manager = $this->manager();
+        $manager->givePermissionTo('users.create');
+
+        $this->actingAs($manager)->post(route('admin.users.store'), $this->userBody(['role' => 'support', 'permissions' => [...$base, 'tickets.view']]))->assertRedirect();
+
+        $u = User::query()->where('name', 'Perm Test')->firstOrFail();
+        $this->assertTrue($u->hasRole('support'));
+        $this->assertSame(['tickets.view'], $u->permissions->pluck('name')->all(), 'only the extra is stored directly');
+        $this->assertTrue($u->can('orders.view') && $u->can('tickets.view'));
+    }
+
+    public function test_unticking_a_role_permission_saves_custom_permissions_without_the_role_and_says_so(): void
+    {
+        (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
+        $base = Role::findByName('support', 'web')->permissions->pluck('name')->all();
+        $kept = array_values(array_diff($base, ['reports.view']));
+        Permission::findOrCreate('users.create', 'web');
+        $manager = $this->manager();
+        $manager->givePermissionTo('users.create');
+
+        $res = $this->actingAs($manager)->post(route('admin.users.store'), $this->userBody(['role' => 'support', 'permissions' => $kept]));
+        $res->assertRedirect()->assertSessionHas('success', fn ($m) => str_contains($m, '1 permission(s) of the role were unticked'));
+
+        $u = User::query()->where('name', 'Perm Test')->firstOrFail();
+        $this->assertFalse($u->hasRole('support'));
+        $this->assertEqualsCanonicalizing($kept, $u->permissions->pluck('name')->all());
+        $this->assertFalse($u->can('reports.view'), 'the unticked permission is really gone');
+    }
+
+    public function test_requests_without_the_marker_keep_the_previous_role_plus_direct_meaning(): void
+    {
+        (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
+        Permission::findOrCreate('users.create', 'web');
+        $manager = $this->manager();
+        $manager->givePermissionTo('users.create');
+        $body = $this->userBody(['role' => 'support']);
+        unset($body['permissions_effective']);
+
+        $this->actingAs($manager)->post(route('admin.users.store'), $body)->assertRedirect();
+
+        $u = User::query()->where('name', 'Perm Test')->firstOrFail();
+        $this->assertTrue($u->hasRole('support'));
+        $this->assertTrue($u->permissions->isEmpty());
+    }
+
     public function test_renaming_the_display_name_never_changes_the_key_or_what_the_code_sees(): void
     {
         (new \Database\Seeders\RolesAndPermissionsSeeder)->run();

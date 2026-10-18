@@ -137,15 +137,14 @@ class UserController extends Controller
         ]);
 
         $user->managedEvents()->sync($validated['managed_event_ids'] ?? []);
-        $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
-        $user->syncPermissions($validated['permissions'] ?? []);
+        $note = $this->applyRoleAndPermissions($request, $user, $validated);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->applyAccountFlags($request, $user->fresh());
         $this->applyPaymentConfiguration($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User created');
 
-        return $this->afterSave($user)->with('success', 'User created successfully.');
+        return $this->afterSave($user)->with('success', 'User created successfully.'.$note);
     }
 
     public function show(User $user)
@@ -255,15 +254,14 @@ class UserController extends Controller
         $user->update($data);
 
         $user->managedEvents()->sync($validated['managed_event_ids'] ?? []);
-        $user->syncRoles(filled($validated['role'] ?? null) ? [$validated['role']] : []);
-        $user->syncPermissions($validated['permissions'] ?? []);
+        $note = $this->applyRoleAndPermissions($request, $user, $validated);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->applyAccountFlags($request, $user->fresh());
         $this->applyPaymentConfiguration($request, $user->fresh());
 
         activity('users')->performedOn($user)->causedBy(auth()->user())->log('User updated');
 
-        return $this->afterSave($user)->with('success', 'User updated successfully.');
+        return $this->afterSave($user)->with('success', 'User updated successfully.'.$note);
     }
 
     public function destroy(User $user)
@@ -305,6 +303,51 @@ class UserController extends Controller
         if (! $wantActive) {
             activity('users')->performedOn($user)->causedBy($request->user())->log('User deactivated');
         }
+    }
+
+    /**
+     * Role + permissions. The form (`permissions_effective=1`) shows the EFFECTIVE permission set: choosing a role ticks what the
+     * role grants and the admin may tick more or untick some.
+     *  - every permission of the role is still ticked  -> the user gets the role, plus the extra ticked ones directly;
+     *  - some permission of the role was unticked      -> a role cannot grant "less", so the user gets exactly the ticked
+     *    permissions directly and no role (the returned note tells the admin).
+     * Requests without the marker (older clients/tests) keep the previous meaning: the role as chosen + the permissions as direct ones.
+     *
+     * @return string sentence to append to the success message ('' when nothing special happened)
+     */
+    private function applyRoleAndPermissions(Request $request, User $user, array $validated): string
+    {
+        $roleName = filled($validated['role'] ?? null) ? (string) $validated['role'] : null;
+        $ticked = array_values(array_unique($validated['permissions'] ?? []));
+
+        if (! $request->boolean('permissions_effective')) {
+            $user->syncRoles($roleName ? [$roleName] : []);
+            $user->syncPermissions($ticked);
+
+            return '';
+        }
+
+        if (! $roleName) {
+            $user->syncRoles([]);
+            $user->syncPermissions($ticked);
+
+            return '';
+        }
+
+        $granted = \Spatie\Permission\Models\Role::findByName($roleName, 'web')->permissions->pluck('name')->all();
+        $removed = array_values(array_diff($granted, $ticked));
+
+        if ($removed) {
+            $user->syncRoles([]);
+            $user->syncPermissions($ticked);
+
+            return ' '.count($removed).' permission(s) of the role were unticked, so this user has custom permissions instead of the role "'.\App\Support\RoleLabel::of($roleName).'".';
+        }
+
+        $user->syncRoles([$roleName]);
+        $user->syncPermissions(array_values(array_diff($ticked, $granted)));
+
+        return '';
     }
 
     /**

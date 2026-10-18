@@ -69,7 +69,7 @@ class AdminUserProfileTest extends TestCase
         $target = User::factory()->create(['name' => 'Target User']);
 
         $this->actingAs($admin)->get(route('admin.users.edit', $target))->assertOk()
-            ->assertSee('Custom permissions')->assertSee('data-perm-filter', false)->assertSee('data-role-perms', false)->assertSee('from role');
+            ->assertSee('Permissions')->assertSee('data-perm-reset', false)->assertSee('data-perm-filter', false)->assertSee('data-role-perms', false)->assertSee('from role');
 
         $this->actingAs($admin)->put(route('admin.users.update', $target), [
             'name' => 'Target Renamed', 'username' => $target->username, 'email' => $target->email, 'role' => 'Order Agent', 'permissions' => ['orders.view'],
