@@ -30,7 +30,7 @@
         @if($attempt->webhookEvents->isEmpty())<p class="a-hint" style="padding:16px">No webhook was received for this attempt (redirect and reconciliation checks are not events).</p>
         @else
         <x-admin.table stack compact caption="Webhook events"><thead><tr><th>Received</th><th>Event</th><th>Signature</th><th>Processing</th></tr></thead><tbody>
-            @foreach($attempt->webhookEvents as $e)<tr><td data-label="Received">{{ $e->received_at->format('d M Y, H:i:s') }}</td><td data-label="Event">{{ $e->event_type }}@if($e->deliveries > 1)<span class="a-table__sub">{{ $e->deliveries }} deliveries</span>@endif</td><td data-label="Signature"><x-admin.badge :variant="$e->signature_status === 'valid' ? 'success' : ($e->signature_status === 'invalid' ? 'danger' : 'warning')">{{ $e->signature_status }}</x-admin.badge></td><td data-label="Processing">{{ $e->processing_status }}@if($e->error)<span class="a-table__sub">{{ $e->error }}</span>@endif</td></tr>@endforeach
+            @foreach($attempt->webhookEvents as $e)<tr><td data-label="Received">{{ $e->received_at->format('d M Y, H:i:s') }}</td><td data-label="Event">{{ $e->event_type }}@if($e->deliveries > 1)<span class="a-table__sub">{{ $e->deliveries }} deliveries</span>@endif</td><td data-label="Signature"><x-admin.badge :variant="$e->signatureVariant()">{{ $e->signatureLabel() }}</x-admin.badge></td><td data-label="Processing">{{ $e->processing_status }}@if($e->error)<span class="a-table__sub">{{ $e->error }}</span>@endif</td></tr>@endforeach
         </tbody></x-admin.table>@endif
     </x-admin.card>
     <x-admin.card title="Status history" subtitle="Built from what TKT House recorded: session, webhooks, checks, settlement and refunds.">

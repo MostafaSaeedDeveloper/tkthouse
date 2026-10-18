@@ -80,7 +80,7 @@ class TransactionController extends Controller
         // one timeline from what we actually hold; the providers offer no history API for Paymob, so this is OUR record of events
         $history = collect([['at' => $attempt->created_at, 'label' => 'Payment session opened', 'detail' => $attempt->method_code]]);
         foreach ($attempt->webhookEvents as $e) {
-            $history->push(['at' => $e->received_at, 'label' => 'Webhook: '.$e->event_type, 'detail' => 'signature '.($e->signature_status ?? '—').', '.($e->processing_status ?? '—')]);
+            $history->push(['at' => $e->received_at, 'label' => 'Webhook: '.$e->event_type, 'detail' => ($e->signatureLabel() ?: '—').', '.($e->processing_status ?? '—')]);
         }
         if ($attempt->paid_at ?? $attempt->settled_at) {
             $history->push(['at' => $attempt->paid_at ?? $attempt->settled_at, 'label' => 'Paid', 'detail' => $attempt->transaction_id ? 'transaction '.$attempt->transaction_id : null]);

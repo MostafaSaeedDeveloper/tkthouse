@@ -21,8 +21,8 @@ class WebhookAdminController extends Controller
             ],
             'fawaterak' => [
                 'label' => 'Fawaterak', 'url' => route('front.fawaterak.webhook'),
-                'events' => ['Paid (hash verified with the vendor key)', 'Failed (no hash documented: informational)', 'Cancel / expired — Fawry, Aman, Masary (hash verified)', 'Refund (no hash documented: informational, approval only)'],
-                'note' => 'Add the URL in the Fawaterak portal → Integration. It must end with _json (this one does). Store the vendor key on each merchant account.',
+                'events' => ['Paid (a trigger only: the payment is always confirmed by asking Fawaterak directly; no vendor key needed)', 'Failed (no hash documented: informational)', 'Cancel / expired — Fawry, Aman, Masary (informational)', 'Refund (no hash documented: informational, approval only)'],
+                'note' => 'Add the URL in the Fawaterak portal → Integration. It must end with _json (this one does). A vendor key is optional (it only lets us check the webhook signature).',
             ],
         ];
     }

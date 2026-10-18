@@ -24,7 +24,6 @@
                 <td data-label="Account"><span class="a-table__main">{{ $a->name }}</span></td>
                 <td data-label="Environment">{{ ucfirst($a->environment) }}</td>
                 <td data-label="Configuration">@if($a->webhook_configured_at)<x-admin.badge variant="info">Configured</x-admin.badge><span class="a-table__sub">{{ $a->webhook_configured_at->format('d M Y') }}</span>@else<x-admin.badge variant="warning">Not confirmed</x-admin.badge>@endif
-                    @if($key === 'fawaterak' && ! $a->secret('vendor_key'))<span class="a-table__sub">No vendor key: hashes cannot be checked</span>@endif
                     @if($key === 'paymob' && ! $a->secret('hmac_secret'))<span class="a-table__sub">No HMAC secret stored</span>@endif</td>
                 <td data-label="Verification">@if($s['verified'])<x-admin.badge variant="success">Verified</x-admin.badge>@else<x-admin.badge variant="default">Not verified yet</x-admin.badge>@endif</td>
                 <td data-label="Last event">{{ $ago($s['last']) }}</td>
@@ -57,7 +56,7 @@
                 <td data-label="Account">{{ $e->account?->name ?? '—' }}</td>
                 <td data-label="Event">{{ $e->event_type }}@if($e->deliveries > 1)<span class="a-table__sub">{{ $e->deliveries }} deliveries</span>@endif</td>
                 <td data-label="Transaction"><span class="a-table__sub" style="color:var(--a-ink)">{{ $e->transaction_reference ?: '—' }}</span>@if($e->attempt)<a class="a-table__sub" href="{{ route('admin.payments.transactions.show', $e->attempt) }}">{{ $e->attempt->internal_reference ?: '#'.$e->attempt->id }}</a>@endif</td>
-                <td data-label="Signature"><x-admin.badge :variant="$e->signature_status === 'valid' ? 'success' : ($e->signature_status === 'invalid' ? 'danger' : 'warning')">{{ $e->signature_status }}</x-admin.badge></td>
+                <td data-label="Signature"><x-admin.badge :variant="$e->signatureVariant()">{{ $e->signatureLabel() }}</x-admin.badge></td>
                 <td data-label="Processing">{{ str_replace('_', ' ', $e->processing_status) }}@if($e->error)<span class="a-table__sub">{{ $e->error }}</span>@endif</td>
                 <td data-label="Actions">@if($canRetry && $e->signature_status !== 'invalid' && in_array($e->processing_status, ['failed', 'needs_review', 'received'], true))<form method="POST" action="{{ route('admin.payments.webhooks.retry', $e) }}">@csrf<button class="a-btn a-btn--outline a-btn--sm" type="submit">Retry</button></form>@endif</td>
             </tr>
