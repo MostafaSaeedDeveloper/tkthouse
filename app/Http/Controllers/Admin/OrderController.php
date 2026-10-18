@@ -175,8 +175,8 @@ class OrderController extends Controller
         $history = $activities
             ->where('log_name', '!=', 'order_notes')
             ->reject(fn (Activity $activity) => in_array($activity->description, self::HIDDEN_ORDER_HISTORY_DESCRIPTIONS, true))
-            // agents who only see their own orders must not learn that/by whom an order was (re)assigned
-            ->reject(fn (Activity $activity) => ! \App\Orders\OrderAccess::canSeeAssignment($request->user()) && in_array($activity->description, ['Order assigned', 'Order reassigned', 'Order unassigned'], true))
+            // Assignment changes are not part of the order's story: they stay in the activity log (and in the Assignment card, for those who may see it)
+            ->reject(fn (Activity $activity) => in_array($activity->description, ['Order assigned', 'Order reassigned', 'Order unassigned'], true))
             ->values();
 
         $statusTransitions = $history

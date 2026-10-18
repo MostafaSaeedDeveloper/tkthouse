@@ -699,7 +699,7 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($a)->get(route('admin.orders.index'))->assertOk()->assertSee($order->order_number)->assertDontSee('Bobby Colleague')->assertDontSee('Assigned to');
 
         // people with the full order view (or assignment rights) still see everything
-        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned agents')->assertSee('Order assigned');
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned agents')->assertDontSee('Order assigned')->assertDontSee('Order reassigned');   // not in Order History for anyone
         $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned to');
     }
 
