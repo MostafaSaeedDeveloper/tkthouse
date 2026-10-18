@@ -22,7 +22,7 @@ class OrderAssignmentService
         return User::query()
             ->where('is_active', true)->where('can_receive_orders', true)
             ->get()
-            ->filter(fn (User $u) => $u->can('orders.view_assigned') || $u->can('orders.view_all') || OrderAccess::isSuper($u))
+            ->filter(fn (User $u) => OrderAccess::canHandleOrders($u))
             ->sortBy('id')->values();
     }
 
@@ -53,8 +53,7 @@ class OrderAssignmentService
 
     public function isEligible(User $user): bool
     {
-        return $user->is_active && $user->can_receive_orders
-            && ($user->can('orders.view_assigned') || $user->can('orders.view_all') || OrderAccess::isSuper($user));
+        return $user->is_active && $user->can_receive_orders && OrderAccess::canHandleOrders($user);
     }
 
     /**

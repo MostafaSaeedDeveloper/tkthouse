@@ -62,7 +62,7 @@
     </div>
     <div class="a-m-switch form-check form-switch">
         <input class="form-check-input" type="checkbox" id="u-orders" name="can_receive_orders" value="1" @checked(old('can_receive_orders', isset($user) ? $user->can_receive_orders : false))>
-        <label class="form-check-label" for="u-orders"><strong>Can receive assigned orders</strong><span class="a-hint d-block">Also needs the orders.view_assigned permission (e.g. the "Order Agent" role). Used by automatic assignment.</span></label>
+        <label class="form-check-label" for="u-orders"><strong>Can receive assigned orders</strong><span class="a-hint d-block">The user also needs to be able to open Orders (orders.view). They then see only the orders assigned to them, unless they have orders.view_all.</span></label>
     </div>
 </x-admin.form-section>
 

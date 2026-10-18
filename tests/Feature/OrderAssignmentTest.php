@@ -185,7 +185,7 @@ class OrderAssignmentTest extends TestCase
         $o = $this->order();
         $inactive = $this->agent(['can_receive_orders' => true, 'is_active' => false]);
         $optedOut = $this->agent(['can_receive_orders' => false]);
-        $nobody = $this->user(null, ['orders.view'], ['can_receive_orders' => true]);
+        $nobody = $this->user(null, ['dashboard.view'], ['can_receive_orders' => true]); // ticked, but cannot open Orders at all
 
         foreach ([$inactive, $optedOut, $nobody] as $bad) {
             $this->actingAs($m)->post(route('admin.orders.assign', $o), ['assignee_id' => $bad->id])->assertSessionHasErrors('assignee');
@@ -701,5 +701,25 @@ class OrderAssignmentTest extends TestCase
         // people with the full order view (or assignment rights) still see everything
         $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned agents')->assertSee('Order assigned');
         $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned to');
+    }
+
+    public function test_ticking_can_receive_orders_is_enough_for_someone_who_can_open_orders(): void
+    {
+        $this->on();
+        $svc = app(OrderAssignmentService::class);
+        $admin = $this->user(null, ['orders.view'], ['can_receive_orders' => true]);   // e.g. an "Administrator" role without orders.view_assigned
+        $notTicked = $this->user(null, ['orders.view'], ['can_receive_orders' => false]);
+
+        $this->assertTrue($svc->isEligible($admin));
+        $this->assertTrue($svc->eligibleUsers()->contains('id', $admin->id));
+        $this->assertFalse($svc->isEligible($notTicked));
+
+        $mine = $this->order(); $other = $this->order();
+        $svc->assign($mine, $admin, $this->superAdmin());
+
+        // they see only their own order (not everything), so the new flag never widens access to all orders
+        $this->actingAs($admin)->get(route('admin.orders.index'))->assertOk()->assertSee($mine->order_number)->assertDontSee($other->order_number);
+        $this->actingAs($admin)->get(route('admin.orders.show', $other))->assertNotFound();
+        $this->assertSame(OrderAccess::ASSIGNED, OrderAccess::level($admin));
     }
 }

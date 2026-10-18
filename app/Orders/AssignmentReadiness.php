@@ -47,7 +47,7 @@ class AssignmentReadiness
     public function lockedOut()
     {
         return User::query()->where('is_active', true)->get()
-            ->filter(fn (User $u) => $u->can('orders.view') && ! OrderAccess::isSuper($u) && ! $u->can('orders.view_all') && ! $u->can('orders.view_assigned'))
+            ->filter(fn (User $u) => $u->can('orders.view') && ! OrderAccess::isSuper($u) && ! $u->can('orders.view_all') && ! $u->can('orders.view_assigned') && ! $u->can_receive_orders)
             ->values();
     }
 

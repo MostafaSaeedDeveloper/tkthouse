@@ -48,7 +48,15 @@ final class OrderAccess
             return self::ALL;
         }
 
-        return $user->can('orders.view_assigned') ? self::ASSIGNED : self::NONE;
+        // "Can receive assigned orders" ticked by an admin is enough for someone who can open Orders: they see the orders assigned to them.
+        return ($user->can('orders.view_assigned') || ($user->can_receive_orders && $user->can('orders.view'))) ? self::ASSIGNED : self::NONE;
+    }
+
+    /** May this user be given orders: an order-handling permission, or the "can receive orders" flag on top of orders.view. */
+    public static function canHandleOrders(User $user): bool
+    {
+        return self::isSuper($user) || $user->can('orders.view_all') || $user->can('orders.view_assigned')
+            || ($user->can_receive_orders && $user->can('orders.view'));
     }
 
     /** True when the user is restricted by assignment (global dashboards/reports must not be shown to them). */
