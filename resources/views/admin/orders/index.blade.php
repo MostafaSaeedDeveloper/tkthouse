@@ -121,10 +121,10 @@
                     @endif
                 </td>
                 <td data-label="Tickets" class="c-tickets">
-                    <span class="a-table__main">{{ $ticketCount }}</span>
+                    <div class="a-ord-tix"><span class="a-table__main">{{ $ticketCount }}</span>
                     @if($ticketTypes->isNotEmpty())
                         <button type="button" class="a-btn a-btn--outline a-btn--sm a-ord-tixbtn" data-ord-tix-open data-number="{{ $number }}" data-types="{{ json_encode($ticketTypes->all()) }}" aria-haspopup="dialog" title="View tickets" aria-label="View tickets of order {{ $number }}"><i class="fa fa-ticket" aria-hidden="true"></i></button>
-                    @endif
+                    @endif</div>
                 </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
