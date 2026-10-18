@@ -82,7 +82,8 @@
     <x-admin.table stack class="a-ordt" caption="Orders">
         <thead>
             <tr>
-                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}">@if($canBulk)<input type="checkbox" class="a-ord-check" data-bulk-all aria-label="Select all orders on this page" form="bulkAssignForm">@endif<a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
+                @if($canBulk)<th scope="col" class="c-check"><input type="checkbox" class="a-ord-check" data-bulk-all aria-label="Select all orders on this page" form="bulkAssignForm"></th>@endif
+                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}"><a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-customer">Customer</th>
                 <th scope="col" class="c-event">Event</th>
                 <th scope="col" class="c-tickets a-num">Tickets</th>
@@ -107,7 +108,8 @@
                 $customerName = $order->customer?->full_name ?: 'Unknown customer';
             @endphp
             <tr>
-                <td data-label="Order" class="c-order">@if($canBulk)<input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}">@endif<a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
+                @if($canBulk)<td class="c-check" data-label=""><input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}"></td>@endif
+                <td data-label="Order" class="c-order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
                     <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span></td>
                 <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
                 <td data-label="Event" class="c-event">
