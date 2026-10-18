@@ -15,9 +15,21 @@ class PaymentMethodController extends Controller
 {
     public function index()
     {
-        $methods = PaymentMethod::query()->orderByDesc('is_active')->orderBy('name')->get();
+        $methods = PaymentMethod::query()->orderByDesc('is_active')->orderBy('sort_order')->orderBy('id')->get();
 
-        return view('admin/settings/payment-methods/index', compact('methods'));
+        // Which merchant accounts can take each method (read from the accounts' own supported-method lists).
+        $accounts = \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->get();
+        $byMethod = $methods->mapWithKeys(fn ($m) => [$m->code => $accounts->filter(fn ($a) => in_array($m->code, $a->supportedMethods(), true))->values()]);
+
+        // Potential duplicates among EXISTING rows are only flagged, never merged or renamed.
+        $dupes = $methods->filter(fn ($m) => $methods->where('id', '!=', $m->id)->contains(
+            fn ($o) => $o->provider === $m->provider && (mb_strtolower($o->name) === mb_strtolower($m->name)
+                || ($m->providerMethodIdentifier() && $o->providerMethodIdentifier() === $m->providerMethodIdentifier()))
+        ))->pluck('id');
+
+        $used = \App\Models\Order::withTrashed()->whereIn('payment_method', $methods->pluck('code'))->distinct()->pluck('payment_method')->all();
+
+        return view('admin/settings/payment-methods/index', compact('methods', 'byMethod', 'dupes', 'used'));
     }
 
     public function create()
@@ -52,6 +64,10 @@ class PaymentMethodController extends Controller
     public function fawaterakMethods(Request $request)
     {
         $apiKey = trim((string) $request->query('api_key', ''));
+        if ($apiKey === '' && $request->filled('method')) { // stored key: used server-side, never sent to the browser
+            $stored = PaymentMethod::query()->where('provider', 'fawaterak')->find((int) $request->query('method'));
+            $apiKey = trim((string) (is_array($stored?->config) ? ($stored->config['api_key'] ?? '') : ''));
+        }
         if ($apiKey === '') {
             return response()->json(['methods' => []]);
         }
@@ -120,6 +136,13 @@ class PaymentMethodController extends Controller
 
     public function destroy(PaymentMethod $paymentMethod)
     {
+        // Codes are referenced by historical orders and payment attempts: such a method can only be disabled.
+        $referenced = \App\Models\Order::withTrashed()->where('payment_method', $paymentMethod->code)->exists()
+            || \App\Models\PaymentAttempt::query()->where('method_code', $paymentMethod->code)->exists();
+        if ($referenced) {
+            return back()->with('error', 'This method is used by existing orders or payment attempts, so it cannot be deleted. Disable it instead.');
+        }
+
         $this->deleteCheckoutIcon($paymentMethod->checkout_icon);
 
         $paymentMethod->delete();
@@ -143,6 +166,7 @@ class PaymentMethodController extends Controller
             ],
             'provider' => ['required', Rule::in(['manual', 'paymob', 'fawaterak'])],
             'is_active' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'paymob_api_key' => ['nullable', 'string'],
             'paymob_iframe_id' => ['nullable', 'string', 'max:50'],
             'paymob_integration_id' => ['nullable', 'string', 'max:50'],
@@ -150,18 +174,34 @@ class PaymentMethodController extends Controller
             'fawaterak_provider_key' => ['nullable', 'string', 'max:120'],
         ]);
 
+        // A blank secret keeps the stored one (secrets are never sent back to the browser).
+        $old = is_array($method?->config) ? $method->config : [];
         $config = [];
         if ($validated['provider'] === 'paymob') {
             $config = [
-                'api_key' => (string) ($validated['paymob_api_key'] ?? ''),
+                'api_key' => (string) (filled($validated['paymob_api_key'] ?? null) ? $validated['paymob_api_key'] : ($old['api_key'] ?? '')),
                 'iframe_id' => (string) ($validated['paymob_iframe_id'] ?? ''),
                 'integration_id' => (string) ($validated['paymob_integration_id'] ?? ''),
             ];
         } elseif ($validated['provider'] === 'fawaterak') {
             $config = [
-                'api_key' => (string) ($validated['fawaterak_api_key'] ?? ''),
+                'api_key' => (string) (filled($validated['fawaterak_api_key'] ?? null) ? $validated['fawaterak_api_key'] : ($old['api_key'] ?? '')),
                 'provider_key' => (string) ($validated['fawaterak_provider_key'] ?? ''),
             ];
+        }
+
+        // Unintended duplicates: same provider + same name, or same provider + same provider-side identifier.
+        $identifier = $validated['provider'] === 'paymob' ? ($config['integration_id'] ?? '') : ($validated['provider'] === 'fawaterak' ? ($config['provider_key'] ?? '') : '');
+        $others = PaymentMethod::query()->where('provider', $validated['provider'])->when($method, fn ($q) => $q->where('id', '!=', $method->id))->get();
+        $errors = [];
+        if ($others->contains(fn ($o) => mb_strtolower($o->name) === mb_strtolower($validated['name']))) {
+            $errors['name'] = 'Another '.$validated['provider'].' method already has this name.';
+        }
+        if ($identifier !== '' && $others->contains(fn ($o) => $o->providerMethodIdentifier() === $identifier)) {
+            $errors[$validated['provider'] === 'paymob' ? 'paymob_integration_id' : 'fawaterak_provider_key'] = 'Another method of this provider already uses this provider identifier.';
+        }
+        if ($errors) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
         }
 
         $iconPath = $this->migrateLegacyCheckoutIconToPublic($method?->checkout_icon);
@@ -178,6 +218,7 @@ class PaymentMethodController extends Controller
             'code' => strtolower($validated['code']),
             'provider' => $validated['provider'],
             'is_active' => $request->boolean('is_active'),
+            'sort_order' => (int) ($validated['sort_order'] ?? 0),
             'config' => $config,
         ];
     }

@@ -18,6 +18,11 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // Order Assignment: agents get their own dashboard (never the global numbers).
+        if (\App\Orders\OrderAccess::scoped($request->user())) {
+            return $this->agentDashboard($request);
+        }
+
         $userManagedEvents = $request->user()?->managedEvents ?? collect();
         $userManagedEventIds = $userManagedEvents->pluck('id')->all();
         if ($userManagedEvents->count() === 1) {
@@ -32,10 +37,11 @@ class DashboardController extends Controller
 
         [$startAt, $endAt, $rangeLabel] = $this->resolveRange($request, $selectedRange);
 
+        // archived events stay selectable (historical numbers) but come last and are marked
         $eventOptions = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
+            ->whereIn('status', ['active', 'sold_out', Event::ARCHIVED])
             ->when(! empty($userManagedEventIds), fn ($q) => $q->whereIn('id', $userManagedEventIds))
-            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'sold_out' THEN 1 ELSE 2 END")
             ->orderBy('event_date')
             ->orderBy('name')
             ->get(['id', 'name', 'status']);
@@ -400,4 +406,24 @@ class DashboardController extends Controller
         $query->where('event_id', $event->id);
     }
 
+
+    private function agentDashboard(Request $request)
+    {
+        $user = $request->user();
+        abort_if(\App\Orders\OrderAccess::level($user) === \App\Orders\OrderAccess::NONE, 403, 'You have no order access. Ask an administrator for the orders.view_assigned permission.');
+
+        $from = now()->startOfMonth();
+        $to = now()->endOfDay();
+        $report = app(\App\Orders\AgentReport::class)->mine($user, $from, $to);
+
+        $orders = \App\Models\Order::query()->visibleTo($user);
+        $totals = [
+            'all' => (clone $orders)->count(),
+            'pending' => (clone $orders)->whereIn('status', \App\Orders\AgentReport::PENDING)->count(),
+            'paid' => (clone $orders)->where('status', 'paid')->count(),
+            'canceled' => (clone $orders)->whereIn('status', \App\Orders\AgentReport::CANCELED)->count(),
+        ];
+
+        return view('admin.agent-dashboard', ['totals' => $totals, 'row' => $report['row'], 'from' => $from, 'to' => $to]);
+    }
 }

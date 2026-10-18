@@ -10,4 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('orders:expire-pending-payments')->everyMinute();
 Schedule::command('orders:reconcile-payments')->everyTwoMinutes()->withoutOverlapping();
+Schedule::call(fn () => app(\App\Services\Payments\Routing\CheckoutRoutingService::class)->prune())->name('checkout:prune-routings')->hourly();
+Schedule::command('payments:reconcile-refunds')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('payments:sync')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('orders:retry-ticket-issuance')->everyFiveMinutes()->withoutOverlapping();

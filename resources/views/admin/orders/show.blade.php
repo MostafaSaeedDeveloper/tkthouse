@@ -160,17 +160,49 @@
       @endforelse
     </x-admin.card>
 
-    <x-admin.card flush title="Payment Attempts" :subtitle="$attempts->count().' attempt(s)'">
+    @php
+        $primary = $attempts->firstWhere('status', 'paid') ?? $attempts->sortByDesc('id')->first();
+        $canTx = auth()->user()->can('payments.transactions.view');
+        $canInq = auth()->user()->can('payments.transactions.inquire') && \App\Orders\OrderAccess::canManage($order, auth()->user());
+    @endphp
+    <x-admin.card title="Payment Information" subtitle="Our order reference is separate from every provider reference.">
+        @if(! $primary)
+            <x-admin.empty icon="fa-credit-card" title="No online payment yet" text="Online payment attempts appear when the customer starts paying." />
+        @else
+        <dl class="a-kv">
+            <div><dt>Payment provider</dt><dd>{{ ucfirst((string) $primary->provider) }}</dd></div>
+            @if($canSeeAccounts)<div><dt>Merchant account</dt><dd>{{ $primary->integrationAccount?->name ?? 'Legacy configuration' }}</dd></div>@endif
+            <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel ?: ($primary->method_code ?: '—') }}</dd></div>
+            <div><dt>Order reference</dt><dd>#{{ $order->order_number }}</dd></div>
+            <div><dt>Payment reference</dt><dd>{{ $primary->internal_reference ?: 'Legacy attempt' }}@if($primary->internal_reference) <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-copy-text="{{ $primary->internal_reference }}" aria-label="Copy payment reference"><i class="fa fa-copy"></i></button>@endif</dd></div>
+            <div><dt>Provider transaction ID</dt><dd>{{ $primary->transaction_id ?: '—' }}@if($primary->transaction_id) <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-copy-text="{{ $primary->transaction_id }}" aria-label="Copy transaction ID"><i class="fa fa-copy"></i></button>@endif</dd></div>
+            @if($primary->provider_reference)<div><dt>Provider reference number</dt><dd>{{ $primary->provider_reference }}</dd></div>@endif
+            <div><dt>{{ $primary->status === 'paid' ? 'Paid amount' : 'Amount requested' }}</dt><dd>{{ $money($primary->amount) }}</dd></div>
+            <div><dt>Payment date</dt><dd>{{ ($primary->paid_at ?? $primary->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
+            <div><dt>Current status</dt><dd><x-admin.status :status="$primary->status" kind="payment" /></dd></div>
+            <div><dt>Last verification</dt><dd>{{ $primary->last_checked_at?->diffForHumans() ?? 'never checked' }}</dd></div>
+        </dl>
+        <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
+            @if($canInq)<form method="POST" action="{{ route('admin.payments.transactions.inquire', $primary) }}" data-a-loading>@csrf<button class="a-btn a-btn--outline" type="submit"><i class="fa fa-rotate"></i> Check payment status</button></form>@endif
+            @if($canTx)<a class="a-btn a-btn--outline" href="{{ route('admin.payments.transactions.show', $primary) }}">View transaction details</a>@endif
+            @includeIf('admin.orders._refund-actions', ['attempt' => $primary])
+        </div>
+        @endif
+    </x-admin.card>
+
+    <x-admin.card flush title="Payment Attempts History" :subtitle="$attempts->count().' attempt(s) — a retry never overwrites an earlier attempt'">
       @if($attempts->isEmpty())
         <x-admin.empty icon="fa-credit-card" title="No payment attempts" text="Attempts appear when the customer starts paying online." />
       @else
         <x-admin.table stack compact caption="Payment attempts">
-          <thead><tr><th>Gateway</th><th>Reference</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <thead><tr><th>Reference</th><th>Gateway</th>@if($canSeeAccounts)<th>Account</th>@endif<th>Provider ID</th><th class="a-num">Amount</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
           @foreach($attempts as $a)
             <tr>
+              <td data-label="Reference">@if($canTx)<a class="a-table__main" href="{{ route('admin.payments.transactions.show', $a) }}">{{ $a->internal_reference ?: '#'.$a->id }}</a>@else{{ $a->internal_reference ?: '#'.$a->id }}@endif</td>
               <td data-label="Gateway">{{ ucfirst((string) $a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
-              <td data-label="Reference" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
+              @if($canSeeAccounts)<td data-label="Account">{{ $a->integrationAccount?->name ?? 'Legacy' }}</td>@endif
+              <td data-label="Provider ID" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
               <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
               <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
               <td data-label="Date">{{ $a->created_at?->format('d M Y, H:i') }}</td>
@@ -180,6 +212,17 @@
         </x-admin.table>
       @endif
     </x-admin.card>
+
+    @can('payments.refunds.view')
+    @php $orderRefunds = \App\Models\PaymentRefund::query()->where('order_id', $order->id)->latest('id')->get(); @endphp
+    <x-admin.card flush title="Refund History" :subtitle="$orderRefunds->count().' refund record(s) — financial status only; the order and tickets are not changed'">
+        @if($orderRefunds->isEmpty())<p class="a-hint" style="padding:16px">No refunds recorded for this order.</p>
+        @else
+        <x-admin.table stack compact caption="Refunds"><thead><tr><th>Reference</th><th>Mode</th><th class="a-num">Amount</th><th>Status</th><th>Requested</th></tr></thead><tbody>
+            @foreach($orderRefunds as $r)<tr><td data-label="Reference"><a class="a-table__main" href="{{ route('admin.payments.refunds.show', $r) }}">{{ $r->internal_reference }}</a></td><td data-label="Mode">{{ $r->mode === 'api' ? 'Provider API' : 'Manual' }}</td><td data-label="Amount" class="a-num">{{ $r->amount() }} {{ $r->currency }}</td><td data-label="Status">@include('admin.payments._refund-status', ['refund' => $r])</td><td data-label="Requested">{{ $r->requested_at->format('d M Y, H:i') }}</td></tr>@endforeach
+        </tbody></x-admin.table>@endif
+    </x-admin.card>
+    @endcan
 
     <x-admin.card title="Internal Notes" :subtitle="$notes->count().' notes'">
       @forelse($notes as $note)
@@ -207,6 +250,53 @@
   </div>
 
   <div class="a-ord-col">
+    @if($canSeeAccounts)
+    <x-admin.card title="Merchant account" subtitle="Where this order's online payments are collected.">
+        <dl class="a-kv">
+            <div><dt>Pinned account</dt><dd>@if($pinnedAccount)<strong>{{ $pinnedAccount->name }}</strong> <span class="a-muted">{{ ucfirst($pinnedAccount->provider) }} · {{ $pinnedAccount->environment }}</span>@else<span class="a-muted">Legacy configuration</span>@endif</dd></div>
+        </dl>
+        @if($switchTargets->isNotEmpty())
+        <form method="POST" action="{{ route('admin.orders.payment-account.switch', $order) }}" data-a-loading data-a-confirm="Switch the merchant account? Every open payment is checked at its gateway first; the switch is refused if money may be collected." data-a-confirm-ok="Switch">
+            @csrf
+            <x-admin.field label="Switch to" name="integration_account_id" for="pa-account"><select id="pa-account" class="form-select" name="integration_account_id">@foreach($switchTargets as $t)<option value="{{ $t->id }}">{{ $t->name }} · {{ ucfirst($t->provider) }}</option>@endforeach</select></x-admin.field>
+            <x-admin.field label="Reason (required)" name="reason" for="pa-reason"><input id="pa-reason" class="form-control" name="reason" minlength="5" maxlength="300" required></x-admin.field>
+            @error('account')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+            <div class="a-form-actions"><button class="a-btn a-btn--danger" type="submit">Switch merchant account</button></div>
+        </form>
+        @endif
+    </x-admin.card>
+    @endif
+
+    @if($assignmentOn)
+    <x-admin.card title="Assignment" subtitle="Who is responsible for this order.">
+        <dl class="a-kv">
+            <div><dt>Assigned to</dt><dd>@if($order->assignedUser)<strong>{{ $order->assignedUser->name }}</strong>@else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif</dd></div>
+            @if($order->assigned_at)<div><dt>Assigned by</dt><dd>{{ $order->assignedBy?->name ?? 'Automatic' }} · {{ $order->assigned_at->format('d M Y, H:i') }}</dd></div>@endif
+            @if($order->sold_at)<div><dt>Sale attributed to</dt><dd>{{ $order->soldBy?->name ?? 'Unattributed' }} · {{ $order->sold_at->format('d M Y, H:i') }}</dd></div>@endif
+        </dl>
+        @if($canAssign)
+        <form method="POST" action="{{ route('admin.orders.assign', $order) }}" data-a-loading class="a-form-grid">
+            @csrf
+            <x-admin.field label="Change assignee" name="assignee_id" for="oa-assignee">
+                <select id="oa-assignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}" @selected($order->assigned_user_id === $a->id)>{{ $a->name }}</option>@endforeach</select>
+            </x-admin.field>
+            <x-admin.field label="Reason (optional)" name="reason" for="oa-reason"><input id="oa-reason" class="form-control" name="reason" maxlength="300"></x-admin.field>
+            <p class="a-hint is-full">Reassigning never changes the payment account or any payment attempt of this order.</p>
+            <div class="a-form-actions is-full"><button class="a-btn a-btn--primary" type="submit">Save assignee</button></div>
+        </form>
+        @endif
+        @if($assignmentHistory->isNotEmpty())
+            <h3 class="a-m-section__title" style="margin-top:16px">History</h3>
+            <ul class="a-timeline">
+                @foreach($assignmentHistory as $h)
+                    <li><strong>{{ $h->meta['to'] ?? 'Unassigned' }}</strong> <span class="a-muted">from {{ $h->meta['from'] ?? 'Unassigned' }}</span><br>
+                        <span class="a-table__sub">{{ $h->created_at?->format('d M Y, H:i') }} · by {{ $h->meta['by'] ?? 'system' }} · {{ str_replace('_', ' ', $h->source) }}@if($h->reason) · “{{ $h->reason }}”@endif</span></li>
+                @endforeach
+            </ul>
+        @endif
+    </x-admin.card>
+    @endif
+
     <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
       <div class="a-ord-who">
         <div class="a-ord-avatar" aria-hidden="true">{{ $customerInitials ?: 'NA' }}</div>
@@ -344,3 +434,4 @@
 })();
 </script>
 @endsection
+@push('scripts')<script>document.querySelectorAll('[data-copy-text]').forEach(function (b) { b.addEventListener('click', function () { navigator.clipboard.writeText(b.dataset.copyText); b.innerHTML = '<i class="fa fa-check"></i>'; setTimeout(function () { b.innerHTML = '<i class="fa fa-copy"></i>'; }, 1200); }); });</script>@endpush

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\EventInsightsController;
 use App\Http\Controllers\Admin\GuestListController;
+use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController;
@@ -46,6 +47,7 @@ Route::match(['GET','POST'], '/payments/paymob/callback', [PaymentController::cl
 Route::get('/t/{ticketNumber}', [FrontTicketController::class, 'shortDownload'])
     ->name('front.tickets.short-download');
 Route::get('/tickets/public/{ticketNumber}/download', [FrontTicketController::class, 'publicDownloadByNumber'])->name('front.tickets.public-download');
+Route::post('/payments/fawaterak/webhook_json', \App\Http\Controllers\FawaterakWebhookController::class)->middleware('throttle:240,1')->name('front.fawaterak.webhook');
 Route::get('/payments/fawaterak/callback/{order}/{token}', [PaymentController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
 
 Route::middleware('guest')->group(function () {
@@ -101,11 +103,11 @@ Auth::routes(['register' => false]);
 Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::class])->prefix('dashboard')->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('dashboard');
 
-    Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware('permission:dashboard.view')->name('events.dashboard');
-    Route::get('events/{event}/report', [ReportController::class, 'event'])->middleware('permission:reports.view')->name('events.report');
+    Route::get('events/{event}/dashboard', [EventInsightsController::class, 'dashboard'])->middleware(['permission:dashboard.view', 'orders.global'])->name('events.dashboard');
+    Route::get('events/{event}/report', [ReportController::class, 'event'])->middleware(['permission:reports.view', 'orders.global'])->name('events.report');
 
-    Route::resource('users', UserController::class)->except('show')
-        ->middlewareFor('index', 'permission:users.view')
+    Route::resource('users', UserController::class)
+        ->middlewareFor(['index', 'show'], 'permission:users.view')
         ->middlewareFor(['create', 'store'], 'permission:users.create')
         ->middlewareFor(['edit', 'update'], 'permission:users.update')
         ->middlewareFor('destroy', 'permission:users.delete');
@@ -122,6 +124,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor(['edit', 'update'], 'permission:permissions.update')
         ->middlewareFor('destroy', 'permission:permissions.delete');
 
+    Route::post('events/{event}/archive', [EventController::class, 'archive'])->middleware('permission:events.archive')->name('events.archive');
+    Route::post('events/{event}/restore', [EventController::class, 'restore'])->middleware('permission:events.restore')->name('events.restore');
     Route::resource('events', EventController::class)
         ->middlewareFor(['index', 'show'], 'permission:events.view')
         ->middlewareFor(['create', 'store'], 'permission:events.create')
@@ -135,12 +139,12 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor('destroy', 'permission:tickets.delete');
 
 
-    Route::get('guest-list', [GuestListController::class, 'index'])->middleware('permission:tickets.view')->name('guest-list.index');
-    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware('permission:tickets.create')->name('guest-list.create');
-    Route::post('guest-list', [GuestListController::class, 'store'])->middleware('permission:tickets.create')->name('guest-list.store');
-    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware('permission:tickets.create')->name('guest-list.import');
-    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware('permission:tickets.view')->name('guest-list.export');
-    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware('permission:tickets.view')->name('guest-list.template');
+    Route::get('guest-list', [GuestListController::class, 'index'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.index');
+    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.create');
+    Route::post('guest-list', [GuestListController::class, 'store'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.store');
+    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.import');
+    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.export');
+    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.template');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
     Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
@@ -180,11 +184,58 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
-    Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view')->name('payments.index');
-    Route::get('reports', [ReportController::class, 'index'])->middleware('permission:reports.view')->name('reports.index');
+    Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view|payments.transactions.view')->name('payments.index');
+    // Provider-side transactions (lookup by id / CSV import) and provider sync. No order, no settlement: see docs/v2-provider-capabilities-audit.md
+    Route::get('payments/imported', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'index'])->middleware('permission:payments.accounts.view|payments.transactions.import')->name('payments.imported');
+    Route::post('payments/imported/lookup', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'lookup'])->middleware('permission:payments.transactions.import')->name('payments.imported.lookup');
+    Route::post('payments/imported/csv', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvUpload'])->middleware('permission:payments.transactions.import')->name('payments.imported.csv');
+    Route::post('payments/imported/csv/import', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvImport'])->middleware('permission:payments.transactions.import')->name('payments.imported.csv.import');
+    Route::get('payments/imported/{external}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'show'])->whereNumber('external')->middleware('permission:payments.accounts.view|payments.transactions.import')->name('payments.imported.show');
+    Route::post('payments/imported/{external}/verify', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'verify'])->whereNumber('external')->middleware('permission:payments.transactions.inquire')->name('payments.imported.verify');
+    Route::post('payments/sync/{account}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'sync'])->whereNumber('account')->middleware('permission:payments.transactions.inquire')->name('payments.sync');
+    Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
+    Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
+    Route::post('payments/transactions/{attempt}/inquire', [\App\Http\Controllers\Admin\TransactionController::class, 'inquire'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.inquire');
+    $rc = \App\Http\Controllers\Admin\RefundController::class;
+    Route::get('payments/refunds', [$rc, 'index'])->middleware('permission:payments.refunds.view')->name('payments.refunds');
+    Route::get('payments/refunds/{refund}', [$rc, 'show'])->middleware('permission:payments.refunds.view')->name('payments.refunds.show');
+    Route::post('payments/transactions/{attempt}/refunds', [$rc, 'store'])->middleware('permission:payments.refunds.create')->name('payments.refunds.store');
+    Route::post('payments/refunds/{refund}/check', [$rc, 'check'])->middleware('permission:payments.refunds.create|payments.refunds.approve|payments.transactions.inquire')->name('payments.refunds.check');
+    Route::post('payments/refunds/{refund}/approve', [$rc, 'approve'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.approve');
+    Route::post('payments/refunds/{refund}/reject', [$rc, 'reject'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.reject');
+    Route::post('payments/refunds/{refund}/submitted', [$rc, 'submitted'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.submitted');
+    Route::post('payments/refunds/{refund}/confirm', [$rc, 'confirm'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.confirm');
+    Route::post('payments/refunds/{refund}/fail', [$rc, 'fail'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.fail');
+    Route::get('settings/payments/webhooks', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'index'])->middleware('permission:payments.webhooks.view')->name('payments.webhooks');
+    Route::post('settings/payments/webhooks/events/{event}/retry', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'retry'])->middleware('permission:payments.transactions.inquire')->name('payments.webhooks.retry');
+    Route::post('settings/payments/webhooks/accounts/{account}/configured', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'markConfigured'])->middleware('permission:payments.accounts.manage|settings.payment-accounts.manage')->name('payments.webhooks.configured');
+    Route::post('orders/{order}/assign', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'assign'])->middleware('permission:orders.view')->name('orders.assign');
+    Route::post('orders/{order}/payment-account', [\App\Http\Controllers\Admin\OrderPaymentAccountController::class, 'switch'])->middleware('permission:orders.reroute_payment')->name('orders.payment-account.switch');
+    Route::post('orders/assign-bulk', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'bulk'])->middleware('permission:orders.view')->name('orders.assign.bulk');
+    Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
+    Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
 
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
+
+    Route::get('settings/integrations', [IntegrationController::class, 'index'])->middleware('permission:settings.integrations.view')->name('integrations.index');
+    Route::get('settings/payments/providers', [IntegrationController::class, 'providers'])->middleware('permission:payments.accounts.view|settings.integrations.view')->name('payments.providers');
+    Route::post('settings/integrations/accounts/{account}/default', [IntegrationController::class, 'makeDefault'])->middleware('permission:payments.accounts.manage|settings.payment-accounts.manage')->name('integrations.default');
+    Route::post('settings/integrations/{provider}', [IntegrationController::class, 'store'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.store');
+    Route::put('settings/integrations/accounts/{account}', [IntegrationController::class, 'update'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.update');
+    Route::post('settings/integrations/accounts/{account}/test', [IntegrationController::class, 'test'])->middleware('permission:payments.accounts.manage|settings.integrations.test')->name('integrations.test');
+    Route::post('settings/integrations/accounts/{account}/enable', [IntegrationController::class, 'enable'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.enable');
+    Route::post('settings/integrations/accounts/{account}/disable', [IntegrationController::class, 'disable'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.disable');
+    Route::post('settings/integrations/accounts/{account}/attest', [IntegrationController::class, 'attest'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.attest');
+    Route::post('settings/integrations/accounts/{account}/refund-verified', [IntegrationController::class, 'refundVerified'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.refund-verified');
+    Route::post('settings/integrations/accounts/{account}/archive', [IntegrationController::class, 'archive'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.archive');
+    Route::delete('settings/integrations/accounts/{account}', [IntegrationController::class, 'destroy'])->middleware('permission:payments.accounts.manage|settings.integrations.manage')->name('integrations.destroy');
+
+    Route::post('settings/orders/grant-view-all', [SystemSettingController::class, 'grantViewAll'])->middleware('permission:settings.orders')->name('settings.orders.grant-view-all');
+    Route::post('settings/notifications/test', [SystemSettingController::class, 'testNotification'])->middleware('permission:settings.integrations.test')->name('settings.notifications.test');
+
+    Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|payments|notifications|security')->name('settings.section');
+    Route::put('settings/{section}', [SystemSettingController::class, 'save'])->where('section', 'general|branding|events|orders|payments|notifications|security')->name('settings.section.update');
 
     Route::resource('payment-methods', PaymentMethodController::class)->except('show')
         ->middlewareFor('index', 'permission:payment-methods.view')

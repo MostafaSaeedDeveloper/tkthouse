@@ -11,11 +11,11 @@ use RuntimeException;
 
 class FawaterakService
 {
-    public function createCheckoutData(Order $order): array
+    public function createCheckoutData(Order $order, ?\App\Models\IntegrationAccount $account = null, ?PaymentMethod $paymentMethod = null): array
     {
         PaymentEnvironment::assertLiveGatewaysAllowed('fawaterak');
 
-        $method = PaymentMethod::query()
+        $method = $paymentMethod ?? PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
             ->where('provider', 'fawaterak')
             ->where('is_active', true)
@@ -26,13 +26,13 @@ class FawaterakService
         }
 
         $config = is_array($method->config) ? $method->config : [];
-        $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
+        $apiKey = $account ? trim((string) $account->secret('api_key')) : trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
 
         if ($apiKey === '') {
             throw new RuntimeException('Fawaterak API key is not configured.');
         }
 
-        $providerKey = trim((string) ($config['provider_key'] ?? ''));
+        $providerKey = $account ? trim((string) $account->field($account->methodField($method->code))) : trim((string) ($config['provider_key'] ?? ''));
 
         if ($providerKey === '') {
             throw new RuntimeException('Fawaterak payment method ID (provider_key) is not configured.');
@@ -89,7 +89,7 @@ class FawaterakService
             ],
         ];
 
-        $response = Http::baseUrl($this->apiBaseUrl())
+        $response = Http::baseUrl($this->apiBaseUrl($account))
             ->timeout(20)
             ->withToken($apiKey)
             ->withHeaders([
@@ -139,6 +139,7 @@ class FawaterakService
         return [
             'url' => $redirectUrl,
             'transaction_id' => $this->extractTransactionId($json),
+            'invoice_key' => (string) (data_get($json, 'data.invoice_key') ?: ''),
             'transaction_url' => $this->extractTransactionUrl($json),
             'provider_payload' => $json,
         ];
@@ -149,12 +150,12 @@ class FawaterakService
      *
      * @return array<string, mixed>
      */
-    public function inquireInvoice(PaymentMethod $method, string $invoiceId): array
+    public function inquireInvoice(?PaymentMethod $method, string $invoiceId, ?\App\Models\IntegrationAccount $account = null): array
     {
         PaymentEnvironment::assertLiveGatewaysAllowed('fawaterak');
 
-        $config = is_array($method->config) ? $method->config : [];
-        $apiKey = trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
+        $config = is_array($method?->config) ? $method->config : [];
+        $apiKey = $account ? trim((string) $account->secret('api_key')) : trim((string) ($config['api_key'] ?? config('services.fawaterak.api_key', '')));
 
         if ($apiKey === '') {
             throw new RuntimeException('Fawaterak API key is not configured.');
@@ -162,7 +163,7 @@ class FawaterakService
 
         $path = str_replace('{id}', rawurlencode($invoiceId), (string) config('payments.fawaterak.invoice_status_path'));
 
-        return (array) Http::baseUrl($this->apiBaseUrl())
+        return (array) Http::baseUrl($this->apiBaseUrl($account))
             ->timeout(20)
             ->withToken($apiKey)
             ->withHeaders(['Accept' => 'application/json'])
@@ -240,9 +241,9 @@ class FawaterakService
         return '';
     }
 
-    private function apiBaseUrl(): string
+    private function apiBaseUrl(?\App\Models\IntegrationAccount $account = null): string
     {
-        $base = rtrim((string) config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2'), '/');
+        $base = rtrim((string) ($account?->field('api_url') ?: config('services.fawaterak.api_url', 'https://app.fawaterk.com/api/v2')), '/');
 
         if (! str_contains(strtolower($base), '/api/v2')) {
             $base .= '/api/v2';

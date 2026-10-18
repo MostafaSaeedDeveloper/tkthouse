@@ -33,11 +33,14 @@ class SearchController extends Controller
             }
             if ($user->can('attendees.view')) {
                 $results['customers'] = Customer::query()
+                    ->when(\App\Orders\OrderAccess::scoped($user), fn ($c) => $c->whereHas('orders', fn ($o) => $o->visibleTo($user)))
                     ->where(fn ($c) => $c->where('email', 'like', $like)->orWhere('first_name', 'like', $like)->orWhere('last_name', 'like', $like)->orWhere('phone', 'like', $like))
                     ->latest()->limit(8)->get();
             }
             if ($user->can('tickets.view')) {
-                $results['tickets'] = Ticket::query()->where(fn ($t) => $t->where('ticket_number', 'like', $like)->orWhere('holder_name', 'like', $like)->orWhere('holder_email', 'like', $like))
+                $results['tickets'] = Ticket::query()
+                    ->when(\App\Orders\OrderAccess::scoped($user), fn ($t) => $t->whereHas('order', fn ($o) => $o->visibleTo($user)))
+                    ->where(fn ($t) => $t->where('ticket_number', 'like', $like)->orWhere('holder_name', 'like', $like)->orWhere('holder_email', 'like', $like))
                     ->latest()->limit(8)->get();
             }
         }

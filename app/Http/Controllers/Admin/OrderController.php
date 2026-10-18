@@ -89,14 +89,20 @@ class OrderController extends Controller
         $paymentMethodLabels = $this->paymentMethodLabels();
 
         $events = $canFilterByEvent
-            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
         $canExport = $this->isSuperAdmin($request->user());
         $statusOptions = self::ORDER_STATUS_OPTIONS;
         $perPageOptions = self::PER_PAGE_OPTIONS;
 
-        return view('admin.orders.index', compact('orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
+        $assignmentOn = \App\Orders\OrderAccess::enabled();
+        $canAssign = \App\Orders\OrderAccess::canAssign($request->user()) || \App\Orders\OrderAccess::canAssign($request->user(), true);
+        $assignees = $assignmentOn && (\App\Orders\OrderAccess::level($request->user()) === \App\Orders\OrderAccess::ALL)
+            ? \App\Models\User::query()->whereIn('id', Order::query()->whereNotNull('assigned_user_id')->distinct()->pluck('assigned_user_id')->merge(app(\App\Orders\OrderAssignmentService::class)->eligibleUsers()->pluck('id'))->unique())->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('admin.orders.index', compact('assignmentOn', 'canAssign', 'assignees', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
@@ -126,7 +132,7 @@ class OrderController extends Controller
         $paymentMethodLabels = $this->paymentMethodLabels();
 
         $events = $canFilterByEvent
-            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;
@@ -137,10 +143,10 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order)
     {
-        $this->abortIfOrderNotAccessible($request, $order);
+        $this->abortIfOrderNotAccessible($request, $order, false);
 
         $order->load(['customer', 'items.ticket', 'items.event:id,name,event_date,end_date,event_time,location', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
-        $paymentAttempts = $order->paymentAttempts()->latest()->get();
+        $paymentAttempts = $order->paymentAttempts()->with('integrationAccount')->latest()->get();
 
         $paymentMethodLabel = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
@@ -198,7 +204,19 @@ class OrderController extends Controller
 
         $statusOptions = self::ORDER_STATUS_OPTIONS;
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts'));
+        $canSeeAccounts = \App\Http\Controllers\Admin\TransactionController::canSeeAccounts($request->user());
+        $pinnedAccount = $canSeeAccounts ? $order->integrationAccount : null;
+        $switchTargets = ($canSeeAccounts && $request->user()->can('orders.reroute_payment') && $order->status === 'pending_payment')
+            ? \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->where('enabled', true)->get()->filter(fn ($a) => \App\Services\Payments\Routing\PaymentAccountResolver::usable($a) && $a->id !== $order->integration_account_id)->values()
+            : collect();
+        $accountNames = $canSeeAccounts ? \App\Models\IntegrationAccount::query()->whereIn('id', $paymentAttempts->pluck('integration_account_id')->filter())->pluck('name', 'id') : collect();
+        $assignmentOn = \App\Orders\OrderAccess::enabled();
+        $assignmentHistory = $assignmentOn ? $order->assignments()->get() : collect();
+        $canAssign = \App\Orders\OrderAccess::canAssign($request->user(), $order->assigned_user_id !== null);
+        $assignees = $canAssign ? app(\App\Orders\OrderAssignmentService::class)->eligibleUsers() : collect();
+        $order->loadMissing(['assignedUser:id,name', 'assignedBy:id,name', 'soldBy:id,name']);
+
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees', 'canSeeAccounts', 'pinnedAccount', 'switchTargets', 'accountNames'));
     }
 
     public function edit(Request $request, Order $order)
@@ -653,6 +671,7 @@ class OrderController extends Controller
             'items:id,order_id,event_id,ticket_name,quantity',
             'items.event:id,name',
             'latestPaymentAttempt',
+            'assignedUser:id,name',
         ];
     }
 
@@ -662,6 +681,18 @@ class OrderController extends Controller
      */
     private function applyOrderFilters(Builder $query, Request $request, bool $canFilterByEvent, bool $withStatus = true): void
     {
+        // Assignee filter (only meaningful while Order Assignment is on; visibleTo() already limits what a user can reach).
+        if (\App\Orders\OrderAccess::enabled() && $request->filled('assignee')) {
+            $assignee = (string) $request->input('assignee');
+            if ($assignee === 'unassigned') {
+                $query->whereNull('assigned_user_id');
+            } elseif ($assignee === 'me') {
+                $query->where('assigned_user_id', $request->user()->id);
+            } elseif (ctype_digit($assignee)) {
+                $query->where('assigned_user_id', (int) $assignee);
+            }
+        }
+
         if ($withStatus) {
             if ($request->filled('status')) {
                 $query->where('status', (string) $request->input('status'));
@@ -841,10 +872,14 @@ class OrderController extends Controller
         });
     }
 
-    private function abortIfOrderNotAccessible(Request $request, Order $order): void
+    private function abortIfOrderNotAccessible(Request $request, Order $order, bool $manage = true): void
     {
-        // Orders excluded from statistics need the `showing_orders` permission (404 so their existence is not leaked).
+        // Orders excluded from statistics need the `showing_orders` permission, and (when Order Assignment is on) the
+        // order must be visible under the assignment rules. 404 so existence is not leaked.
         abort_unless($order->isVisibleTo($request->user()), 404);
+
+        // Acting on an order needs more than seeing it when assignment is on (agents: own order + orders.manage_assigned).
+        abort_if($manage && ! \App\Orders\OrderAccess::canManage($order, $request->user()), 403);
 
         $managedEvents = $request->user()?->managedEvents ?? collect();
         if ($managedEvents->isEmpty()) {

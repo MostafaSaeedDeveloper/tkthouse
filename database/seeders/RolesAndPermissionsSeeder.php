@@ -14,9 +14,12 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        // MySQL refuses TRUNCATE on tables that are referenced by foreign keys.
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
         DB::table('role_has_permissions')->truncate();
         DB::table('model_has_permissions')->truncate();
         DB::table('permissions')->truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
         $permissions = [
             'dashboard.view',
@@ -42,6 +45,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'events.create',
             'events.update',
             'events.delete',
+            'events.archive',
+            'events.restore',
             'events.publish',
             'events.mark-sold-out',
 
@@ -87,6 +92,32 @@ class RolesAndPermissionsSeeder extends Seeder
             'attendees.export',
 
             'activity-logs.view',
+
+            // Settings Center + Order Assignment (V2). Kept here because this seeder truncates the permission tables.
+            'settings.orders',
+            'settings.integrations.view',
+            'settings.integrations.manage',
+            'settings.integrations.test',
+            'settings.security.view',
+            'orders.assign',
+            'orders.reassign',
+            'orders.view_all',
+            'orders.view_assigned',
+            'orders.manage_assigned',
+            'orders.view_unassigned',
+            'orders.view_agent_stats',
+            'orders.reroute_payment',
+            'settings.payment-accounts.view',
+            'settings.payment-accounts.manage',
+            'payments.transactions.view',
+            'payments.transactions.inquire',
+            'payments.refunds.view',
+            'payments.refunds.create',
+            'payments.refunds.approve',
+            'payments.accounts.view',
+            'payments.accounts.manage',
+            'payments.webhooks.view',
+            'payments.transactions.import',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -164,6 +195,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'scanner.access',
             'orders.view',
         ]);
+
+        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats', ...\App\Support\PaymentPermissionPolicy::forRole('Order Manager')]);
+        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned', ...\App\Support\PaymentPermissionPolicy::forRole('Order Agent')]);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

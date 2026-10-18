@@ -18,6 +18,7 @@ class CustomerController extends Controller
         $canFilterByEvent = $request->user()?->can('showing_orders') ?? false;
 
         $customersQuery = Customer::query()
+            ->when(\App\Orders\OrderAccess::scoped($request->user()), fn (Builder $query) => $query->whereHas('orders', fn (Builder $o) => $o->visibleTo($request->user())))
             ->when($managedEvents->isNotEmpty(), function (Builder $query) use ($managedEventIds) {
                 $query->whereHas('orders', function (Builder $ordersQuery) use ($managedEventIds) {
                     $ordersQuery->whereHas('items', fn (Builder $iq) => $iq->whereIn('event_id', $managedEventIds));
@@ -49,7 +50,7 @@ class CustomerController extends Controller
         $customers = $customersQuery->latest()->paginate(15)->withQueryString();
 
         $events = $canFilterByEvent
-            ? Event::query()->orderBy('name')->get(['id', 'name'])
+            ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
         return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent'));
@@ -113,6 +114,10 @@ class CustomerController extends Controller
     {
         $managedEvents = $request->user()?->managedEvents ?? collect();
         $managedEventIds = $managedEvents->pluck('id')->all();
+
+        if (\App\Orders\OrderAccess::scoped($request->user())) {
+            abort_unless($customer->orders()->visibleTo($request->user())->exists(), 404);
+        }
 
         if ($managedEvents->isNotEmpty()) {
             $hasVisibleOrder = $customer->orders()

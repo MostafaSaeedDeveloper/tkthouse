@@ -335,6 +335,7 @@ class PaymentSecurityTest extends TestCase
         match ($change) {
             'ended' => $this->event->update(['event_date' => now()->subDay()->toDateString()]),
             'inactive' => $this->event->update(['status' => 'inactive']),
+            'archived' => $this->event->update(['status' => 'archived']),
             'sold_out' => $this->event->update(['status' => 'sold_out']),
             'ticket_off' => $this->event->tickets()->update(['status' => 'sold_out']),
             'ticket_gone' => $this->event->tickets()->delete(),
@@ -363,6 +364,7 @@ class PaymentSecurityTest extends TestCase
             'event ended' => ['ended', 'event_ended'],
             'event no longer active' => ['inactive', 'event_not_on_sale'],
             'event sold out' => ['sold_out', 'event_not_on_sale'],
+            'event archived' => ['archived', 'event_not_on_sale'],
             'ticket no longer on sale' => ['ticket_off', 'ticket_unavailable'],
             'ticket removed' => ['ticket_gone', 'ticket_unavailable'],
         ];

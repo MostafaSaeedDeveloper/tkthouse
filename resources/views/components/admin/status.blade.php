@@ -19,7 +19,7 @@
         ],
         'event' => [
             'active' => ['Active', 'success'], 'sold_out' => ['Sold out', 'danger'], 'draft' => ['Draft', 'default'], 'inactive' => ['Inactive', 'default'],
-            'canceled' => ['Canceled', 'danger'], 'ended' => ['Ended', 'default'],
+            'canceled' => ['Canceled', 'danger'], 'ended' => ['Ended', 'default'], 'archived' => ['Archived', 'info'],
         ],
     ];
     [$label, $variant] = $map[$kind][$s] ?? [ucfirst(str_replace('_', ' ', $s)), 'default'];

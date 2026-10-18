@@ -6,7 +6,7 @@
 <x-admin.flash />
 <form method="POST" action="{{ route('admin.users.store') }}" data-a-loading>
     @csrf
-    <x-admin.card class="a-m-narrow">
+    <x-admin.card>
         @include('admin.users.form')
         <div class="a-form-actions"><a class="a-btn a-btn--outline" href="{{ route('admin.users.index') }}">Cancel</a><button class="a-btn a-btn--primary" type="submit">Save</button></div>
     </x-admin.card>

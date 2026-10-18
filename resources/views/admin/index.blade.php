@@ -91,7 +91,7 @@
                 <label class="a-sr-only" for="aEvent">Event</label>
                 <select class="form-select" id="aEvent" name="event_id" onchange="this.form.submit()" style="min-width:200px;max-width:260px">
                     <option value="">All events</option>
-                    @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($selectedEvent?->id === $e->id)>{{ $e->name }}</option>@endforeach
+                    @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($selectedEvent?->id === $e->id)>{{ $e->filterLabel() }}</option>@endforeach
                 </select>
             </form>
         @endif

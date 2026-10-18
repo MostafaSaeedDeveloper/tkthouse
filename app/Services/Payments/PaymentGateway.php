@@ -11,7 +11,7 @@ interface PaymentGateway
     public function provider(): string;
 
     /** Whether the method has everything it needs to take a payment (so unusable methods are never offered). */
-    public function isConfigured(PaymentMethod $method): bool;
+    public function isConfigured(PaymentMethod $method, ?\App\Models\IntegrationAccount $account = null): bool;
 
     /**
      * Opens a payment at the gateway.

@@ -30,13 +30,29 @@ class Event extends Model
         'requires_booking_approval',
     ];
 
+    /** archived_at / archived_by / status_before_archive are set only by EventLifecycle (never mass-assigned from a form). */
+
     protected function casts(): array
     {
         return [
             'event_date' => 'date',
             'end_date' => 'date',
             'requires_booking_approval' => 'boolean',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    public const ARCHIVED = 'archived';
+
+    /** Name for admin dropdowns: archived events stay selectable (historical filters/reports) but are marked. */
+    public function filterLabel(): string
+    {
+        return $this->name.($this->isArchived() ? ' (Archived)' : '');
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === self::ARCHIVED;
     }
 
     protected static function booted(): void
@@ -84,7 +100,7 @@ class Event extends Model
 
     public function tickets()
     {
-        return $this->hasMany(EventTicket::class);
+        return $this->hasMany(EventTicket::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function fees()

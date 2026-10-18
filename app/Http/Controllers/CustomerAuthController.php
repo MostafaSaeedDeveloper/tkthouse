@@ -39,7 +39,7 @@ class CustomerAuthController extends Controller
 
         $field = filter_var($validated['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        if (! Auth::attempt([$field => $validated['login'], 'password' => $validated['password']], $request->boolean('remember'))) {
+        if (! Auth::attempt([$field => $validated['login'], 'password' => $validated['password'], 'is_active' => true], $request->boolean('remember'))) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Invalid credentials.',

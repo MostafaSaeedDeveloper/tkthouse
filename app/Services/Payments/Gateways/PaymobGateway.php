@@ -22,10 +22,15 @@ class PaymobGateway implements PaymentGateway
         return 'paymob';
     }
 
-    public function isConfigured(PaymentMethod $method): bool
+    public function isConfigured(PaymentMethod $method, ?\App\Models\IntegrationAccount $account = null): bool
     {
         if (! PaymentEnvironment::liveGatewaysAllowed()) {
             return false;
+        }
+
+        if ($account) {
+            return $account->provider === 'paymob'
+                && filled($account->secret('api_key')) && filled($account->field('iframe_id')) && filled($account->field($account->methodField($method->code)));
         }
 
         $config = $method->config ?? [];
@@ -39,9 +44,9 @@ class PaymobGateway implements PaymentGateway
     {
         PaymentEnvironment::assertLiveGatewaysAllowed('paymob');
 
-        $checkout = $this->paymob->createCheckout($order);
+        $checkout = $this->paymob->createCheckout($order, $attempt->integrationAccount, $method);
 
-        return ['url' => $checkout['url'], 'transaction_id' => null, 'reference' => $checkout['reference']];
+        return ['url' => $checkout['url'], 'transaction_id' => null, 'reference' => $checkout['reference'], 'provider_order_id' => (string) ($checkout['paymob_order_id'] ?? '')];
     }
 
     public function inquire(PaymentAttempt $attempt, ?string $hintTransactionId = null): GatewayResult
@@ -56,13 +61,15 @@ class PaymobGateway implements PaymentGateway
             return new GatewayResult(GatewayResult::PENDING, message: 'No transaction id yet.');
         }
 
+        // An attempt bound to a merchant account is ALWAYS verified with that account, never with whatever the method config says now.
+        $account = $attempt->integration_account_id ? $attempt->integrationAccount : null;
         $method = PaymentMethod::query()->where('code', (string) $attempt->method_code)->where('provider', 'paymob')->first();
-        if (! $method) {
+        if (! $method && ! $account) {
             return GatewayResult::unknown('Paymob payment method not found.');
         }
 
         try {
-            $tx = $this->paymob->inquireTransaction($method, (string) $transactionId);
+            $tx = $this->paymob->inquireTransaction($method, (string) $transactionId, $account);
         } catch (\Throwable $e) {
             Log::warning('Paymob inquiry failed.', ['attempt_id' => $attempt->id, 'error' => $e->getMessage()]);
 

@@ -4,20 +4,32 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\Events\EventLifecycle;
+use App\Services\Events\EventTicketSync;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class EventController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $events = Event::latest()->paginate(12);
+        // Archived events stay in the admin but are out of the way by default: ?archived=only shows just them, ?archived=all shows everything.
+        $archived = in_array($request->query('archived'), ['only', 'all'], true) ? $request->query('archived') : '';
+        $events = Event::query()
+            ->when($archived === '', fn ($q) => $q->where('status', '!=', Event::ARCHIVED))
+            ->when($archived === 'only', fn ($q) => $q->where('status', Event::ARCHIVED))
+            ->latest()->paginate(12)->withQueryString();
+        $archivedCount = Event::query()->where('status', Event::ARCHIVED)->count();
+        $lifecycle = app(EventLifecycle::class);
+        // Which events could be deleted for good (no history at all); the server re-checks inside a transaction on every delete.
+        $deletable = $events->getCollection()->mapWithKeys(fn (Event $e) => [$e->id => $lifecycle->dependencies($e)['total'] === 0]);
 
-        return view('admin.events.index', compact('events'));
+        return view('admin.events.index', compact('events', 'archived', 'archivedCount', 'deletable'));
     }
 
     public function create()
@@ -39,7 +51,8 @@ class EventController extends Controller
                 'venue_map' => $venueMap,
             ]));
 
-            $this->syncTickets($event, $validated['tickets'] ?? []);
+            $newTickets = array_map(fn ($t) => array_diff_key($t, ['id' => 1]), array_values($validated['tickets'] ?? []));
+            app(EventTicketSync::class)->sync($event, $newTickets);
             $this->syncFees($event, $validated['fees'] ?? []);
             $this->syncImages($event, $request);
             $this->syncLineups($event, $validated['lineups'] ?? [], $request);
@@ -53,8 +66,9 @@ class EventController extends Controller
     public function show(Event $event)
     {
         $event->load(['tickets', 'fees', 'images', 'lineups']);
+        $dependencies = app(EventLifecycle::class)->dependencies($event);
 
-        return view('admin.events.show', compact('event'));
+        return view('admin.events.show', compact('event', 'dependencies'));
     }
 
     public function edit(Event $event)
@@ -66,9 +80,13 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
+        if ($event->isArchived()) {
+            $request->merge(['status' => Event::ARCHIVED]); // the status of an archived event only changes through Restore
+        }
         $validated = $this->normalizeEventPayload($this->validateEvent($request, $event));
 
-        DB::transaction(function () use ($request, $validated, $event) {
+        $ticketResult = null;
+        DB::transaction(function () use ($request, $validated, $event, &$ticketResult) {
             if ($request->hasFile('cover_image')) {
                 $validated['cover_image'] = $this->storePublicImage($request->file('cover_image'), 'uploads/events');
             }
@@ -82,7 +100,8 @@ class EventController extends Controller
             }
 
             $event->update($validated);
-            $this->syncTickets($event, $validated['tickets'] ?? [], true);
+            // Ticket types are synced by id, never deleted and recreated; only explicitly removed ones go (or are hidden when they have sales).
+            $ticketResult = app(EventTicketSync::class)->sync($event, array_values($validated['tickets'] ?? []), $validated['removed_ticket_ids'] ?? []);
             $this->syncFees($event, $validated['fees'] ?? [], true);
             $this->syncLineups($event, $validated['lineups'] ?? [], $request, true);
 
@@ -91,21 +110,45 @@ class EventController extends Controller
             }
             $this->syncImages($event, $request);
 
-            activity('events')->performedOn($event)->causedBy(auth()->user())->log('Event updated');
+            activity('events')->performedOn($event)->causedBy(auth()->user())->withProperties(['tickets' => $ticketResult])->log('Event updated');
         });
 
-        return redirect()->route('admin.events.index')->with('success', 'Event updated successfully.');
+        $redirect = redirect()->route('admin.events.index')->with('success', 'Event updated successfully.');
+        if (! empty($ticketResult['hidden'])) {
+            $redirect->with('warning', 'These ticket types already have sales, so they were hidden instead of deleted: '.implode(', ', $ticketResult['hidden']).'. Their orders, tickets and QR codes are unchanged.');
+        }
+
+        return $redirect;
     }
 
     public function destroy(Event $event)
     {
-        $eventName = $event->name;
-        $event->delete();
-        activity('events')->causedBy(auth()->user())->log('Event deleted: '.$eventName);
+        try {
+            app(EventLifecycle::class)->delete($event, auth()->user());
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->errors()['event'][0] ?? 'This event cannot be deleted.');
+        }
 
-        return back()->with('success', 'Event deleted successfully.');
+        return redirect()->route('admin.events.index')->with('success', 'Event deleted permanently.');
     }
 
+    public function archive(Event $event)
+    {
+        app(EventLifecycle::class)->archive($event, auth()->user());
+
+        return redirect()->route('admin.events.index')->with('success', '"'.$event->name.'" was archived. It is off sale and hidden from the public site; its orders, tickets, payments and check-ins are untouched.');
+    }
+
+    public function restore(Event $event)
+    {
+        $result = app(EventLifecycle::class)->restore($event, auth()->user());
+        $redirect = redirect()->route('admin.events.index', ['archived' => 'all'])->with('success', '"'.$event->name.'" was restored as '.str_replace('_', ' ', $result['restored_to']).'.');
+        if ($result['issues'] !== []) {
+            $redirect->with('warning', 'It was not put back on sale because: '.implode(' ', $result['issues']).' Fix this and set the status to Active when it is ready.');
+        }
+
+        return $redirect;
+    }
 
     private function normalizeEventPayload(array $validated): array
     {
@@ -119,8 +162,31 @@ class EventController extends Controller
         return $validated;
     }
 
+    /**
+     * The form always renders one empty ticket row and one empty fee row. A row the user never touched is not a row: drop it before
+     * validation, otherwise saving an event without fees (or tickets) fails with "name is required when fees is present".
+     * Keys are preserved because lineup image uploads are matched by index.
+     */
+    private function dropUntouchedRows(Request $request): void
+    {
+        $blank = fn ($row, array $keys) => collect($keys)->every(fn ($k) => trim((string) data_get($row, $k, '')) === '');
+        $rules = [
+            'tickets' => ['name', 'price', 'label', 'description'],
+            'fees' => ['name', 'value', 'description'],
+            'lineups' => ['artist_name', 'instagram', 'performance_time', 'performance_date'],
+        ];
+        $merge = [];
+        foreach ($rules as $field => $keys) {
+            if (is_array($rows = $request->input($field))) {
+                $merge[$field] = array_filter($rows, fn ($row) => ! (is_array($row) && trim((string) ($row['id'] ?? '')) === '' && $blank($row, $keys)));
+            }
+        }
+        $request->merge($merge);
+    }
+
     private function validateEvent(Request $request, ?Event $event = null): array
     {
+        $this->dropUntouchedRows($request);
         $coverRule = ['nullable', 'image', 'max:2048'];
 
         return $request->validate([
@@ -134,13 +200,17 @@ class EventController extends Controller
             'map_embed' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
             'house_rules' => ['nullable', 'string'],
-            'status' => ['required', 'in:active,inactive,draft,sold_out'],
+            'status' => ['required', $event?->isArchived() ? 'in:archived' : 'in:active,inactive,draft,sold_out'],
             'requires_booking_approval' => ['required', 'boolean'],
             'cover_image' => $coverRule,
             'event_banner' => $coverRule,
             'venue_map' => $coverRule,
             'gallery_images.*' => ['nullable', 'image', 'max:2048'],
             'tickets' => ['nullable', 'array'],
+            'tickets.*.id' => ['nullable', 'integer', 'min:1'],
+            'tickets.*.position' => ['nullable', 'integer', 'min:0'],
+            'removed_ticket_ids' => ['nullable', 'array'],
+            'removed_ticket_ids.*' => ['integer', 'min:1'],
             'tickets.*.name' => ['required_with:tickets', 'string', 'max:255'],
             'tickets.*.price' => ['required_with:tickets', 'numeric', 'min:0'],
             'tickets.*.status' => ['required_with:tickets', 'in:active,inactive,sold_out,hidden'],
@@ -163,22 +233,6 @@ class EventController extends Controller
             'lineups.*.existing_image' => ['nullable', 'string', 'max:500'],
             'lineup_images.*' => ['nullable', 'image', 'max:2048'],
         ]);
-    }
-
-    private function syncTickets(Event $event, array $tickets, bool $replace = false): void
-    {
-        if ($replace) {
-            $event->tickets()->delete();
-        }
-
-        foreach ($tickets as $ticket) {
-            if (! empty($ticket['name'])) {
-                $ticket['color'] = $ticket['color'] ?? '#0d6efd';
-                $ticket['is_couple'] = (bool) ($ticket['is_couple'] ?? false);
-                $ticket['max_per_order'] = $ticket['is_couple'] ? 2 : max(1, (int) ($ticket['max_per_order'] ?? 10));
-                $event->tickets()->create($ticket);
-            }
-        }
     }
 
     private function syncFees(Event $event, array $fees, bool $replace = false): void
