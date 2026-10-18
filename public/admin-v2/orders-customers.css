@@ -92,7 +92,8 @@
 .a-ordt thead th { padding: 10px 12px; }
 .a-ordt tbody td { padding: 12px; vertical-align: top; }
 .a-ordt td, .a-ordt th { white-space: normal; }
-.a-ordt .c-check { width: 44px; padding-right: 0; text-align: center; vertical-align: middle; } .a-ordt .c-order { width: 136px; } .a-ordt .c-customer { width: 22%; } .a-ordt .c-event { width: auto; }
+.a-ordt tbody td { vertical-align: middle; } /* every cell is centred on the row's height */
+.a-ordt .c-check { width: 44px; padding-right: 0; text-align: center; } .a-ordt .c-order { width: 136px; } .a-ordt .c-customer { width: 22%; } .a-ordt .c-event { width: auto; }
 .a-ordt .c-tickets { width: 84px; } .a-ordt .c-total { width: 116px; } .a-ordt .c-status { width: 156px; } .a-ordt .c-actions { width: 112px; }
 .a-ordt .a-table__main { white-space: nowrap; }
 .a-ordt .a-btn--sm { min-height: 32px; min-width: 32px; padding: 0 9px; }
