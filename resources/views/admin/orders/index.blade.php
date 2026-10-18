@@ -86,7 +86,7 @@
                 <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}"><a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-customer">Customer</th>
                 <th scope="col" class="c-event">Event</th>
-                <th scope="col" class="c-tickets a-num">Tickets</th>
+                <th scope="col" class="c-tickets">Tickets</th>
                 @if($assignmentOn)<th scope="col" class="c-assignee">Assigned to</th>@endif
                 <th scope="col" class="c-total a-num" aria-sort="{{ $ariaSort('total_amount') }}"><a class="a-ordt__sort" href="{{ $sortUrl('total_amount') }}">Total <i class="fa {{ $sortIcon('total_amount') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-status" aria-sort="{{ $ariaSort('status') }}"><a class="a-ordt__sort" href="{{ $sortUrl('status') }}">Status <i class="fa {{ $sortIcon('status') }}" aria-hidden="true"></i></a></th>
@@ -119,13 +119,14 @@
                         <span class="a-ord-clamp" title="{{ $eventNames->implode(' · ') }}">{{ $eventNames->first() }}</span>
                         @if($eventNames->count() > 1)<span class="a-table__sub">+{{ $eventNames->count() - 1 }} more {{ \Illuminate\Support\Str::plural('event', $eventNames->count() - 1) }}</span>@endif
                     @endif
-                    @foreach($ticketTypes->take(2) as $type)
-                        <span class="a-table__sub a-ord-type" title="{{ $type['qty'] }} × {{ $type['name'] }}"><b>{{ $type['qty'] }}×</b> {{ $type['name'] }}</span>
-                    @endforeach
-                    @if($ticketTypes->count() > 2)<span class="a-table__sub">+{{ $ticketTypes->count() - 2 }} more {{ \Illuminate\Support\Str::plural('type', $ticketTypes->count() - 2) }}</span>@endif
-                    <span class="a-table__sub a-ord-inline-tix">{{ $ticketCount }} {{ \Illuminate\Support\Str::plural('ticket', $ticketCount) }}@if($typeCount > 1) · {{ $typeCount }} types @endif</span>
                 </td>
-                <td data-label="Tickets" class="c-tickets a-num"><span class="a-table__main">{{ $ticketCount }}</span>@if($typeCount > 1)<span class="a-table__sub">{{ $typeCount }} types</span>@endif</td>
+                <td data-label="Tickets" class="c-tickets">
+                    <span class="a-table__main">{{ $ticketCount }}</span>
+                    @foreach($ticketTypes->take(3) as $type)
+                        <span class="a-table__sub a-ord-type" title="{{ $type['qty'] }} × {{ $type['name'] }}"><i class="a-ord-dot" style="background: {{ $type['color'] }}" aria-hidden="true"></i><b>{{ $type['qty'] }}×</b> {{ $type['name'] }}</span>
+                    @endforeach
+                    @if($ticketTypes->count() > 3)<span class="a-table__sub">+{{ $ticketTypes->count() - 3 }} more {{ \Illuminate\Support\Str::plural('type', $ticketTypes->count() - 3) }}</span>@endif
+                </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
                     @if($order->assignedUser)<span class="a-table__main a-ord-ellipsis" title="{{ $order->assignedUser->name }}">{{ $order->assignedUser->name }}</span>

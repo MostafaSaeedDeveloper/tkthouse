@@ -124,6 +124,21 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringContainsString(route('admin.orders.bulk.reject'), $html);
     }
 
+    public function test_ticket_types_are_listed_in_the_tickets_column_with_the_ticket_colour(): void
+    {
+        $this->staff();
+        $vip = \App\Models\EventTicket::create(['event_id' => $this->eventA->id, 'name' => 'VIP', 'price' => 500, 'status' => 'active', 'color' => '#ff0055']);
+        $order = $this->order('920001', 'paid', 'Gus', $this->eventA, [], [['VIP', 500, 2], ['Early Bird', 100, 1]]);
+        $order->items()->where('ticket_name', 'like', '%- VIP')->update(['event_ticket_id' => $vip->id]);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('#<td data-label="Tickets" class="c-tickets">.*?<b>2×</b> VIP.*?<b>1×</b> Early Bird.*?</td>#s', $html);
+        $this->assertStringContainsString('background: #ff0055', $html);   // the ticket's own colour
+        $this->assertStringContainsString('background: #9a9a94', $html);   // no linked ticket: neutral grey
+        $this->assertDoesNotMatchRegularExpression('#<td data-label="Event"[^>]*>(?:(?!</td>).)*a-ord-type#s', $html); // not under the event name any more
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();
@@ -135,7 +150,6 @@ class AdminOrdersListTest extends TestCase
         $response = $this->get(route('admin.orders.index'))->assertOk();
         $response->assertSee('The Very Long Winter Open Air Festival 2026 Featuring Many International Headliners', false)
             ->assertSee('class="a-ord-clamp"', false)
-            ->assertSee('2 types')                                  // distinct ticket names
             ->assertDontSee('a-ord-tag')                            // the old coloured ticket badges are gone
             ->assertSee('class="a-table__sub a-ord-type"', false)   // ticket types are listed under the event, one line each...
             ->assertSee('<b>2×</b>', false)                         // ...with their quantity

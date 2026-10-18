@@ -48,7 +48,7 @@ final class OrderPresenter
     /**
      * Ticket types on the order with their total quantity, in order of first appearance.
      *
-     * @return \Illuminate\Support\Collection<int, array{name: string, qty: int}>
+     * @return \Illuminate\Support\Collection<int, array{name: string, qty: int, color: string}>
      */
     public static function ticketTypes(Order $order): \Illuminate\Support\Collection
     {
@@ -64,7 +64,16 @@ final class OrderPresenter
                 return $name;
             })
             ->reject(fn ($group, $name) => $name === '')
-            ->map(fn ($group, $name) => ['name' => (string) $name, 'qty' => (int) $group->sum(fn ($item) => max(1, (int) $item->quantity))])
+            ->map(function ($group, $name) {
+                $color = (string) $group->first()->eventTicket?->color;
+
+                return [
+                    'name' => (string) $name,
+                    'qty' => (int) $group->sum(fn ($item) => max(1, (int) $item->quantity)),
+                    // The ticket's own colour from the event setup; only a plain #rrggbb is ever put into a style attribute.
+                    'color' => preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : '#9a9a94',
+                ];
+            })
             ->values();
     }
 
