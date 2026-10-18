@@ -17,7 +17,7 @@
                 var ids = (open.dataset.ids || '').split(',').filter(Boolean);
                 Array.prototype.forEach.call(select.options, function (o) { o.selected = ids.indexOf(o.value) !== -1; });
                 select.dispatchEvent(new Event('change', { bubbles: true }));
-                modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false'); var f = modal.querySelector('.a-msel__search') || select; f.focus();
+                modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false'); var dlg = modal.querySelector('[role="dialog"]'); dlg.setAttribute('tabindex', '-1'); dlg.focus(); // not the search box: focusing it opens the list
                 return;
             }
             if (e.target.closest('[data-ord-assign-close]') || e.target === modal) close();
