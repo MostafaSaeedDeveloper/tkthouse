@@ -109,6 +109,7 @@
 .a-ord-type { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .a-ord-type b { color: var(--a-ink, #111); font-weight: 700; }
 .a-ord-tix { display: flex; align-items: center; gap: 8px; }
+.a-ord-tix__label { display: none; font-size: 12.5px; color: var(--a-muted); } /* label only on the mobile cards */
 .a-ord-tixbtn { white-space: nowrap; }
 .a-ord-tixlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 50vh; overflow: auto; }
 .a-ord-tixlist li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--a-line); }
@@ -149,13 +150,16 @@
     .a-ordt.a-table--stack td.c-order { grid-column: 1; grid-row: 1; }
     .a-ordt.a-table--stack td.c-status { grid-column: 2; grid-row: 1; text-align: right; }
     /* Card layout: order | status, customer, event + ticket types, tickets | total, assignee, actions. No labels: the content is self-explanatory. */
-    .a-ordt.a-table--stack td.c-customer { grid-column: 1 / -1; grid-row: 2; margin-top: 4px; }
-    .a-ordt.a-table--stack td.c-event { grid-column: 1 / -1; grid-row: 3; }
+    .a-ordt.a-table--stack td.c-customer { grid-column: 1 / -1; grid-row: 2; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--a-line); }
+    .a-ordt.a-table--stack td.c-event { grid-column: 1 / -1; grid-row: 3; font-size: 13.5px; }
+    .a-ordt.a-table--stack td.c-event .a-ord-clamp { font-weight: 600; -webkit-line-clamp: 3; line-clamp: 3; }
     .a-ordt.a-table--stack td.c-customer::before, .a-ordt.a-table--stack td.c-event::before { display: none; }
-    .a-ordt.a-table--stack td.c-tickets { grid-column: 1; grid-row: 4; display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0 5px; align-items: baseline; text-align: left; }
+    .a-ordt.a-table--stack td.c-tickets { grid-column: 1; grid-row: 4; display: block; text-align: left; margin-top: 2px; }
     .a-ordt.a-table--stack td.c-tickets::after { display: none; }
-    .a-ordt.a-table--stack .a-ord-tix .a-table__main::after { content: " tickets"; font-size: 12px; font-weight: 400; color: var(--a-muted); }
+    .a-ordt.a-table--stack .a-ord-tix { gap: 6px; }
+    .a-ordt.a-table--stack .a-ord-tix__label { display: inline; }
     
+    .a-ordt.a-table--stack td.c-total .a-table__main { font-size: 17px; }
     .a-ordt.a-table--stack td.c-total { grid-column: 2; grid-row: 4 / span 2; align-self: start; text-align: right; display: flex; gap: 4px; justify-content: flex-end; align-items: baseline; }
     .a-ordt.a-table--stack td.c-actions { grid-column: 1 / -1; grid-row: 6; padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--a-line); }
     .a-ordt.a-table--stack .c-actions .a-table__actions { justify-content: flex-start; }

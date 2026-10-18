@@ -121,7 +121,7 @@
                     @endif
                 </td>
                 <td data-label="Tickets" class="c-tickets">
-                    <div class="a-ord-tix"><span class="a-table__main">{{ $ticketCount }}</span>
+                    <div class="a-ord-tix"><span class="a-table__main">{{ $ticketCount }}</span><span class="a-ord-tix__label">{{ \Illuminate\Support\Str::plural('ticket', $ticketCount) }}</span>
                     @if($ticketTypes->isNotEmpty())
                         <button type="button" class="a-btn a-btn--outline a-btn--sm a-ord-tixbtn" data-ord-tix-open data-number="{{ $number }}" data-types="{{ json_encode($ticketTypes->all()) }}" aria-haspopup="dialog" title="View tickets" aria-label="View tickets of order {{ $number }}"><i class="fa fa-ticket" aria-hidden="true"></i></button>
                     @endif</div>
