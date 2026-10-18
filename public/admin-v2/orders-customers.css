@@ -178,5 +178,6 @@
 .a-ordt td.c-order .a-table__sub { font-size: 11px; white-space: nowrap; }
 .a-ord-bulk { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--a-line); background: var(--a-yellow-soft); }
 .a-ord-bulk[hidden] { display: none; }
+.a-ord-bulk__decide { display: inline-flex; gap: 8px; margin-left: auto; }
 .a-ord-bulk .form-select, .a-ord-bulk .form-control { max-width: 240px; }
 @media (max-width: 767px) { .a-ordt.a-table--stack td.c-assignee { grid-column: 1 / -1; } }

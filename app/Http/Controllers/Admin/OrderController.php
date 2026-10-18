@@ -467,6 +467,13 @@ class OrderController extends Controller
             return back()->with('error', 'Only pending approval orders can be approved.');
         }
 
+        $this->performApprove($request, $order);
+
+        return back()->with('success', 'Order approved and payment email sent successfully.');
+    }
+
+    private function performApprove(Request $request, Order $order): void
+    {
         $oldStatus = $order->status;
 
         $order->update([
@@ -492,8 +499,6 @@ class OrderController extends Controller
             ->send(new OrderApprovedMail($order, $paymentLink));
 
         $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
-
-        return back()->with('success', 'Order approved and payment email sent successfully.');
     }
 
     public function reject(Request $request, Order $order)
@@ -504,6 +509,13 @@ class OrderController extends Controller
             return back()->with('error', 'Only pending approval orders can be rejected.');
         }
 
+        $this->performReject($request, $order);
+
+        return back()->with('success', 'Order rejected and email sent successfully.');
+    }
+
+    private function performReject(Request $request, Order $order): void
+    {
         $oldStatus = $order->status;
         $order->update([
             'status' => 'rejected',
@@ -520,8 +532,55 @@ class OrderController extends Controller
             ->log('Order rejected');
 
         $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
+    }
 
-        return back()->with('success', 'Order rejected and email sent successfully.');
+    public function bulkApprove(Request $request)
+    {
+        return $this->bulkDecide($request, 'approve');
+    }
+
+    public function bulkReject(Request $request)
+    {
+        return $this->bulkDecide($request, 'reject');
+    }
+
+    /** Approve or reject the selected pending-approval orders; anything else (or not allowed) is skipped, never failed. */
+    private function bulkDecide(Request $request, string $decision)
+    {
+        $data = $request->validate([
+            'order_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'order_ids.*' => ['integer'],
+        ]);
+
+        $done = 0;
+        $skipped = 0;
+        $failed = 0;
+
+        foreach (Order::query()->visibleTo($request->user())->whereIn('id', $data['order_ids'])->get() as $order) {
+            try {
+                $this->abortIfOrderNotAccessible($request, $order);
+
+                if ($order->status !== 'pending_approval') {
+                    $skipped++;
+
+                    continue;
+                }
+
+                $decision === 'approve' ? $this->performApprove($request, $order) : $this->performReject($request, $order);
+                $done++;
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
+                $skipped++;
+            } catch (\Throwable $e) {
+                report($e);
+                $failed++;
+            }
+        }
+
+        $message = $done.' order(s) '.($decision === 'approve' ? 'approved' : 'rejected')
+            .($skipped ? ", {$skipped} skipped (not pending approval or not allowed)" : '')
+            .($failed ? ", {$failed} failed (see logs)" : '').'.';
+
+        return back()->with($failed || ! $done ? 'error' : 'success', $message);
     }
 
     public function updateStatus(Request $request, Order $order)

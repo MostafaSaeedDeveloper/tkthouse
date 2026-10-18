@@ -76,6 +76,54 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringContainsString("getElementById('bulkAssignForm')", file_get_contents(public_path('admin-v2/orders-assign.js')));
     }
 
+    public function test_bulk_approve_and_reject_only_touch_orders_awaiting_approval(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $this->staff(['orders.update']);
+        $a = $this->order('910001', 'pending_approval', 'Ann', $this->eventA);
+        $b = $this->order('910002', 'pending_approval', 'Ben', $this->eventA);
+        $c = $this->order('910003', 'pending_approval', 'Cy', $this->eventA);
+        $paid = $this->order('910004', 'paid', 'Dee', $this->eventA);
+
+        $this->post(route('admin.orders.bulk.approve'), ['order_ids' => [$a->id, $paid->id]])
+            ->assertRedirect()->assertSessionHas('success');
+        $this->assertSame('pending_payment', $a->fresh()->status);
+        $this->assertNotNull($a->fresh()->payment_link_token);
+        $this->assertSame('paid', $paid->fresh()->status);           // not pending approval: skipped, untouched
+
+        $this->post(route('admin.orders.bulk.reject'), ['order_ids' => [$b->id, $a->id]])->assertRedirect();
+        $this->assertSame('rejected', $b->fresh()->status);
+        $this->assertSame('pending_payment', $a->fresh()->status);   // already approved: not rejected afterwards
+        $this->assertSame('pending_approval', $c->fresh()->status);  // not selected: untouched
+
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\OrderApprovedMail::class, 1);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\OrderRejectedMail::class, 1);
+    }
+
+    public function test_bulk_approve_and_reject_require_the_update_permission_and_a_selection(): void
+    {
+        $this->staff();   // orders.view only
+        $o = $this->order('910010', 'pending_approval', 'Eli', $this->eventA);
+
+        $this->post(route('admin.orders.bulk.approve'), ['order_ids' => [$o->id]])->assertForbidden();
+        $this->post(route('admin.orders.bulk.reject'), ['order_ids' => [$o->id]])->assertForbidden();
+        $this->assertSame('pending_approval', $o->fresh()->status);
+
+        $this->staff(['orders.update']);
+        $this->post(route('admin.orders.bulk.approve'), [])->assertSessionHasErrors('order_ids');
+    }
+
+    public function test_bulk_bar_offers_approve_and_reject_to_users_who_can_update(): void
+    {
+        $this->staff(['orders.update']);
+        $this->order('910020', 'pending_approval', 'Fay', $this->eventA);
+
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+        $this->assertStringContainsString('id="bulkAssignForm"', $html);
+        $this->assertStringContainsString(route('admin.orders.bulk.approve'), $html);
+        $this->assertStringContainsString(route('admin.orders.bulk.reject'), $html);
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();

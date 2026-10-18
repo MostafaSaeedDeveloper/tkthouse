@@ -171,6 +171,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.update')->name('orders.update');
     Route::post('orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('permission:update_status')->name('orders.status.update');
     Route::post('orders/{order}/notes', [OrderController::class, 'storeNote'])->middleware('permission:orders.update')->name('orders.notes.store');
+    Route::post('orders/bulk-approve', [OrderController::class, 'bulkApprove'])->middleware('permission:orders.update')->name('orders.bulk.approve');
+    Route::post('orders/bulk-reject', [OrderController::class, 'bulkReject'])->middleware('permission:orders.update')->name('orders.bulk.reject');
     Route::post('orders/{order}/approve', [OrderController::class, 'approve'])->middleware('permission:orders.update')->name('orders.approve');
     Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.update')->name('orders.reject');
 

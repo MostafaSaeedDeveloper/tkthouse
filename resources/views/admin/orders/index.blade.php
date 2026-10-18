@@ -60,20 +60,29 @@
             @endif
         </x-admin.empty>
     @else
-    @if($canAssign)
+    @php $canBulk = $canAssign || auth()->user()->can('orders.update'); @endphp
+    @if($canBulk)
     <form method="POST" action="{{ route('admin.orders.assign.bulk') }}" id="bulkAssignForm" class="a-ord-bulk" hidden>
         @csrf
         <span><strong data-bulk-count>0</strong> selected</span>
+        @if($canAssign)
         <label class="a-sr-only" for="bulkAssignee">Assign selected orders to</label>
         <select id="bulkAssignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach</select>
         <input class="form-control" name="reason" maxlength="300" placeholder="Reason (optional)" aria-label="Reason">
-        <button type="submit" class="a-btn a-btn--primary a-btn--sm">Apply</button>
+        <button type="submit" class="a-btn a-btn--primary a-btn--sm">Assign</button>
+        @endif
+        @can('orders.update')
+        <span class="a-ord-bulk__decide">
+            <button type="submit" class="a-btn a-btn--success a-btn--sm" formaction="{{ route('admin.orders.bulk.approve') }}" data-bulk-confirm="Approve the selected orders that are awaiting approval and email each customer a payment link? Other orders are skipped."><i class="fa fa-check" aria-hidden="true"></i> Approve</button>
+            <button type="submit" class="a-btn a-btn--danger a-btn--sm" formaction="{{ route('admin.orders.bulk.reject') }}" data-bulk-confirm="Reject the selected orders that are awaiting approval and email each customer? Other orders are skipped."><i class="fa fa-xmark" aria-hidden="true"></i> Reject</button>
+        </span>
+        @endcan
     </form>
     @endif
     <x-admin.table stack class="a-ordt" caption="Orders">
         <thead>
             <tr>
-                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}">@if($canAssign)<input type="checkbox" class="a-ord-check" data-bulk-all aria-label="Select all orders on this page" form="bulkAssignForm">@endif<a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
+                <th scope="col" class="c-order" aria-sort="{{ $ariaSort('created_at') }}">@if($canBulk)<input type="checkbox" class="a-ord-check" data-bulk-all aria-label="Select all orders on this page" form="bulkAssignForm">@endif<a class="a-ordt__sort" href="{{ $sortUrl('created_at') }}">Order <i class="fa {{ $sortIcon('created_at') }}" aria-hidden="true"></i></a></th>
                 <th scope="col" class="c-customer">Customer</th>
                 <th scope="col" class="c-event">Event</th>
                 <th scope="col" class="c-tickets a-num">Tickets</th>
@@ -98,7 +107,7 @@
                 $customerName = $order->customer?->full_name ?: 'Unknown customer';
             @endphp
             <tr>
-                <td data-label="Order" class="c-order">@if($canAssign)<input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}">@endif<a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
+                <td data-label="Order" class="c-order">@if($canBulk)<input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}">@endif<a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
                     <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span></td>
                 <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
                 <td data-label="Event" class="c-event">
