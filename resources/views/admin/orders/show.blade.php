@@ -271,37 +271,7 @@
     </x-admin.card>
     @endif
 
-    @if($assignmentOn)
-    <x-admin.card title="Assignment" subtitle="Who is responsible for this order.">
-        <dl class="a-kv">
-            <div><dt>Assigned to</dt><dd>@if($order->assignedUser)<strong>{{ $order->assignedUser->name }}</strong>@foreach($order->assignees->where('id', '!=', $order->assigned_user_id) as $extra)<span class="a-table__sub">{{ $extra->name }}</span>@endforeach @if($order->assignees->count() > 1)<span class="a-table__sub">First agent = primary (sales and reports)</span>@endif @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif</dd></div>
-            @if($order->assigned_at)<div><dt>Assigned by</dt><dd>{{ $order->assignedBy?->name ?? 'Automatic' }} · {{ $order->assigned_at->format('d M Y, H:i') }}</dd></div>@endif
-            @if($order->sold_at)<div><dt>Sale attributed to</dt><dd>{{ $order->soldBy?->name ?? 'Unattributed' }} · {{ $order->sold_at->format('d M Y, H:i') }}</dd></div>@endif
-        </dl>
-        @if($canAssign)
-        <form method="POST" action="{{ route('admin.orders.assign', $order) }}" data-a-loading class="a-form-grid">
-            @csrf
-            <div class="a-field is-full">
-                <label class="form-label" for="oa-assignee">Assigned agents</label>
-                <x-admin.multiselect name="assignee_ids" id="oa-assignee" label="Assigned agents" :options="$assigneeOptions" :selected="$order->assigneeIds()" placeholder="Search agents…" empty-text="Unassigned" />
-                <p class="a-hint">You can pick several agents, but they must all have the same payment methods. Leave empty to unassign.</p>
-            </div>
-            <x-admin.field label="Reason (optional)" name="reason" for="oa-reason"><input id="oa-reason" class="form-control" name="reason" maxlength="300"></x-admin.field>
-            <p class="a-hint is-full">Changing agents never changes the payment account or any payment attempt of this order.</p>
-            <div class="a-form-actions is-full"><button class="a-btn a-btn--primary" type="submit">Save agents</button></div>
-        </form>
-        @endif
-        @if($assignmentHistory->isNotEmpty())
-            <h3 class="a-m-section__title" style="margin-top:16px">History</h3>
-            <ul class="a-timeline">
-                @foreach($assignmentHistory as $h)
-                    <li><strong>{{ $h->meta['to'] ?? 'Unassigned' }}</strong> <span class="a-muted">from {{ $h->meta['from'] ?? 'Unassigned' }}</span><br>
-                        <span class="a-table__sub">{{ $h->created_at?->format('d M Y, H:i') }} · by {{ $h->meta['by'] ?? 'system' }} · {{ str_replace('_', ' ', $h->source) }}@if($h->reason) · “{{ $h->reason }}”@endif</span></li>
-                @endforeach
-            </ul>
-        @endif
-    </x-admin.card>
-    @endif
+    {{-- Assignment is not shown on the order itself: assigning is done from the orders list. --}}
 
     <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
       <div class="a-ord-who">

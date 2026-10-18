@@ -406,7 +406,7 @@ class OrderAssignmentTest extends TestCase
         $m = $this->manager();
         $old = $this->order(null, 'paid', 40);
         $this->actingAs($m)->get(route('admin.orders.index'))->assertOk()->assertSee('Unassigned');
-        $this->actingAs($m)->get(route('admin.orders.show', $old))->assertOk()->assertSee('Unassigned');
+        $this->actingAs($m)->get(route('admin.orders.show', $old))->assertOk();   // the order page itself says nothing about assignment
         $this->actingAs($m)->get(route('admin.orders.index', ['assignee' => 'unassigned']))->assertSee($old->order_number);
     }
 
@@ -552,7 +552,7 @@ class OrderAssignmentTest extends TestCase
         $this->assertSame($b->id, $order->fresh()->assigned_user_id, 'the first agent of the list is the primary');
         $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds());
         $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee($a->name)->assertSee($b->name);
-        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Assigned agents')->assertSee('primary');
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertDontSee('Assigned agents');   // assigning is done from the list, not on the order page
 
         // the old single-agent field still works and replaces everyone
         $this->actingAs($manager)->post(route('admin.orders.assign', $order), ['assignee_id' => $a->id])->assertSessionHasNoErrors();
@@ -699,7 +699,7 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($a)->get(route('admin.orders.index'))->assertOk()->assertSee($order->order_number)->assertDontSee('Bobby Colleague')->assertDontSee('Assigned to');
 
         // people with the full order view (or assignment rights) still see everything
-        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned agents')->assertDontSee('Order assigned')->assertDontSee('Order reassigned');   // not in Order History for anyone
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertDontSee('Bobby Colleague')->assertDontSee('Assigned agents')->assertDontSee('Order assigned')->assertDontSee('Order reassigned');   // nothing about assignment on the order page, for anyone
         $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned to');
     }
 

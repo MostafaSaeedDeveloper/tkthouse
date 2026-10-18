@@ -333,6 +333,30 @@ class WebhookTrackingTest extends TestCase
         $this->assertSame('paid', $a->fresh()->displayStatus());
     }
 
+    public function test_when_the_provider_does_not_confirm_a_payment_its_answer_is_kept_and_shown(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view']);
+        $p = ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK1', 'payment_method' => 'Card', 'invoice_status' => 'paid'];
+
+        // a valid paid webhook, but the provider's own record still says unpaid => nothing is settled, and we remember what it said
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $this->fawHash($p, 'VENDOR-A')])->assertOk();
+
+        $this->assertSame('pending_payment', $a->order->fresh()->status);
+        $li = $a->fresh()->meta['last_inquiry'] ?? null;
+        $this->assertNotNull($li);
+        $this->assertSame('pending', $li['result']);
+        $this->assertArrayHasKey('data_fields', $li);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertSee('Provider answer')->assertSee('fields:');
+
+        // once the provider confirms, the attempt is paid and the note is not shown any more
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $this->fawHash($p, 'VENDOR-A')])->assertOk();
+        $this->assertSame('paid', $a->order->fresh()->status);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertDontSee('Provider answer');
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);

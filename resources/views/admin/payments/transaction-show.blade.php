@@ -61,6 +61,14 @@
             <div><dt>Paid at</dt><dd>{{ ($attempt->paid_at ?? $attempt->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
             <div><dt>Last checked</dt><dd>{{ $attempt->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>
             @if($attempt->failure_reason)<div><dt>Failure reason</dt><dd>{{ $attempt->failure_reason }}</dd></div>@endif
+            @if($attempt->status === 'initiated' && ($li = data_get($attempt->meta, 'last_inquiry')))
+                <div><dt>Provider answer</dt><dd class="a-wrap">
+                    {{ $li['message'] ?? 'Not confirmed as paid' }}
+                    <span class="a-table__sub">{{ collect(['provider_status' => 'status', 'paid' => 'paid', 'paid_at' => 'paid_at', 'total' => 'total', 'currency' => 'currency', 'invoice_id' => 'invoice'])
+                        ->filter(fn ($label, $k) => array_key_exists($k, $li))->map(fn ($label, $k) => $label.'='.$li[$k])->implode(' · ') }}</span>
+                    @if(!empty($li['data_fields']))<span class="a-table__sub">fields: {{ $li['data_fields'] }}</span>@endif
+                </dd></div>
+            @endif
         </dl>
     </x-admin.card>
     @if($seeAccounts && $attempt->routing_snapshot)

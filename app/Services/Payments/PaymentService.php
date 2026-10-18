@@ -214,6 +214,8 @@ class PaymentService
         PaymentAttempt::query()->whereKey($attempt->id)->update(['last_checked_at' => now()]);
 
         if (in_array($result->status, [GatewayResult::PENDING, GatewayResult::UNKNOWN], true)) {
+            $this->recordInquiry($attempt, $result);
+
             return self::OUTCOME_PENDING;
         }
 
@@ -235,6 +237,40 @@ class PaymentService
         }
 
         return $outcome;
+    }
+
+    /**
+     * Keeps what the provider answered the last time it did NOT confirm a payment, so an operator can see why an order stays
+     * "Processing" (e.g. the provider says unpaid, or answered in a shape we do not recognise). Only whitelisted, non-secret
+     * fields are kept: statuses, flags, amounts and the NAMES of the returned fields.
+     */
+    private function recordInquiry(PaymentAttempt $attempt, GatewayResult $result): void
+    {
+        try {
+            $raw = $result->raw;
+            $scalar = fn ($v) => is_scalar($v) || $v === null ? ($v === null ? null : mb_substr((string) $v, 0, 60)) : null;
+            $summary = array_filter([
+                'at' => now()->toIso8601String(),
+                'result' => $result->status,
+                'message' => $result->message ? mb_substr($result->message, 0, 200) : null,
+                'provider_status' => $scalar(data_get($raw, 'status')),
+                'invoice_id' => $scalar(data_get($raw, 'data.invoice_id')),
+                'paid' => $scalar(data_get($raw, 'data.paid')),
+                'paid_at' => $scalar(data_get($raw, 'data.paid_at')),
+                'total' => $scalar(data_get($raw, 'data.total')),
+                'currency' => $scalar(data_get($raw, 'data.currency')),
+                'data_fields' => is_array(data_get($raw, 'data')) ? implode(', ', array_slice(array_map('strval', array_keys(data_get($raw, 'data'))), 0, 40)) : null,
+            ], fn ($v) => $v !== null && $v !== '');
+
+            $fresh = PaymentAttempt::query()->find($attempt->id);
+            if ($fresh && $fresh->status === PaymentAttempt::INITIATED) {
+                $meta = $fresh->meta ?? [];
+                $meta['last_inquiry'] = $summary;
+                $fresh->forceFill(['meta' => $meta])->saveQuietly();
+            }
+        } catch (\Throwable $e) {
+            Log::debug('Could not record the provider answer.', ['attempt_id' => $attempt->id, 'error' => $e->getMessage()]);
+        }
     }
 
     private function settleInTransaction(PaymentAttempt $attempt, GatewayResult $result, ?Order &$issueFor): string
