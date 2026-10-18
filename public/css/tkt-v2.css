@@ -419,6 +419,18 @@
 .tkt-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 body.tkt-has-bar .tkt-toast { bottom: 96px; }
 
+/* Soft navigation (js/tkt-spa.js): thin progress line for slow requests + a dismissible error bar. No full-screen loader. */
+.tkt-progress { height: 3px !important; background-color: var(--tkt-primary) !important; z-index: 4500 !important; }
+.tkt-navbar-error {
+    position: fixed; left: 50%; bottom: 24px; z-index: 3100; display: flex; align-items: center; gap: 12px;
+    max-width: calc(100vw - 32px); padding: 12px 14px 12px 18px; background: var(--tkt-dark); color: #fff;
+    border-radius: var(--tkt-radius-sm); font-size: var(--tkt-fs-sm); font-weight: 600; box-shadow: var(--tkt-shadow);
+    opacity: 0; pointer-events: none; transform: translate(-50%, 12px); transition: opacity .2s, transform .2s;
+}
+.tkt-navbar-error.is-visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.tkt-navbar-error__retry { padding: 6px 12px; border: 0; border-radius: 8px; background: var(--tkt-primary); color: var(--tkt-ink); font-weight: 700; cursor: pointer; }
+.tkt-navbar-error__close { padding: 0 4px; border: 0; background: none; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
+
 .tkt-lightbox {
     position: fixed; inset: 0; z-index: 4000; display: none; align-items: center; justify-content: center;
     padding: 24px; background: rgba(0, 0, 0, .88);

@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Browser regression + performance checks for the soft (SPA-like) navigation. Not part of the PHP suite.",
+  "devDependencies": { "playwright-core": "1.49.1" }
+}

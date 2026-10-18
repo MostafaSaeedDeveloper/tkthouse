@@ -5,6 +5,12 @@
     // Brand colour can still be overridden from the admin settings; default is the V2 brand yellow.
     $brandColor = \App\Support\SystemSettings::get('primary_color');
     $pageTitle = trim($__env->yieldContent('title'));
+    $fullTitle = $pageTitle !== '' ? $pageTitle.' | '.$siteName : $siteName.' | Events & Ticket Booking';
+    $metaDescription = trim($__env->yieldContent('description')) ?: 'TKT House curates premium techno events and makes booking your tickets simple and secure.';
+    $ogImage = trim($__env->yieldContent('og_image')) ?: $logoLight;
+    // Canonical: the page itself, keeping only the pagination parameters (search/filter URLs point to the base listing).
+    $canonicalQuery = collect(['page', 'previous_page'])->mapWithKeys(fn ($k) => [$k => request()->query($k)])->filter(fn ($v) => (int) $v > 1)->all();
+    $canonicalUrl = url()->current().($canonicalQuery ? '?'.http_build_query($canonicalQuery) : '');
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -13,7 +19,16 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $pageTitle !== '' ? $pageTitle.' | '.$siteName : $siteName.' | Events & Ticket Booking' }}</title>
+    <title>{{ $fullTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    <link rel="canonical" href="{{ $canonicalUrl }}">
+    <meta property="og:site_name" content="{{ $siteName }}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ $fullTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ $canonicalUrl }}">
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta name="twitter:card" content="summary_large_image">
     @hasSection('meta')
         @yield('meta')
     @endif
@@ -84,7 +99,16 @@
     <script src="{{ asset('js/jquery.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/js/intlTelInput.min.js"></script>
     <script src="{{ asset('js/bootstrap.js') }}"></script>
+    <script src="{{ asset('js/tkt-page.js') }}?v={{ filemtime(public_path('js/tkt-page.js')) }}"></script>
     <script src="{{ asset('js/tkt-v2.js') }}?v={{ filemtime(public_path('js/tkt-v2.js')) }}"></script>
+    <script src="{{ asset('js/tkt-booking.js') }}?v={{ filemtime(public_path('js/tkt-booking.js')) }}"></script>
+    {{-- Soft navigation between the public pages (see docs/spa-navigation-audit.md). Vendored, version-pinned. --}}
+    <script src="{{ asset('js/vendor/swup-4.8.2.umd.js') }}"></script>
+    <script src="{{ asset('js/vendor/swup-head-plugin-2.3.1.umd.js') }}"></script>
+    <script src="{{ asset('js/vendor/swup-a11y-plugin-5.2.1.umd.js') }}"></script>
+    <script src="{{ asset('js/vendor/swup-scroll-plugin-4.0.0.umd.js') }}"></script>
+    <script src="{{ asset('js/vendor/swup-progress-plugin-3.2.0.umd.js') }}"></script>
+    <script src="{{ asset('js/tkt-spa.js') }}?v={{ filemtime(public_path('js/tkt-spa.js')) }}"></script>
     @include('front.partials.auth-scripts')
     @stack('scripts')
 </body>
