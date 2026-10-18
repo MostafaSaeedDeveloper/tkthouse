@@ -293,6 +293,30 @@ class CustomerPortalTest extends TestCase
         $this->actingAs($me)->put(route('front.account.profile.update'), ['name' => ''])->assertSessionHasErrors('name');
     }
 
+    public function test_login_returns_the_customer_to_the_page_they_were_on(): void
+    {
+        $user = $this->customer(['email' => 'back@example.test', 'password' => Hash::make('right-password')]);
+        $page = url('/events/some-event?ref=1');
+        $login = fn (array $extra = [], array $headers = []) => $this->withHeaders($headers)->postJson(route('front.customer.login.store'), ['login' => 'back@example.test', 'password' => 'right-password'] + $extra);
+
+        // the page they were on (Referer) wins over the account dashboard
+        $login([], ['Referer' => $page])->assertOk()->assertJson(['redirect_to' => $page]);
+        auth()->logout();
+
+        // an explicit redirect still has priority
+        $login(['redirect_to' => '/checkout'], ['Referer' => $page])->assertOk()->assertJson(['redirect_to' => '/checkout']);
+        auth()->logout();
+
+        // coming from an auth page, an external site or nowhere falls back to the account dashboard
+        foreach (['/account/login', '/account/register', '/login'] as $authPage) {
+            $login([], ['Referer' => url($authPage)])->assertOk()->assertJson(['redirect_to' => route('front.account.dashboard')]);
+            auth()->logout();
+        }
+        $login([], ['Referer' => 'https://evil.example/phish'])->assertOk()->assertJson(['redirect_to' => route('front.account.dashboard')]);
+        auth()->logout();
+        $login()->assertOk()->assertJson(['redirect_to' => route('front.account.dashboard')]);
+    }
+
     public function test_customer_can_upload_replace_and_remove_a_profile_photo(): void
     {
         \Illuminate\Support\Facades\Storage::fake('public');

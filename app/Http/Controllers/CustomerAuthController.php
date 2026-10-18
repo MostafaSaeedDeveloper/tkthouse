@@ -163,9 +163,27 @@ class CustomerAuthController extends Controller
         return redirect()->route('front.home');
     }
 
+    /** Signing in keeps the customer where they were: the page they came from, unless that is an auth page itself. */
+    private function cameFrom(Request $request): ?string
+    {
+        $previous = (string) $request->headers->get('referer');   // the page the browser was on; no Referer = the old default
+        if ($previous === '' || ! str_starts_with($previous, url('/'))) {
+            return null;
+        }
+
+        $path = '/'.ltrim((string) parse_url($previous, PHP_URL_PATH), '/');
+        foreach (['/account/login', '/account/register', '/account/logout', '/login', '/register', '/password', '/auth'] as $authPath) {
+            if ($path === $authPath || str_starts_with($path, $authPath.'/')) {
+                return null;
+            }
+        }
+
+        return $previous;
+    }
+
     private function redirectAfterAuth(Request $request, ?string $redirectTo, ?string $successMessage = null)
     {
-        $target = route('front.account.dashboard');
+        $target = $this->cameFrom($request) ?? route('front.account.dashboard');
 
         if (is_string($redirectTo) && $redirectTo !== '') {
             if (str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
