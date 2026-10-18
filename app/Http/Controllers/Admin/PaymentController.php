@@ -36,7 +36,7 @@ class PaymentController extends Controller
             'refunded' => Order::query()->visibleTo($user)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
         ];
 
-        $attempts = (clone $base)->with(['order.customer'])
+        $attempts = (clone $base)->with(['order.customer', 'failedWebhookEvent'])
             ->when($filter === 'review', fn ($q) => $q->where('meta->needs_review', true))
             ->when(! in_array($filter, ['all', 'review'], true), fn ($q) => $q->where('status', $filter))
             ->when($provider !== '', fn ($q) => $q->where('provider', $provider))

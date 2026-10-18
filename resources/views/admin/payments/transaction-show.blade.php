@@ -45,7 +45,7 @@
     @if($siblings->isNotEmpty())
     <x-admin.card flush title="Other attempts on this order" :subtitle="'A retry never overwrites an earlier attempt'" style="margin-top:12px">
         <x-admin.table stack compact caption="Other attempts"><thead><tr><th>Payment</th><th>Provider</th><th>Status</th><th>Date</th></tr></thead><tbody>
-            @foreach($siblings as $o)<tr><td data-label="Payment"><a class="a-table__main" href="{{ route('admin.payments.transactions.show', $o) }}">{{ $o->internal_reference ?: '#'.$o->id }}</a></td><td data-label="Provider">{{ ucfirst($o->provider) }}</td><td data-label="Status"><x-admin.status :status="$o->status" kind="payment" /></td><td data-label="Date">{{ $o->created_at->format('d M Y, H:i') }}</td></tr>@endforeach
+            @foreach($siblings as $o)<tr><td data-label="Payment"><a class="a-table__main" href="{{ route('admin.payments.transactions.show', $o) }}">{{ $o->internal_reference ?: '#'.$o->id }}</a></td><td data-label="Provider">{{ ucfirst($o->provider) }}</td><td data-label="Status"><x-admin.status :status="$o->displayStatus()" kind="payment" /></td><td data-label="Date">{{ $o->created_at->format('d M Y, H:i') }}</td></tr>@endforeach
         </tbody></x-admin.table>
     </x-admin.card>
     @endif
@@ -53,7 +53,7 @@
   <div>
     <x-admin.card title="Payment">
         <dl class="a-kv">
-            <div><dt>Status</dt><dd><x-admin.status :status="$attempt->status" kind="payment" /></dd></div>
+            <div><dt>Status</dt><dd><x-admin.status :status="$attempt->displayStatus()" kind="payment" /></dd></div>
             <div><dt>Amount</dt><dd>{{ $money($attempt->amount) }}</dd></div>
             <div><dt>Provider</dt><dd>{{ ucfirst($attempt->provider) }} · {{ $attempt->method_code }}</dd></div>
             @if($seeAccounts)<div><dt>Merchant account</dt><dd>{{ $attempt->integrationAccount?->name ?? 'Legacy configuration' }}</dd></div>@endif

@@ -37,7 +37,7 @@
                 <td data-label="Provider &amp; method">{{ ucfirst($a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
                 @if($seeAccounts)<td data-label="Merchant account">{{ $a->integrationAccount?->name ?? 'Legacy configuration' }}</td>@endif
                 <td data-label="Amount" class="a-num">{{ number_format((float) $a->amount, 2) }} {{ $a->currency ?: 'EGP' }}</td>
-                <td data-label="Status / refund"><x-admin.status :status="$a->status" kind="payment" />@if($refunded > 0)<x-admin.badge variant="info">{{ number_format($refunded / 100, 2) }} refunded</x-admin.badge>@endif @if($open)<x-admin.badge variant="warning">{{ $open }} refund in progress</x-admin.badge>@endif</td>
+                <td data-label="Status / refund"><x-admin.status :status="$a->displayStatus()" kind="payment" />@if($refunded > 0)<x-admin.badge variant="info">{{ number_format($refunded / 100, 2) }} refunded</x-admin.badge>@endif @if($open)<x-admin.badge variant="warning">{{ $open }} refund in progress</x-admin.badge>@endif</td>
                 <td data-label="Created / paid">{{ $a->created_at->format('d M Y, H:i') }}<span class="a-table__sub">{{ ($a->paid_at ?? $a->settled_at) ? 'Paid '.($a->paid_at ?? $a->settled_at)->format('d M, H:i') : 'Not paid' }}</span></td>
             </tr>
         @endforeach

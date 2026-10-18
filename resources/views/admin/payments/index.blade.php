@@ -89,7 +89,7 @@
                     <td data-label="Gateway">{{ ucfirst($a->provider) }}<span class="a-table__sub">{{ $a->method_code }}</span></td>
                     <td data-label="Reference"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
                     <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
-                    <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
+                    <td data-label="Status"><x-admin.status :status="$a->displayStatus()" kind="payment" /></td>
                     <td data-label="Date">{{ $a->created_at->format('d M Y, H:i') }}</td>
                 </tr>
             @endforeach

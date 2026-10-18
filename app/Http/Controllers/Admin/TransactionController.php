@@ -35,7 +35,7 @@ class TransactionController extends Controller
         $seeAccounts = self::canSeeAccounts($user);
         $esc = fn (string $v) => '%'.str_replace(['%', '_'], ['\%', '\_'], $v).'%';
 
-        $attempts = self::visible($user)->with(['order.customer', 'integrationAccount:id,name,provider'])
+        $attempts = self::visible($user)->with(['order.customer', 'integrationAccount:id,name,provider', 'failedWebhookEvent'])
             ->when($status !== '', fn ($w) => $w->where('status', $status))
             ->when($provider !== '', fn ($w) => $w->where('provider', $provider))
             ->when($seeAccounts && $accountId > 0, fn ($w) => $w->where('integration_account_id', $accountId))

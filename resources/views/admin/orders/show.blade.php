@@ -51,7 +51,7 @@
   <dl class="a-ord-summary__grid">
     <div><dt>Order status</dt><dd class="a-ord-head__badge"><x-admin.status :status="$order->status" kind="order" /></dd></div>
     <div><dt>Payment</dt><dd class="a-ord-head__badge">
-      @if($latestAttempt)<x-admin.status :status="$latestAttempt->status" kind="payment" />
+      @if($latestAttempt)<x-admin.status :status="$latestAttempt->displayStatus()" kind="payment" />
       @elseif($order->status === 'paid')<x-admin.status status="paid" kind="payment" />
       @else<span class="a-muted a-ord-head__none">No payment recorded</span>@endif
     </dd></div>
@@ -69,7 +69,7 @@
         <div><dt>Order status</dt><dd><x-admin.status :status="$order->status" kind="order" /></dd></div>
         <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
         @if($latestAttempt)
-          <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->status" kind="payment" /></dd></div>
+          <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->displayStatus()" kind="payment" /></dd></div>
         @endif
         @if($order->paid_at)<div><dt>Paid at</dt><dd>{{ $order->paid_at->format('d M Y, H:i') }}</dd></div>@endif
         @if($order->requires_approval)<div><dt>Booking approval</dt><dd>{{ $order->approved_at ? 'Approved '.$order->approved_at->format('d M Y, H:i') : 'Required' }}</dd></div>@endif
@@ -183,7 +183,7 @@
             @if($primary->provider_reference)<div><dt>Provider reference number</dt><dd>{{ $primary->provider_reference }}</dd></div>@endif
             <div><dt>{{ $primary->status === 'paid' ? 'Paid amount' : 'Amount requested' }}</dt><dd>{{ $money($primary->amount) }}</dd></div>
             <div><dt>Payment date</dt><dd>{{ ($primary->paid_at ?? $primary->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
-            <div><dt>Current status</dt><dd><x-admin.status :status="$primary->status" kind="payment" /></dd></div>
+            <div><dt>Current status</dt><dd><x-admin.status :status="$primary->displayStatus()" kind="payment" /></dd></div>
             <div><dt>Last verification</dt><dd>{{ $primary->last_checked_at?->diffForHumans() ?? 'never checked' }}</dd></div>
         </dl>
         <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
@@ -208,7 +208,7 @@
               @if($canSeeAccounts)<td data-label="Account">{{ $a->integrationAccount?->name ?? 'Legacy' }}</td>@endif
               <td data-label="Provider ID" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
               <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
-              <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
+              <td data-label="Status"><x-admin.status :status="$a->displayStatus()" kind="payment" /></td>
               <td data-label="Date">{{ $a->created_at?->format('d M Y, H:i') }}</td>
             </tr>
           @endforeach

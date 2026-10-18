@@ -314,6 +314,25 @@ class WebhookTrackingTest extends TestCase
         $this->actingAs($nobody)->get(route('admin.payments.webhooks'))->assertForbidden();
     }
 
+    public function test_a_failure_reported_only_by_webhook_reads_failed_on_every_screen_but_never_for_a_paid_attempt(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view', 'payments.reports.view']);
+
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'amount' => 300, 'errorMessage' => '3DS failed', 'response' => ['gatewayCode' => 'X']])->assertOk();
+        $this->assertSame('initiated', $a->fresh()->status, 'the stored attempt is untouched');
+        $this->assertSame('failed', $a->fresh()->displayStatus());
+
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertSee('<dt>Status</dt><dd><span class="a-badge a-badge--danger a-badge--dot">Failed</span>', false);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions'))->assertOk()->assertSee('a-badge--danger', false)->assertSee('Failed');
+        $this->actingAs($viewer)->get(route('admin.orders.show', $a->order))->assertOk()->assertSee('Failed');
+
+        // a payment that went through afterwards is paid, whatever an earlier webhook said
+        $a->forceFill(['status' => 'paid'])->saveQuietly();
+        $this->assertSame('paid', $a->fresh()->displayStatus());
+    }
+
     public function test_assignment_scoping_applies_to_transactions(): void
     {
         SystemSettings::set('order_assignment_enabled', true);

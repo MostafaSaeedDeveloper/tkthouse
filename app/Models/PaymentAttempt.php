@@ -47,6 +47,21 @@ class PaymentAttempt extends Model
         return $this->hasMany(WebhookEvent::class);
     }
 
+    /** The "payment.failed" webhook recorded for this attempt, if any (Fawaterak reports failures only this way). */
+    public function failedWebhookEvent()
+    {
+        return $this->hasOne(WebhookEvent::class)->where('event_type', 'payment.failed')->latestOfMany();
+    }
+
+    /**
+     * Status to show people. A gateway may report a failure only by webhook, which is stored but never changes the attempt itself
+     * (the attempt would otherwise keep reading "Processing"); such an open attempt is shown as failed. A paid attempt never is.
+     */
+    public function displayStatus(): string
+    {
+        return $this->status === self::INITIATED && $this->failedWebhookEvent !== null ? self::FAILED : (string) $this->status;
+    }
+
     public static function newInternalReference(): string
     {
         do {
