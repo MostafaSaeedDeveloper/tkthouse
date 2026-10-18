@@ -11,6 +11,7 @@ use App\Services\PendingPaymentExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Customer portal: what a signed-in customer may see is decided by Order::ownedByCustomer / IssuedTicket::ownedByCustomer
@@ -51,17 +52,21 @@ class CustomerDashboardController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'profile_image' => ['nullable', 'image', 'max:2048'],
+            'profile_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_profile_image' => ['nullable', 'boolean'],
         ]);
 
         $update = ['name' => trim($validated['name']), 'phone' => filled($validated['phone'] ?? null) ? trim($validated['phone']) : null];
 
-        if ($request->hasFile('profile_image')) {
-            if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
+        if ($request->hasFile('profile_image') || $request->boolean('remove_profile_image')) {
+            // Only files we stored ourselves are deleted; an external (http) avatar URL is just unlinked.
+            if ($user->profile_image && ! Str::startsWith($user->profile_image, ['http://', 'https://']) && Storage::disk('public')->exists($user->profile_image)) {
                 Storage::disk('public')->delete($user->profile_image);
             }
 
-            $update['profile_image'] = $request->file('profile_image')->store('profile-images', 'public');
+            $update['profile_image'] = $request->hasFile('profile_image')
+                ? $request->file('profile_image')->store('profile-images', 'public')
+                : null;
         }
 
         $user->update($update);

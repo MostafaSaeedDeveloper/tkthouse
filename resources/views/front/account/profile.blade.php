@@ -13,6 +13,24 @@
                 @method('PUT')
                 <div class="tkt-form-grid tkt-form-grid--2">
                     <div class="tkt-field is-full">
+                        <span class="tkt-label">Profile photo</span>
+                        <div class="tkt-photo" data-photo>
+                            <span class="tkt-portal__avatar tkt-photo__img" aria-hidden="true">
+                                <img src="{{ $user->profileImageUrl() }}" alt="" data-photo-img @unless($user->profileImageUrl()) hidden @endunless>
+                                <span data-photo-initial @if($user->profileImageUrl()) hidden @endif>{{ mb_strtoupper(mb_substr(trim((string) ($user->name ?: $user->email)), 0, 1)) }}</span>
+                            </span>
+                            <div>
+                                <label class="tkt-btn tkt-btn--outline tkt-btn--sm" for="acc_photo" style="cursor:pointer">{{ $user->profileImageUrl() ? 'Change photo' : 'Upload photo' }}</label>
+                                <input id="acc_photo" name="profile_image" type="file" accept="image/jpeg,image/png,image/webp" hidden data-photo-input>
+                                @if($user->profileImageUrl())
+                                    <label class="tkt-text-sm tkt-text-muted" style="display:block;margin-top:8px"><input type="checkbox" name="remove_profile_image" value="1"> Remove current photo</label>
+                                @endif
+                                <p class="tkt-field__hint" style="margin:6px 0 0">JPG, PNG or WebP, up to 2 MB. Press “Save changes” to apply.</p>
+                            </div>
+                        </div>
+                        @error('profile_image')<div class="tkt-field__error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="tkt-field is-full">
                         <label class="tkt-label" for="acc_name">Full name</label>
                         <input class="tkt-input {{ $errors->has('name') ? 'is-invalid' : '' }}" id="acc_name" name="name" type="text" value="{{ old('name', $user->name) }}" autocomplete="name" required>
                         @error('name')<div class="tkt-field__error">{{ $message }}</div>@enderror
@@ -107,6 +125,14 @@
 
 @push('scripts')
 <script>
+(function () {
+    var input = document.querySelector('[data-photo-input]');
+    if (input) input.addEventListener('change', function () {
+        var f = input.files && input.files[0], img = document.querySelector('[data-photo-img]'), ini = document.querySelector('[data-photo-initial]');
+        if (!f || !img) return;
+        img.src = URL.createObjectURL(f); img.hidden = false; if (ini) ini.hidden = true;
+    });
+})();
 (function () {
     var card = document.getElementById('emailCard');
     if (!card) return;

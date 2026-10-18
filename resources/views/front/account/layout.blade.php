@@ -18,7 +18,7 @@
 <div class="tkt-container tkt-portal">
     <header class="tkt-portal__head">
         <div class="tkt-portal__who">
-            <span class="tkt-portal__avatar" aria-hidden="true">{{ $initial }}</span>
+            <span class="tkt-portal__avatar" aria-hidden="true">@if($portalUser->profileImageUrl())<img src="{{ $portalUser->profileImageUrl() }}" alt="">@else{{ $initial }}@endif</span>
             <div class="tkt-portal__who-text">
                 <h1 class="tkt-portal__name">@yield('heading', 'My account')</h1>
                 <p class="tkt-portal__email">{{ $portalUser->name ?: 'Welcome' }} · {{ $portalUser->email }}</p>
