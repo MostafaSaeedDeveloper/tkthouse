@@ -5,7 +5,7 @@
 @php
     $initials = mb_strtoupper(mb_substr(trim($user->name) ?: $user->username, 0, 1));
     $isMe = auth()->id() === $user->id;
-    $role = $user->roles->first()?->name;
+    $role = \App\Support\RoleLabel::of($user->roles->first());
     $isStaff = $user->roles->isNotEmpty() || $user->permissions->isNotEmpty();
 @endphp
 <x-admin.page-header :title="$user->name" :subtitle="'@'.$user->username" :crumbs="['Dashboard' => route('admin.dashboard'), 'Users' => route('admin.users.index'), $user->name]">
@@ -20,7 +20,7 @@
         <div style="min-width:0;flex:1">
             <div class="a-m-chips">
                 @if($user->is_active)<x-admin.badge variant="success" dot>Active</x-admin.badge>@else<x-admin.badge variant="danger" dot>Inactive — cannot sign in</x-admin.badge>@endif
-                @if($role)<x-admin.badge variant="dark">{{ $role }}</x-admin.badge>@elseif($isStaff)<x-admin.badge>No role · custom permissions</x-admin.badge>@else<x-admin.badge>Customer account</x-admin.badge>@endif
+                @if($role !== '')<x-admin.badge variant="dark">{{ $role }}</x-admin.badge>@elseif($isStaff)<x-admin.badge>No role · custom permissions</x-admin.badge>@else<x-admin.badge>Customer account</x-admin.badge>@endif
                 @if($user->can_receive_orders)<x-admin.badge variant="info">Receives orders</x-admin.badge>@endif
                 @if($isMe)<x-admin.badge variant="info">You</x-admin.badge>@endif
             </div>
@@ -40,7 +40,7 @@
   <div>
     <x-admin.card title="Access" subtitle="What this user can do. Role permissions change when the role is edited.">
         <dl class="a-kv" style="margin-bottom:16px">
-            <div><dt>Role</dt><dd>{{ $role ?? '—' }}</dd></div>
+            <div><dt>Role</dt><dd>{{ $role !== '' ? $role : '—' }}</dd></div>
             <div><dt>Event scope</dt><dd>@if($user->managedEvents->isEmpty())All events (no restriction)@else{{ $user->managedEvents->pluck('name')->implode(', ') }}@endif</dd></div>
         </dl>
         <h3 class="a-form-section__title" style="font-size:14px">Custom permissions ({{ $direct->count() }})</h3>

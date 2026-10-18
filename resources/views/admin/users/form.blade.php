@@ -15,7 +15,7 @@
         <select id="u-role" name="role" class="form-select" data-role-perms='@json($rolePermissions ?? [])'>
             <option value="">-- No Role --</option>
             @foreach($roles as $role)
-                <option value="{{ $role->name }}" @selected(old('role', isset($user) ? $user->roles->first()?->name : '') === $role->name)>{{ $role->name }}</option>
+                <option value="{{ $role->name }}" @selected(old('role', isset($user) ? $user->roles->first()?->name : '') === $role->name)>{{ \App\Support\RoleLabel::of($role) }}</option>
             @endforeach
         </select>
     </x-admin.field>

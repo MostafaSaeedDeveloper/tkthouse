@@ -3,7 +3,15 @@
     $groups = $permissions->groupBy(fn ($p) => str($p->name)->before('.')->before(' ')->toString());
 @endphp
 <x-admin.form-section title="Role" cols="1">
-    <x-admin.field label="Role Name" name="name" for="r-name" required><input id="r-name" name="name" class="form-control" value="{{ old('name', $role->name ?? '') }}" required></x-admin.field>
+    <x-admin.field label="Display name" name="display_name" for="r-name" required hint="What people read in lists and dropdowns. You can rename it any time."><input id="r-name" name="display_name" class="form-control" maxlength="80" value="{{ old('display_name', isset($role) ? \App\Support\RoleLabel::of($role) : '') }}" required></x-admin.field>
+    <x-admin.field label="Description" name="description" for="r-desc" hint="One line on who this role is for."><input id="r-desc" name="description" class="form-control" maxlength="255" value="{{ old('description', $role->description ?? '') }}"></x-admin.field>
+    @isset($role)
+        <div class="a-field">
+            <label class="form-label" for="r-key">System name</label>
+            <input id="r-key" class="form-control" value="{{ $role->name }}" readonly>
+            <p class="a-hint">The fixed key the application uses. It is never changed, so renaming the display name is always safe.</p>
+        </div>
+    @endisset
 </x-admin.form-section>
 
 <x-admin.form-section title="Permissions" description="Tick what this role is allowed to do. Permissions are grouped by area." cols="1">

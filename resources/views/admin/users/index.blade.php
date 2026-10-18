@@ -24,7 +24,7 @@
         <select id="role" name="role" class="form-select">
             <option value="">All Roles</option>
             @foreach($roles as $roleName)
-                <option value="{{ $roleName }}" @selected($roleName === $role)>{{ $roleName }}</option>
+                <option value="{{ $roleName }}" @selected($roleName === $role)>{{ \App\Support\RoleLabel::of($roleName) }}</option>
             @endforeach
         </select></div>
     <div class="a-field"><label class="form-label" for="permission">Permission</label>
@@ -75,7 +75,7 @@
                             </span>
                         </div>
                     </td>
-                    <td data-label="Role">@if($user->roles->first()?->name)<x-admin.badge variant="dark">{{ $user->roles->first()->name }}</x-admin.badge>@else <span class="a-table__sub">No role</span>@endif</td>
+                    <td data-label="Role">@if($user->roles->first()?->name)<x-admin.badge variant="dark">{{ \App\Support\RoleLabel::of($user->roles->first()) }}</x-admin.badge>@else <span class="a-table__sub">No role</span>@endif</td>
                     <td data-label="Status" class="a-wrap">
                         <div class="a-m-chips">
                             @if($user->is_active)<x-admin.badge variant="success" dot>Active</x-admin.badge>@else<x-admin.badge variant="danger" dot>Inactive</x-admin.badge>@endif
