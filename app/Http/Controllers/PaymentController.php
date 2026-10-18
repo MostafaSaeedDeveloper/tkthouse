@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Services\Auth\GuestOrderAccess;
 use App\Services\PaymobService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PaymentService;
@@ -186,24 +185,12 @@ class PaymentController extends Controller
 
     /**
      * Shared checks for pages that act on a payable order. Returns a response when the order can't be paid right now.
-     * Access = the link token AND (signed-in owner OR the browser session that placed the order). Anyone else who has a
-     * valid emailed link is asked to prove they own the account's mailbox with a one-time code.
+     * Access = the link token (a 40-character secret that only travels in the e-mail sent to the customer). There is no extra
+     * "confirm it's you" code step: whoever holds the link can pay for the order from any browser.
      */
     private function guard(Request $request, Order $order, string $token)
     {
         abort_unless($order->payment_link_token && hash_equals($order->payment_link_token, $token), 404);
-
-        if (! GuestOrderAccess::can($request, $order)) {
-            $order->loadMissing('user');
-            abort_unless($order->user, 403);
-
-            return response()->view('front.checkout.verify-link', [
-                'order' => $order,
-                'token' => $token,
-                'emailMasked' => GuestOrderAccess::mask($order->user->email),
-                'email' => '', // never hand the account address to someone who only holds the link
-            ], 401);
-        }
 
         if ($order->status === 'pending_payment'
             && app(PendingPaymentExpiryService::class)->expireOrderIfNeeded($order->loadMissing('customer'), SystemSettings::pendingPaymentTimeoutMinutes())) {

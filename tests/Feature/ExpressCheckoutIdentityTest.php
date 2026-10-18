@@ -329,7 +329,8 @@ class ExpressCheckoutIdentityTest extends TestCase
 
         $this->assertGuest();
         $this->get(route('front.checkout.confirmation', $theirs->order_number))->assertNotFound();
-        $this->get(route('front.orders.payment', ['order' => $theirs, 'token' => $theirs->payment_link_token]))->assertStatus(401);
+        $this->get(route('front.orders.payment', ['order' => $theirs, 'token' => $theirs->payment_link_token]))->assertOk();   // the emailed link alone opens the payment page
+        $this->get(route('front.orders.payment', ['order' => $theirs, 'token' => 'wrong-token']))->assertNotFound();
         $this->get(route('front.account.orders'))->assertRedirect();
         $this->assertSame(1, Order::where('user_id', $other->id)->count());
         $this->assertSame(0, Order::where('user_id', User::where('email', 'new@example.test')->value('id'))->where('owner_unverified', false)->count());
