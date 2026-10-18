@@ -53,9 +53,10 @@ class PaymentAccountResolver
         if ($id = $this->defaultAccountId()) {
             $account = IntegrationAccount::query()->find($id);
 
+            // A default account that is disabled/unverified/deleted must not take checkout down: each method's own configuration is used.
             return self::usable($account)
                 ? new Resolution($account, 'default_account', assigneeId: $assigneeId, allowedMethods: $allowed)
-                : new Resolution(null, 'blocked', true, 'default_account_unavailable', $assigneeId, $allowed);
+                : new Resolution(null, 'legacy', false, 'default_account_unavailable', $assigneeId, $allowed);
         }
 
         return new Resolution(null, 'legacy', assigneeId: $assigneeId, allowedMethods: $allowed);

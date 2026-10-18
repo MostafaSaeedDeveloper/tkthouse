@@ -491,11 +491,19 @@ class PaymentRoutingTest extends TestCase
         $this->assertFalse(PaymentAccountResolver::usable($fA));
     }
 
-    public function test_empty_checkout_explains_itself_to_payment_admins_only(): void
+    public function test_unusable_default_account_falls_back_to_the_methods_own_configuration(): void
     {
         SystemSettings::set('default_payment_account_id', $this->A->id);
-        $this->A->forceFill(['enabled' => false])->save(); // default account unusable -> online methods blocked
-        \App\Models\PaymentMethod::query()->where('provider', '!=', 'paymob')->update(['is_active' => false]);
+        $this->A->forceFill(['enabled' => false])->save();
+        $order = $this->order();
+
+        $this->actingAs($this->customer)->get(route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]))
+            ->assertOk()->assertDontSee('No payment methods are available');
+    }
+
+    public function test_empty_checkout_explains_itself_to_payment_admins_only(): void
+    {
+        \App\Models\PaymentMethod::query()->update(['is_active' => false]);
         $order = $this->order();
         $url = route('front.orders.payment', ['order' => $order, 'token' => $order->payment_link_token]);
 
@@ -504,6 +512,6 @@ class PaymentRoutingTest extends TestCase
 
         Permission::findOrCreate('payments.transactions.view', 'web');
         $this->customer->givePermissionTo('payments.transactions.view');
-        $this->actingAs($this->customer->fresh())->get($url)->assertOk()->assertSee('Admin only')->assertSee('default_account_unavailable');
+        $this->actingAs($this->customer->fresh())->get($url)->assertOk()->assertSee('Admin only')->assertSee('No payment method is active');
     }
 }
