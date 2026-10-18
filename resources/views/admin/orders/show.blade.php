@@ -176,7 +176,6 @@
         @else
         <dl class="a-kv">
             <div><dt>Payment provider</dt><dd>{{ ucfirst((string) $primary->provider) }}</dd></div>
-            @if($canSeeAccounts)<div><dt>Merchant account</dt><dd>{{ $primary->integrationAccount?->name ?? 'Legacy configuration' }}</dd></div>@endif
             <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel ?: ($primary->method_code ?: '—') }}</dd></div>
             <div><dt>Order reference</dt><dd>#{{ $order->order_number }}</dd></div>
             <div><dt>Payment reference</dt><dd>{{ $primary->internal_reference ?: 'Legacy attempt' }}@if($primary->internal_reference) <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-copy-text="{{ $primary->internal_reference }}" aria-label="Copy payment reference"><i class="fa fa-copy"></i></button>@endif</dd></div>
