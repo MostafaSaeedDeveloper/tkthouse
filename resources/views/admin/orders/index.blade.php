@@ -52,7 +52,7 @@
 
 @include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o'])
 
-@php $canBulk = $canAssign || auth()->user()->can('orders.update'); @endphp
+@php $canBulk = $canAssign || auth()->user()->can('orders.update') || auth()->user()->can('orders.delete'); @endphp
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
     @if($orders->isEmpty())
         <x-admin.empty icon="fa-receipt" title="No orders found" text="No order matches the current search and filters.">
@@ -68,17 +68,19 @@
         @if($canAssign)
         <span class="a-ord-bulk__assign">
         <label class="a-sr-only" for="bulkAssignee">Assign selected orders to</label>
-        <select id="bulkAssignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach</select>
-        <input class="form-control" name="reason" maxlength="300" placeholder="Reason (optional)" aria-label="Reason">
+        <select id="bulkAssignee" class="form-select form-select-sm" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}">{{ $a->name }}</option>@endforeach</select>
         <button type="submit" class="a-btn a-btn--primary a-btn--sm">Assign</button>
         </span>
         @endif
-        @can('orders.update')
         <span class="a-ord-bulk__decide">
+            @can('orders.update')
             <button type="submit" class="a-btn a-btn--success a-btn--sm" formaction="{{ route('admin.orders.bulk.approve') }}" data-bulk-confirm="Approve the selected orders that are awaiting approval and email each customer a payment link? Other orders are skipped."><i class="fa fa-check" aria-hidden="true"></i> Approve</button>
             <button type="submit" class="a-btn a-btn--danger a-btn--sm" formaction="{{ route('admin.orders.bulk.reject') }}" data-bulk-confirm="Reject the selected orders that are awaiting approval and email each customer? Other orders are skipped."><i class="fa fa-xmark" aria-hidden="true"></i> Reject</button>
+            @endcan
+            @can('orders.delete')
+            <button type="submit" class="a-btn a-btn--outline a-btn--sm a-ord-bulk__delete" formaction="{{ route('admin.orders.bulk.delete') }}" data-bulk-confirm="Delete the selected orders? They move to Deleted Orders and can be restored from there."><i class="fa fa-trash-can" aria-hidden="true"></i> Delete</button>
+            @endcan
         </span>
-        @endcan
     </form>
     @endif
     <x-admin.table stack class="a-ordt" caption="Orders">

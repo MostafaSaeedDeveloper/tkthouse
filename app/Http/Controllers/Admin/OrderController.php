@@ -414,6 +414,36 @@ class OrderController extends Controller
         return redirect()->route('admin.orders.index')->with('success', "Order {$orderNumber} deleted successfully.");
     }
 
+    /** Soft-delete the selected orders (they move to Deleted Orders and can be restored), skipping any the user may not touch. */
+    public function bulkDestroy(Request $request)
+    {
+        abort_unless($request->user()?->can('orders.delete'), 403);
+
+        $data = $request->validate([
+            'order_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'order_ids.*' => ['integer'],
+        ]);
+
+        $done = 0;
+        $skipped = 0;
+
+        foreach (Order::query()->visibleTo($request->user())->whereIn('id', $data['order_ids'])->get() as $order) {
+            try {
+                $this->abortIfOrderNotAccessible($request, $order);
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
+                $skipped++;
+
+                continue;
+            }
+
+            $order->delete();
+            activity('orders')->performedOn($order)->causedBy($request->user())->log('Order soft deleted (bulk)');
+            $done++;
+        }
+
+        return back()->with($done ? 'success' : 'error', $done.' order(s) moved to Deleted Orders'.($skipped ? ", {$skipped} skipped (not allowed)" : '').'.');
+    }
+
     public function restore(Request $request, int $order)
     {
         abort_unless($request->user()?->can(self::DELETED_ORDERS_PERMISSION), 403);

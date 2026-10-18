@@ -164,6 +164,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('orders', [OrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
     Route::get('orders/export', [OrderController::class, 'export'])->middleware('permission:orders.view')->name('orders.export');
     Route::get('orders/deleted', [OrderController::class, 'deleted'])->middleware('permission:orders.deleted.view')->name('orders.deleted');
+    Route::post('orders/bulk-delete', [OrderController::class, 'bulkDestroy'])->middleware('permission:orders.delete')->name('orders.bulk.delete');
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.delete')->name('orders.destroy');
     Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.restore')->name('orders.restore');
     Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');

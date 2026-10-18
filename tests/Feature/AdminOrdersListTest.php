@@ -159,6 +159,38 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringContainsString('class="a-filters__body"', $html);
     }
 
+    public function test_bulk_delete_soft_deletes_selected_orders_and_needs_the_delete_permission(): void
+    {
+        $this->staff(['orders.update']);   // no orders.delete
+        $a = $this->order('930001', 'paid', 'Hal', $this->eventA);
+        $this->post(route('admin.orders.bulk.delete'), ['order_ids' => [$a->id]])->assertForbidden();
+        $this->assertNull($a->fresh()->deleted_at);
+
+        $this->staff(['orders.delete']);
+        $b = $this->order('930002', 'pending_approval', 'Ivy', $this->eventA);
+        $keep = $this->order('930003', 'paid', 'Jon', $this->eventA);
+
+        $this->post(route('admin.orders.bulk.delete'), ['order_ids' => [$a->id, $b->id]])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSoftDeleted('orders', ['id' => $a->id]);
+        $this->assertSoftDeleted('orders', ['id' => $b->id]);
+        $this->assertNull($keep->fresh()->deleted_at);                                // not selected
+        $this->post(route('admin.orders.bulk.delete'), [])->assertSessionHasErrors('order_ids');
+    }
+
+    public function test_bulk_bar_has_no_reason_field_and_shows_delete_only_with_the_permission(): void
+    {
+        $this->staff(['orders.update']);
+        $this->order('930010', 'pending_approval', 'Kim', $this->eventA);
+        $html = $this->get(route('admin.orders.index'))->assertOk()->getContent();
+        $bar = substr($html, strpos($html, 'id="bulkAssignForm"'), 2500);
+        $this->assertStringNotContainsString('name="reason"', $bar);
+        $this->assertStringNotContainsString(route('admin.orders.bulk.delete'), $html);
+
+        $this->staff(['orders.update', 'orders.delete']);
+        $this->assertStringContainsString(route('admin.orders.bulk.delete'), $this->get(route('admin.orders.index'))->getContent());
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();
