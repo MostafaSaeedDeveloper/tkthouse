@@ -198,7 +198,6 @@
             @csrf
             <label class="form-label" for="ordAssignSelect">Assigned agents</label>
             <x-admin.multiselect name="assignee_ids" id="ordAssignSelect" label="Assigned agents" :options="$assigneeOptions" :selected="[]" placeholder="Search agents…" empty-text="Unassigned" />
-            <p class="a-hint">Pick one or more agents. They must all have the same payment methods.</p>
             <label class="form-label" for="ordAssignReason" style="margin-top:12px">Reason (optional)</label>
             <input id="ordAssignReason" class="form-control" name="reason" maxlength="300">
             <p class="a-hint">Changing the assignee never changes how this order is paid.</p>
