@@ -130,15 +130,20 @@
           $socialProfileLink = $socialProfileRaw !== ''
             ? (\Illuminate\Support\Str::startsWith($socialProfileRaw, ['http://', 'https://']) ? $socialProfileRaw : 'https://' . ltrim($socialProfileRaw, '/'))
             : null;
+          // Show "instagram.com/handle" instead of the full tracking URL; the full link stays on the href/title.
+          $socialParts = $socialProfileLink ? parse_url($socialProfileLink) : null;
+          $socialProfileShort = $socialParts ? preg_replace('/^www\./', '', (string) ($socialParts['host'] ?? '')).rtrim((string) ($socialParts['path'] ?? ''), '/') : '';
         @endphp
         <div class="a-ord-item">
           <div style="min-width:0">
-            <div class="a-ord-item__name">{{ $item->holder_name ?: '—' }}</div>
-            <div class="a-ord-item__meta">{{ $item->ticket_name }}@if((int) $item->quantity > 1) × {{ $item->quantity }}@endif</div>
-            <div class="a-ord-item__meta">{{ $item->holder_email ?: '-' }} — {{ $item->holder_phone ?: '-' }}@if($item->holder_gender) — {{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}@endif</div>
-            @if($socialProfileLink)
-              <a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" class="a-ord-item__meta"><i class="fa fa-globe"></i> {{ $socialProfileRaw }}</a>
-            @endif
+            <div class="a-ord-item__name">{{ $item->holder_name ?: '—' }}@if($item->holder_gender) <span class="a-ord-chip">{{ ucwords(str_replace('_', ' ', (string) $item->holder_gender)) }}</span>@endif</div>
+            <div class="a-ord-item__ticket">{{ $item->ticket_name }}@if((int) $item->quantity > 1) <span class="a-ord-chip">× {{ $item->quantity }}</span>@endif</div>
+            <ul class="a-ord-contact">
+              @if($item->holder_email)<li><i class="fa fa-envelope" aria-hidden="true"></i><a href="mailto:{{ $item->holder_email }}">{{ $item->holder_email }}</a></li>@endif
+              @if($item->holder_phone)<li><i class="fa fa-phone" aria-hidden="true"></i><a href="tel:{{ preg_replace('/[^\d+]/', '', (string) $item->holder_phone) }}">{{ $item->holder_phone }}</a></li>@endif
+              @if($socialProfileLink)<li><i class="fa fa-globe" aria-hidden="true"></i><a href="{{ $socialProfileLink }}" target="_blank" rel="noopener noreferrer" title="{{ $socialProfileRaw }}">{{ $socialProfileShort }}</a></li>@endif
+              @if(! $item->holder_email && ! $item->holder_phone && ! $socialProfileLink)<li class="a-muted">No contact details.</li>@endif
+            </ul>
             @if($item->issuedTickets->isNotEmpty())
               <div class="a-ord-issued">
                 @foreach($item->issuedTickets->sortBy('seat_index') as $issuedTicket)
@@ -150,7 +155,7 @@
                 @endforeach
               </div>
             @else
-              <div class="a-ord-item__meta" style="margin-top:8px">No generated ticket numbers yet.</div>
+              <div class="a-ord-item__meta" style="margin-top:10px"><i class="fa fa-ticket" aria-hidden="true"></i> No ticket numbers generated yet</div>
             @endif
           </div>
           <div class="a-ord-item__price">{{ $money($item->line_total) }}<small>Qty × {{ $item->quantity }}</small></div>

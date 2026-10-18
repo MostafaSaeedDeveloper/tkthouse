@@ -14,6 +14,13 @@
 .a-ord-item:first-child { border-top: 0; padding-top: 0; }
 .a-ord-item__name { font-weight: 800; overflow-wrap: anywhere; }
 .a-ord-item__meta { font-size: 13px; color: var(--a-muted); overflow-wrap: anywhere; }
+.a-ord-item__ticket { margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--a-ink, #111); overflow-wrap: anywhere; }
+.a-ord-chip { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--a-surface, #f4f4f1); border: 1px solid var(--a-line); font-size: 11px; font-weight: 700; color: var(--a-muted); vertical-align: 1px; }
+.a-ord-contact { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; }
+.a-ord-contact li { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: var(--a-muted); }
+.a-ord-contact i { width: 14px; text-align: center; opacity: .75; }
+.a-ord-contact a { color: inherit; overflow-wrap: anywhere; }
+.a-ord-contact a:hover { color: var(--a-ink, #111); text-decoration: underline; }
 .a-ord-item__price { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
 .a-ord-item__price small { display: block; font-weight: 500; color: var(--a-muted); }
 .a-ord-issued { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
