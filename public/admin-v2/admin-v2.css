@@ -207,6 +207,19 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 @media (min-width: 1100px) { .a-filters { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; } }
 .a-filters__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .a-filters .a-field { min-width: 0; }
+/* The body is transparent to the grid on tablets/desktops (layout unchanged); on phones it collapses behind the toggle. */
+.a-filters__body { display: contents; }
+.a-filters__toggle { display: none; }
+@media (max-width: 639.98px) {
+    .a-filters { padding: 0; gap: 0; }
+    .a-filters__toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 50px; padding: 0 18px; border: 0; background: none; font: inherit; font-weight: 700; color: var(--a-ink); cursor: pointer; }
+    .a-filters__toggle > span { display: inline-flex; align-items: center; gap: 8px; }
+    .a-filters__count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--a-yellow); color: #000; font-size: 12px; line-height: 20px; text-align: center; }
+    .a-filters__chev { font-size: 12px; color: var(--a-muted); transition: transform .15s; }
+    .a-filters.is-open .a-filters__chev { transform: rotate(180deg); }
+    .a-filters__body { display: none; gap: 12px; padding: 4px 18px 18px; border-top: 1px solid var(--a-line); padding-top: 16px; }
+    .a-filters.is-open .a-filters__body { display: grid; }
+}
 
 /* ---------- tables ---------- */
 .a-table-wrap, .a-body .table-responsive { position: relative; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: inherit; }

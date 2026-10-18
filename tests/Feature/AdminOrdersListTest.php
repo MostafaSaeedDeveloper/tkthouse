@@ -146,6 +146,18 @@ class AdminOrdersListTest extends TestCase
         $this->assertStringNotContainsString('a-ord-type', $html);                    // no ticket lines in the cells any more
     }
 
+    public function test_shared_filters_render_a_collapsible_toggle_with_an_applied_count(): void
+    {
+        $this->staff(['attendees.view']);
+
+        $html = $this->get(route('admin.customers.index', ['search' => 'abc']))->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-a-filters', $html);
+        $this->assertStringContainsString('class="a-filters__toggle"', $html);
+        $this->assertMatchesRegularExpression('#a-filters__count"[^>]*>1</b>#', $html);   // one filter applied
+        $this->assertStringContainsString('class="a-filters__body"', $html);
+    }
+
     public function test_list_renders_compact_columns_with_full_event_name_available_and_real_summary(): void
     {
         $this->staff();
