@@ -20,7 +20,7 @@ use Tests\Support\PinnedSessionManager;
 use Tests\Support\PinnedSessionStore;
 use Tests\TestCase;
 
-/** Provisional reservations: the agent + merchant account shown to a customer, without consuming round-robin turns until an order exists. */
+/** Provisional reservations: the agent (and so the payment methods) shown to a customer, without consuming round-robin turns until an order exists. */
 class CheckoutReservationTest extends TestCase
 {
     use BuildsMerchantAccounts, BuildsOrders, RefreshDatabase;
@@ -29,8 +29,6 @@ class CheckoutReservationTest extends TestCase
     private User $agent1;
     private User $agent2;
     private IntegrationAccount $F0;
-    private IntegrationAccount $F1;
-    private IntegrationAccount $F2;
 
     protected function setUp(): void
     {
@@ -44,12 +42,11 @@ class CheckoutReservationTest extends TestCase
         $this->event = $this->makeEvent();
         $this->makeMethod('fake', 'fake_card');
         $this->makeMethod('fake', 'fake_wallet');
+        // One merchant account for everyone; the agents differ only in which payment methods their customers see.
         $this->F0 = $this->account('fake', 'F0');
-        $this->F1 = $this->account('fake', 'F1', ['supported_methods' => 'fake_card']);
-        $this->F2 = $this->account('fake', 'F2', ['supported_methods' => 'fake_wallet,fake_card']);
 
-        $this->agent1 = $this->agent($this->F1);
-        $this->agent2 = $this->agent($this->F2);
+        $this->agent1 = $this->agent(['fake_card']);
+        $this->agent2 = $this->agent(['fake_wallet', 'fake_card']);
         SystemSettings::set('order_assignment_enabled', true);
         SystemSettings::set('order_assignment_mode', 'round_robin');
         SystemSettings::set('payment_routing_enabled', true);
@@ -57,11 +54,11 @@ class CheckoutReservationTest extends TestCase
         $this->browser('a');
     }
 
-    private function agent(IntegrationAccount $acc): User
+    private function agent(array $allowedMethods): User
     {
         $u = User::factory()->create();
         $u->assignRole('Order Agent');
-        $u->forceFill(['can_receive_orders' => true, 'payment_routing_mode' => 'custom', 'payment_account_id' => $acc->id, 'payment_routing_enabled' => true])->save();
+        $u->forceFill(['can_receive_orders' => true, 'allowed_payment_methods' => $allowedMethods])->save();
 
         return $u->fresh();
     }
@@ -99,11 +96,11 @@ class CheckoutReservationTest extends TestCase
     public function test_opening_the_payment_step_reserves_provisionally_and_never_moves_the_final_pointer(): void
     {
         $this->begin();
-        $this->get(route('front.checkout'))->assertOk()->assertSee('fake_card', false)->assertDontSee('fake_wallet', false); // F1 supports only the card
+        $this->get(route('front.checkout'))->assertOk()->assertSee('fake_card', false)->assertDontSee('fake_wallet', false); // agent1 offers only the card
         $r = $this->reservation();
 
         $this->assertSame($this->agent1->id, $r->assignee_id);
-        $this->assertSame($this->F1->id, $r->integration_account_id);
+        $this->assertSame($this->F0->id, $r->integration_account_id);   // the one shared account
         $this->assertNull($this->pointer(), 'a reservation is not a turn');
         $this->assertSame(0, Order::count());
 
@@ -145,14 +142,14 @@ class CheckoutReservationTest extends TestCase
 
         $order = Order::firstOrFail();
         $this->assertSame($this->agent1->id, $order->assigned_user_id);
-        $this->assertSame($this->F1->id, $order->integration_account_id);
+        $this->assertSame($this->F0->id, $order->integration_account_id);
         $this->assertSame($this->agent1->id, $this->pointer());
         $this->assertSame($order->id, CheckoutRouting::where('token', $token)->value('consumed_order_id'));
         $this->assertDatabaseHas('order_assignments', ['order_id' => $order->id, 'to_user_id' => $this->agent1->id, 'source' => 'round_robin']);
 
-        // the payment attempt that follows uses exactly that account
+        // the payment attempt that follows uses the shared account
         $this->get(route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token, 'method' => 'fake_card']))->assertRedirect();
-        $this->assertSame($this->F1->id, $order->paymentAttempts()->firstOrFail()->integration_account_id);
+        $this->assertSame($this->F0->id, $order->paymentAttempts()->firstOrFail()->integration_account_id);
 
         // the next customer gets the next agent
         $this->browser('b'); $this->begin(); $this->get(route('front.checkout'));
@@ -188,10 +185,10 @@ class CheckoutReservationTest extends TestCase
         $this->assertSame(1, Order::count());
     }
 
-    public function test_method_no_longer_offered_by_the_reserved_account_conflicts(): void
+    public function test_method_no_longer_offered_to_the_reserved_agents_customers_conflicts(): void
     {
         $this->begin(); $this->get(route('front.checkout'));
-        $this->F1->forceFill(['config' => array_merge($this->F1->config, ['supported_methods' => 'fake_wallet'])])->save();
+        $this->agent1->forceFill(['allowed_payment_methods' => ['fake_wallet']])->save();
 
         $this->postJson(route('front.checkout.store'), $this->payload())->assertStatus(409)->assertJson(['routing_changed' => true]);
         $this->assertSame(0, Order::count());
@@ -200,7 +197,7 @@ class CheckoutReservationTest extends TestCase
     public function test_disabling_the_reserved_account_conflicts_instead_of_switching_silently(): void
     {
         $this->begin(); $this->get(route('front.checkout'));
-        $this->F1->forceFill(['enabled' => false])->save();
+        $this->F0->forceFill(['enabled' => false])->save();
 
         $this->postJson(route('front.checkout.store'), $this->payload())->assertStatus(409)->assertJson(['routing_changed' => true]);
         $this->assertSame(0, Order::count());

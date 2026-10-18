@@ -21,9 +21,22 @@ class OfferedMethods
             return $this->gateways->available();
         }
 
+        $offered = $this->filtered($resolution, $resolution->allowedMethods);
+
+        // An agent whose allowed methods are all unavailable right now must never leave the customer unable to pay.
+        if ($offered->isEmpty() && $resolution->allowedMethods !== null) {
+            return $this->filtered($resolution, null);
+        }
+
+        return $offered;
+    }
+
+    /** @return Collection<int, PaymentMethod> */
+    private function filtered(Resolution $resolution, ?array $allowed): Collection
+    {
         return PaymentMethod::query()->where('is_active', true)->where('code', '!=', 'card')->orderBy('sort_order')->orderBy('id')->get()
-            ->filter(function (PaymentMethod $m) use ($resolution) {
-                if ($resolution->allowedMethods !== null && ! in_array($m->code, $resolution->allowedMethods, true)) {
+            ->filter(function (PaymentMethod $m) use ($resolution, $allowed) {
+                if ($allowed !== null && ! in_array($m->code, $allowed, true)) {
                     return false;
                 }
                 if (! $this->gateways->isOnline($m)) {

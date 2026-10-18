@@ -308,9 +308,9 @@ class UserController extends Controller
     }
 
     /**
-     * Per-user payment configuration. Only super admin / settings.payment-accounts.manage may change it (the section is not even
-     * rendered for anyone else, and a forged request is ignored). The user row stores a reference to an account, never keys.
-     * Past orders and payment attempts are unaffected: they stay bound to the account they were opened with.
+     * Per-user payment methods: which methods the customers of this agent's orders are offered. Only super admin /
+     * settings.payment-accounts.manage may change it (the section is not even rendered for anyone else, and a forged request
+     * is ignored). There are no per-user merchant accounts: everyone pays into the same account.
      */
     private function applyPaymentConfiguration(Request $request, User $user): void
     {
@@ -320,30 +320,18 @@ class UserController extends Controller
         }
 
         $data = $request->validate([
-            'payment_routing_mode' => ['required', 'in:default,custom'],
-            'payment_account_id' => ['nullable', 'integer', 'exists:integration_accounts,id'],
             'allowed_payment_methods' => ['nullable', 'array'],
             'allowed_payment_methods.*' => ['string', 'exists:payment_methods,code'],
         ]);
 
-        $account = ! empty($data['payment_account_id']) ? \App\Models\IntegrationAccount::query()->find($data['payment_account_id']) : null;
-        if ($data['payment_routing_mode'] === 'custom') {
-            if (! $account || $account->archived_at !== null || ! in_array($account->provider, ['paymob', 'fawaterak', 'fake'], true)) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['payment_account_id' => 'Choose an active merchant account for custom routing.']);
-            }
+        $before = $user->allowed_payment_methods;
+        $user->forceFill(['allowed_payment_methods' => array_values($data['allowed_payment_methods'] ?? []) ?: null])->save();
+
+        if ($before !== $user->allowed_payment_methods) {
+            activity('users')->performedOn($user)->causedBy($actor)->withProperties([
+                'from' => $before, 'to' => $user->allowed_payment_methods,
+            ])->log('User payment methods changed');
         }
-
-        $before = [$user->payment_routing_mode, $user->payment_account_id, $user->payment_routing_enabled];
-        $user->forceFill([
-            'payment_routing_mode' => $data['payment_routing_mode'],
-            'payment_account_id' => $data['payment_routing_mode'] === 'custom' ? $account->id : null,
-            'allowed_payment_methods' => $data['allowed_payment_methods'] ?? null ?: null,
-            'payment_routing_enabled' => $data['payment_routing_mode'] === 'custom' && $request->boolean('payment_routing_enabled'),
-        ])->save();
-
-        activity('users')->performedOn($user)->causedBy($actor)->withProperties([
-            'from' => $before, 'mode' => $user->payment_routing_mode, 'account' => $account?->name, 'routing_enabled' => $user->payment_routing_enabled,
-        ])->log('User payment configuration changed');
     }
 
     private function ensureCanManageUser(?User $actor, User $target): void

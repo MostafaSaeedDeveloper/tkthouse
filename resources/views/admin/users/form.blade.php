@@ -65,33 +65,15 @@
 
 @if(auth()->user()->can('settings.payment-accounts.manage') || \App\Orders\OrderAccess::isSuper(auth()->user()))
 @php
-    $pAccounts = \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->orderBy('provider')->orderBy('name')->get();
     $pMethods = \App\Models\PaymentMethod::query()->where('is_active', true)->orderBy('id')->get(['code', 'name']);
-    $pMode = old('payment_routing_mode', isset($user) ? $user->payment_routing_mode : 'default');
     $pAllowed = old('allowed_payment_methods', isset($user) ? ($user->allowed_payment_methods ?? []) : []);
 @endphp
-<x-admin.form-section title="Payment configuration" description="Which merchant account collects the payments of this agent's orders. Credentials are never shown here; past payments are never affected." cols="1">
+<x-admin.form-section title="Payment methods" description="Which payment methods the customers of this agent's orders can choose when they pay. Every agent shares the same merchant account; this only controls which methods are shown. Leave empty to show every active method." cols="1">
     <input type="hidden" name="payment_flags" value="1">
-    <x-admin.field label="Payment account" name="payment_routing_mode" for="u-pmode">
-        <select id="u-pmode" name="payment_routing_mode" class="form-select">
-            <option value="default" @selected($pMode === 'default')>Use default payment account</option>
-            <option value="custom" @selected($pMode === 'custom')>Use custom payment account</option>
-        </select>
-    </x-admin.field>
-    <x-admin.field label="Merchant account" name="payment_account_id" for="u-paccount" hint="Only used with a custom account. Must be enabled and verified to take payments.">
-        <select id="u-paccount" name="payment_account_id" class="form-select">
-            <option value="">— none —</option>
-            @foreach($pAccounts as $a)<option value="{{ $a->id }}" @selected((int) old('payment_account_id', isset($user) ? $user->payment_account_id : 0) === $a->id)>{{ $a->name }} · {{ ucfirst($a->provider) }} · {{ $a->environment }}@unless($a->enabled) (disabled)@endunless</option>@endforeach
-        </select>
-    </x-admin.field>
-    <div class="a-m-switch form-check form-switch">
-        <input class="form-check-input" type="checkbox" id="u-prouting" name="payment_routing_enabled" value="1" @checked(old('payment_routing_enabled', isset($user) ? $user->payment_routing_enabled : false))>
-        <label class="form-check-label" for="u-prouting"><strong>Routing enabled for this user</strong><span class="a-hint d-block">Also requires "Enable per-user payment routing" in Settings → Payment Routing.</span></label>
-    </div>
-    <fieldset><legend class="form-label">Allowed payment methods</legend>
-        <p class="a-hint">Leave all unchecked to allow every method the account supports.</p>
-        <div class="a-chips">@foreach($pMethods as $m)<label class="a-m-perm"><input type="checkbox" name="allowed_payment_methods[]" value="{{ $m->code }}" @checked(in_array($m->code, $pAllowed))><span>{{ $m->name }}</span></label>@endforeach</div>
-    </fieldset>
+    <x-admin.multiselect name="allowed_payment_methods" label="Payment methods" :options="$pMethods->pluck('name', 'code')->all()" :selected="$pAllowed" placeholder="Search payment methods…" empty-text="All payment methods" />
+    @unless(\App\Services\Payments\Routing\PaymentAccountResolver::routingEnabled())
+        <p class="a-hint" style="margin-top:10px"><i class="fa fa-circle-info" aria-hidden="true"></i> Not applied yet: turn on <strong>Show each agent's payment methods</strong> in Settings → Payments, then every customer of this agent sees only the methods chosen here.</p>
+    @endunless
 </x-admin.form-section>
 @endif
 

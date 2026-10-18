@@ -47,10 +47,10 @@ class AdminUserProfileTest extends TestCase
         $this->actingAs($noView)->get(route('admin.users.show', $agent))->assertForbidden();
 
         $viewer = $this->actor(['users.view']);
-        $this->actingAs($viewer)->get(route('admin.users.show', $agent))->assertOk()->assertDontSee('Payment configuration')->assertDontSee('Edit user');
+        $this->actingAs($viewer)->get(route('admin.users.show', $agent))->assertOk()->assertDontSee('Payment methods')->assertDontSee('Edit user');
 
         $payments = $this->actor(['users.view', 'settings.payment-accounts.view']);
-        $this->actingAs($payments)->get(route('admin.users.show', $agent))->assertOk()->assertSee('Payment configuration');
+        $this->actingAs($payments)->get(route('admin.users.show', $agent))->assertOk()->assertSee('Payment methods');
     }
 
     public function test_the_super_admin_profile_is_not_visible_to_other_staff(): void

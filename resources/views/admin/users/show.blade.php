@@ -79,14 +79,9 @@
         </dl>
     </x-admin.card>
     @if($canSeePayment)
-    <x-admin.card title="Payment configuration" style="margin-top:12px">
+    <x-admin.card title="Payment methods" style="margin-top:12px">
         <dl class="a-kv">
-            <div><dt>Account mode</dt><dd>{{ $user->payment_routing_mode === 'custom' ? 'Custom account' : 'Default account' }}</dd></div>
-            @if($user->payment_routing_mode === 'custom')
-            <div><dt>Merchant account</dt><dd>{{ $paymentAccount ? $paymentAccount->name.' · '.ucfirst($paymentAccount->provider) : '—' }}</dd></div>
-            <div><dt>Routing</dt><dd>{{ $user->payment_routing_enabled ? 'Enabled' : 'Off' }}</dd></div>
-            <div><dt>Allowed methods</dt><dd>{{ $user->allowed_payment_methods ? implode(', ', $user->allowed_payment_methods) : 'All the account supports' }}</dd></div>
-            @endif
+            <div><dt>Shown to this agent's customers</dt><dd>{{ $user->allowed_payment_methods ? implode(', ', $user->allowed_payment_methods) : 'All active methods' }}</dd></div>
         </dl>
     </x-admin.card>
     @endif
