@@ -343,15 +343,21 @@ class CheckoutController extends Controller
     }
 
     /** What is shown comes from the order's real status, never from a query string, so a URL can not fake a payment. */
-    public function confirmation(Request $request, string $orderNumber, PaymentService $payments)
+    /** Lightweight check used by the confirmation page while a payment is pending: asks the gateway (every 2 s at most) and answers with the state only. */
+    public function confirmationStatus(Request $request, string $orderNumber, PaymentService $payments)
     {
-        $order = Order::query()->where('order_number', $orderNumber)->with(['items', 'customer', 'user'])->first();
-
-        // Only the owner (signed in) or the browser session that placed the order may see it; otherwise it does not exist.
+        $order = Order::query()->where('order_number', $orderNumber)->first();
         abort_unless($order && GuestOrderAccess::can($request, $order), 404);
 
-        if ($order->status === 'pending_payment' && $order->paymentAttempts()->exists() && Cache::add('order-refresh:'.$order->id, 1, 5)) {
-            // The customer may be back before the gateway callback: ask the gateway instead of guessing.
+        $this->refreshPendingPayment($order, $payments, 2);
+
+        return response()->json(['state' => $this->confirmationState($order->refresh())])->header('Cache-Control', 'no-store');
+    }
+
+    /** The customer may be back before the gateway callback: ask the gateway instead of guessing. */
+    private function refreshPendingPayment(Order $order, PaymentService $payments, int $minSeconds = 2): void
+    {
+        if ($order->status === 'pending_payment' && $order->paymentAttempts()->exists() && Cache::add('order-refresh:'.$order->id, 1, $minSeconds)) {
             try {
                 $payments->refresh($order);
             } catch (\Throwable $e) {
@@ -359,19 +365,37 @@ class CheckoutController extends Controller
             }
             $order->refresh();
         }
+    }
 
-        $latest = $order->paymentAttempts()->latest('id')->first();
-        $hasOpen = $order->paymentAttempts()->where('status', 'initiated')->exists();
+    /** paid | review | closed | failed | unpaid | pending | other. A failure the gateway reported only by webhook counts as failed too. */
+    private function confirmationState(Order $order): string
+    {
+        $attempts = $order->paymentAttempts()->with('failedWebhookEvent')->latest('id')->get();
+        $latest = $attempts->first();
+        $hasOpen = $attempts->contains(fn ($a) => $a->displayStatus() === 'initiated');
 
-        $state = match (true) {
+        return match (true) {
             $order->status === 'paid' => 'paid',
             $order->status === 'pending_approval' => 'review',
             in_array($order->status, ['canceled', 'rejected'], true) => 'closed',
-            $order->status === 'pending_payment' && $latest?->status === 'failed' && ! $hasOpen => 'failed',
+            $order->status === 'pending_payment' && $latest?->displayStatus() === 'failed' && ! $hasOpen => 'failed',
             $order->status === 'pending_payment' && $latest === null => 'unpaid',
             $order->status === 'pending_payment' => 'pending',
             default => 'other',
         };
+    }
+
+    public function confirmation(Request $request, string $orderNumber, PaymentService $payments)
+    {
+        $order = Order::query()->where('order_number', $orderNumber)->with(['items', 'customer', 'user'])->first();
+
+        // Only the owner (signed in) or the browser session that placed the order may see it; otherwise it does not exist.
+        abort_unless($order && GuestOrderAccess::can($request, $order), 404);
+
+        $this->refreshPendingPayment($order, $payments);
+
+        $latest = $order->paymentAttempts()->latest('id')->first();
+        $state = $this->confirmationState($order);
 
         $event = Event::query()->find($order->items->pluck('event_id')->filter()->first());
         $tickets = $state === 'paid' && $order->tickets_generated_at ? $order->issuedTickets()->orderBy('id')->get() : collect();

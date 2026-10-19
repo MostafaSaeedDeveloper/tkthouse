@@ -101,7 +101,7 @@ class PaymentReportTest extends TestCase
         $plain = $this->admin();
         $this->actingAs($plain)->get(route('admin.payments.index'))->assertOk()->assertSee('Net collected')->assertSee('Provider breakdown')->assertDontSee('Merchant account breakdown')->assertDontSee('Hidden Merchant');
         $priv = $this->admin(['payments.accounts.view']);
-        $this->actingAs($priv)->get(route('admin.payments.index'))->assertOk()->assertSee('Merchant account breakdown')->assertSee('Hidden Merchant');
+        $this->actingAs($priv)->get(route('admin.payments.index'))->assertOk()->assertDontSee('Merchant account breakdown')->assertDontSee('Imported from the provider')->assertDontSee('Hidden Merchant');   // these two sections were removed from the overview
 
         SystemSettings::set('order_assignment_enabled', true);
         $agent = User::factory()->create();

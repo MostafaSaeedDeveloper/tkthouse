@@ -48,7 +48,15 @@ final class OrderAccess
             return self::ALL;
         }
 
-        return $user->can('orders.view_assigned') ? self::ASSIGNED : self::NONE;
+        // "Can receive assigned orders" ticked by an admin is enough for someone who can open Orders: they see the orders assigned to them.
+        return ($user->can('orders.view_assigned') || ($user->can_receive_orders && $user->can('orders.view'))) ? self::ASSIGNED : self::NONE;
+    }
+
+    /** May this user be given orders: an order-handling permission, or the "can receive orders" flag on top of orders.view. */
+    public static function canHandleOrders(User $user): bool
+    {
+        return self::isSuper($user) || $user->can('orders.view_all') || $user->can('orders.view_assigned')
+            || ($user->can_receive_orders && $user->can('orders.view'));
     }
 
     /** True when the user is restricted by assignment (global dashboards/reports must not be shown to them). */
@@ -70,7 +78,10 @@ final class OrderAccess
         $col = $table.'.assigned_user_id';
         $seeUnassigned = $user->can('orders.view_unassigned');
 
-        return $query->where(fn ($q) => $q->where($col, $user->id)->when($seeUnassigned, fn ($w) => $w->orWhereNull($col)));
+        // Mine = I am the primary assignee or one of the extra agents on the order.
+        return $query->where(fn ($q) => $q->where($col, $user->id)
+            ->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_assignees')->whereColumn('order_assignees.order_id', $table.'.id')->where('order_assignees.user_id', $user->id))
+            ->when($seeUnassigned, fn ($w) => $w->orWhereNull($col)));
     }
 
     public static function canView(Order $order, ?User $user): bool
@@ -78,7 +89,7 @@ final class OrderAccess
         return match (self::level($user)) {
             self::ALL => true,
             self::NONE => false,
-            default => (int) $order->assigned_user_id === (int) $user->id || ($order->assigned_user_id === null && $user->can('orders.view_unassigned')),
+            default => $order->isAssignedTo($user) || ($order->assigned_user_id === null && $user->can('orders.view_unassigned')),
         };
     }
 
@@ -88,8 +99,19 @@ final class OrderAccess
         return match (self::level($user)) {
             self::ALL => true,
             self::NONE => false,
-            default => (int) $order->assigned_user_id === (int) $user->id && $user->can('orders.manage_assigned'),
+            default => $order->isAssignedTo($user) && $user->can('orders.manage_assigned'),
         };
+    }
+
+    /**
+     * Who may see assignment details (who an order is assigned to, the assignment history). Agents who only see their own orders
+     * must not learn which colleagues are on an order, or that it was assigned at all: only people with the full order view or
+     * assignment rights see it.
+     */
+    public static function canSeeAssignment(?User $user): bool
+    {
+        return self::enabled() && $user !== null
+            && (self::level($user) === self::ALL || self::canAssign($user) || self::canAssign($user, true));
     }
 
     public static function canAssign(?User $user, bool $reassign = false): bool

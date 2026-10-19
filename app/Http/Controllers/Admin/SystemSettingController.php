@@ -68,12 +68,20 @@ class SystemSettingController extends Controller
         }
 
         if ($section === 'orders' && ($input['order_assignment_enabled'] ?? false) && ! \App\Orders\OrderAccess::enabled()) {
-            $check = app(\App\Orders\AssignmentReadiness::class)->check($request->user(), (string) ($input['order_assignment_mode'] ?? 'manual'), (int) ($input['order_default_assignee_id'] ?? 0) ?: null);
+            $check = app(\App\Orders\AssignmentReadiness::class)->check($request->user(), (string) ($input['order_assignment_mode'] ?? 'manual'), array_values(array_filter(array_map('intval', (array) ($input['order_default_assignee_ids'] ?? [])))));
             if ($check['blockers']) {
                 return back()->withInput()->withErrors(['order_assignment_enabled' => implode(' ', $check['blockers'])]);
             }
             if ($check['lockedOut']->isNotEmpty() && ! $request->boolean('acknowledge_lockout')) {
                 return back()->withInput()->withErrors(['order_assignment_enabled' => $check['lockedOut']->count().' staff member(s) can open Orders today but have neither orders.view_all nor orders.view_assigned and would see nothing. Grant them access below, or tick the acknowledgement.']);
+            }
+        }
+
+        // Several default assignees must be able to receive orders and share the same payment methods (also when assignment is already on).
+        if ($section === 'orders' && ($input['order_assignment_mode'] ?? null) === 'default_assignee' && \App\Orders\OrderAccess::enabled()) {
+            $ids = array_values(array_filter(array_map('intval', (array) ($input['order_default_assignee_ids'] ?? []))));
+            if ($ids !== [] && ($problem = app(\App\Orders\AssignmentReadiness::class)->defaultAssigneeProblem($ids))) {
+                return back()->withInput()->withErrors(['order_default_assignee_ids' => $problem]);
             }
         }
 

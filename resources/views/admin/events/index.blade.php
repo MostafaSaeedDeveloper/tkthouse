@@ -42,6 +42,12 @@
                             <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.events.dashboard', $event) }}" title="Event dashboard" aria-label="Dashboard for {{ $event->name }}"><i class="fa fa-gauge"></i></a>
                             <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.events.report', $event) }}" title="Event report" aria-label="Report for {{ $event->name }}"><i class="fa fa-chart-line"></i></a>
                             <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.events.edit', $event) }}" title="Edit" aria-label="Edit {{ $event->name }}"><i class="fa fa-pen"></i></a>
+                            @can('events.create')
+                            <form method="POST" action="{{ route('admin.events.duplicate', $event) }}" data-a-confirm="Duplicate &quot;{{ $event->name }}&quot;? A new draft copy is created with the same details, ticket types, fees, line-up and photos. Orders, tickets and payments are not copied." data-a-confirm-title="Duplicate event" data-a-confirm-ok="Duplicate">
+                                @csrf
+                                <button type="submit" class="a-btn a-btn--outline a-btn--sm" title="Duplicate" aria-label="Duplicate {{ $event->name }}"><i class="fa fa-copy"></i></button>
+                            </form>
+                            @endcan
                             @if($event->isArchived())
                                 @can('events.restore')
                                 <form method="POST" action="{{ route('admin.events.restore', $event) }}" data-a-confirm="Restore &quot;{{ $event->name }}&quot;? It is checked for readiness first and is only put back on sale if it is ready." data-a-confirm-title="Restore event" data-a-confirm-ok="Restore">

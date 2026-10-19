@@ -30,6 +30,13 @@
                     <x-admin.field :label="$def['label']" :name="$key" :for="'s-'.$key" hint="Only active users who are allowed to receive orders are listed.">
                         <select id="s-{{ $key }}" class="form-select" name="{{ $key }}"><option value="">— none —</option>@foreach(($orderTools['eligible'] ?? collect()) as $eu)<option value="{{ $eu->id }}" @selected((int) $val === $eu->id)>{{ $eu->name }}</option>@endforeach</select>
                     </x-admin.field>
+                @elseif($def['type'] === 'users')
+                    <div class="a-field is-full">
+                        <label class="form-label" for="s-{{ $key }}">{{ $def['label'] }}</label>
+                        <input type="hidden" name="{{ $key }}[]" value=""> {{-- keeps the key in the request so clearing the list is saved --}}
+                        <x-admin.multiselect :name="$key" :id="'s-'.$key" :label="$def['label']" :options="($orderTools['eligible'] ?? collect())->pluck('name', 'id')->all()" :selected="empty($val) ? array_filter([\App\Support\SystemSettings::get('order_default_assignee_id')]) : (array) $val" placeholder="Search agents…" empty-text="— none —" />
+                        <p class="a-hint">{{ $def['help'] ?? '' }} Only active users who are allowed to receive orders are listed.</p>
+                    </div>
                 @elseif($def['type'] === 'account')
                     <x-admin.field :label="$def['label']" :name="$key" :for="'s-'.$key" :hint="$def['help'] ?? null">
                         <select id="s-{{ $key }}" class="form-select" name="{{ $key }}"><option value="">— none (legacy payment-method configuration) —</option>

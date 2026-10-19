@@ -14,7 +14,7 @@
     <x-tkt.stepper :current="3" />
 
     <div class="tkt-result">
-        <section class="tkt-card tkt-result__card" aria-live="polite" @if($state === 'pending') data-autorefresh="12000" @endif>
+        <section class="tkt-card tkt-result__card" aria-live="polite" @if($state === 'pending') data-autorefresh="12000" data-poll-url="{{ route('front.checkout.confirmation.status', $order->order_number) }}" @endif>
             @switch($state)
                 @case('paid')
                     <div class="tkt-result__icon tkt-result__icon--success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $iconCheck !!}</svg></div>

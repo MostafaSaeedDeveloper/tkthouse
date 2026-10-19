@@ -96,12 +96,12 @@ class FawaterakGateway implements PaymentGateway
         }
 
         if (strtolower((string) data_get($json, 'status')) !== 'success') {
-            return GatewayResult::unknown('Unexpected Fawaterak response status.');
+            return new GatewayResult(GatewayResult::UNKNOWN, message: 'Unexpected Fawaterak response status.', raw: (array) $json);
         }
 
         // The response must describe the very invoice we asked about.
         if ((string) data_get($json, 'data.invoice_id') !== (string) $invoiceId) {
-            return GatewayResult::unknown('Fawaterak returned a different invoice.');
+            return new GatewayResult(GatewayResult::UNKNOWN, message: 'Fawaterak returned a different invoice.', raw: (array) $json);
         }
 
         $paid = in_array(data_get($json, 'data.paid'), [1, '1', true], true) && filled(data_get($json, 'data.paid_at'));

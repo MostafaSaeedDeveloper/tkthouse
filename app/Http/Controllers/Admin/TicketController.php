@@ -531,6 +531,13 @@ class TicketController extends Controller
     /** Order Assignment: a ticket is reachable only through an order the user may see (404 otherwise). */
     private function guardAssignedTicket(Request $request, Ticket $ticket): void
     {
+        // A guest-list ticket belongs to the person who added it (Super Admin sees all); it has no order to check.
+        if ($ticket->source === 'guest_list') {
+            abort_unless($ticket->isGuestVisibleTo($request->user()), 404);
+
+            return;
+        }
+
         if (! \App\Orders\OrderAccess::scoped($request->user())) {
             return;
         }

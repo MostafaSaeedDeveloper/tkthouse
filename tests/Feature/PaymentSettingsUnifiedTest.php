@@ -87,6 +87,26 @@ class PaymentSettingsUnifiedTest extends TestCase
         $this->assertNotNull(PaymentMethod::find($m->id));
     }
 
+    public function test_methods_may_share_a_provider_method_id_when_the_api_key_differs_but_not_a_name(): void
+    {
+        $u = $this->staff(['payment-methods.view', 'payment-methods.create', 'payment-methods.update']);
+        PaymentMethod::updateOrCreate(['code' => 'a_wallet'], ['name' => 'A-Wallet', 'provider' => 'fawaterak', 'is_active' => true, 'config' => ['api_key' => 'KEY-A', 'provider_key' => '27416']]);
+        $base = ['provider' => 'fawaterak', 'is_active' => 1, 'fawaterak_provider_key' => '27416'];
+
+        // Same provider method id, different API key (another merchant account) => allowed, and editing it again stays allowed.
+        $this->actingAs($u)->post(route('admin.payment-methods.store'), $base + ['name' => 'B-Wallet', 'code' => 'b_wallet', 'fawaterak_api_key' => 'KEY-B'])->assertSessionHasNoErrors();
+        $b = PaymentMethod::where('code', 'b_wallet')->firstOrFail();
+        $this->assertSame('27416', $b->providerMethodIdentifier());
+        $this->actingAs($u)->put(route('admin.payment-methods.update', $b), $base + ['name' => 'B-Wallet', 'code' => 'b_wallet', 'fawaterak_api_key' => ''])->assertSessionHasNoErrors();
+        $this->assertSame('KEY-B', $b->fresh()->config['api_key']);
+
+        // Same provider method id AND same API key => a real duplicate.
+        $this->actingAs($u)->post(route('admin.payment-methods.store'), $base + ['name' => 'Other', 'code' => 'c_wallet', 'fawaterak_api_key' => 'KEY-A'])->assertSessionHasErrors('fawaterak_provider_key');
+        // Same name is still refused.
+        $this->actingAs($u)->post(route('admin.payment-methods.store'), $base + ['name' => 'a-wallet', 'code' => 'd_wallet', 'fawaterak_api_key' => 'KEY-D'])->assertSessionHasErrors('name');
+        $this->assertSame(0, PaymentMethod::whereIn('code', ['c_wallet', 'd_wallet'])->count());
+    }
+
     public function test_checkout_orders_methods_by_sort_order_and_existing_codes_are_untouched(): void
     {
         config(['payments.fake.enabled' => true]);

@@ -16,15 +16,22 @@ class OfferedMethods
     /** @return Collection<int, PaymentMethod> */
     public function for(Resolution $resolution): Collection
     {
-        // Nothing routing-related applies: exactly the pre-existing list.
+        // No agent-level selection: the methods flagged "Default" (null while none is flagged = every active method, as before).
+        $allowed = $resolution->allowedMethods ?? PaymentMethod::defaultCodes();
+
+        // Nothing routing-related applies: exactly the pre-existing list (narrowed to the defaults, if any are set).
         if ($resolution->account === null && ! $resolution->blocked && $resolution->allowedMethods === null) {
-            return $this->gateways->available();
+            $available = $this->gateways->available();
+            $offered = $allowed === null ? $available : $available->filter(fn (PaymentMethod $m) => in_array($m->code, $allowed, true))->values();
+
+            // Defaults that are not usable right now must never leave the customer unable to pay.
+            return $offered->isEmpty() ? $available : $offered;
         }
 
-        $offered = $this->filtered($resolution, $resolution->allowedMethods);
+        $offered = $this->filtered($resolution, $allowed);
 
-        // An agent whose allowed methods are all unavailable right now must never leave the customer unable to pay.
-        if ($offered->isEmpty() && $resolution->allowedMethods !== null) {
+        // Selected/default methods that are all unavailable right now must never leave the customer unable to pay.
+        if ($offered->isEmpty() && $allowed !== null) {
             return $this->filtered($resolution, null);
         }
 
@@ -79,7 +86,8 @@ class OfferedMethods
         }
         foreach ($methods as $m) {
             $account = $resolution->account;
-            if ($resolution->allowedMethods !== null && ! in_array($m->code, $resolution->allowedMethods, true)) {
+            $narrow = $resolution->allowedMethods ?? PaymentMethod::defaultCodes();
+            if ($narrow !== null && ! in_array($m->code, $narrow, true)) {
                 continue;
             }
             if (! $this->gateways->isOnline($m)) {

@@ -36,8 +36,8 @@ class PaymentController extends Controller
             'refunded' => Order::query()->visibleTo($user)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
         ];
 
-        $attempts = (clone $base)->with(['order.customer'])
-            ->when($filter === 'review', fn ($q) => $q->where('meta->needs_review', true))
+        $attempts = (clone $base)->with(['order.customer', 'failedWebhookEvent'])
+            ->when($filter === 'review', fn ($q) => $q->whereNotNull('meta->needs_review'))
             ->when(! in_array($filter, ['all', 'review'], true), fn ($q) => $q->where('status', $filter))
             ->when($provider !== '', fn ($q) => $q->where('provider', $provider))
             ->when($search !== '', function ($q) use ($search) {
@@ -53,11 +53,9 @@ class PaymentController extends Controller
         $reports = app(\App\Services\Payments\PaymentReport::class);
         $report = $reports->build($user, $from, $to, $seeAccounts);
         $previous = $reports->previous($user, $from, $to);
-        // provider-side (imported) figures: separate data set, only for staff who may see merchant accounts
-        $imported = $seeAccounts ? $reports->imported($from, $to) : null;
 
         return view('admin.payments.index', [
-            'report' => $report, 'previous' => $previous, 'imported' => $imported, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
+            'report' => $report, 'previous' => $previous, 'from' => $from, 'to' => $to, 'seeAccounts' => $seeAccounts,
             'accountNames' => $seeAccounts ? \App\Models\IntegrationAccount::query()->pluck('name', 'id') : collect(),
             'methodNames' => PaymentMethod::query()->pluck('name', 'code'),
             'attempts' => $attempts,

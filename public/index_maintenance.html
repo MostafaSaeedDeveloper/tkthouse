@@ -4,11 +4,13 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TKT House | Under Maintenance</title>
-    <link rel="shortcut icon" href="images/favicon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="images/favicon.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="images/favicon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>TKT House | Back in 1 hour</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#060608">
+    <link rel="shortcut icon" href="/images/favicon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/images/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -25,14 +27,15 @@
         }
 
         html, body {
-            height: 100%;
+            min-height: 100%;
         }
 
         body {
             background-color: var(--dark);
             color: #ffffff;
-            font-family: 'Syne', 'DM Sans', sans-serif;
-            overflow: hidden;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         /* ── Star-field background ── */
@@ -67,13 +70,14 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            min-height: 100dvh;
             padding: 2rem 1rem;
             text-align: center;
         }
 
         /* ── Logo ── */
         .logo-wrap {
-            margin-bottom: 2.8rem;
+            margin-bottom: 2.4rem;
         }
 
         .logo-wrap img {
@@ -87,7 +91,7 @@
             position: relative;
             width: 80px;
             height: 80px;
-            margin: 0 auto 2rem;
+            margin: 0 auto 1.6rem;
         }
 
         .gear-wrap svg {
@@ -97,30 +101,18 @@
             color: var(--gold);
         }
 
-        .gear-wrap svg.inner {
-            position: absolute;
-            width: 44px;
-            height: 44px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation: spin-rev 5s linear infinite;
-            color: #fff;
-            opacity: .15;
-        }
-
         @keyframes spin     { to { transform: rotate(360deg); } }
-        @keyframes spin-rev { to { transform: translate(-50%,-50%) rotate(-360deg); } }
 
         /* ── Headline ── */
         h1 {
-            font-family: 'Syne', 'DM Sans', sans-serif;
-            font-size: clamp(1.8rem, 5vw, 3rem);
-            font-weight: 800;
-            letter-spacing: .02em;
+            font-family: 'Unbounded', 'Inter', system-ui, sans-serif;
+            font-size: clamp(1.4rem, 4vw, 2.5rem);
+            font-weight: 600;
+            letter-spacing: -.01em;
+            line-height: 1.3;
             color: #fff;
-            line-height: 1.15;
-            margin-bottom: .6rem;
+            margin-bottom: 1.4rem;
+            text-wrap: balance;
         }
 
         h1 span {
@@ -130,9 +122,10 @@
         .subtitle {
             font-size: clamp(.95rem, 2.5vw, 1.15rem);
             color: var(--text-muted);
-            max-width: 480px;
+            max-width: 540px;
             line-height: 1.7;
-            margin: 0 auto 2.5rem;
+            margin: 0 auto 1.4rem;
+            text-wrap: balance;
         }
 
         /* ── Divider ── */
@@ -141,7 +134,7 @@
             height: 3px;
             background: var(--gold);
             border-radius: 2px;
-            margin: 0 auto 2.5rem;
+            margin: 0 auto 1.8rem;
         }
 
         /* ── Contact card ── */
@@ -192,48 +185,21 @@
             transition: color .2s;
         }
 
+        .contact-card .info a:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+
         .contact-card .info a:hover {
             color: var(--gold);
         }
 
-        /* ── Social ── */
-        .social-row {
-            display: flex;
-            gap: .8rem;
-            justify-content: center;
-            margin-top: 2rem;
-        }
-
-        .social-row a {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: border-color .25s, color .25s, background .25s;
-        }
-
-        .social-row a:hover {
-            border-color: var(--gold);
-            color: var(--gold);
-            background: rgba(245,184,0,.08);
-        }
-
-        .social-row svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
         /* ── Footer note ── */
         .foot-note {
-            margin-top: 3rem;
-            font-size: .75rem;
-            color: rgba(255,255,255,.2);
+            margin-top: 2rem;
+            font-size: .8rem;
+            color: var(--text-muted);
             letter-spacing: .05em;
         }
 
@@ -252,6 +218,11 @@
             100% { transform: scale(1.4); opacity: 0; }
         }
 
+        @media (prefers-reduced-motion: reduce) {
+            .gear-wrap svg, .gear-wrap::before, .star { animation: none; }
+            .star { opacity: .5; }
+        }
+
         /* ── Responsive ── */
         @media (max-width: 480px) {
             .contact-card { flex-direction: column; text-align: center; }
@@ -268,7 +239,7 @@
 
         <!-- Logo -->
         <div class="logo-wrap">
-            <img src="images/logo-light.png" alt="TKT House" onerror="this.src='images/logo-dark.png'">
+            <img src="/images/logo-light.png" alt="TKT House" width="200" onerror="this.onerror=null;this.src='/images/logo-dark.png'">
         </div>
 
         <!-- Animated Gear -->
@@ -281,12 +252,12 @@
         </div>
 
         <!-- Headline -->
-        <h1>We're <span>Under Maintenance</span></h1>
+        <h1>We are updating our system<br><span>back in 1 hour</span></h1>
 
         <div class="gold-line"></div>
 
         <p class="subtitle">
-            We're working hard to improve your experience ✦<br>
+            We're working hard to improve your experience ✦
             We'll be back soon with something better than ever.
         </p>
 
@@ -303,21 +274,17 @@
             </div>
         </div>
 
-        <!-- Social Row -->
-        <div class="social-row" aria-label="Social media">
-            <a href="https://www.instagram.com/tkthouse.eg?igsh=MTd0MnJjcWJ4bG9yZA==" target="_blank" rel="noopener" aria-label="Instagram">
-                <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
-            </a>
-        </div>
-
-        <p class="foot-note">© 2026 TKT House — ALL RIGHTS RESERVED</p>
+        <p class="foot-note">© <span id="year">2026</span> TKT House — ALL RIGHTS RESERVED</p>
     </div>
 
     <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
         // Generate random stars
         (function () {
             var bg = document.getElementById('stars-bg');
-            for (var i = 0; i < 120; i++) {
+            var count = window.innerWidth < 600 ? 60 : 120;
+            for (var i = 0; i < count; i++) {
                 var s = document.createElement('div');
                 s.className = 'star';
                 var size = Math.random() * 2.5 + .5;

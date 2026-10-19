@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\Events\EventDuplicator;
 use App\Services\Events\EventLifecycle;
 use App\Services\Events\EventTicketSync;
 use Illuminate\Http\UploadedFile;
@@ -130,6 +131,13 @@ class EventController extends Controller
         }
 
         return redirect()->route('admin.events.index')->with('success', 'Event deleted permanently.');
+    }
+
+    public function duplicate(Event $event)
+    {
+        $copy = app(EventDuplicator::class)->duplicate($event, auth()->user());
+
+        return redirect()->route('admin.events.edit', $copy)->with('success', 'Duplicated as "'.$copy->name.'". It is a draft (off sale): set the date, review the tickets and set it to Active when it is ready.');
     }
 
     public function archive(Event $event)

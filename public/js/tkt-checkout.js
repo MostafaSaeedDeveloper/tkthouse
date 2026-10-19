@@ -174,10 +174,30 @@
     /* Confirmation: re-check a pending payment a few times without a manual refresh */
     var auto = $('[data-autorefresh]');
     if (auto) {
-        var key = 'tkt-refresh-' + location.pathname;
-        var n = parseInt(sessionStorage.getItem(key) || '0', 10);
-        if (n < 12) {
-            setTimeout(function () { sessionStorage.setItem(key, String(n + 1)); location.reload(); }, parseInt(auto.getAttribute('data-autorefresh'), 10) || 12000);
+        var pollUrl = auto.getAttribute('data-poll-url');
+        if (pollUrl && window.fetch) {
+            // Ask for the result every 2 s (then 5 s after the first minute, up to ~5 min) and show it the moment it is known.
+            var started = Date.now(), busy = false;
+            var tick = function () {
+                var age = Date.now() - started;
+                if (age > 300000) { return; }
+                if (!busy && !document.hidden) {
+                    busy = true;
+                    fetch(pollUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' }, cache: 'no-store' })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (d) { if (d && d.state && d.state !== 'pending') { location.reload(); } })
+                        .catch(function () {})
+                        .then(function () { busy = false; });
+                }
+                setTimeout(tick, age < 60000 ? 2000 : 5000);
+            };
+            setTimeout(tick, 1500);
+        } else {
+            var key = 'tkt-refresh-' + location.pathname;
+            var n = parseInt(sessionStorage.getItem(key) || '0', 10);
+            if (n < 12) {
+                setTimeout(function () { sessionStorage.setItem(key, String(n + 1)); location.reload(); }, parseInt(auto.getAttribute('data-autorefresh'), 10) || 12000);
+            }
         }
     } else {
         try { sessionStorage.removeItem('tkt-refresh-' + location.pathname); } catch (e) {}

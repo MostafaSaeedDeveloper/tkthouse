@@ -17,13 +17,9 @@ class PaymentMethodController extends Controller
     {
         $methods = PaymentMethod::query()->orderByDesc('is_active')->orderBy('sort_order')->orderBy('id')->get();
 
-        // Which merchant accounts can take each method (read from the accounts' own supported-method lists).
-        $accounts = \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->get();
-        $byMethod = $methods->mapWithKeys(fn ($m) => [$m->code => $accounts->filter(fn ($a) => in_array($m->code, $a->supportedMethods(), true))->values()]);
-
         $used = \App\Models\Order::withTrashed()->whereIn('payment_method', $methods->pluck('code'))->distinct()->pluck('payment_method')->all();
 
-        return view('admin/settings/payment-methods/index', compact('methods', 'byMethod', 'used'));
+        return view('admin/settings/payment-methods/index', compact('methods', 'used'));
     }
 
     public function create()
@@ -43,6 +39,18 @@ class PaymentMethodController extends Controller
     public function edit(PaymentMethod $paymentMethod)
     {
         return view('admin/settings/payment-methods/form', ['method' => $paymentMethod]);
+    }
+
+    /** One-click Default on/off from the list (the same flag as the edit form). */
+    public function toggleDefault(PaymentMethod $paymentMethod)
+    {
+        if (! $paymentMethod->is_default && ! $paymentMethod->is_active) {
+            return back()->with('error', '"'.$paymentMethod->name.'" is disabled. Activate it before making it a default method.');
+        }
+
+        $paymentMethod->update(['is_default' => ! $paymentMethod->is_default]);
+
+        return back()->with('success', '"'.$paymentMethod->name.'" '.($paymentMethod->is_default ? 'is now a default method.' : 'is no longer a default method.'));
     }
 
     public function update(Request $request, PaymentMethod $paymentMethod)
@@ -160,6 +168,7 @@ class PaymentMethodController extends Controller
             ],
             'provider' => ['required', Rule::in(['manual', 'paymob', 'fawaterak'])],
             'is_active' => ['nullable', 'boolean'],
+            'is_default' => ['nullable', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'paymob_api_key' => ['nullable', 'string'],
             'paymob_iframe_id' => ['nullable', 'string', 'max:50'],
@@ -184,15 +193,17 @@ class PaymentMethodController extends Controller
             ];
         }
 
-        // Unintended duplicates: same provider + same name, or same provider + same provider-side identifier.
+        // Unintended duplicates: same provider + same name, or the same provider-side identifier with the same credentials.
+        // Several methods may share a Fawaterak/Paymob method id as long as their API keys differ (one method per merchant account).
         $identifier = $validated['provider'] === 'paymob' ? ($config['integration_id'] ?? '') : ($validated['provider'] === 'fawaterak' ? ($config['provider_key'] ?? '') : '');
+        $apiKey = (string) ($config['api_key'] ?? '');
         $others = PaymentMethod::query()->where('provider', $validated['provider'])->when($method, fn ($q) => $q->where('id', '!=', $method->id))->get();
         $errors = [];
         if ($others->contains(fn ($o) => mb_strtolower($o->name) === mb_strtolower($validated['name']))) {
             $errors['name'] = 'Another '.$validated['provider'].' method already has this name.';
         }
-        if ($identifier !== '' && $others->contains(fn ($o) => $o->providerMethodIdentifier() === $identifier)) {
-            $errors[$validated['provider'] === 'paymob' ? 'paymob_integration_id' : 'fawaterak_provider_key'] = 'Another method of this provider already uses this provider identifier.';
+        if ($identifier !== '' && $others->contains(fn ($o) => $o->providerMethodIdentifier() === $identifier && (string) (($o->config ?? [])['api_key'] ?? '') === $apiKey)) {
+            $errors[$validated['provider'] === 'paymob' ? 'paymob_integration_id' : 'fawaterak_provider_key'] = 'Another method of this provider already uses this provider identifier with the same API key. Use a different API key (another merchant account) or a different method.';
         }
         if ($errors) {
             throw \Illuminate\Validation\ValidationException::withMessages($errors);
@@ -212,6 +223,7 @@ class PaymentMethodController extends Controller
             'code' => strtolower($validated['code']),
             'provider' => $validated['provider'],
             'is_active' => $request->boolean('is_active'),
+            'is_default' => $request->boolean('is_default'),
             'sort_order' => (int) ($validated['sort_order'] ?? 0),
             'config' => $config,
         ];

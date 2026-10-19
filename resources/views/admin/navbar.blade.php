@@ -7,7 +7,7 @@
     $main = array_values(array_filter([
         $can('dashboard.view') ? ['Dashboard', 'admin.dashboard', 'fa-gauge-high', ['admin.dashboard']] : null,
         $can('events.view') ? ['Events', 'admin.events.index', 'fa-calendar-days', ['admin.events.*']] : null,
-        $can('orders.view') ? ['Orders', 'admin.orders.index', 'fa-receipt', ['admin.orders.index', 'admin.orders.show', 'admin.orders.edit']] : null,
+        $can('orders.view') ? ['Orders', 'admin.orders.index', 'fa-receipt', ['admin.orders.index', 'admin.orders.show', 'admin.orders.edit', 'admin.orders.deleted']] : null,
         $can('tickets.view') ? ['Tickets', 'admin.tickets.index', 'fa-ticket', ['admin.tickets.index', 'admin.tickets.show', 'admin.tickets.edit', 'admin.tickets.create']] : null,
         $can('attendees.view') ? ['Customers', 'admin.customers.index', 'fa-users', ['admin.customers.*']] : null,
         $can('promo-codes.view') ? ['Promo Codes', 'admin.promo-codes.index', 'fa-tags', ['admin.promo-codes.*']] : null,
@@ -17,11 +17,10 @@
     ]));
 
     $ops = array_values(array_filter([
-        $can('tickets.view') ? ['Guest list', 'admin.guest-list.index', 'fa-clipboard-list', ['admin.guest-list.*']] : null,
+        $can('guest-list.view') ? ['Guest list', 'admin.guest-list.index', 'fa-clipboard-list', ['admin.guest-list.*']] : null,
         $can('scanner.access') ? ['Ticket scanner', 'admin.tickets.scanner', 'fa-qrcode', ['admin.tickets.scanner*']] : null,
         $can('scanners.view') ? ['Scanner staff', 'admin.scanners.index', 'fa-id-badge', ['admin.scanners.*']] : null,
         $can('attendees.view') ? ['Affiliates', 'admin.affiliates.index', 'fa-link', ['admin.affiliates.*']] : null,
-        $can('orders.deleted.view') ? ['Deleted orders', 'admin.orders.deleted', 'fa-trash-can', ['admin.orders.deleted']] : null,
     ]));
 
     $team = array_values(array_filter([

@@ -203,6 +203,53 @@ class WebhookTrackingTest extends TestCase
         $this->assertSame('initiated', $a->fresh()->status);
     }
 
+    public function test_two_fawaterak_accounts_share_one_webhook_url_and_each_is_verified_with_its_own_vendor_key(): void
+    {
+        $A = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $B = $this->account('fawaterak', 'FB', [], ['vendor_key' => 'VENDOR-B']);
+        $a = $this->attempt($A, 'fawaterak_card');
+        $b = $this->attempt($B, 'fawaterak_card');
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+        $this->fawInvoices[$b->transaction_id]['paid'] = true;
+
+        $pa = ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IKA', 'payment_method' => 'Card', 'invoice_status' => 'paid'];
+        $pb = ['invoice_id' => $b->transaction_id, 'invoice_key' => 'IKB', 'payment_method' => 'Card', 'invoice_status' => 'paid'];
+
+        $this->postJson(route('front.fawaterak.webhook'), $pa + ['hashKey' => $this->fawHash($pa, 'VENDOR-A')])->assertOk()->assertJson(['authenticated' => true]);
+        $this->postJson(route('front.fawaterak.webhook'), $pb + ['hashKey' => $this->fawHash($pb, 'VENDOR-B')])->assertOk()->assertJson(['authenticated' => true]);
+
+        $this->assertSame('paid', $a->order->fresh()->status);
+        $this->assertSame('paid', $b->order->fresh()->status);
+        $this->assertSame($A->id, WebhookEvent::where('transaction_reference', $a->transaction_id)->value('integration_account_id'));
+        $this->assertSame($B->id, WebhookEvent::where('transaction_reference', $b->transaction_id)->value('integration_account_id'));
+    }
+
+    public function test_fawaterak_paid_webhook_without_a_hash_is_rejected_when_a_vendor_key_is_stored(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'invoice_status' => 'paid'])->assertStatus(403);
+
+        $this->assertSame('pending_payment', $a->order->fresh()->status);
+    }
+
+    public function test_fawaterak_cancel_webhook_checks_its_hash_and_never_pays_the_order(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        PaymentAttempt::whereKey($a->id)->update(['provider_reference' => 'FAW-REF-1']);
+        $p = ['referenceId' => 'FAW-REF-1', 'paymentMethod' => 'Fawry', 'status' => 'EXPIRED'];
+        $hash = fn (string $key) => hash_hmac('sha256', 'referenceId=FAW-REF-1&PaymentMethod=Fawry', $key);
+
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $hash('WRONG')])->assertStatus(403);
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $hash('VENDOR-A')])->assertOk()->assertJson(['authenticated' => true]);
+
+        $this->assertSame('valid', WebhookEvent::where('event_type', 'payment.cancelled')->latest('id')->value('signature_status'));
+        $this->assertNotSame('paid', $a->order->fresh()->status);
+    }
+
     public function test_unmatched_fawaterak_events_are_kept_for_review(): void
     {
         $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => 'UNKNOWN', 'invoice_key' => 'k', 'payment_method' => 'Card', 'invoice_status' => 'paid'])->assertOk()->assertJson(['matched' => false]);
@@ -265,6 +312,155 @@ class WebhookTrackingTest extends TestCase
 
         $nobody = $this->staff(['orders.view']);
         $this->actingAs($nobody)->get(route('admin.payments.webhooks'))->assertForbidden();
+    }
+
+    public function test_a_failure_reported_only_by_webhook_reads_failed_on_every_screen_but_never_for_a_paid_attempt(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view', 'payments.reports.view']);
+
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'amount' => 300, 'errorMessage' => '3DS failed', 'response' => ['gatewayCode' => 'X']])->assertOk();
+        $this->assertSame('initiated', $a->fresh()->status, 'the stored attempt is untouched');
+        $this->assertSame('failed', $a->fresh()->displayStatus());
+
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertSee('<dt>Status</dt><dd><span class="a-badge a-badge--danger a-badge--dot">Failed</span>', false);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions'))->assertOk()->assertSee('a-badge--danger', false)->assertSee('Failed');
+        $this->actingAs($viewer)->get(route('admin.orders.show', $a->order))->assertOk()->assertSee('Failed');
+
+        // a payment that went through afterwards is paid, whatever an earlier webhook said
+        $a->forceFill(['status' => 'paid'])->saveQuietly();
+        $this->assertSame('paid', $a->fresh()->displayStatus());
+    }
+
+    public function test_when_the_provider_does_not_confirm_a_payment_its_answer_is_kept_and_shown(): void
+    {
+        $acc = $this->account('fawaterak', 'FA', [], ['vendor_key' => 'VENDOR-A']);
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view']);
+        $p = ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK1', 'payment_method' => 'Card', 'invoice_status' => 'paid'];
+
+        // a valid paid webhook, but the provider's own record still says unpaid => nothing is settled, and we remember what it said
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $this->fawHash($p, 'VENDOR-A')])->assertOk();
+
+        $this->assertSame('pending_payment', $a->order->fresh()->status);
+        $li = $a->fresh()->meta['last_inquiry'] ?? null;
+        $this->assertNotNull($li);
+        $this->assertSame('pending', $li['result']);
+        $this->assertArrayHasKey('data_fields', $li);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertSee('Provider answer')->assertSee('fields:');
+
+        // once the provider confirms, the attempt is paid and the note is not shown any more
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+        $this->postJson(route('front.fawaterak.webhook'), $p + ['hashKey' => $this->fawHash($p, 'VENDOR-A')])->assertOk();
+        $this->assertSame('paid', $a->order->fresh()->status);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertDontSee('Provider answer');
+    }
+
+    public function test_the_invoice_inquiry_sends_the_json_content_type_fawaterak_requires(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+
+        app(PaymentService::class)->refresh($a->order, null, 'fawaterak');
+
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r->url(), 'getInvoiceData') && $r->hasHeader('Content-Type', 'application/json') && $r->hasHeader('Accept', 'application/json'));
+    }
+
+    public function test_a_flagged_payment_says_why_it_needs_review(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view', 'payments.reports.view']);
+        $a->forceFill(['meta' => ['needs_review' => 'duplicate_payment']])->saveQuietly();
+
+        $this->assertSame('Paid twice', $a->fresh()->reviewReason()[0]);
+        $this->actingAs($viewer)->get(route('admin.payments.transactions.show', $a))->assertOk()->assertSee('Needs review')->assertSee('Paid twice')->assertSee('charged twice');
+        $this->actingAs($viewer)->get(route('admin.payments.index'))->assertOk()->assertSee('Needs review')->assertSee('Paid twice');
+        $this->assertNull($this->attempt($acc, 'fawaterak_card')->reviewReason());
+    }
+
+    public function test_a_reviewed_payment_loses_its_flag_without_touching_the_payment_or_the_order(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $a->forceFill(['status' => 'paid', 'meta' => ['needs_review' => 'duplicate_payment', 'flagged_at' => now()->toIso8601String()]])->saveQuietly();
+        $orderStatus = $a->order->fresh()->status;
+        $viewer = $this->staff(['payments.transactions.view', 'orders.view', 'payments.reports.view']);
+        $ops = $this->staff(['payments.transactions.view', 'payments.transactions.inquire', 'orders.view', 'payments.reports.view']);
+        $url = route('admin.payments.transactions.review.dismiss', $a);
+
+        // the review filter finds it; people without the inquire permission cannot clear it (and do not see the button)
+        $this->actingAs($ops)->get(route('admin.payments.index', ['status' => 'review']))->assertOk()->assertSee($a->order->order_number)->assertSee('Mark as reviewed');
+        $this->actingAs($viewer)->get(route('admin.payments.index'))->assertOk()->assertDontSee('Mark as reviewed');
+        $this->actingAs($viewer)->post($url)->assertForbidden();
+        $this->assertSame('duplicate_payment', data_get($a->fresh()->meta, 'needs_review'));
+
+        $this->actingAs($ops)->post($url)->assertRedirect()->assertSessionHas('success');
+
+        $fresh = $a->fresh();
+        $this->assertNull(data_get($fresh->meta, 'needs_review'));
+        $this->assertSame('duplicate_payment', data_get($fresh->meta, 'review_dismissed.reason'));
+        $this->assertSame($ops->id, data_get($fresh->meta, 'review_dismissed.by_id'));
+        $this->assertSame('paid', $fresh->status);
+        $this->assertSame($orderStatus, $a->order->fresh()->status);
+        $this->actingAs($ops)->get(route('admin.payments.index'))->assertOk()->assertDontSee('Paid twice')->assertDontSee('Mark as reviewed');   // (the filter menu itself still lists "Needs review")
+        $this->actingAs($ops)->get(route('admin.payments.index', ['status' => 'review']))->assertOk()->assertDontSee($a->order->order_number);
+    }
+
+    public function test_the_confirmation_page_polls_and_learns_the_result_straight_away(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $number = $a->order->order_number;
+        $status = fn () => $this->actingAs($this->customer)->getJson(route('front.checkout.confirmation.status', $number));
+
+        // the customer is back but the provider has not marked the invoice paid yet
+        $status()->assertOk()->assertJson(['state' => 'pending']);
+        $this->actingAs($this->customer)->get(route('front.checkout.confirmation', $number))->assertOk()->assertSee('data-poll-url', false);
+
+        // the moment the provider confirms, the next poll says paid (no page reload needed to ask)
+        $this->fawInvoices[$a->transaction_id]['paid'] = true;
+        \Illuminate\Support\Facades\Cache::forget('order-refresh:'.$a->order_id);
+        $status()->assertOk()->assertJson(['state' => 'paid']);
+        $this->assertSame('paid', $a->order->fresh()->status);
+        $this->actingAs($this->customer)->get(route('front.checkout.confirmation', $number))->assertOk()->assertDontSee('data-poll-url', false)->assertSee('Your payment was confirmed');
+
+        // somebody else's browser cannot poll an order that is not theirs
+        $this->actingAs(User::factory()->create())->getJson(route('front.checkout.confirmation.status', $number))->assertNotFound();
+    }
+
+    public function test_a_failure_reported_only_by_webhook_ends_the_pending_page_with_a_failed_state(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $a = $this->attempt($acc, 'fawaterak_card');
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $a->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'amount' => 300, 'errorMessage' => '3DS failed', 'response' => ['gatewayCode' => 'X']])->assertOk();
+
+        $this->actingAs($this->customer)->getJson(route('front.checkout.confirmation.status', $a->order->order_number))->assertOk()->assertJson(['state' => 'failed']);
+    }
+
+    public function test_after_a_gateway_reported_failure_the_customer_gets_a_fresh_payment_session(): void
+    {
+        $acc = $this->account('fawaterak', 'FA');
+        $first = $this->attempt($acc, 'fawaterak_card');
+        $order = $first->order;
+        $method = PaymentMethod::where('code', 'fawaterak_card')->first();
+
+        // while the first session is alive, asking again hands out the same one (no duplicate invoices)
+        app(PaymentService::class)->start($order->fresh(), $method);
+        $this->assertSame(1, $order->paymentAttempts()->count());
+
+        // Fawaterak says that session failed (webhook only: the attempt stays "initiated") => a new session is opened
+        $this->postJson(route('front.fawaterak.webhook'), ['invoice_id' => $first->transaction_id, 'invoice_key' => 'IK', 'payment_method' => 'Card', 'amount' => 300, 'errorMessage' => '3DS failed', 'response' => ['gatewayCode' => 'X']])->assertOk();
+        $this->assertSame('initiated', $first->fresh()->status);
+
+        app(PaymentService::class)->start($order->fresh(), $method);
+
+        $this->assertSame(2, $order->paymentAttempts()->count(), 'a retry opens a new invoice instead of reusing the failed one');
+        $second = $order->paymentAttempts()->latest('id')->first();
+        $this->assertNotSame($first->transaction_id, $second->transaction_id);
+        $this->assertSame('initiated', $second->displayStatus());
     }
 
     public function test_assignment_scoping_applies_to_transactions(): void

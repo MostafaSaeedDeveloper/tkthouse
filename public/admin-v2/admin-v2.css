@@ -233,6 +233,9 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 .a-table th, .a-table td { white-space: nowrap; }
 .a-table td.a-wrap, .a-table th.a-wrap { white-space: normal; min-width: 180px; }
 .a-trunc { display: block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dashboard recent-orders: six compact columns that fit the half-width card without a horizontal scrollbar. */
+.a-dash-orders th, .a-dash-orders td { padding-left: 12px; padding-right: 12px; }
+.a-dash-orders .a-trunc { max-width: 150px; }
 .a-table .a-num, .a-body .table .text-end { text-align: right; font-variant-numeric: tabular-nums; }
 .a-table__main { font-weight: 700; display: block; min-width: 0; overflow-wrap: anywhere; }
 .a-table__sub { display: block; font-size: 12.5px; color: var(--a-muted); overflow-wrap: anywhere; }
@@ -395,6 +398,8 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
 .a-msel__x { flex: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .08); color: inherit; font-size: 15px; line-height: 20px; cursor: pointer; }
 .a-msel__x:hover { background: rgba(0, 0, 0, .18); }
 .a-msel__search { flex: 1 1 120px; min-width: 80px; height: 30px; padding: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--a-ink); }
+/* The card clips its children (rounded corners); a card holding a multiselect must not, or the open list is cut off at the card's edge. */
+.a-card:has(.a-msel) { overflow: visible; }
 .a-msel__chev { position: absolute; right: 14px; top: 50%; margin-top: -6px; font-size: 12px; color: var(--a-muted); pointer-events: none; transition: transform .15s; }
 .a-msel.is-open .a-msel__chev { transform: rotate(180deg); }
 .a-msel__panel { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px); background: var(--a-surface); border: 1px solid var(--a-line-strong); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .14); overflow: hidden; }

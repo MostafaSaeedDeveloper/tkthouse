@@ -35,6 +35,10 @@
                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" @checked(old('is_active', $method->is_active ?? true))>
                 <label class="form-check-label" for="is_active"><strong>Active</strong><span class="a-hint d-block">Inactive methods are hidden at checkout.</span></label>
             </div>
+            <div class="is-full a-m-switch form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="is_default" value="1" id="is_default" @checked(old('is_default', $method->is_default ?? false))>
+                <label class="form-check-label" for="is_default"><strong>Default</strong><span class="a-hint d-block">Shown when the order is not assigned to an agent, or the agent has no payment methods selected. While no active method is marked Default, every active method is shown.</span></label>
+            </div>
         </x-admin.form-section>
 
         <div id="paymob-config" style="display:none;">

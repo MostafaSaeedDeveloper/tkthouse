@@ -28,6 +28,7 @@
 .a-m-range { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .a-m-range-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
 .a-m-range-form .a-field { min-width: 160px; flex: 1 1 160px; max-width: 240px; }
+.a-m-range-form .a-btn-group .a-btn.is-active { background: var(--a-ink); border-color: var(--a-ink); color: #fff; }
 .a-m-section { margin-bottom: 28px; }
 .a-m-section__title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--a-muted); margin: 0 0 12px; }
 .a-m-report { padding: 0; }

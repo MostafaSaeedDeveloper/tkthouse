@@ -17,6 +17,7 @@ class PaymentMethod extends Model
         'code',
         'provider',
         'is_active',
+        'is_default',
         'sort_order',
         'config',
     ];
@@ -25,6 +26,7 @@ class PaymentMethod extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_default' => 'boolean',
             'config' => 'array',
         ];
     }
@@ -40,6 +42,17 @@ class PaymentMethod extends Model
         };
 
         return filled($value) ? (string) $value : null;
+    }
+
+    /**
+     * Codes of the active methods flagged "default", or null while none is flagged (then nothing is narrowed: every active method is offered, as before).
+     * These are what a customer sees when no agent-level selection applies.
+     */
+    public static function defaultCodes(): ?array
+    {
+        $codes = static::query()->where('is_active', true)->where('is_default', true)->pluck('code')->all();
+
+        return $codes === [] ? null : $codes;
     }
 
     public static function activeCodes(): array

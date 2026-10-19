@@ -43,6 +43,8 @@ class EnsureAdminPanelAccess
         'tickets.create',
         'tickets.update',
         'tickets.delete',
+        'guest-list.view',
+        'guest-list.create',
         'scanner.access',
         'fees.create',
         'fees.update',

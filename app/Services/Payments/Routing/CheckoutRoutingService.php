@@ -177,9 +177,9 @@ class CheckoutRoutingService
         $mode = (string) SystemSettings::get('order_assignment_mode', 'manual');
 
         if ($mode === 'default_assignee') {
-            $u = User::query()->find((int) SystemSettings::get('order_default_assignee_id', 0));
+            $u = $this->assignment->defaultAssignees()->first();
 
-            return $u && $this->assignment->isEligible($u) ? [$u, 'default_assignee'] : [null, 'manual_default'];
+            return $u ? [$u, 'default_assignee'] : [null, 'manual_default'];
         }
 
         if ($mode !== 'round_robin') {

@@ -185,7 +185,7 @@ class OrderAssignmentTest extends TestCase
         $o = $this->order();
         $inactive = $this->agent(['can_receive_orders' => true, 'is_active' => false]);
         $optedOut = $this->agent(['can_receive_orders' => false]);
-        $nobody = $this->user(null, ['orders.view'], ['can_receive_orders' => true]);
+        $nobody = $this->user(null, ['dashboard.view'], ['can_receive_orders' => true]); // ticked, but cannot open Orders at all
 
         foreach ([$inactive, $optedOut, $nobody] as $bad) {
             $this->actingAs($m)->post(route('admin.orders.assign', $o), ['assignee_id' => $bad->id])->assertSessionHasErrors('assignee');
@@ -406,7 +406,7 @@ class OrderAssignmentTest extends TestCase
         $m = $this->manager();
         $old = $this->order(null, 'paid', 40);
         $this->actingAs($m)->get(route('admin.orders.index'))->assertOk()->assertSee('Unassigned');
-        $this->actingAs($m)->get(route('admin.orders.show', $old))->assertOk()->assertSee('Unassigned');
+        $this->actingAs($m)->get(route('admin.orders.show', $old))->assertOk();   // the order page itself says nothing about assignment
         $this->actingAs($m)->get(route('admin.orders.index', ['assignee' => 'unassigned']))->assertSee($old->order_number);
     }
 
@@ -466,5 +466,260 @@ class OrderAssignmentTest extends TestCase
         \Illuminate\Support\Facades\DB::table('users')->where('id', $staff->id)->update(['is_active' => true]);
         $this->actingAs($actor)->put(route('admin.users.update', $staff), ['name' => $staff->name, 'username' => $staff->username, 'email' => $staff->email, 'role' => 'Order Agent'])->assertRedirect();
         $this->assertTrue($staff->fresh()->is_active);
+    }
+
+    /* ------------------------------------------------------------ several agents per order */
+
+    public function test_several_agents_with_the_same_payment_methods_can_share_an_order_and_all_of_them_see_it(): void
+    {
+        $this->on();
+        $service = app(OrderAssignmentService::class);
+        $a = $this->agent(); $b = $this->agent(); $c = $this->agent(); $manager = $this->superAdmin();
+        $order = $this->order($a);
+
+        $service->assignMany($order, [$a, $b], $manager);
+
+        $order->refresh();
+        $this->assertSame($a->id, $order->assigned_user_id, 'the current primary stays primary');
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->assigneeIds());
+        foreach ([$a, $b] as $agent) {
+            $this->actingAs($agent)->get(route('admin.orders.show', $order))->assertOk();
+            $this->actingAs($agent)->get(route('admin.orders.index'))->assertOk()->assertSee($order->order_number);
+            $this->assertTrue(OrderAccess::canView($order, $agent));
+        }
+        $this->actingAs($c)->get(route('admin.orders.show', $order))->assertNotFound();
+        $this->assertSame(1, OrderAssignment::where('order_id', $order->id)->count(), 'one history row for the change');
+    }
+
+    public function test_agents_with_different_payment_methods_cannot_share_an_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $c = $this->agent();
+        $a->forceFill(['allowed_payment_methods' => ['fake_card', 'fake_wallet']])->save();
+        $b->forceFill(['allowed_payment_methods' => ['fake_wallet', 'fake_card']])->save();   // same set, other order => allowed
+        $c->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        $order = $this->order($a);
+        $service = app(OrderAssignmentService::class);
+
+        $service->assignMany($order, [$a, $b], $this->superAdmin());
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds());
+
+        try {
+            $service->assignMany($order, [$a, $b, $c], $this->superAdmin());
+            $this->fail('different payment methods must be refused');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('same payment methods', $e->errors()['assignee'][0]);
+        }
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds(), 'nothing changed');
+    }
+
+    public function test_an_agent_with_no_selection_and_one_with_a_selection_differ(): void
+    {
+        $this->on();
+        $all = $this->agent(); $some = $this->agent();
+        $some->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(OrderAssignmentService::class)->assignMany($this->order(), [$all, $some], $this->superAdmin());
+    }
+
+    public function test_removing_the_primary_promotes_the_next_agent_and_unassigning_clears_everyone(): void
+    {
+        $this->on();
+        $service = app(OrderAssignmentService::class);
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $order = $this->order($a);
+        $service->assignMany($order, [$a, $b], $manager);
+
+        $service->assignMany($order, [$b], $manager);
+        $this->assertSame($b->id, $order->fresh()->assigned_user_id);
+        $this->assertSame([$b->id], $order->fresh()->assigneeIds());
+        $this->actingAs($a)->get(route('admin.orders.show', $order))->assertNotFound();
+
+        $service->assignMany($order, [], $manager);
+        $this->assertNull($order->fresh()->assigned_user_id);
+        $this->assertSame([], $order->fresh()->assigneeIds());
+    }
+
+    public function test_the_assign_endpoint_accepts_several_agents_and_the_list_shows_them(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $order = $this->order();
+
+        $this->actingAs($manager)->post(route('admin.orders.assign', $order), ['assignee_ids' => [$b->id, $a->id]])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $this->assertSame($b->id, $order->fresh()->assigned_user_id, 'the first agent of the list is the primary');
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $order->fresh()->assigneeIds());
+        $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee($a->name)->assertSee($b->name);
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertDontSee('Assigned agents');   // assigning is done from the list, not on the order page
+
+        // the old single-agent field still works and replaces everyone
+        $this->actingAs($manager)->post(route('admin.orders.assign', $order), ['assignee_id' => $a->id])->assertSessionHasNoErrors();
+        $this->assertSame([$a->id], $order->fresh()->assigneeIds());
+    }
+
+    public function test_extra_agents_get_the_notification_and_agent_reports_still_count_the_primary_only(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        $order = $this->order($a, 'paid', 200);
+        app(OrderAssignmentService::class)->snapshotSale($order);
+        $manager = $this->superAdmin();
+        $b->notifications()->delete();
+        $this->actingAs($manager);
+        app(OrderAssignmentService::class)->assignMany($order, [$a, $b], $manager);
+
+        $this->assertSame(['order.assigned'], $b->notifications()->get()->pluck('data.type')->all());
+        $this->assertSame($a->id, $order->fresh()->sold_by_user_id);
+        $report = app(AgentReport::class)->build($this->superAdmin(), now()->subDay(), now()->addDay());
+        $this->assertSame([$a->id], $report['rows']->pluck('user_id')->map(fn ($id) => (int) $id)->all(), 'only the primary agent is a row');
+    }
+
+    public function test_bulk_assign_puts_several_agents_on_every_selected_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $o1 = $this->order(); $o2 = $this->order($a); $skipMe = $this->order();
+
+        $this->actingAs($manager)->post(route('admin.orders.assign.bulk'), ['order_ids' => [$o1->id, $o2->id], 'assignee_ids' => [$a->id, $b->id]])
+            ->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        foreach ([$o1, $o2] as $o) {
+            $this->assertEqualsCanonicalizing([$a->id, $b->id], $o->fresh()->assigneeIds());
+        }
+        $this->assertSame($a->id, $o1->fresh()->assigned_user_id);
+        $this->assertSame([], $skipMe->fresh()->assigneeIds());
+        $this->actingAs($b)->get(route('admin.orders.show', $o2))->assertOk();
+
+        // the old single-agent field replaces everyone on the selected orders
+        $this->actingAs($manager)->post(route('admin.orders.assign.bulk'), ['order_ids' => [$o1->id], 'assignee_id' => $b->id])->assertSessionHasNoErrors();
+        $this->assertSame([$b->id], $o1->fresh()->assigneeIds());
+    }
+
+    public function test_bulk_assign_refuses_agents_with_different_payment_methods_before_touching_any_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        $b->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        $o1 = $this->order();
+
+        $this->actingAs($this->superAdmin())->post(route('admin.orders.assign.bulk'), ['order_ids' => [$o1->id], 'assignee_ids' => [$a->id, $b->id]])->assertSessionHasErrors('assignee');
+
+        $this->assertSame([], $o1->fresh()->assigneeIds());
+    }
+
+    public function test_several_default_assignees_all_land_on_a_new_order_and_the_old_single_setting_still_works(): void
+    {
+        $this->on();
+        SystemSettings::set('order_assignment_mode', 'default_assignee');
+        $a = $this->agent(); $b = $this->agent();
+        SystemSettings::set('order_default_assignee_ids', [$a->id, $b->id]);
+        $svc = app(OrderAssignmentService::class);
+
+        $o = $this->order(); $svc->assignOnCreate($o);
+        $this->assertSame($a->id, $o->fresh()->assigned_user_id);
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $o->fresh()->assigneeIds());
+        $this->assertSame(1, OrderAssignment::where('order_id', $o->id)->count());
+
+        // an ineligible one is skipped, the others still get the order
+        $b->forceFill(['is_active' => false])->save();
+        $o2 = $this->order(); $svc->assignOnCreate($o2);
+        $this->assertSame([$a->id], $o2->fresh()->assigneeIds());
+
+        // the old single setting is honoured until the new list is saved
+        SystemSettings::set('order_default_assignee_ids', null);
+        SystemSettings::set('order_default_assignee_id', $a->id);
+        $o3 = $this->order(); $svc->assignOnCreate($o3);
+        $this->assertSame([$a->id], $o3->fresh()->assigneeIds());
+    }
+
+    public function test_a_checkout_reservation_for_the_default_agent_puts_every_default_agent_on_the_order(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent();
+        SystemSettings::set('order_default_assignee_ids', [$a->id, $b->id]);
+        $o = $this->order();
+
+        app(OrderAssignmentService::class)->assignFromReservation($o, $b, 'default_assignee');
+
+        $this->assertSame($b->id, $o->fresh()->assigned_user_id, 'the agent the customer was shown stays primary');
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $o->fresh()->assigneeIds());
+    }
+
+    public function test_default_assignees_with_different_payment_methods_leave_the_order_in_the_queue(): void
+    {
+        $this->on();
+        SystemSettings::set('order_assignment_mode', 'default_assignee');
+        $a = $this->agent(); $b = $this->agent();
+        $b->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        SystemSettings::set('order_default_assignee_ids', [$a->id, $b->id]);
+
+        $o = $this->order(); app(OrderAssignmentService::class)->assignOnCreate($o);
+
+        $this->assertNull($o->fresh()->assigned_user_id, 'never a partial or arbitrary assignment');
+    }
+
+    public function test_the_settings_page_saves_several_default_assignees_and_refuses_mixed_payment_methods(): void
+    {
+        $this->on();
+        foreach (['settings.update', 'settings.orders'] as $p) {
+            Permission::findOrCreate($p, 'web');
+        }
+        $admin = $this->superAdmin();
+        $admin->givePermissionTo(['settings.update', 'settings.orders']);
+        $a = $this->agent(); $b = $this->agent(); $c = $this->agent();
+        $c->forceFill(['allowed_payment_methods' => ['fake_card']])->save();
+        $base = ['order_assignment_mode' => 'default_assignee', 'order_assignment_enabled' => 1];
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => ['', (string) $a->id, (string) $b->id]])->assertSessionHasNoErrors();
+        $this->assertSame([$a->id, $b->id], SystemSettings::get('order_default_assignee_ids'));
+        $this->actingAs($admin)->get(route('admin.settings.section', 'orders'))->assertOk()->assertSee('Default assignees')->assertSee($a->name);
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => [(string) $a->id, (string) $c->id]])->assertSessionHasErrors('order_default_assignee_ids');
+        $this->assertSame([$a->id, $b->id], SystemSettings::get('order_default_assignee_ids'), 'unchanged');
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'orders'), $base + ['order_default_assignee_ids' => ['']])->assertSessionHasNoErrors();
+        $this->assertNull(SystemSettings::get('order_default_assignee_ids'));
+    }
+
+    public function test_agents_never_learn_who_else_is_on_an_order_or_that_it_was_assigned(): void
+    {
+        $this->on();
+        $a = $this->agent(); $b = $this->agent(); $manager = $this->superAdmin();
+        $a->forceFill(['name' => 'Alice Agentone'])->save();
+        $b->forceFill(['name' => 'Bobby Colleague'])->save();
+        $order = $this->order();
+        $this->actingAs($manager);
+        app(OrderAssignmentService::class)->assignMany($order, [$a, $b], $manager);
+
+        // the agent sees the order, but nothing about assignment: no card, no names, no assignment events, no column
+        $page = $this->actingAs($a)->get(route('admin.orders.show', $order))->assertOk();
+        $page->assertDontSee('Bobby Colleague')->assertDontSee('Assigned agents')->assertDontSee('Order assigned')->assertDontSee('Order reassigned')->assertDontSee('First agent = primary');
+        $this->actingAs($a)->get(route('admin.orders.index'))->assertOk()->assertSee($order->order_number)->assertDontSee('Bobby Colleague')->assertDontSee('Assigned to');
+
+        // people with the full order view (or assignment rights) still see everything
+        $this->actingAs($manager)->get(route('admin.orders.show', $order))->assertOk()->assertDontSee('Bobby Colleague')->assertDontSee('Assigned agents')->assertDontSee('Order assigned')->assertDontSee('Order reassigned');   // nothing about assignment on the order page, for anyone
+        $this->actingAs($manager)->get(route('admin.orders.index'))->assertOk()->assertSee('Bobby Colleague')->assertSee('Assigned to');
+    }
+
+    public function test_ticking_can_receive_orders_is_enough_for_someone_who_can_open_orders(): void
+    {
+        $this->on();
+        $svc = app(OrderAssignmentService::class);
+        $admin = $this->user(null, ['orders.view'], ['can_receive_orders' => true]);   // e.g. an "Administrator" role without orders.view_assigned
+        $notTicked = $this->user(null, ['orders.view'], ['can_receive_orders' => false]);
+
+        $this->assertTrue($svc->isEligible($admin));
+        $this->assertTrue($svc->eligibleUsers()->contains('id', $admin->id));
+        $this->assertFalse($svc->isEligible($notTicked));
+
+        $mine = $this->order(); $other = $this->order();
+        $svc->assign($mine, $admin, $this->superAdmin());
+
+        // they see only their own order (not everything), so the new flag never widens access to all orders
+        $this->actingAs($admin)->get(route('admin.orders.index'))->assertOk()->assertSee($mine->order_number)->assertDontSee($other->order_number);
+        $this->actingAs($admin)->get(route('admin.orders.show', $other))->assertNotFound();
+        $this->assertSame(OrderAccess::ASSIGNED, OrderAccess::level($admin));
     }
 }

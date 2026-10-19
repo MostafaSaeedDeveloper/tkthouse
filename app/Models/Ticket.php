@@ -28,6 +28,7 @@ class Ticket extends Model
         'issued_at',
         'checked_in_at',
         'canceled_at',
+        'created_by_user_id',
     ];
 
     protected function casts(): array
@@ -37,6 +38,21 @@ class Ticket extends Model
             'checked_in_at' => 'datetime',
             'canceled_at' => 'datetime',
         ];
+    }
+
+    /** Guest-list tickets: everyone sees only the ones they added; Super Admin sees all (and the ones with no recorded creator). */
+    public function scopeGuestListVisibleTo($query, ?User $user)
+    {
+        if (\App\Orders\OrderAccess::isSuper($user)) {
+            return $query;
+        }
+
+        return $user ? $query->where($this->getTable().'.created_by_user_id', $user->id) : $query->whereRaw('1 = 0');
+    }
+
+    public function isGuestVisibleTo(?User $user): bool
+    {
+        return \App\Orders\OrderAccess::isSuper($user) || ($user !== null && (int) $this->created_by_user_id === (int) $user->id);
     }
 
     public function event()

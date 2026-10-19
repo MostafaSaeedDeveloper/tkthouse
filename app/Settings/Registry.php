@@ -56,7 +56,9 @@ final class Registry
             'order_assignment_enabled' => ['group' => 'orders', 'type' => 'bool', 'label' => 'Enable order assignment', 'default' => false, 'rules' => ['boolean']],
             'order_assignment_mode' => ['group' => 'orders', 'type' => 'select', 'label' => 'Assignment mode', 'default' => 'manual',
                 'options' => ['manual' => 'Manual', 'round_robin' => 'Automatic — round robin', 'default_assignee' => 'Default assignee'], 'rules' => ['required', 'in:manual,round_robin,default_assignee']],
-            'order_default_assignee_id' => ['group' => 'orders', 'type' => 'user', 'label' => 'Default assignee', 'default' => null, 'rules' => ['nullable', 'integer']],
+            'order_default_assignee_ids' => ['group' => 'orders', 'type' => 'users', 'label' => 'Default assignees', 'default' => null,
+                'help' => 'Used when the mode is "Default assignee". Several agents can be chosen, but they must all have the same payment methods.',
+                'rules' => ['nullable', 'array', 'max:20', self::eachPositiveInt(...)]],
 
             // ---- Payment routing (all off / empty by default => today's payment behaviour is unchanged)
             'payment_routing_enabled' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Show each agent\'s payment methods', 'default' => false,
@@ -73,6 +75,18 @@ final class Registry
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,
                 'help' => 'Disable to stop WhatsApp sending from admin and post-payment flows.', 'rules' => ['boolean']],
         ];
+    }
+
+    /** Validation rule for a list of ids; blank entries (the "nothing selected" marker of a multi-select) are ignored. */
+    public static function eachPositiveInt(string $attribute, mixed $value, \Closure $fail): void
+    {
+        foreach ((array) $value as $v) {
+            if ($v !== '' && $v !== null && (! is_numeric($v) || (int) $v < 1)) {
+                $fail('The '.$attribute.' list must contain valid ids.');
+
+                return;
+            }
+        }
     }
 
     public static function definition(string $key): ?array

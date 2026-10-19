@@ -77,6 +77,12 @@ class OrderController extends Controller
         [$sortKey, $sortDir] = $this->applySorting($ordersQuery, $request);
 
         $orders = $ordersQuery->paginate($this->perPage($request))->withQueryString();
+
+        // Some gateways (Fawaterak) report a failure only through their webhook, which never changes the attempt itself: such an attempt still reads "Processing".
+        // The list calls it out too, for the latest attempt of each order on this page.
+        $failedAttemptIds = \App\Models\WebhookEvent::query()->where('event_type', 'payment.failed')
+            ->whereIn('payment_attempt_id', $orders->getCollection()->pluck('latestPaymentAttempt.id')->filter()->all())
+            ->pluck('payment_attempt_id')->unique()->all();
         $canViewDeletedOrders = $request->user()?->can(self::DELETED_ORDERS_PERMISSION) ?? false;
         $deletedOrdersCount = 0;
         if ($canViewDeletedOrders) {
@@ -96,13 +102,15 @@ class OrderController extends Controller
         $statusOptions = self::ORDER_STATUS_OPTIONS;
         $perPageOptions = self::PER_PAGE_OPTIONS;
 
-        $assignmentOn = \App\Orders\OrderAccess::enabled();
+        $assignmentOn = \App\Orders\OrderAccess::canSeeAssignment($request->user());
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user()) || \App\Orders\OrderAccess::canAssign($request->user(), true);
         $assignees = $assignmentOn && (\App\Orders\OrderAccess::level($request->user()) === \App\Orders\OrderAccess::ALL)
-            ? \App\Models\User::query()->whereIn('id', Order::query()->whereNotNull('assigned_user_id')->distinct()->pluck('assigned_user_id')->merge(app(\App\Orders\OrderAssignmentService::class)->eligibleUsers()->pluck('id'))->unique())->orderBy('name')->get(['id', 'name'])
+            ? \App\Models\User::query()->whereIn('id', Order::query()->whereNotNull('assigned_user_id')->distinct()->pluck('assigned_user_id')->merge(app(\App\Orders\OrderAssignmentService::class)->eligibleUsers()->pluck('id'))->unique())->orderBy('name')->get(['id', 'name', 'allowed_payment_methods'])
             : collect();
 
-        return view('admin.orders.index', compact('assignmentOn', 'canAssign', 'assignees', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
+        $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
+
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
     }
 
     public function deleted(Request $request)
@@ -146,7 +154,7 @@ class OrderController extends Controller
         $this->abortIfOrderNotAccessible($request, $order, false);
 
         $order->load(['customer', 'items.ticket', 'items.event:id,name,event_date,end_date,event_time,location', 'items.issuedTickets.dashboardTicket', 'user', 'promoCode']);
-        $paymentAttempts = $order->paymentAttempts()->with('integrationAccount')->latest()->get();
+        $paymentAttempts = $order->paymentAttempts()->with(['integrationAccount', 'failedWebhookEvent'])->latest()->get();
 
         $paymentMethodLabel = PaymentMethod::query()
             ->where('code', (string) $order->payment_method)
@@ -167,6 +175,8 @@ class OrderController extends Controller
         $history = $activities
             ->where('log_name', '!=', 'order_notes')
             ->reject(fn (Activity $activity) => in_array($activity->description, self::HIDDEN_ORDER_HISTORY_DESCRIPTIONS, true))
+            // Assignment changes are not part of the order's story: they stay in the activity log (and in the Assignment card, for those who may see it)
+            ->reject(fn (Activity $activity) => in_array($activity->description, ['Order assigned', 'Order reassigned', 'Order unassigned'], true))
             ->values();
 
         $statusTransitions = $history
@@ -210,13 +220,14 @@ class OrderController extends Controller
             ? \App\Models\IntegrationAccount::query()->whereIn('provider', ['paymob', 'fawaterak', 'fake'])->whereNull('archived_at')->where('enabled', true)->get()->filter(fn ($a) => \App\Services\Payments\Routing\PaymentAccountResolver::usable($a) && $a->id !== $order->integration_account_id)->values()
             : collect();
         $accountNames = $canSeeAccounts ? \App\Models\IntegrationAccount::query()->whereIn('id', $paymentAttempts->pluck('integration_account_id')->filter())->pluck('name', 'id') : collect();
-        $assignmentOn = \App\Orders\OrderAccess::enabled();
+        $assignmentOn = \App\Orders\OrderAccess::canSeeAssignment($request->user());
         $assignmentHistory = $assignmentOn ? $order->assignments()->get() : collect();
         $canAssign = \App\Orders\OrderAccess::canAssign($request->user(), $order->assigned_user_id !== null);
         $assignees = $canAssign ? app(\App\Orders\OrderAssignmentService::class)->eligibleUsers() : collect();
-        $order->loadMissing(['assignedUser:id,name', 'assignedBy:id,name', 'soldBy:id,name']);
+        $order->loadMissing(['assignedUser:id,name', 'assignedBy:id,name', 'soldBy:id,name', 'assignees:users.id,users.name']);
+        $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees', 'canSeeAccounts', 'pinnedAccount', 'switchTargets', 'accountNames'));
+        return view('admin.orders.show', compact('order', 'notes', 'history', 'activityTimeline', 'paymentMethodLabel', 'statusOptions', 'paymentAttempts', 'assignmentOn', 'assignmentHistory', 'canAssign', 'assignees', 'assigneeOptions', 'canSeeAccounts', 'pinnedAccount', 'switchTargets', 'accountNames'));
     }
 
     public function edit(Request $request, Order $order)
@@ -760,8 +771,9 @@ class OrderController extends Controller
             'items:id,order_id,event_id,event_ticket_id,ticket_name,ticket_price,quantity,line_total',
             'items.event:id,name',
             'items.eventTicket:id,color',
-            'latestPaymentAttempt',
             'assignedUser:id,name',
+            'assignees:users.id,users.name',
+            'latestPaymentAttempt',
         ];
     }
 
@@ -999,4 +1011,10 @@ class OrderController extends Controller
             ->send(new OrderStatusChangedMail($order, $oldStatus, $newStatus));
     }
 
+
+    /** [user id => name] for the agent pickers. */
+    private function assigneeOptions($users): array
+    {
+        return collect($users)->mapWithKeys(fn ($u) => [$u->id => $u->name])->all();
+    }
 }

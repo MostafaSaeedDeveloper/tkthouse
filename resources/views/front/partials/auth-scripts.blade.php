@@ -141,7 +141,9 @@
 
                                     setPanelMessage(type, 'success', result.data.message || 'Success. Redirecting...');
                                     var redirectTo = result.data.redirect_to || '{{ route('front.account.dashboard') }}';
-                                    window.location.href = redirectTo;
+                                    // Same page as now (the usual case: sign-in keeps you where you were) => reload so it renders signed in.
+                                    var here = window.location.href.split('#')[0];
+                                    if (redirectTo.split('#')[0] === here) { window.location.reload(); } else { window.location.href = redirectTo; }
                                     return;
                                 }
 

@@ -33,4 +33,26 @@ class WebhookEvent extends Model
     {
         return $this->signature_status === 'valid';
     }
+
+    /** How the signature check reads to an operator. No vendor key / no documented hash is normal for some setups, so it is shown neutrally, not as a warning. */
+    public function signatureLabel(): string
+    {
+        return match ($this->signature_status) {
+            'valid' => 'Verified',
+            'invalid' => 'Invalid',
+            'missing' => 'Missing',
+            'unverifiable', 'unsupported' => 'Not signed',
+            default => (string) $this->signature_status,
+        };
+    }
+
+    public function signatureVariant(): string
+    {
+        return match ($this->signature_status) {
+            'valid' => 'success',
+            'invalid' => 'danger',
+            'missing' => 'warning',
+            default => 'default',
+        };
+    }
 }

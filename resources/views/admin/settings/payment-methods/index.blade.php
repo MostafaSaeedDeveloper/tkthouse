@@ -13,7 +13,7 @@
         <x-admin.empty icon="fa-credit-card" title="No payment methods found." text="Add a method to let customers pay."><a href="{{ route('admin.payment-methods.create') }}" class="a-btn a-btn--primary">Add Payment Method</a></x-admin.empty>
     @else
         <x-admin.table stack compact caption="Payment methods">
-            <thead><tr><th class="a-num">Order</th><th>Method</th><th>Code</th><th>Provider</th><th>Provider method ID</th><th>Merchant accounts</th><th>Status</th><th><span class="a-sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th class="a-num">Order</th><th>Method</th><th>Code</th><th>Provider</th><th>Provider method ID</th><th>Status</th><th><span class="a-sr-only">Actions</span></th></tr></thead>
             <tbody>
             @foreach($methods as $method)
                 <tr>
@@ -24,16 +24,16 @@
                     <td data-label="Code"><code>{{ $method->code }}</code></td>
                     <td data-label="Provider">{{ strtoupper($method->provider) }}</td>
                     <td data-label="Provider method ID">{{ $method->providerMethodIdentifier() ?? '—' }}</td>
-                    <td data-label="Merchant accounts" class="a-wrap">@php $accs = $byMethod[$method->code] ?? collect(); @endphp
-                        @if(in_array($method->provider, ['paymob', 'fawaterak', 'fake'], true))
-                            @forelse($accs as $a)<span class="a-table__sub" style="color:var(--a-ink)">{{ $a->name }}</span>@empty<span class="a-table__sub">Legacy configuration only</span>@endforelse
-                        @else<span class="a-table__sub">Manual (confirmed by staff)</span>@endif</td>
-                    <td data-label="Status"><x-admin.badge :variant="$method->is_active ? 'success' : 'default'" dot>{{ $method->is_active ? 'Active' : 'Disabled' }}</x-admin.badge></td>
+                    <td data-label="Status"><x-admin.badge :variant="$method->is_active ? 'success' : 'default'" dot>{{ $method->is_active ? 'Active' : 'Disabled' }}</x-admin.badge>@if($method->is_default)<x-admin.badge variant="warning">Default</x-admin.badge>@endif</td>
                     <td data-label="Actions"><div class="a-table__actions">
-                        @can('payment-methods.update')<a href="{{ route('admin.payment-methods.edit', $method) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>@endcan
+                        @can('payment-methods.update')
+                            <form method="POST" action="{{ route('admin.payment-methods.default', $method) }}">@csrf
+                                <button type="submit" class="a-btn a-btn--outline a-btn--sm" title="{{ $method->is_default ? 'Stop showing this method by default' : 'Show this method by default when no agent selection applies' }}" aria-pressed="{{ $method->is_default ? 'true' : 'false' }}"><i class="fa {{ $method->is_default ? 'fa-star' : 'fa-star-half-stroke' }}" aria-hidden="true"></i> {{ $method->is_default ? 'Remove default' : 'Set default' }}</button>
+                            </form>
+                            <a href="{{ route('admin.payment-methods.edit', $method) }}" class="a-btn a-btn--outline a-btn--sm">Edit</a>
+                        @endcan
                         @can('payment-methods.delete')
-                            @if(in_array($method->code, $used, true))<span class="a-table__sub" title="Used by existing orders: disable it instead of deleting">In use</span>
-                            @else<form method="POST" action="{{ route('admin.payment-methods.destroy', $method) }}" data-a-confirm="Delete this payment method?" data-a-confirm-title="Delete payment method" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-btn a-btn--danger a-btn--sm" type="submit">Delete</button></form>@endif
+                            @unless(in_array($method->code, $used, true))<form method="POST" action="{{ route('admin.payment-methods.destroy', $method) }}" data-a-confirm="Delete this payment method?" data-a-confirm-title="Delete payment method" data-a-confirm-ok="Delete">@csrf @method('DELETE')<button class="a-btn a-btn--danger a-btn--sm" type="submit">Delete</button></form>@endunless
                         @endcan
                     </div></td>
                 </tr>

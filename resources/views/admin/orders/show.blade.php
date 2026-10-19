@@ -51,7 +51,7 @@
   <dl class="a-ord-summary__grid">
     <div><dt>Order status</dt><dd class="a-ord-head__badge"><x-admin.status :status="$order->status" kind="order" /></dd></div>
     <div><dt>Payment</dt><dd class="a-ord-head__badge">
-      @if($latestAttempt)<x-admin.status :status="$latestAttempt->status" kind="payment" />
+      @if($latestAttempt)<x-admin.status :status="$latestAttempt->displayStatus()" kind="payment" />
       @elseif($order->status === 'paid')<x-admin.status status="paid" kind="payment" />
       @else<span class="a-muted a-ord-head__none">No payment recorded</span>@endif
     </dd></div>
@@ -69,7 +69,7 @@
         <div><dt>Order status</dt><dd><x-admin.status :status="$order->status" kind="order" /></dd></div>
         <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
         @if($latestAttempt)
-          <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->status" kind="payment" /></dd></div>
+          <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->displayStatus()" kind="payment" /></dd></div>
         @endif
         @if($order->paid_at)<div><dt>Paid at</dt><dd>{{ $order->paid_at->format('d M Y, H:i') }}</dd></div>@endif
         @if($order->requires_approval)<div><dt>Booking approval</dt><dd>{{ $order->approved_at ? 'Approved '.$order->approved_at->format('d M Y, H:i') : 'Required' }}</dd></div>@endif
@@ -176,7 +176,6 @@
         @else
         <dl class="a-kv">
             <div><dt>Payment provider</dt><dd>{{ ucfirst((string) $primary->provider) }}</dd></div>
-            @if($canSeeAccounts)<div><dt>Merchant account</dt><dd>{{ $primary->integrationAccount?->name ?? 'Legacy configuration' }}</dd></div>@endif
             <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel ?: ($primary->method_code ?: '—') }}</dd></div>
             <div><dt>Order reference</dt><dd>#{{ $order->order_number }}</dd></div>
             <div><dt>Payment reference</dt><dd>{{ $primary->internal_reference ?: 'Legacy attempt' }}@if($primary->internal_reference) <button type="button" class="a-btn a-btn--ghost a-btn--sm" data-copy-text="{{ $primary->internal_reference }}" aria-label="Copy payment reference"><i class="fa fa-copy"></i></button>@endif</dd></div>
@@ -184,7 +183,7 @@
             @if($primary->provider_reference)<div><dt>Provider reference number</dt><dd>{{ $primary->provider_reference }}</dd></div>@endif
             <div><dt>{{ $primary->status === 'paid' ? 'Paid amount' : 'Amount requested' }}</dt><dd>{{ $money($primary->amount) }}</dd></div>
             <div><dt>Payment date</dt><dd>{{ ($primary->paid_at ?? $primary->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
-            <div><dt>Current status</dt><dd><x-admin.status :status="$primary->status" kind="payment" /></dd></div>
+            <div><dt>Current status</dt><dd><x-admin.status :status="$primary->displayStatus()" kind="payment" /></dd></div>
             <div><dt>Last verification</dt><dd>{{ $primary->last_checked_at?->diffForHumans() ?? 'never checked' }}</dd></div>
         </dl>
         <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
@@ -209,7 +208,7 @@
               @if($canSeeAccounts)<td data-label="Account">{{ $a->integrationAccount?->name ?? 'Legacy' }}</td>@endif
               <td data-label="Provider ID" class="a-wrap"><span class="a-table__sub" style="color:var(--a-ink)">{{ $a->transaction_id ?: ($a->reference ?: '—') }}</span>@if($a->failure_reason)<span class="a-table__sub">{{ $a->failure_reason }}</span>@endif</td>
               <td data-label="Amount" class="a-num">{{ $money($a->amount) }}</td>
-              <td data-label="Status"><x-admin.status :status="$a->status" kind="payment" /></td>
+              <td data-label="Status"><x-admin.status :status="$a->displayStatus()" kind="payment" /></td>
               <td data-label="Date">{{ $a->created_at?->format('d M Y, H:i') }}</td>
             </tr>
           @endforeach
@@ -272,35 +271,7 @@
     </x-admin.card>
     @endif
 
-    @if($assignmentOn)
-    <x-admin.card title="Assignment" subtitle="Who is responsible for this order.">
-        <dl class="a-kv">
-            <div><dt>Assigned to</dt><dd>@if($order->assignedUser)<strong>{{ $order->assignedUser->name }}</strong>@else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif</dd></div>
-            @if($order->assigned_at)<div><dt>Assigned by</dt><dd>{{ $order->assignedBy?->name ?? 'Automatic' }} · {{ $order->assigned_at->format('d M Y, H:i') }}</dd></div>@endif
-            @if($order->sold_at)<div><dt>Sale attributed to</dt><dd>{{ $order->soldBy?->name ?? 'Unattributed' }} · {{ $order->sold_at->format('d M Y, H:i') }}</dd></div>@endif
-        </dl>
-        @if($canAssign)
-        <form method="POST" action="{{ route('admin.orders.assign', $order) }}" data-a-loading class="a-form-grid">
-            @csrf
-            <x-admin.field label="Change assignee" name="assignee_id" for="oa-assignee">
-                <select id="oa-assignee" class="form-select" name="assignee_id"><option value="">Unassigned</option>@foreach($assignees as $a)<option value="{{ $a->id }}" @selected($order->assigned_user_id === $a->id)>{{ $a->name }}</option>@endforeach</select>
-            </x-admin.field>
-            <x-admin.field label="Reason (optional)" name="reason" for="oa-reason"><input id="oa-reason" class="form-control" name="reason" maxlength="300"></x-admin.field>
-            <p class="a-hint is-full">Reassigning never changes the payment account or any payment attempt of this order.</p>
-            <div class="a-form-actions is-full"><button class="a-btn a-btn--primary" type="submit">Save assignee</button></div>
-        </form>
-        @endif
-        @if($assignmentHistory->isNotEmpty())
-            <h3 class="a-m-section__title" style="margin-top:16px">History</h3>
-            <ul class="a-timeline">
-                @foreach($assignmentHistory as $h)
-                    <li><strong>{{ $h->meta['to'] ?? 'Unassigned' }}</strong> <span class="a-muted">from {{ $h->meta['from'] ?? 'Unassigned' }}</span><br>
-                        <span class="a-table__sub">{{ $h->created_at?->format('d M Y, H:i') }} · by {{ $h->meta['by'] ?? 'system' }} · {{ str_replace('_', ' ', $h->source) }}@if($h->reason) · “{{ $h->reason }}”@endif</span></li>
-                @endforeach
-            </ul>
-        @endif
-    </x-admin.card>
-    @endif
+    {{-- Assignment is not shown on the order itself: assigning is done from the orders list. --}}
 
     <x-admin.card title="Customer" subtitle="The buyer record attached to this order.">
       <div class="a-ord-who">

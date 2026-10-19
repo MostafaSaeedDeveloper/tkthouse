@@ -72,6 +72,7 @@ Route::group([], function () {
     Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->middleware('throttle:30,1,checkout-promo')->name('front.checkout.promo');
     Route::redirect('/checkout/review', '/checkout');
     Route::get('/checkout/thank-you', [CheckoutController::class, 'thankYou'])->name('front.checkout.thank-you');
+    Route::get('/checkout/confirmation/{orderNumber}/status', [CheckoutController::class, 'confirmationStatus'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:120,1,checkout-status')->name('front.checkout.confirmation.status');
     Route::get('/checkout/confirmation/{orderNumber}', [CheckoutController::class, 'confirmation'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.checkout.confirmation');
     Route::post('/checkout/confirmation/{orderNumber}/email', [CheckoutController::class, 'changeEmail'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:6,1,checkout-email')->name('front.checkout.change-email');
     Route::get('/payments/fake/{attempt}', [PaymentSimulatorController::class, 'show'])->name('front.payments.fake.show');
@@ -131,6 +132,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor(['edit', 'update'], 'permission:permissions.update')
         ->middlewareFor('destroy', 'permission:permissions.delete');
 
+    Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->middleware('permission:events.create')->name('events.duplicate');
     Route::post('events/{event}/archive', [EventController::class, 'archive'])->middleware('permission:events.archive')->name('events.archive');
     Route::post('events/{event}/restore', [EventController::class, 'restore'])->middleware('permission:events.restore')->name('events.restore');
     Route::resource('events', EventController::class)
@@ -146,12 +148,12 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor('destroy', 'permission:tickets.delete');
 
 
-    Route::get('guest-list', [GuestListController::class, 'index'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.index');
-    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.create');
-    Route::post('guest-list', [GuestListController::class, 'store'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.store');
-    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware(['permission:tickets.create', 'orders.global'])->name('guest-list.import');
-    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.export');
-    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware(['permission:tickets.view', 'orders.global'])->name('guest-list.template');
+    Route::get('guest-list', [GuestListController::class, 'index'])->middleware('permission:guest-list.view')->name('guest-list.index');
+    Route::get('guest-list/create', [GuestListController::class, 'create'])->middleware('permission:guest-list.create')->name('guest-list.create');
+    Route::post('guest-list', [GuestListController::class, 'store'])->middleware('permission:guest-list.create')->name('guest-list.store');
+    Route::post('guest-list/import', [GuestListController::class, 'import'])->middleware('permission:guest-list.create')->name('guest-list.import');
+    Route::get('guest-list/export', [GuestListController::class, 'export'])->middleware('permission:guest-list.view')->name('guest-list.export');
+    Route::get('guest-list/template', [GuestListController::class, 'template'])->middleware('permission:guest-list.view')->name('guest-list.template');
 
     Route::post('tickets/{ticket}/send-email', [TicketController::class, 'sendEmail'])->middleware('permission:tickets.update')->name('tickets.send-email');
     Route::post('tickets/{ticket}/send-whatsapp', [TicketController::class, 'sendWhatsapp'])->middleware('permission:tickets.update')->name('tickets.send-whatsapp');
@@ -205,6 +207,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('payments/sync/{account}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'sync'])->whereNumber('account')->middleware('permission:payments.transactions.inquire')->name('payments.sync');
     Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
     Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
+    Route::post('payments/transactions/{attempt}/review-dismiss', [\App\Http\Controllers\Admin\TransactionController::class, 'dismissReview'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.review.dismiss');
     Route::post('payments/transactions/{attempt}/inquire', [\App\Http\Controllers\Admin\TransactionController::class, 'inquire'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.inquire');
     $rc = \App\Http\Controllers\Admin\RefundController::class;
     Route::get('payments/refunds', [$rc, 'index'])->middleware('permission:payments.refunds.view')->name('payments.refunds');
@@ -252,6 +255,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor(['create', 'store'], 'permission:payment-methods.create')
         ->middlewareFor(['edit', 'update'], 'permission:payment-methods.update')
         ->middlewareFor('destroy', 'permission:payment-methods.delete');
+    Route::post('payment-methods/{payment_method}/default', [PaymentMethodController::class, 'toggleDefault'])->middleware('permission:payment-methods.update')->name('payment-methods.default');
     Route::get('payment-methods/fawaterak/methods', [PaymentMethodController::class, 'fawaterakMethods'])->middleware('permission:payment-methods.view')->name('payment-methods.fawaterak-methods');
 
     Route::resource('promo-codes', PromoCodeController::class)->except('show')

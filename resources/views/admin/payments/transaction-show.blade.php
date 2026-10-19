@@ -30,7 +30,7 @@
         @if($attempt->webhookEvents->isEmpty())<p class="a-hint" style="padding:16px">No webhook was received for this attempt (redirect and reconciliation checks are not events).</p>
         @else
         <x-admin.table stack compact caption="Webhook events"><thead><tr><th>Received</th><th>Event</th><th>Signature</th><th>Processing</th></tr></thead><tbody>
-            @foreach($attempt->webhookEvents as $e)<tr><td data-label="Received">{{ $e->received_at->format('d M Y, H:i:s') }}</td><td data-label="Event">{{ $e->event_type }}@if($e->deliveries > 1)<span class="a-table__sub">{{ $e->deliveries }} deliveries</span>@endif</td><td data-label="Signature"><x-admin.badge :variant="$e->signature_status === 'valid' ? 'success' : ($e->signature_status === 'invalid' ? 'danger' : 'warning')">{{ $e->signature_status }}</x-admin.badge></td><td data-label="Processing">{{ $e->processing_status }}@if($e->error)<span class="a-table__sub">{{ $e->error }}</span>@endif</td></tr>@endforeach
+            @foreach($attempt->webhookEvents as $e)<tr><td data-label="Received">{{ $e->received_at->format('d M Y, H:i:s') }}</td><td data-label="Event">{{ $e->event_type }}@if($e->deliveries > 1)<span class="a-table__sub">{{ $e->deliveries }} deliveries</span>@endif</td><td data-label="Signature"><x-admin.badge :variant="$e->signatureVariant()">{{ $e->signatureLabel() }}</x-admin.badge></td><td data-label="Processing">{{ $e->processing_status }}@if($e->error)<span class="a-table__sub">{{ $e->error }}</span>@endif</td></tr>@endforeach
         </tbody></x-admin.table>@endif
     </x-admin.card>
     <x-admin.card title="Status history" subtitle="Built from what TKT House recorded: session, webhooks, checks, settlement and refunds.">
@@ -45,7 +45,7 @@
     @if($siblings->isNotEmpty())
     <x-admin.card flush title="Other attempts on this order" :subtitle="'A retry never overwrites an earlier attempt'" style="margin-top:12px">
         <x-admin.table stack compact caption="Other attempts"><thead><tr><th>Payment</th><th>Provider</th><th>Status</th><th>Date</th></tr></thead><tbody>
-            @foreach($siblings as $o)<tr><td data-label="Payment"><a class="a-table__main" href="{{ route('admin.payments.transactions.show', $o) }}">{{ $o->internal_reference ?: '#'.$o->id }}</a></td><td data-label="Provider">{{ ucfirst($o->provider) }}</td><td data-label="Status"><x-admin.status :status="$o->status" kind="payment" /></td><td data-label="Date">{{ $o->created_at->format('d M Y, H:i') }}</td></tr>@endforeach
+            @foreach($siblings as $o)<tr><td data-label="Payment"><a class="a-table__main" href="{{ route('admin.payments.transactions.show', $o) }}">{{ $o->internal_reference ?: '#'.$o->id }}</a></td><td data-label="Provider">{{ ucfirst($o->provider) }}</td><td data-label="Status"><x-admin.status :status="$o->displayStatus()" kind="payment" /></td><td data-label="Date">{{ $o->created_at->format('d M Y, H:i') }}</td></tr>@endforeach
         </tbody></x-admin.table>
     </x-admin.card>
     @endif
@@ -53,7 +53,7 @@
   <div>
     <x-admin.card title="Payment">
         <dl class="a-kv">
-            <div><dt>Status</dt><dd><x-admin.status :status="$attempt->status" kind="payment" /></dd></div>
+            <div><dt>Status</dt><dd><x-admin.status :status="$attempt->displayStatus()" kind="payment" /></dd></div>
             <div><dt>Amount</dt><dd>{{ $money($attempt->amount) }}</dd></div>
             <div><dt>Provider</dt><dd>{{ ucfirst($attempt->provider) }} · {{ $attempt->method_code }}</dd></div>
             @if($seeAccounts)<div><dt>Merchant account</dt><dd>{{ $attempt->integrationAccount?->name ?? 'Legacy configuration' }}</dd></div>@endif
@@ -61,6 +61,15 @@
             <div><dt>Paid at</dt><dd>{{ ($attempt->paid_at ?? $attempt->settled_at)?->format('d M Y, H:i') ?? '—' }}</dd></div>
             <div><dt>Last checked</dt><dd>{{ $attempt->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>
             @if($attempt->failure_reason)<div><dt>Failure reason</dt><dd>{{ $attempt->failure_reason }}</dd></div>@endif
+            @if($rr = $attempt->reviewReason())<div><dt>Needs review</dt><dd class="a-wrap"><strong>{{ $rr[0] }}</strong><span class="a-table__sub">{{ $rr[1] }}</span>@can('payments.transactions.inquire')<form method="POST" action="{{ route('admin.payments.transactions.review.dismiss', $attempt) }}" data-a-confirm="Mark this payment as reviewed? The Needs review flag is removed; the payment and the order are not changed." data-a-confirm-title="Mark as reviewed" data-a-confirm-ok="Mark as reviewed" style="margin-top:6px">@csrf<button type="submit" class="a-btn a-btn--outline a-btn--sm">Mark as reviewed</button></form>@endcan</dd></div> @endif
+            @if($attempt->status === 'initiated' && ($li = data_get($attempt->meta, 'last_inquiry')))
+                <div><dt>Provider answer</dt><dd class="a-wrap">
+                    {{ $li['message'] ?? 'Not confirmed as paid' }}
+                    <span class="a-table__sub">{{ collect(['provider_status' => 'status', 'paid' => 'paid', 'paid_at' => 'paid_at', 'total' => 'total', 'currency' => 'currency', 'invoice_id' => 'invoice'])
+                        ->filter(fn ($label, $k) => array_key_exists($k, $li))->map(fn ($label, $k) => $label.'='.$li[$k])->implode(' · ') }}</span>
+                    @if(!empty($li['data_fields']))<span class="a-table__sub">fields: {{ $li['data_fields'] }}</span>@endif
+                </dd></div>
+            @endif
         </dl>
     </x-admin.card>
     @if($seeAccounts && $attempt->routing_snapshot)

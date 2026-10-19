@@ -329,6 +329,29 @@ class AdminOrdersListTest extends TestCase
             ->assertSee('Approve order 940001')->assertSee('Reject order')->assertSee('Edit order')->assertSee('Change status')->assertSee('Delete order');
     }
 
+    public function test_a_failed_payment_attempt_shows_on_the_orders_list_but_other_attempt_states_do_not(): void
+    {
+        $this->staff();
+        $failed = $this->order('970001', 'pending_payment', 'Alice', $this->eventA);
+        $processing = $this->order('970002', 'pending_payment', 'Bob', $this->eventA);
+        $paidAfterFail = $this->order('970003', 'paid', 'Cara', $this->eventA);
+        foreach ([[$failed, 'failed'], [$processing, 'initiated'], [$paidAfterFail, 'failed']] as [$o, $status]) {
+            \App\Models\PaymentAttempt::create(['order_id' => $o->id, 'provider' => 'fake', 'method_code' => 'fake_card', 'amount' => 100, 'currency' => 'EGP', 'status' => $status,
+                'transaction_id' => 'T'.$o->id, 'internal_reference' => \App\Models\PaymentAttempt::newInternalReference()]);
+        }
+        // Fawaterak reports a failure only by webhook; the attempt itself stays "Processing" (initiated)
+        $webhookFailed = $this->order('970004', 'pending_payment', 'Dina', $this->eventA);
+        $attempt = \App\Models\PaymentAttempt::create(['order_id' => $webhookFailed->id, 'provider' => 'fawaterak', 'method_code' => 'fawaterak_card', 'amount' => 100, 'currency' => 'EGP', 'status' => 'initiated',
+            'transaction_id' => 'T4', 'internal_reference' => \App\Models\PaymentAttempt::newInternalReference()]);
+        \App\Models\WebhookEvent::create(['provider' => 'fawaterak', 'payment_attempt_id' => $attempt->id, 'order_id' => $webhookFailed->id, 'event_type' => 'payment.failed', 'dedupe_key' => 'k4', 'signature_status' => 'unsupported', 'processing_status' => 'ignored', 'received_at' => now()]);
+        $list = fn (string $ref) => $this->get(route('admin.orders.index', ['reference' => $ref]))->assertOk();
+
+        $list('970004')->assertSee('970004')->assertSee('a-ord-pay', false)->assertSee('Failed');
+        $list('970001')->assertSee('970001')->assertSee('a-ord-pay', false)->assertSee('Failed');
+        $list('970002')->assertSee('970002')->assertDontSee('a-ord-pay', false);
+        $list('970003')->assertSee('970003')->assertDontSee('a-ord-pay', false);   // a paid order never shows an old failed attempt
+    }
+
     public function test_deleted_orders_use_shared_filters_and_permission(): void
     {
         $this->staff();
@@ -341,6 +364,18 @@ class AdminOrdersListTest extends TestCase
 
         $this->get(route('admin.orders.deleted'))->assertOk()->assertSee('950001')->assertDontSee('950002')->assertSee('Restore');
         $this->get(route('admin.orders.deleted', ['customer' => 'bob']))->assertOk()->assertDontSee('950001');
+    }
+
+    public function test_deleted_orders_is_not_in_the_menu_and_its_button_on_orders_needs_the_permission(): void
+    {
+        $url = route('admin.orders.deleted');
+
+        $this->staff();
+        $this->get(route('admin.orders.index'))->assertOk()->assertDontSee($url)->assertDontSee('Deleted orders');
+
+        $this->staff(['orders.deleted.view']);
+        $this->get(route('admin.orders.index'))->assertOk()->assertSee($url)->assertSee('Deleted Orders')->assertDontSee('Deleted orders');
+        $this->get($url)->assertOk()->assertDontSee('>Deleted orders<', false);
     }
 
     public function test_order_details_show_separate_sections_and_full_ticket_names(): void

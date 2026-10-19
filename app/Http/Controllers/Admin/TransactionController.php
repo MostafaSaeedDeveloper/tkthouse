@@ -35,7 +35,7 @@ class TransactionController extends Controller
         $seeAccounts = self::canSeeAccounts($user);
         $esc = fn (string $v) => '%'.str_replace(['%', '_'], ['\%', '\_'], $v).'%';
 
-        $attempts = self::visible($user)->with(['order.customer', 'integrationAccount:id,name,provider'])
+        $attempts = self::visible($user)->with(['order.customer', 'integrationAccount:id,name,provider', 'failedWebhookEvent'])
             ->when($status !== '', fn ($w) => $w->where('status', $status))
             ->when($provider !== '', fn ($w) => $w->where('provider', $provider))
             ->when($seeAccounts && $accountId > 0, fn ($w) => $w->where('integration_account_id', $accountId))
@@ -80,7 +80,7 @@ class TransactionController extends Controller
         // one timeline from what we actually hold; the providers offer no history API for Paymob, so this is OUR record of events
         $history = collect([['at' => $attempt->created_at, 'label' => 'Payment session opened', 'detail' => $attempt->method_code]]);
         foreach ($attempt->webhookEvents as $e) {
-            $history->push(['at' => $e->received_at, 'label' => 'Webhook: '.$e->event_type, 'detail' => 'signature '.($e->signature_status ?? '—').', '.($e->processing_status ?? '—')]);
+            $history->push(['at' => $e->received_at, 'label' => 'Webhook: '.$e->event_type, 'detail' => ($e->signatureLabel() ?: '—').', '.($e->processing_status ?? '—')]);
         }
         if ($attempt->paid_at ?? $attempt->settled_at) {
             $history->push(['at' => $attempt->paid_at ?? $attempt->settled_at, 'label' => 'Paid', 'detail' => $attempt->transaction_id ? 'transaction '.$attempt->transaction_id : null]);
@@ -118,5 +118,28 @@ class TransactionController extends Controller
         activity('orders')->performedOn($attempt->order)->causedBy($request->user())->withProperties(['attempt_id' => $attempt->id, 'outcome' => $outcome])->log('Payment status checked');
 
         return back()->with('success', 'Checked with the gateway: '.str_replace('_', ' ', $outcome).'.');
+    }
+
+    /**
+     * "Mark as reviewed": clears the Needs review flag once someone has looked at the payment. Only the flag changes (never the
+     * payment, the order or any money); who cleared it and what the flag said are kept in the attempt and the activity log.
+     */
+    public function dismissReview(Request $request, PaymentAttempt $attempt)
+    {
+        abort_unless(self::visible($request->user())->whereKey($attempt->id)->exists(), 404);
+        abort_unless(OrderAccess::canManage($attempt->order, $request->user()), 403);
+
+        $meta = $attempt->meta ?? [];
+        $reason = $meta['needs_review'] ?? null;
+        if (! $reason) {
+            return back()->with('success', 'This payment was not flagged.');
+        }
+
+        unset($meta['needs_review'], $meta['flagged_at']);
+        $meta['review_dismissed'] = ['reason' => $reason, 'by' => $request->user()->name, 'by_id' => $request->user()->id, 'at' => now()->toIso8601String()];
+        $attempt->forceFill(['meta' => $meta])->saveQuietly();
+        activity('orders')->performedOn($attempt->order)->causedBy($request->user())->withProperties(['attempt_id' => $attempt->id, 'reason' => $reason])->log('Payment review dismissed');
+
+        return back()->with('success', 'Marked as reviewed.');
     }
 }
