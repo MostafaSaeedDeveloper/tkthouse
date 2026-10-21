@@ -66,12 +66,12 @@ final class OrderAccess
     }
 
     /**
-     * TEMPORARY: event ids (env ORDERS_OPEN_EVENT_IDS="12,15") whose orders every order-handling user may view, assigned or not.
-     * View only; acting on an order still needs the normal assignment rules. Remove the env value to switch it off.
+     * TEMPORARY: event ids whose orders every order-handling user may view, assigned or not.
+     * View only; acting on an order still needs the normal assignment rules. Empty the list to switch it off.
      */
     private static function openEventIds(): array
     {
-        return array_values(array_filter(array_map('intval', explode(',', (string) env('ORDERS_OPEN_EVENT_IDS', '')))));
+        return [33];
     }
 
     public static function apply(Builder $query, ?User $user, string $table = 'orders'): Builder
