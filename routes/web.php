@@ -247,8 +247,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('settings/orders/grant-view-all', [SystemSettingController::class, 'grantViewAll'])->middleware('permission:settings.orders')->name('settings.orders.grant-view-all');
     Route::post('settings/notifications/test', [SystemSettingController::class, 'testNotification'])->middleware('permission:settings.integrations.test')->name('settings.notifications.test');
 
-    Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|payments|notifications|security')->name('settings.section');
-    Route::put('settings/{section}', [SystemSettingController::class, 'save'])->where('section', 'general|branding|events|orders|payments|notifications|security')->name('settings.section.update');
+    Route::get('settings/{section}', [SystemSettingController::class, 'show'])->where('section', 'general|branding|events|orders|payments|notifications|scripts|security')->name('settings.section');
+    Route::put('settings/{section}', [SystemSettingController::class, 'save'])->where('section', 'general|branding|events|orders|payments|notifications|scripts|security')->name('settings.section.update');
 
     Route::resource('payment-methods', PaymentMethodController::class)->except('show')
         ->middlewareFor('index', 'permission:payment-methods.view')
