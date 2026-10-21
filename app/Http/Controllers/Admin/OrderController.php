@@ -63,7 +63,7 @@ class OrderController extends Controller
 
         $managedEvents = $request->user()?->managedEvents ?? collect();
 
-        $ordersQuery = Order::query()->visibleTo($request->user(), true)->with(self::listRelations());
+        $ordersQuery = Order::query()->visibleTo($request->user())->with(self::listRelations());
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;

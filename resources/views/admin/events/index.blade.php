@@ -27,12 +27,11 @@
     @else
         <x-admin.table stack caption="Events">
             <thead>
-                <tr><th>ID</th><th>Name</th><th>Date</th><th>Location</th><th>Status</th><th class="a-num">Actions</th></tr>
+                <tr><th>Name</th><th>Date</th><th>Location</th><th>Status</th><th class="a-num">Actions</th></tr>
             </thead>
             <tbody>
             @foreach($events as $event)
                 <tr>
-                    <td data-label="ID">{{ $event->id }}</td>
                     <td data-label="Name" class="a-wrap"><a class="a-table__main" href="{{ route('admin.events.edit', $event) }}">{{ $event->name }}</a></td>
                     <td data-label="Date"><div class="a-cellstack">{{ $event->event_date->format('Y-m-d') }}<span class="a-table__sub">{{ $event->event_time }}</span></div></td>
                     <td data-label="Location" class="a-wrap">{{ $event->location }}</td>
