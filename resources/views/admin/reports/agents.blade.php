@@ -54,31 +54,6 @@
 @endif
 <p class="a-hint" style="margin-top:12px">"Collected" is the line total of paid orders in the period; it is not a bank settlement.</p>
 @else
-    <x-admin.table stack caption="Event report">
-        <thead><tr>
-            <th scope="col">Event</th><th scope="col" class="a-num">Orders</th><th scope="col" class="a-num">Pending</th><th scope="col" class="a-num">Paid</th>
-            <th scope="col" class="a-num">Canceled</th><th scope="col" class="a-num">Win rate</th><th scope="col" class="a-num">Tickets sold</th><th scope="col" class="a-num">Collected (EGP)</th><th scope="col">Payment methods</th>
-        </tr></thead>
-        <tbody>
-        @foreach($eventRows as $r)
-            <tr>
-                <td data-label="Event"><span class="a-table__main">{{ $r['name'] }}</span></td>
-                <td data-label="Orders" class="a-num">{{ $r['orders'] }}</td>
-                <td data-label="Pending" class="a-num">{{ $r['pending'] }}</td>
-                <td data-label="Paid" class="a-num">{{ $r['paid'] }}</td>
-                <td data-label="Canceled" class="a-num">{{ $r['canceled'] }}</td>
-                <td data-label="Win rate" class="a-num">{{ $r['win_rate'] === null ? '—' : $r['win_rate'].'%' }}</td>
-                <td data-label="Tickets sold" class="a-num">{{ $r['tickets'] }}</td>
-                <td data-label="Collected" class="a-num">{{ $money($r['collected']) }}</td>
-                <td data-label="Payment methods" class="a-wrap">@forelse($r['methods'] as $m => $c)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $m ?: 'unknown')) }} × {{ $c }}</span>@empty — @endforelse</td>
-            </tr>
-        @endforeach
-        </tbody>
-    </x-admin.table>
-    @endif
-</x-admin.card>
-<p class="a-hint" style="margin-top:12px">"Collected" is the line total of paid orders in the period; it is not a bank settlement.</p>
-@else
 
 <x-admin.card flush :title="$seesTeam ? 'Per agent' : 'Summary'" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
     @if($data['rows']->isEmpty())
