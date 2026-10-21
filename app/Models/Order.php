@@ -168,11 +168,11 @@ class Order extends Model
     public const SHOW_HIDDEN_PERMISSION = 'showing_orders';
 
     /** Back-office visibility: hidden (statistics-excluded) orders need the `showing_orders` permission. */
-    public function scopeVisibleTo($query, ?\App\Models\User $user)
+    public function scopeVisibleTo($query, ?\App\Models\User $user, bool $openEvents = false)
     {
         $query = $user?->can(self::SHOW_HIDDEN_PERMISSION) ? $query : $query->includedInStatistics();
 
-        return \App\Orders\OrderAccess::apply($query, $user, $this->getTable());
+        return \App\Orders\OrderAccess::apply($query, $user, $this->getTable(), $openEvents);
     }
 
     /** Assignment scoping only (no hidden-order rule) for statistics queries that already use includedInStatistics(). */

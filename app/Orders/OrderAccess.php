@@ -74,7 +74,8 @@ final class OrderAccess
         return [33];
     }
 
-    public static function apply(Builder $query, ?User $user, string $table = 'orders'): Builder
+    /** $openEvents: also include the temporary open events. Only the Orders list passes true; reports and stats never do. */
+    public static function apply(Builder $query, ?User $user, string $table = 'orders', bool $openEvents = false): Builder
     {
         $level = self::level($user);
         if ($level === self::ALL) {
@@ -91,7 +92,7 @@ final class OrderAccess
         return $query->where(fn ($q) => $q->where($col, $user->id)
             ->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_assignees')->whereColumn('order_assignees.order_id', $table.'.id')->where('order_assignees.user_id', $user->id))
             ->when($seeUnassigned, fn ($w) => $w->orWhereNull($col))
-            ->when(self::openEventIds(), fn ($w, $ids) => $w->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_items')->whereColumn('order_items.order_id', $table.'.id')->whereIn('order_items.event_id', $ids))));
+            ->when($openEvents ? self::openEventIds() : [], fn ($w, $ids) => $w->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_items')->whereColumn('order_items.order_id', $table.'.id')->whereIn('order_items.event_id', $ids))));
     }
 
     public static function canView(Order $order, ?User $user): bool
