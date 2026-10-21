@@ -10,10 +10,50 @@
 </x-admin.filters>
 
 @unless($seesTeam)
-<x-admin.card flush title="Events" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
-    @if($eventRows->isEmpty())
-        <x-admin.empty title="No activity" text="No orders in this period." icon="fa-chart-column" />
-    @else
+@php
+    $tot = ['orders' => $eventRows->sum('orders'), 'paid' => $eventRows->sum('paid'), 'canceled' => $eventRows->sum('canceled'), 'tickets' => $eventRows->sum('tickets'), 'collected' => $eventRows->sum('collected')];
+    $totClosed = $tot['paid'] + $tot['canceled'];
+@endphp
+<div class="a-grid a-grid--4" style="margin-bottom:20px">
+    <x-admin.kpi label="Collected" :value="$money($tot['collected']).' EGP'" icon="fa-wallet" :hint="$from->format('d M').' – '.$to->format('d M Y')" />
+    <x-admin.kpi label="Tickets sold" :value="number_format($tot['tickets'])" icon="fa-ticket" hint="Paid orders" />
+    <x-admin.kpi label="Orders" :value="number_format($tot['orders'])" icon="fa-receipt" :hint="number_format($tot['paid']).' paid · '.number_format($eventRows->sum('pending')).' pending'" />
+    <x-admin.kpi label="Win rate" :value="$totClosed > 0 ? round($tot['paid'] / $totClosed * 100, 1).'%' : '—'" icon="fa-chart-line" hint="Paid ÷ (paid + canceled)" />
+</div>
+
+@if($eventRows->isEmpty())
+    <x-admin.card title="Events"><x-admin.empty title="No activity" text="No orders in this period." icon="fa-chart-column" /></x-admin.card>
+@else
+<div class="a-evrep">
+    @foreach($eventRows as $r)
+        @php $closed = $r['paid'] + $r['canceled']; $paidPct = $r['orders'] > 0 ? round($r['paid'] / $r['orders'] * 100) : 0; $pendPct = $r['orders'] > 0 ? round($r['pending'] / $r['orders'] * 100) : 0; @endphp
+        <article class="a-evrep__card">
+            <header class="a-evrep__head">
+                <h2 class="a-evrep__name">{{ $r['name'] }}</h2>
+                <div class="a-evrep__money">{{ $money($r['collected']) }} <small>EGP</small></div>
+            </header>
+            <div class="a-evrep__bar" role="img" aria-label="{{ $r['paid'] }} paid, {{ $r['pending'] }} pending, {{ $r['canceled'] }} canceled">
+                <span class="is-paid" style="width:{{ $paidPct }}%"></span><span class="is-pending" style="width:{{ $pendPct }}%"></span>
+            </div>
+            <dl class="a-evrep__stats">
+                <div><dt>Orders</dt><dd>{{ $r['orders'] }}</dd></div>
+                <div><dt>Paid</dt><dd>{{ $r['paid'] }}</dd></div>
+                <div><dt>Pending</dt><dd>{{ $r['pending'] }}</dd></div>
+                <div><dt>Canceled</dt><dd>{{ $r['canceled'] }}</dd></div>
+                <div><dt>Win rate</dt><dd>{{ $r['win_rate'] === null ? '—' : $r['win_rate'].'%' }}</dd></div>
+                <div><dt>Tickets sold</dt><dd>{{ $r['tickets'] }}</dd></div>
+            </dl>
+            @if(! empty($r['methods']))
+            <div class="a-chips a-evrep__methods">
+                @foreach($r['methods'] as $m => $c)<span class="a-badge">{{ ucwords(str_replace('_', ' ', $m ?: 'unknown')) }} × {{ $c }}</span>@endforeach
+            </div>
+            @endif
+        </article>
+    @endforeach
+</div>
+@endif
+<p class="a-hint" style="margin-top:12px">"Collected" is the line total of paid orders in the period; it is not a bank settlement.</p>
+@else
     <x-admin.table stack caption="Event report">
         <thead><tr>
             <th scope="col">Event</th><th scope="col" class="a-num">Orders</th><th scope="col" class="a-num">Pending</th><th scope="col" class="a-num">Paid</th>

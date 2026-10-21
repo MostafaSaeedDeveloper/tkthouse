@@ -89,3 +89,18 @@
 .a-user-search { max-width: 320px; }
 .a-user-inherited { font-size: 11px; font-weight: 700; color: var(--a-muted); background: var(--a-surface-2); border: 1px solid var(--a-line); border-radius: 999px; padding: 1px 8px; margin-left: auto; white-space: nowrap; }
 .a-user-actionbar { position: sticky; bottom: 0; z-index: 5; background: var(--a-surface); border-top: 1px solid var(--a-line); padding: 12px 0; margin-top: 8px; }
+
+/* Event report (agents) */
+.a-evrep { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 992px) { .a-evrep { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.a-evrep__card { background: var(--a-surface); border: 1px solid var(--a-line); border-radius: 16px; padding: 20px; display: grid; gap: 16px; }
+.a-evrep__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.a-evrep__name { font-size: 16px; font-weight: 800; margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.a-evrep__money { font-size: 20px; font-weight: 800; white-space: nowrap; }
+.a-evrep__money small { font-size: 12px; font-weight: 700; color: var(--a-muted); }
+.a-evrep__bar { display: flex; height: 8px; border-radius: 999px; background: #efefea; overflow: hidden; }
+.a-evrep__bar .is-paid { background: var(--a-success); }
+.a-evrep__bar .is-pending { background: var(--a-yellow); }
+.a-evrep__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.a-evrep__stats dt { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--a-muted); }
+.a-evrep__stats dd { margin: 2px 0 0; font-size: 18px; font-weight: 800; }
