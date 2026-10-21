@@ -47,6 +47,8 @@
                     <x-admin.field :label="$def['label']" :name="$key" :for="'s-'.$key" :hint="$def['help'] ?? null">
                         <select id="s-{{ $key }}" class="form-select" name="{{ $key }}">@foreach($def['options'] as $v => $l)<option value="{{ $v }}" @selected($val == $v)>{{ $l }}</option>@endforeach</select>
                     </x-admin.field>
+                @elseif($def['type'] === 'code')
+                    <x-admin.field class="is-full" :label="$def['label']" :name="$key" :for="'s-'.$key" :hint="$def['help'] ?? null"><textarea id="s-{{ $key }}" class="form-control" rows="9" name="{{ $key }}" spellcheck="false" autocomplete="off" dir="ltr" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px" placeholder="<script>...</script>">{{ $val }}</textarea></x-admin.field>
                 @elseif($def['type'] === 'text')
                     <x-admin.field class="is-full" :label="$def['label']" :name="$key" :for="'s-'.$key"><textarea id="s-{{ $key }}" class="form-control" rows="3" name="{{ $key }}">{{ $val }}</textarea></x-admin.field>
                 @else

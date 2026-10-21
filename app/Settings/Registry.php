@@ -17,6 +17,7 @@ final class Registry
         'orders' => ['label' => 'Orders', 'icon' => 'fa-receipt', 'permission' => 'settings.orders'],
         'payments' => ['label' => 'Payment Routing', 'icon' => 'fa-credit-card', 'permission' => 'settings.payment-accounts.view'],
         'notifications' => ['label' => 'Notifications', 'icon' => 'fa-bell', 'permission' => 'settings.view'],
+        'scripts' => ['label' => 'Tracking Codes', 'icon' => 'fa-code', 'permission' => 'settings.security.view'],
         'security' => ['label' => 'Security & Access', 'icon' => 'fa-shield-halved', 'permission' => 'settings.security.view'],
     ];
 
@@ -74,6 +75,14 @@ final class Registry
             // ---- Notifications
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,
                 'help' => 'Disable to stop WhatsApp sending from admin and post-payment flows.', 'rules' => ['boolean']],
+
+            // ---- Tracking codes (raw HTML/JS injected into every public page; restricted to security-level staff)
+            'custom_code_head' => ['group' => 'scripts', 'type' => 'code', 'label' => 'Head code', 'default' => null,
+                'help' => 'Inserted just before </head> on every public page. Use for Meta Pixel, Google Tag Manager, Google Analytics, verification meta tags, etc.', 'rules' => ['nullable', 'string', 'max:30000']],
+            'custom_code_body' => ['group' => 'scripts', 'type' => 'code', 'label' => 'Body code (right after <body>)', 'default' => null,
+                'help' => 'Inserted right after the opening <body> tag, e.g. the Google Tag Manager <noscript> iframe.', 'rules' => ['nullable', 'string', 'max:30000']],
+            'custom_code_footer' => ['group' => 'scripts', 'type' => 'code', 'label' => 'Footer code (before </body>)', 'default' => null,
+                'help' => 'Inserted just before </body> on every public page, e.g. chat widgets or deferred scripts. Code runs for all visitors — only paste code from sources you trust.', 'rules' => ['nullable', 'string', 'max:30000']],
         ];
     }
 

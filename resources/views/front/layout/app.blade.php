@@ -69,8 +69,10 @@
     @endif
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@22.0.2/build/css/intlTelInput.css">
     @stack('styles')
+    {!! \App\Support\SystemSettings::get('custom_code_head') !!}
 </head>
 <body class="tkt-v2" data-layout="v2" data-authenticated="{{ auth()->check() ? '1' : '0' }}">
+    {!! \App\Support\SystemSettings::get('custom_code_body') !!}
     <noscript>
         <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1320872626597581&ev=PageView&noscript=1" alt="">
     </noscript>
@@ -111,5 +113,6 @@
     <script src="{{ asset('js/tkt-spa.js') }}?v={{ filemtime(public_path('js/tkt-spa.js')) }}"></script>
     @include('front.partials.auth-scripts')
     @stack('scripts')
+    {!! \App\Support\SystemSettings::get('custom_code_footer') !!}
 </body>
 </html>
