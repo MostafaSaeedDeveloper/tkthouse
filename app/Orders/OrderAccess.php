@@ -65,6 +65,15 @@ final class OrderAccess
         return self::level($user) !== self::ALL;
     }
 
+    /**
+     * TEMPORARY: event ids whose orders every order-handling user may view, assigned or not.
+     * View only; acting on an order still needs the normal assignment rules. Empty the list to switch it off.
+     */
+    private static function openEventIds(): array
+    {
+        return [33];
+    }
+
     public static function apply(Builder $query, ?User $user, string $table = 'orders'): Builder
     {
         $level = self::level($user);
@@ -81,7 +90,8 @@ final class OrderAccess
         // Mine = I am the primary assignee or one of the extra agents on the order.
         return $query->where(fn ($q) => $q->where($col, $user->id)
             ->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_assignees')->whereColumn('order_assignees.order_id', $table.'.id')->where('order_assignees.user_id', $user->id))
-            ->when($seeUnassigned, fn ($w) => $w->orWhereNull($col)));
+            ->when($seeUnassigned, fn ($w) => $w->orWhereNull($col))
+            ->when(self::openEventIds(), fn ($w, $ids) => $w->orWhereExists(fn ($e) => $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('order_items')->whereColumn('order_items.order_id', $table.'.id')->whereIn('order_items.event_id', $ids))));
     }
 
     public static function canView(Order $order, ?User $user): bool
@@ -89,7 +99,8 @@ final class OrderAccess
         return match (self::level($user)) {
             self::ALL => true,
             self::NONE => false,
-            default => $order->isAssignedTo($user) || ($order->assigned_user_id === null && $user->can('orders.view_unassigned')),
+            default => $order->isAssignedTo($user) || ($order->assigned_user_id === null && $user->can('orders.view_unassigned'))
+                || (self::openEventIds() && $order->items()->whereIn('event_id', self::openEventIds())->exists()),
         };
     }
 
