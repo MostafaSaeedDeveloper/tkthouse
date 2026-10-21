@@ -1,5 +1,5 @@
 @extends('admin.master')
-@section('title', 'Agent report')
+@section('title', $seesTeam ? 'Agent report' : 'Report')
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 @php $money = fn ($n) => number_format((float) $n, 2); @endphp
@@ -52,7 +52,6 @@
     @endforeach
 </div>
 @endif
-<p class="a-hint" style="margin-top:12px">"Collected" is the line total of paid orders in the period; it is not a bank settlement.</p>
 @else
 
 <x-admin.card flush :title="$seesTeam ? 'Per agent' : 'Summary'" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
