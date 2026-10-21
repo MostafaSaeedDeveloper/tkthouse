@@ -96,6 +96,48 @@ class AgentReport
         ];
     }
 
+    /**
+     * Event-level view for viewers who only see their own orders: the same orders, rolled up per event, with no mention of
+     * assignment. Orders are restricted by visibleTo($viewer) exactly as in build().
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function forEvents(User $viewer, CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        $items = fn () => OrderItem::query()->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->whereNull('orders.deleted_at')
+            ->whereIn('orders.id', Order::query()->visibleTo($viewer)->select('orders.id'));
+
+        $workflow = $items()->whereBetween('orders.created_at', [$from, $to])
+            ->select('order_items.event_id', 'orders.status', DB::raw('COUNT(DISTINCT orders.id) as c'))->groupBy('order_items.event_id', 'orders.status')->get();
+
+        $paid = $items()->where('orders.status', 'paid')->whereBetween('orders.paid_at', [$from, $to])
+            ->select('order_items.event_id', DB::raw('SUM(order_items.quantity) as qty'), DB::raw('SUM(order_items.line_total) as amount'))->groupBy('order_items.event_id')->get()->keyBy('event_id');
+
+        $methods = $items()->where('orders.status', 'paid')->whereBetween('orders.paid_at', [$from, $to])
+            ->select('order_items.event_id', 'orders.payment_method', DB::raw('COUNT(DISTINCT orders.id) as c'))->groupBy('order_items.event_id', 'orders.payment_method')->get()->groupBy('event_id');
+
+        $names = \App\Models\Event::query()->whereIn('id', $workflow->pluck('event_id')->merge($paid->keys())->unique())->pluck('name', 'id');
+
+        return $names->keys()->map(function ($id) use ($workflow, $paid, $methods, $names) {
+            $by = $workflow->where('event_id', $id)->pluck('c', 'status');
+            $paidNow = (int) ($by['paid'] ?? 0);
+            $canceled = (int) collect(self::CANCELED)->sum(fn ($s) => $by[$s] ?? 0);
+            $closed = $paidNow + $canceled;
+
+            return [
+                'name' => $names[$id],
+                'orders' => (int) $by->sum(),
+                'pending' => (int) collect(self::PENDING)->sum(fn ($s) => $by[$s] ?? 0),
+                'paid' => $paidNow, 'canceled' => $canceled,
+                'win_rate' => $closed > 0 ? round($paidNow / $closed * 100, 1) : null,
+                'tickets' => (int) ($paid[$id]->qty ?? 0),
+                'collected' => (float) ($paid[$id]->amount ?? 0),
+                'methods' => ($methods[$id] ?? collect())->mapWithKeys(fn ($m) => [(string) $m->payment_method => (int) $m->c])->all(),
+            ];
+        })->sortByDesc('collected')->values();
+    }
+
     /** The viewer's own row (zeros when they have none yet). */
     public function mine(User $viewer, CarbonInterface $from, CarbonInterface $to): array
     {
