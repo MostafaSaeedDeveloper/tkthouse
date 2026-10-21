@@ -17,7 +17,7 @@
 <div class="a-grid a-grid--4" style="margin-bottom:20px">
     <x-admin.kpi label="Collected" :value="$money($tot['collected']).' EGP'" icon="fa-wallet" :hint="$from->format('d M').' – '.$to->format('d M Y')" />
     <x-admin.kpi label="Tickets sold" :value="number_format($tot['tickets'])" icon="fa-ticket" hint="Paid orders" />
-    <x-admin.kpi label="Orders" :value="number_format($tot['orders'])" icon="fa-receipt" :hint="number_format($tot['paid']).' paid · '.number_format($eventRows->sum('pending')).' pending'" />
+    <x-admin.kpi label="Orders" :value="number_format($tot['orders'])" icon="fa-receipt" :hint="number_format($tot['paid']).' paid · '.number_format($eventRows->sum('pending')).' pending · '.number_format($tot['canceled']).' canceled'" />
     <x-admin.kpi label="Win rate" :value="$totClosed > 0 ? round($tot['paid'] / $totClosed * 100, 1).'%' : '—'" icon="fa-chart-line" hint="Paid ÷ (paid + canceled)" />
 </div>
 
