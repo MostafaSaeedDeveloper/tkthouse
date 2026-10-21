@@ -3,11 +3,42 @@
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 @php $money = fn ($n) => number_format((float) $n, 2); @endphp
-<x-admin.page-header :title="$seesTeam ? 'Agent report' : 'Report'" subtitle="Workflow counts follow the current assignee; collected sales follow who held the order when payment was confirmed." :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports', $seesTeam ? 'Agents' : 'Mine']" />
+<x-admin.page-header :title="$seesTeam ? 'Agent report' : 'Report'" :subtitle="$seesTeam ? 'Workflow counts follow the current assignee; collected sales follow who held the order when payment was confirmed.' : 'Orders and sales per event for the selected period.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Reports', $seesTeam ? 'Agents' : 'Events']" />
 <x-admin.filters :action="route('admin.reports.agents')" :reset="route('admin.reports.agents')">
     <div class="a-field"><label class="form-label" for="ag-from">From</label><input id="ag-from" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
     <div class="a-field"><label class="form-label" for="ag-to">To</label><input id="ag-to" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
 </x-admin.filters>
+
+@unless($seesTeam)
+<x-admin.card flush title="Events" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
+    @if($eventRows->isEmpty())
+        <x-admin.empty title="No activity" text="No orders in this period." icon="fa-chart-column" />
+    @else
+    <x-admin.table stack caption="Event report">
+        <thead><tr>
+            <th scope="col">Event</th><th scope="col" class="a-num">Orders</th><th scope="col" class="a-num">Pending</th><th scope="col" class="a-num">Paid</th>
+            <th scope="col" class="a-num">Canceled</th><th scope="col" class="a-num">Win rate</th><th scope="col" class="a-num">Tickets sold</th><th scope="col" class="a-num">Collected (EGP)</th><th scope="col">Payment methods</th>
+        </tr></thead>
+        <tbody>
+        @foreach($eventRows as $r)
+            <tr>
+                <td data-label="Event"><span class="a-table__main">{{ $r['name'] }}</span></td>
+                <td data-label="Orders" class="a-num">{{ $r['orders'] }}</td>
+                <td data-label="Pending" class="a-num">{{ $r['pending'] }}</td>
+                <td data-label="Paid" class="a-num">{{ $r['paid'] }}</td>
+                <td data-label="Canceled" class="a-num">{{ $r['canceled'] }}</td>
+                <td data-label="Win rate" class="a-num">{{ $r['win_rate'] === null ? '—' : $r['win_rate'].'%' }}</td>
+                <td data-label="Tickets sold" class="a-num">{{ $r['tickets'] }}</td>
+                <td data-label="Collected" class="a-num">{{ $money($r['collected']) }}</td>
+                <td data-label="Payment methods" class="a-wrap">@forelse($r['methods'] as $m => $c)<span class="a-table__sub">{{ ucwords(str_replace('_', ' ', $m ?: 'unknown')) }} × {{ $c }}</span>@empty — @endforelse</td>
+            </tr>
+        @endforeach
+        </tbody>
+    </x-admin.table>
+    @endif
+</x-admin.card>
+<p class="a-hint" style="margin-top:12px">"Collected" is the line total of paid orders in the period; it is not a bank settlement.</p>
+@else
 
 <x-admin.card flush :title="$seesTeam ? 'Per agent' : 'Summary'" :subtitle="$from->format('d M Y').' – '.$to->format('d M Y')">
     @if($data['rows']->isEmpty())
@@ -48,4 +79,5 @@
 </div>
 @endif
 <p class="a-hint" style="margin-top:12px">"Collected" is the order total of paid orders, "Refunded" only counts refunds the provider (or a person) confirmed; neither is a bank settlement, which is not tracked.</p>
+@endunless
 @endsection

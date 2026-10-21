@@ -379,7 +379,7 @@ class OrderAssignmentTest extends TestCase
         $legacy->forceFill(['sold_by_user_id' => null])->save();
 
         $page = $this->actingAs($a)->get(route('admin.reports.agents'))->assertOk();
-        $page->assertSee($a->name)->assertDontSee($b->name)->assertDontSee('Unattributed sales');
+        $page->assertSee('Event report')->assertDontSee($b->name)->assertDontSee('Assigned')->assertDontSee('Unattributed sales');
 
         $mgr = $this->actingAs($m)->get(route('admin.reports.agents'))->assertOk();
         $mgr->assertSee($a->name)->assertSee($b->name)->assertSee('Unattributed sales');
