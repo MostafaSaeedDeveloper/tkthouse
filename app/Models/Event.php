@@ -47,7 +47,11 @@ class Event extends Model
     /** Name for admin dropdowns: archived events stay selectable (historical filters/reports) but are marked. */
     public function filterLabel(): string
     {
-        return $this->name.($this->isArchived() ? ' (Archived)' : '');
+        return $this->name.match ($this->status) {
+            self::ARCHIVED => ' (Archived)',
+            'inactive' => ' (Inactive)',
+            default => '',
+        };
     }
 
     public function isArchived(): bool
