@@ -91,6 +91,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'promo-codes.delete',
 
             'attendees.view',
+            'affiliates.view',
             'attendees.export',
 
             'activity-logs.view',
@@ -160,6 +161,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.update',
             'update_status',
             'attendees.view',
+            'affiliates.view',
             'attendees.export',
         ]);
 
@@ -185,6 +187,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.restore',
             'promo-codes.view',
             'attendees.view',
+            'affiliates.view',
             'attendees.export',
         ]);
 
@@ -195,6 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.history.view',
             'reports.view',
             'attendees.view',
+            'affiliates.view',
             'activity-logs.view',
         ]);
 

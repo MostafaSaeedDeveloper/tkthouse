@@ -80,6 +80,7 @@ class EnsureAdminPanelAccess
         'promo-codes.update',
         'promo-codes.delete',
         'attendees.view',
+        'affiliates.view',
         'attendees.export',
         'activity-logs.view',
     ];
