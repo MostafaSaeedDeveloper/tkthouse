@@ -95,7 +95,7 @@ class RoleDisplayNameTest extends TestCase
         $this->assertTrue($u->can('orders.view') && $u->can('tickets.view'));
     }
 
-    public function test_unticking_a_role_permission_keeps_the_role(): void
+    public function test_unticking_a_role_permission_keeps_the_role_and_denies_only_that_permission(): void
     {
         (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
         $base = Role::findByName('support', 'web')->permissions->pluck('name')->all();
@@ -109,6 +109,9 @@ class RoleDisplayNameTest extends TestCase
         $u = User::query()->where('name', 'Perm Test')->firstOrFail();
         $this->assertTrue($u->hasRole('support'));
         $this->assertTrue($u->permissions->isEmpty());
+        $this->assertSame(['reports.view'], $u->denied_permissions);
+        $this->assertFalse($u->can('reports.view'), 'the unticked permission is removed for this user only');
+        $this->assertTrue($u->can('orders.view'));
     }
 
     public function test_requests_without_the_marker_keep_the_previous_role_plus_direct_meaning(): void

@@ -153,7 +153,7 @@ class UserController extends Controller
         $this->ensureCanManageUser($viewer, $user);
         $user->load(['roles.permissions', 'permissions', 'managedEvents:id,name']);
 
-        $viaRole = $user->roles->flatMap(fn ($r) => $r->permissions->pluck('name'))->unique()->sort()->values();
+        $viaRole = $user->roles->flatMap(fn ($r) => $r->permissions->pluck('name'))->diff($user->denied_permissions ?? [])->unique()->sort()->values();
         $direct = $user->permissions->pluck('name')->sort()->values();
 
         $assigned = \App\Models\Order::query()->where('assigned_user_id', $user->id);
@@ -308,8 +308,8 @@ class UserController extends Controller
     /**
      * Role + permissions. The form (`permissions_effective=1`) shows the EFFECTIVE permission set: choosing a role ticks what the
      * role grants and the admin may tick more or untick some.
-     * The chosen role is always kept as is; only the ticked permissions the role does not grant are stored directly on the user.
-     * A role cannot grant "less", so permissions the role grants stay on (the form locks them).
+     * The chosen role is always kept as is; the ticked permissions the role does not grant are stored directly on the user,
+     * and role permissions that were unticked are stored in `denied_permissions` (the user loses just those).
      * Requests without the marker (older clients/tests) keep the previous meaning: the role as chosen + the permissions as direct ones.
      *
      * @return string sentence to append to the success message ('' when nothing special happened)
@@ -322,6 +322,7 @@ class UserController extends Controller
         if (! $request->boolean('permissions_effective')) {
             $user->syncRoles($roleName ? [$roleName] : []);
             $user->syncPermissions($ticked);
+            $user->forceFill(['denied_permissions' => null])->save();
 
             return '';
         }
@@ -329,11 +330,14 @@ class UserController extends Controller
         if (! $roleName) {
             $user->syncRoles([]);
             $user->syncPermissions($ticked);
+            $user->forceFill(['denied_permissions' => null])->save();
 
             return '';
         }
 
         $granted = \Spatie\Permission\Models\Role::findByName($roleName, 'web')->permissions->pluck('name')->all();
+        $denied = array_values(array_diff($granted, $ticked));
+        $user->forceFill(['denied_permissions' => $denied ?: null])->save();
 
         $user->syncRoles([$roleName]);
         $user->syncPermissions(array_values(array_diff($ticked, $granted)));

@@ -7,7 +7,7 @@
 
 @php
     // The boxes show the EFFECTIVE permissions (role + direct), so picking a role ticks what it grants and everything stays editable.
-    $selectedPermissions = session()->hasOldInput() ? (array) old('permissions', []) : (isset($user) ? $user->getAllPermissions()->pluck('name')->toArray() : []);
+    $selectedPermissions = session()->hasOldInput() ? (array) old('permissions', []) : (isset($user) ? $user->getAllPermissions()->pluck('name')->diff($user->denied_permissions ?? [])->values()->toArray() : []);
     $selectedEventIds = old('managed_event_ids', isset($user) ? $user->managedEvents->pluck('id')->map(fn($id) => (string) $id)->all() : []);
     $permGroups = $permissions->groupBy(fn ($p) => str($p->name)->before('.')->before(' ')->toString());
 @endphp
@@ -22,7 +22,7 @@
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section title="Permissions" description="Ticked = this user can do it. Ones the chosen role grants are marked “from role”. They stay on while the role is set; tick extra ones to add permissions for this user only." cols="1">
+<x-admin.form-section title="Permissions" description="Ticked = this user can do it. Ones the chosen role grants are marked “from role”. Untick any of those to remove it from this user only (the role stays), or tick extra ones to add permissions for this user only." cols="1">
     <input type="hidden" name="permissions_effective" value="1">
     <div id="u-perms">
         <div class="a-m-perm-toolbar">
@@ -94,16 +94,19 @@
         function setTicks(names) { var on = {}; names.forEach(function (n) { on[n] = true; }); rows.forEach(function (r) { box(r).checked = !!on[r.getAttribute('data-perm-row')]; }); }
         function ticked() { return rows.filter(function (r) { return box(r).checked; }).map(function (r) { return r.getAttribute('data-perm-row'); }); }
         function refresh() {
-            var base = granted(role.value), t, extra = 0;
+            var base = granted(role.value), t, extra = 0, missing = 0;
             rows.forEach(function (r) {
                 var name = r.getAttribute('data-perm-row'), fromRole = base.indexOf(name) !== -1;
                 r.querySelector('.a-user-inherited').hidden = !fromRole;
                 if (box(r).checked && !fromRole) extra++;
-                if (fromRole) box(r).checked = true;
+                if (!box(r).checked && fromRole) missing++;
             });
             t = ticked();
             if (count) count.textContent = t.length + ' ticked · ' + base.length + ' from role · ' + extra + ' extra';
-            if (warn) warn.hidden = true;
+            if (warn) {
+                warn.hidden = !(role.value && missing);
+                warn.textContent = missing ? missing + ' permission(s) of the role are removed for this user only; the role itself stays.' : '';
+            }
         }
         // Picking another role swaps the role's permissions but keeps extras that were ticked by hand.
         role.addEventListener('change', function () {

@@ -49,11 +49,24 @@ class User extends Authenticatable
             'can_receive_orders' => 'boolean',
             'payment_routing_enabled' => 'boolean',
             'allowed_payment_methods' => 'array',
+            'denied_permissions' => 'array',
             'last_login_at' => 'datetime',
         ];
     }
 
 
+
+    /** Permissions the user's role grants but this user must not have (the role itself stays assigned). */
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        $name = $permission instanceof \Spatie\Permission\Contracts\Permission ? $permission->name : $permission;
+
+        if (is_string($name) && in_array($name, $this->denied_permissions ?? [], true)) {
+            return false;
+        }
+
+        return parent::hasPermissionTo($permission, $guardName);
+    }
 
     public function profileImageUrl(): ?string
     {
