@@ -130,7 +130,7 @@
                 </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
-                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<span class="a-table__main a-ord-ellipsis" title="{{ $order->assignedUser->name }}{{ $others->isNotEmpty() ? ', '.$others->implode(', ') : '' }}">{{ $order->assignedUser->name }}</span>@if($others->isNotEmpty())<span class="a-table__sub a-ord-ellipsis" title="{{ $others->implode(', ') }}">+ {{ $others->implode(', ') }}</span>@endif
+                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<span class="a-table__main a-ord-ellipsis" title="{{ $order->assignedUser->name }}{{ $others->isNotEmpty() ? ', '.$others->implode(', ') : '' }}">{{ $order->assignedUser->name }}</span>@if($others->isNotEmpty())<span class="a-ord-agents">@foreach($others as $other)<span class="a-ord-agent" title="{{ $other }}">{{ $other }}</span>@endforeach</span>@endif
                     @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif
                 </td>
                 @endif

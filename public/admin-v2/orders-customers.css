@@ -190,8 +190,10 @@
 .a-ord-event .a-ord-item__meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 2px; }
 
 /* Order assignment */
-.a-ordt .c-assignee { width: 140px; }
-@media (max-width: 1100px) { .a-ordt .c-assignee { width: 112px; } }
+.a-ordt .c-assignee { width: 180px; }
+.a-ord-agents { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.a-ord-agent { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 8px; border-radius: 999px; background: rgba(0, 0, 0, .06); font-size: 12px; line-height: 1.5; color: inherit; }
+@media (max-width: 1100px) { .a-ordt .c-assignee { width: 140px; } }
 .a-ordt .a-ord-check { width: 18px; height: 18px; margin: 0; vertical-align: middle; accent-color: #111; cursor: pointer; }
 .a-ordt td.c-order .a-table__sub { font-size: 11px; white-space: nowrap; }
 /* Bulk bar: [N selected] [assign: person + reason + Assign] ........ [Approve] [Reject] -- one row on desktop, grouped blocks on phones */
