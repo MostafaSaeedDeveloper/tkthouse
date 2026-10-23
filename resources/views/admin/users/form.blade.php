@@ -64,6 +64,10 @@
         <input class="form-check-input" type="checkbox" id="u-orders" name="can_receive_orders" value="1" @checked(old('can_receive_orders', isset($user) ? $user->can_receive_orders : false))>
         <label class="form-check-label" for="u-orders"><strong>Can receive assigned orders</strong><span class="a-hint d-block">The user also needs to be able to open Orders (orders.view). They then see only the orders assigned to them, unless they have orders.view_all.</span></label>
     </div>
+    <div class="a-m-switch form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="u-notifs" name="notifications_enabled" value="1" @checked(old('notifications_enabled', isset($user) ? $user->notifications_enabled : true))>
+        <label class="form-check-label" for="u-notifs"><strong>Notifications (bell)</strong><span class="a-hint d-block">Turn off to remove the bell from this user's top bar and stop sending them notifications.</span></label>
+    </div>
 </x-admin.form-section>
 
 @if(auth()->user()->can('settings.payment-accounts.manage') || \App\Orders\OrderAccess::isSuper(auth()->user()))

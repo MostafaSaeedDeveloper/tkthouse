@@ -298,6 +298,7 @@ class UserController extends Controller
         $user->forceFill([
             'is_active' => $wantActive,
             'can_receive_orders' => $isStaff && $request->boolean('can_receive_orders'),
+            'notifications_enabled' => $request->boolean('notifications_enabled'),
         ])->save();
 
         if (! $wantActive) {

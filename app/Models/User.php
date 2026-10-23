@@ -53,6 +53,7 @@ class User extends Authenticatable
             'payment_routing_enabled' => 'boolean',
             'allowed_payment_methods' => 'array',
             'denied_permissions' => 'array',
+            'notifications_enabled' => 'boolean',
             'last_login_at' => 'datetime',
         ];
     }

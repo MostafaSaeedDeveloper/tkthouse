@@ -27,9 +27,6 @@ class OrderObserver
         if ($order->wasChanged('status')) {
             $notifier->orderStatusChanged($order, $order->getOriginal('status'));
         }
-        if ($order->wasChanged('assigned_user_id')) {
-            $notifier->orderAssigned($order);
-        }
     }
 
     public function saved(Order $order): void

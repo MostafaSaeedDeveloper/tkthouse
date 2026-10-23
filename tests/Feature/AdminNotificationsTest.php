@@ -75,7 +75,7 @@ class AdminNotificationsTest extends TestCase
         $this->assertTrue($manager->notifications()->get()->contains(fn ($n) => $n->data['type'] === 'order.paid' && str_contains($n->data['title'], 'Payment received')));
     }
 
-    public function test_assignment_notifies_only_the_new_assignee_and_not_the_person_who_assigned(): void
+    public function test_assigning_an_order_sends_no_notification(): void
     {
         $agent = $this->staff(['orders.view', 'orders.update']);
         $manager = $this->staff(['orders.view', 'orders.update']);
@@ -86,11 +86,20 @@ class AdminNotificationsTest extends TestCase
         $this->actingAs($manager);
         $order->update(['assigned_user_id' => $agent->id]);
 
-        $this->assertSame(['order.assigned'], $agent->notifications()->get()->pluck('data.type')->all());
+        $this->assertSame(0, $agent->notifications()->count());
         $this->assertSame(0, $manager->notifications()->count());
+    }
 
-        $order->update(['assigned_user_id' => $manager->id]);   // assigning to yourself notifies nobody
-        $this->assertSame(0, $manager->notifications()->count());
+    public function test_a_user_with_the_bell_switched_off_gets_no_notifications(): void
+    {
+        $off = $this->staff(['orders.view', 'orders.update']);
+        $off->forceFill(['notifications_enabled' => false])->save();
+        $on = $this->staff(['orders.view', 'orders.update']);
+
+        $this->order();
+
+        $this->assertSame(0, $off->notifications()->count());
+        $this->assertSame(1, $on->notifications()->count());
     }
 
     public function test_with_order_assignment_on_an_agent_is_only_told_about_orders_they_can_see(): void
