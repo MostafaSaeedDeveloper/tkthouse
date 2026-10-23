@@ -108,6 +108,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.manage_assigned',
             'orders.view_unassigned',
             'orders.view_agent_stats',
+            'orders.history.view',
             'orders.reroute_payment',
             'settings.payment-accounts.view',
             'settings.payment-accounts.manage',
@@ -155,6 +156,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'event-images.update',
             'event-images.delete',
             'orders.view',
+            'orders.history.view',
             'orders.update',
             'update_status',
             'attendees.view',
@@ -175,6 +177,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'fees.update',
             'fees.delete',
             'orders.view',
+            'orders.history.view',
             'orders.update',
             'update_status',
             'orders.delete',
@@ -189,6 +192,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'dashboard.view',
             'events.view',
             'orders.view',
+            'orders.history.view',
             'reports.view',
             'attendees.view',
             'activity-logs.view',
@@ -200,12 +204,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'tickets.update',
             'scanner.access',
             'orders.view',
+            'orders.history.view',
         ]);
 
-        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats', ...\App\Support\PaymentPermissionPolicy::forRole('Order Manager')]);
-        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned', ...\App\Support\PaymentPermissionPolicy::forRole('Order Agent')]);
+        Role::findOrCreate('Order Manager', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.history.view', 'orders.update', 'update_status', 'orders.view_all', 'orders.assign', 'orders.reassign', 'orders.view_unassigned', 'orders.view_agent_stats', ...\App\Support\PaymentPermissionPolicy::forRole('Order Manager')]);
+        Role::findOrCreate('Order Agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.history.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned', ...\App\Support\PaymentPermissionPolicy::forRole('Order Agent')]);
 
-        Role::findOrCreate('agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned', ...\App\Support\PaymentPermissionPolicy::forRole('agent')]);
+        Role::findOrCreate('agent', 'web')->syncPermissions(['dashboard.view', 'orders.view', 'orders.history.view', 'orders.update', 'update_status', 'orders.view_assigned', 'orders.manage_assigned', ...\App\Support\PaymentPermissionPolicy::forRole('agent')]);
 
         // Display names/descriptions of the system roles (only filled in when empty, so edits made in the panel survive a re-seed).
         foreach (\App\Support\RoleLabel::SYSTEM as $key => [$label, $description]) {
