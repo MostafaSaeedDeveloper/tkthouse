@@ -17,7 +17,10 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, LogsActivity;
+    use HasFactory, Notifiable, LogsActivity;
+    use HasRoles {
+        HasRoles::hasPermissionTo as protected spatieHasPermissionTo;
+    }
 
     protected $fillable = [
         'name',
@@ -65,7 +68,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return parent::hasPermissionTo($permission, $guardName);
+        return $this->spatieHasPermissionTo($permission, $guardName);
     }
 
     public function profileImageUrl(): ?string
