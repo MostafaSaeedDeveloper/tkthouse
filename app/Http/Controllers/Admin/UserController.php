@@ -308,9 +308,8 @@ class UserController extends Controller
     /**
      * Role + permissions. The form (`permissions_effective=1`) shows the EFFECTIVE permission set: choosing a role ticks what the
      * role grants and the admin may tick more or untick some.
-     *  - every permission of the role is still ticked  -> the user gets the role, plus the extra ticked ones directly;
-     *  - some permission of the role was unticked      -> a role cannot grant "less", so the user gets exactly the ticked
-     *    permissions directly and no role (the returned note tells the admin).
+     * The chosen role is always kept as is; only the ticked permissions the role does not grant are stored directly on the user.
+     * A role cannot grant "less", so permissions the role grants stay on (the form locks them).
      * Requests without the marker (older clients/tests) keep the previous meaning: the role as chosen + the permissions as direct ones.
      *
      * @return string sentence to append to the success message ('' when nothing special happened)
@@ -335,14 +334,6 @@ class UserController extends Controller
         }
 
         $granted = \Spatie\Permission\Models\Role::findByName($roleName, 'web')->permissions->pluck('name')->all();
-        $removed = array_values(array_diff($granted, $ticked));
-
-        if ($removed) {
-            $user->syncRoles([]);
-            $user->syncPermissions($ticked);
-
-            return ' '.count($removed).' permission(s) of the role were unticked, so this user has custom permissions instead of the role "'.\App\Support\RoleLabel::of($roleName).'".';
-        }
 
         $user->syncRoles([$roleName]);
         $user->syncPermissions(array_values(array_diff($ticked, $granted)));

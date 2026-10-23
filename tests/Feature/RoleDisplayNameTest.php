@@ -95,7 +95,7 @@ class RoleDisplayNameTest extends TestCase
         $this->assertTrue($u->can('orders.view') && $u->can('tickets.view'));
     }
 
-    public function test_unticking_a_role_permission_saves_custom_permissions_without_the_role_and_says_so(): void
+    public function test_unticking_a_role_permission_keeps_the_role(): void
     {
         (new \Database\Seeders\RolesAndPermissionsSeeder)->run();
         $base = Role::findByName('support', 'web')->permissions->pluck('name')->all();
@@ -104,13 +104,11 @@ class RoleDisplayNameTest extends TestCase
         $manager = $this->manager();
         $manager->givePermissionTo('users.create');
 
-        $res = $this->actingAs($manager)->post(route('admin.users.store'), $this->userBody(['role' => 'support', 'permissions' => $kept]));
-        $res->assertRedirect()->assertSessionHas('success', fn ($m) => str_contains($m, '1 permission(s) of the role were unticked'));
+        $this->actingAs($manager)->post(route('admin.users.store'), $this->userBody(['role' => 'support', 'permissions' => $kept]))->assertRedirect();
 
         $u = User::query()->where('name', 'Perm Test')->firstOrFail();
-        $this->assertFalse($u->hasRole('support'));
-        $this->assertEqualsCanonicalizing($kept, $u->permissions->pluck('name')->all());
-        $this->assertFalse($u->can('reports.view'), 'the unticked permission is really gone');
+        $this->assertTrue($u->hasRole('support'));
+        $this->assertTrue($u->permissions->isEmpty());
     }
 
     public function test_requests_without_the_marker_keep_the_previous_role_plus_direct_meaning(): void
