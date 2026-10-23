@@ -226,6 +226,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('orders/{order}/payment-account', [\App\Http\Controllers\Admin\OrderPaymentAccountController::class, 'switch'])->middleware('permission:orders.reroute_payment')->name('orders.payment-account.switch');
     Route::post('orders/assign-bulk', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'bulk'])->middleware('permission:orders.view')->name('orders.assign.bulk');
     Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
+    // Same report for people who only see their own orders, under a URL that says nothing about other agents.
+    Route::get('my-report', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.mine');
     Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
 
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');

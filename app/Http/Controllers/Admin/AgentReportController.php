@@ -20,6 +20,14 @@ class AgentReportController extends Controller
         $to = $request->filled('to') ? \Illuminate\Support\Carbon::parse($request->string('to'))->endOfDay() : now()->endOfDay();
 
         $seesTeam = $level === OrderAccess::ALL && ($user->can('orders.view_agent_stats') || OrderAccess::isSuper($user));
+        // Scoped users live on /my-report (nothing in the URL hints at other agents); the team view stays on /reports/agents.
+        if ($seesTeam && $request->routeIs('admin.reports.mine')) {
+            return redirect()->route('admin.reports.agents', $request->query());
+        }
+        if (! $seesTeam && $request->routeIs('admin.reports.agents')) {
+            return redirect()->route('admin.reports.mine', $request->query());
+        }
+
         if (! $seesTeam) {
             // Everyone else gets an event-level report of the orders they can see, with no hint of assignment.
             return view('admin.reports.agents', ['eventRows' => $report->forEvents($user, $from, $to), 'from' => $from, 'to' => $to, 'seesTeam' => false, 'showAccounts' => false, 'accountNames' => collect(), 'data' => null]);

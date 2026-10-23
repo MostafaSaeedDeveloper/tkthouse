@@ -378,7 +378,8 @@ class OrderAssignmentTest extends TestCase
         $legacy = $this->order(null, 'paid', 70); // paid before attribution existed
         $legacy->forceFill(['sold_by_user_id' => null])->save();
 
-        $page = $this->actingAs($a)->get(route('admin.reports.agents'))->assertOk();
+        $this->actingAs($a)->get(route('admin.reports.agents'))->assertRedirect(route('admin.reports.mine'));
+        $page = $this->actingAs($a)->get(route('admin.reports.mine'))->assertOk();
         $page->assertSee('Win rate')->assertDontSee($b->name)->assertDontSee('Assigned')->assertDontSee('Unattributed sales');
 
         $mgr = $this->actingAs($m)->get(route('admin.reports.agents'))->assertOk();
