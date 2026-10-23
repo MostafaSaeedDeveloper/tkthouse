@@ -17,7 +17,10 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, LogsActivity;
+    use HasFactory, Notifiable, LogsActivity;
+    use HasRoles {
+        HasRoles::hasPermissionTo as protected spatieHasPermissionTo;
+    }
 
     protected $fillable = [
         'name',
@@ -49,11 +52,25 @@ class User extends Authenticatable
             'can_receive_orders' => 'boolean',
             'payment_routing_enabled' => 'boolean',
             'allowed_payment_methods' => 'array',
+            'denied_permissions' => 'array',
+            'notifications_enabled' => 'boolean',
             'last_login_at' => 'datetime',
         ];
     }
 
 
+
+    /** Permissions the user's role grants but this user must not have (the role itself stays assigned). */
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        $name = $permission instanceof \Spatie\Permission\Contracts\Permission ? $permission->name : $permission;
+
+        if (is_string($name) && in_array($name, $this->denied_permissions ?? [], true)) {
+            return false;
+        }
+
+        return $this->spatieHasPermissionTo($permission, $guardName);
+    }
 
     public function profileImageUrl(): ?string
     {

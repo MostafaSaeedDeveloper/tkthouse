@@ -189,10 +189,10 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('customers', [CustomerController::class, 'index'])->middleware('permission:attendees.view')->name('customers.index');
     Route::get('customers/export', [CustomerController::class, 'export'])->middleware('permission:attendees.export')->name('customers.export');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:attendees.view')->name('customers.show');
-    Route::get('affiliates', [AffiliateController::class, 'index'])->middleware('permission:attendees.view')->name('affiliates.index');
-    Route::get('affiliates/create', [AffiliateController::class, 'create'])->middleware('permission:attendees.export')->name('affiliates.create');
-    Route::post('affiliates', [AffiliateController::class, 'store'])->middleware('permission:attendees.export')->name('affiliates.store');
-    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware('permission:attendees.view')->name('affiliates.show');
+    Route::get('affiliates', [AffiliateController::class, 'index'])->middleware(['permission:attendees.view', 'permission:affiliates.view'])->name('affiliates.index');
+    Route::get('affiliates/create', [AffiliateController::class, 'create'])->middleware(['permission:attendees.export', 'permission:affiliates.view'])->name('affiliates.create');
+    Route::post('affiliates', [AffiliateController::class, 'store'])->middleware(['permission:attendees.export', 'permission:affiliates.view'])->name('affiliates.store');
+    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware(['permission:attendees.view', 'permission:affiliates.view'])->name('affiliates.show');
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
@@ -226,6 +226,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('orders/{order}/payment-account', [\App\Http\Controllers\Admin\OrderPaymentAccountController::class, 'switch'])->middleware('permission:orders.reroute_payment')->name('orders.payment-account.switch');
     Route::post('orders/assign-bulk', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'bulk'])->middleware('permission:orders.view')->name('orders.assign.bulk');
     Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
+    // Same report for people who only see their own orders, under a URL that says nothing about other agents.
+    Route::get('events-reports', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.mine');
     Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
 
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');

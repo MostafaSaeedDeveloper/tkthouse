@@ -312,6 +312,7 @@
       </ol>
     </x-admin.card>
 
+    @can('orders.history.view')
     <x-admin.card title="Order History" :subtitle="$history->count().' events'">
       @forelse($history as $log)
         <div class="a-ord-log">
@@ -332,6 +333,7 @@
         <p class="a-muted">No history yet.</p>
       @endforelse
     </x-admin.card>
+    @endcan
   </div>
 </div>
 

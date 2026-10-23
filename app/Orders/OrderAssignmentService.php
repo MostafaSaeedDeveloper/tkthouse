@@ -251,12 +251,6 @@ class OrderAssignmentService
 
         activity('orders')->performedOn($order)->causedBy($by)->withProperties(['from' => $fromNames, 'to' => $toNames, 'source' => $source, 'reason' => $reason])
             ->log($users ? ($fromIds ? 'Order reassigned' : 'Order assigned') : 'Order unassigned');
-
-        // Agents added to the order (the primary is notified by the order observer when it changes).
-        $added = collect($users)->reject(fn (User $u) => in_array($u->id, $fromIds, true) || $u->id === $primaryId);
-        if ($added->isNotEmpty()) {
-            app(\App\Services\Notifications\AdminNotifier::class)->orderAssignedTo($order, $added->all());
-        }
     }
 
     /**

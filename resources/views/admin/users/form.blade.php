@@ -7,7 +7,7 @@
 
 @php
     // The boxes show the EFFECTIVE permissions (role + direct), so picking a role ticks what it grants and everything stays editable.
-    $selectedPermissions = session()->hasOldInput() ? (array) old('permissions', []) : (isset($user) ? $user->getAllPermissions()->pluck('name')->toArray() : []);
+    $selectedPermissions = session()->hasOldInput() ? (array) old('permissions', []) : (isset($user) ? $user->getAllPermissions()->pluck('name')->diff($user->denied_permissions ?? [])->values()->toArray() : []);
     $selectedEventIds = old('managed_event_ids', isset($user) ? $user->managedEvents->pluck('id')->map(fn($id) => (string) $id)->all() : []);
     $permGroups = $permissions->groupBy(fn ($p) => str($p->name)->before('.')->before(' ')->toString());
 @endphp
@@ -22,7 +22,7 @@
     </x-admin.field>
 </x-admin.form-section>
 
-<x-admin.form-section title="Permissions" description="Ticked = this user can do it. Ones the chosen role grants are marked “from role”. Untick any of those and the user is saved with custom permissions instead of the role." cols="1">
+<x-admin.form-section title="Permissions" description="Ticked = this user can do it. Ones the chosen role grants are marked “from role”. Untick any of those to remove it from this user only (the role stays), or tick extra ones to add permissions for this user only." cols="1">
     <input type="hidden" name="permissions_effective" value="1">
     <div id="u-perms">
         <div class="a-m-perm-toolbar">
@@ -64,6 +64,10 @@
         <input class="form-check-input" type="checkbox" id="u-orders" name="can_receive_orders" value="1" @checked(old('can_receive_orders', isset($user) ? $user->can_receive_orders : false))>
         <label class="form-check-label" for="u-orders"><strong>Can receive assigned orders</strong><span class="a-hint d-block">The user also needs to be able to open Orders (orders.view). They then see only the orders assigned to them, unless they have orders.view_all.</span></label>
     </div>
+    <div class="a-m-switch form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="u-notifs" name="notifications_enabled" value="1" @checked(old('notifications_enabled', isset($user) ? $user->notifications_enabled : true))>
+        <label class="form-check-label" for="u-notifs"><strong>Notifications (bell)</strong><span class="a-hint d-block">Turn off to remove the bell from this user's top bar and stop sending them notifications.</span></label>
+    </div>
 </x-admin.form-section>
 
 @if(auth()->user()->can('settings.payment-accounts.manage') || \App\Orders\OrderAccess::isSuper(auth()->user()))
@@ -94,17 +98,18 @@
         function setTicks(names) { var on = {}; names.forEach(function (n) { on[n] = true; }); rows.forEach(function (r) { box(r).checked = !!on[r.getAttribute('data-perm-row')]; }); }
         function ticked() { return rows.filter(function (r) { return box(r).checked; }).map(function (r) { return r.getAttribute('data-perm-row'); }); }
         function refresh() {
-            var base = granted(role.value), t = ticked(), extra = 0, missing = 0;
+            var base = granted(role.value), t, extra = 0, missing = 0;
             rows.forEach(function (r) {
                 var name = r.getAttribute('data-perm-row'), fromRole = base.indexOf(name) !== -1;
                 r.querySelector('.a-user-inherited').hidden = !fromRole;
                 if (box(r).checked && !fromRole) extra++;
                 if (!box(r).checked && fromRole) missing++;
             });
+            t = ticked();
             if (count) count.textContent = t.length + ' ticked · ' + base.length + ' from role · ' + extra + ' extra';
             if (warn) {
                 warn.hidden = !(role.value && missing);
-                warn.textContent = missing ? missing + ' permission(s) the role grants are unticked: this user will be saved with custom permissions instead of the role.' : '';
+                warn.textContent = missing ? missing + ' permission(s) of the role are removed for this user only; the role itself stays.' : '';
             }
         }
         // Picking another role swaps the role's permissions but keeps extras that were ticked by hand.

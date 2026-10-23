@@ -61,6 +61,7 @@
         @can('events.create')
           <a class="a-btn a-btn--primary d-none d-md-inline-flex" href="{{ route('admin.events.create') }}"><i class="fa fa-plus" aria-hidden="true"></i> Create event</a>
         @endcan
+        @if($authUser?->notifications_enabled ?? true)
         @php
           $bellUnread = $authUser ? $authUser->unreadNotifications()->count() : 0;
           $bellItems = $authUser ? $authUser->notifications()->limit(\App\Http\Controllers\Admin\NotificationController::BELL_LIMIT)->get() : collect();
@@ -77,6 +78,7 @@
           </div>
           <span class="a-sr-only" role="status" aria-live="polite" data-notif-live></span>
         </div>
+        @endif
         <div class="a-menu">
           <button type="button" class="a-userbtn" data-a-menu-toggle aria-haspopup="true" aria-expanded="false">
             <span class="a-userbtn__avatar">@if($authUser?->profile_image)<img src="{{ asset('storage/'.$authUser->profile_image) }}" alt="">@else{{ $initial }}@endif</span>
