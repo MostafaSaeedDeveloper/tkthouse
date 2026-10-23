@@ -1,9 +1,9 @@
 @extends('admin.master')
-@section('title', $seesTeam ? 'Agent report' : 'Events Reports')
+@section('title', $seesTeam ? 'Agent report' : 'Reports')
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/misc.css') }}?v={{ filemtime(public_path('admin-v2/misc.css')) }}">@endpush
 @section('content')
 @php $money = fn ($n) => number_format((float) $n, 2); @endphp
-<x-admin.page-header :title="$seesTeam ? 'Agent report' : 'Events Reports'" :subtitle="$seesTeam ? 'Workflow counts follow the current assignee; collected sales follow who held the order when payment was confirmed.' : 'Orders and sales per event for the selected period.'" :crumbs="$seesTeam ? ['Dashboard' => route('admin.dashboard'), 'Reports', 'Agents'] : ['Dashboard' => route('admin.dashboard'), 'Events']" />
+<x-admin.page-header :title="$seesTeam ? 'Agent report' : 'Reports'" :subtitle="$seesTeam ? 'Workflow counts follow the current assignee; collected sales follow who held the order when payment was confirmed.' : 'Orders and sales per event for the selected period.'" :crumbs="$seesTeam ? ['Dashboard' => route('admin.dashboard'), 'Reports', 'Agents'] : ['Dashboard' => route('admin.dashboard'), 'Events']" />
 @php $reportRoute = $seesTeam ? 'admin.reports.agents' : 'admin.reports.mine'; @endphp
 <x-admin.filters :action="route($reportRoute)" :reset="route($reportRoute)">
     <div class="a-field"><label class="form-label" for="ag-from">From</label><input id="ag-from" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
