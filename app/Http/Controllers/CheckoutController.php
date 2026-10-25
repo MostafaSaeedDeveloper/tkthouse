@@ -705,6 +705,29 @@ class CheckoutController extends Controller
         return array_values($groups);
     }
 
+    private function notBlockedEmailDomain(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            if (self::isBlockedEmailDomain((string) $value)) {
+                $fail('Please use a real email address.');
+            }
+        };
+    }
+
+    private static function isBlockedEmailDomain(string $email): bool
+    {
+        $domain = strtolower(substr(strrchr(trim($email), '@') ?: '', 1));
+
+        foreach ((array) config('checkout.blocked_email_domains', []) as $blocked) {
+            $blocked = strtolower($blocked);
+            if ($domain === $blocked || str_ends_with($domain, '.'.$blocked)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Names: letters (any script), marks, spaces and . ' - only; rejects markup/script payloads and digits. */
     private const NAME_PATTERN = "/^[\\p{L}\\p{M}\\s.'’\\-]+$/u";
 
@@ -730,7 +753,7 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255', 'regex:'.self::NAME_PATTERN],
             'last_name' => ['required', 'string', 'max:255', 'regex:'.self::NAME_PATTERN],
-            'email' => ['required', 'email', 'max:255'],
+            'email' => ['required', 'email', 'max:255', $this->notBlockedEmailDomain()],
             'phone' => ['nullable', 'string', 'max:255', 'regex:'.self::PHONE_PATTERN],
         ], [
             'first_name.regex' => 'Please enter a valid name (letters only).',
@@ -784,7 +807,7 @@ class CheckoutController extends Controller
             } elseif (! preg_match(self::PHONE_PATTERN, $row['phone'])) {
                 $errors["attendees.$index.phone"] = 'Please enter a valid phone number.';
             }
-            if (! filter_var($row['email'], FILTER_VALIDATE_EMAIL)) {
+            if (! filter_var($row['email'], FILTER_VALIDATE_EMAIL) || self::isBlockedEmailDomain($row['email'])) {
                 $errors["attendees.$index.email"] = 'Valid email is required.';
             }
             if (! in_array($row['gender'], ['male', 'female'], true)) {
