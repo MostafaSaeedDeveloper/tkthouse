@@ -12,4 +12,10 @@ return [
     | compared on staging. Production always follows this setting.
     */
     'experience' => in_array(env('CHECKOUT_EXPERIENCE', 'wizard'), ['wizard', 'one-page'], true) ? env('CHECKOUT_EXPERIENCE', 'wizard') : 'wizard',
+
+    /*
+    | Email domains refused at checkout (reserved/placeholder domains used by bots and security scans).
+    | Comma-separated override: CHECKOUT_BLOCKED_EMAIL_DOMAINS. Subdomains are blocked too. Empty under phpunit.
+    */
+    'blocked_email_domains' => array_values(array_filter(array_map('trim', explode(',', (string) env('CHECKOUT_BLOCKED_EMAIL_DOMAINS', 'example.com,example.org,example.net'))))),
 ];
