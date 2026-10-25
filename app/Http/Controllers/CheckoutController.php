@@ -705,6 +705,12 @@ class CheckoutController extends Controller
         return array_values($groups);
     }
 
+    /** Names: letters (any script), marks, spaces and . ' - only; rejects markup/script payloads and digits. */
+    private const NAME_PATTERN = "/^[\\p{L}\\p{M}\\s.'’\\-]+$/u";
+
+    /** Phones: digits with the usual + - ( ) and space separators. */
+    private const PHONE_PATTERN = '/^[0-9+\\-()\\s]+$/';
+
     /** The buyer block as typed (not validated): used to keep the draft. */
     private function buyerInput(Request $request): array
     {
@@ -722,11 +728,14 @@ class CheckoutController extends Controller
         }
 
         $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255', 'regex:'.self::NAME_PATTERN],
+            'last_name' => ['required', 'string', 'max:255', 'regex:'.self::NAME_PATTERN],
             'email' => ['required', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255', 'regex:'.self::PHONE_PATTERN],
         ], [
+            'first_name.regex' => 'Please enter a valid name (letters only).',
+            'last_name.regex' => 'Please enter a valid name (letters only).',
+            'phone.regex' => 'Please enter a valid phone number.',
             'first_name.required' => 'Please enter your full name.',
             'last_name.required' => 'Please enter your full name.',
             'email.required' => 'Please enter your email address.',
@@ -767,9 +776,13 @@ class CheckoutController extends Controller
 
             if ($row['name'] === '') {
                 $errors["attendees.$index.name"] = 'Name is required.';
+            } elseif (! preg_match(self::NAME_PATTERN, $row['name'])) {
+                $errors["attendees.$index.name"] = 'Please enter a valid name (letters only).';
             }
             if ($row['phone'] === '') {
                 $errors["attendees.$index.phone"] = 'Phone is required.';
+            } elseif (! preg_match(self::PHONE_PATTERN, $row['phone'])) {
+                $errors["attendees.$index.phone"] = 'Please enter a valid phone number.';
             }
             if (! filter_var($row['email'], FILTER_VALIDATE_EMAIL)) {
                 $errors["attendees.$index.email"] = 'Valid email is required.';
