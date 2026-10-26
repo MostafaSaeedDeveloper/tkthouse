@@ -187,7 +187,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('orders/{order}/reject', [OrderController::class, 'reject'])->middleware('permission:orders.update')->name('orders.reject');
 
     Route::get('customers', [CustomerController::class, 'index'])->middleware('permission:attendees.view')->name('customers.index');
-    Route::get('customers/export', [CustomerController::class, 'export'])->middleware('permission:attendees.export')->name('customers.export');
+    Route::match(['get', 'post'], 'customers/export', [CustomerController::class, 'export'])->middleware('permission:attendees.export')->name('customers.export');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:attendees.view')->name('customers.show');
     Route::get('affiliates', [AffiliateController::class, 'index'])->middleware('permission:attendees.view')->name('affiliates.index');
     Route::get('affiliates/create', [AffiliateController::class, 'create'])->middleware('permission:attendees.export')->name('affiliates.create');

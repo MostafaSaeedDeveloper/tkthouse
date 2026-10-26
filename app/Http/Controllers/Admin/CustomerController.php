@@ -53,7 +53,9 @@ class CustomerController extends Controller
             ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
-        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent'));
+        $exportColumns = self::exportColumns();
+
+        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent', 'exportColumns'));
     }
 
     public function export(Request $request): StreamedResponse
@@ -93,21 +95,42 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $customersQuery->latest()->get();
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
+        if ($ids) {
+            $customersQuery->whereIn('customers.id', $ids);
+        }
 
-        return response()->streamDownload(function () use ($customers) {
+        $available = self::exportColumns();
+        $columns = array_values(array_intersect(array_keys($available), (array) $request->input('columns', [])));
+        if (! $columns) {
+            $columns = array_keys($available);
+        }
+
+        $customersQuery->withMax('orders as last_order_at', 'created_at');
+
+        return response()->streamDownload(function () use ($customersQuery, $columns, $available) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Name', 'Email', 'Phone', 'Orders Count']);
-            foreach ($customers as $customer) {
-                fputcsv($handle, [
-                    $customer->full_name,
-                    $customer->email,
-                    $customer->phone,
-                    $customer->orders_count,
-                ]);
+            fputcsv($handle, array_map(fn ($key) => $available[$key]['label'], $columns));
+            foreach ($customersQuery->latest()->cursor() as $customer) {
+                fputcsv($handle, array_map(fn ($key) => $available[$key]['value']($customer), $columns));
             }
             fclose($handle);
         }, 'customers-export.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /** @return array<string, array{label: string, value: \Closure}> */
+    public static function exportColumns(): array
+    {
+        return [
+            'name' => ['label' => 'Name', 'value' => fn ($c) => $c->full_name],
+            'first_name' => ['label' => 'First Name', 'value' => fn ($c) => $c->first_name],
+            'last_name' => ['label' => 'Last Name', 'value' => fn ($c) => $c->last_name],
+            'email' => ['label' => 'Email', 'value' => fn ($c) => $c->email],
+            'phone' => ['label' => 'Phone', 'value' => fn ($c) => $c->phone],
+            'orders_count' => ['label' => 'Orders Count', 'value' => fn ($c) => $c->orders_count],
+            'created_at' => ['label' => 'Customer Since', 'value' => fn ($c) => $c->created_at?->format('Y-m-d H:i')],
+            'last_order_at' => ['label' => 'Last Order', 'value' => fn ($c) => $c->last_order_at ? \Illuminate\Support\Carbon::parse($c->last_order_at)->format('Y-m-d H:i') : ''],
+        ];
     }
 
     public function show(Request $request, Customer $customer)
