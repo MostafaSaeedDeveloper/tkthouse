@@ -27,6 +27,13 @@
             @endforeach
         </select></div>
     @endif
+    <div class="a-field"><label class="form-label" for="cStatus">Order status</label>
+        <select name="status" id="cStatus" class="form-select">
+            <option value="">All Statuses</option>
+            @foreach($statusOptions as $value => $label)
+                <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+            @endforeach
+        </select></div>
 </x-admin.filters>
 
 <x-admin.card flush title="All Customers" :subtitle="$customers->total().' total'">
@@ -69,12 +76,13 @@
                 @csrf
                 <input type="hidden" name="search" value="{{ request('search') }}">
                 <input type="hidden" name="event_id" value="{{ request('event_id') }}">
+                <input type="hidden" name="status" value="{{ request('status') }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="exportCustomersLabel"><i class="fa fa-download me-2"></i>Export Customers to CSV</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-3" id="custExportScope">Exporting all customers matching the current filters.</p>
+                    <p class="mb-3" id="custExportScope">Exporting all customers matching the current filters (search, event, order status).</p>
                     <div id="custExportIds"></div>
                     <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Columns to Export</h6>
                     <div class="a-ord-export-cols">
@@ -109,7 +117,7 @@
         if (all) { all.checked = n > 0 && n === boxes().length; all.indeterminate = n > 0 && n < boxes().length; }
         document.getElementById('custExportScope').textContent = n
             ? 'Exporting ' + n + ' selected customer' + (n === 1 ? '' : 's') + '.'
-            : 'Exporting all customers matching the current filters.';
+            : 'Exporting all customers matching the current filters (search, event, order status).';
         var holder = document.getElementById('custExportIds');
         holder.innerHTML = '';
         checked().forEach(function (b) {

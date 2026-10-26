@@ -11,6 +11,17 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomerController extends Controller
 {
+    public const ORDER_STATUSES = [
+        'pending_approval' => 'Pending Approval',
+        'pending_payment' => 'Pending Payment',
+        'on_hold' => 'On Hold',
+        'paid' => 'Paid',
+        'refunded' => 'Refunded',
+        'partially_refunded' => 'Partially Refunded',
+        'canceled' => 'Canceled',
+        'rejected' => 'Rejected',
+    ];
+
     public function index(Request $request)
     {
         $managedEvents = $request->user()?->managedEvents ?? collect();
@@ -40,12 +51,7 @@ class CustomerController extends Controller
             });
         }
 
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $eventId = $request->integer('event_id');
-            $customersQuery->whereHas('orders', function (Builder $q) use ($eventId) {
-                $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
-            });
-        }
+        $this->applyOrderFilters($customersQuery, $request, $canFilterByEvent);
 
         $customers = $customersQuery->latest()->paginate(15)->withQueryString();
 
@@ -55,7 +61,7 @@ class CustomerController extends Controller
 
         $exportColumns = self::exportColumns();
 
-        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent', 'exportColumns'));
+        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent', 'exportColumns') + ['statusOptions' => self::ORDER_STATUSES]);
     }
 
     public function export(Request $request): StreamedResponse
@@ -88,12 +94,7 @@ class CustomerController extends Controller
             });
         }
 
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $eventId = $request->integer('event_id');
-            $customersQuery->whereHas('orders', function (Builder $q) use ($eventId) {
-                $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
-            });
-        }
+        $this->applyOrderFilters($customersQuery, $request, $canFilterByEvent);
 
         $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
         if ($ids) {
@@ -161,6 +162,28 @@ class CustomerController extends Controller
         }]);
 
         return view('admin.customers.show', compact('customer'));
+    }
+
+    /** Event and order status are matched on the same order. */
+    private function applyOrderFilters(Builder $customersQuery, Request $request, bool $canFilterByEvent): void
+    {
+        $eventId = $canFilterByEvent && $request->filled('event_id') ? $request->integer('event_id') : null;
+        $status = array_key_exists((string) $request->input('status'), self::ORDER_STATUSES) ? (string) $request->input('status') : null;
+
+        if (! $eventId && ! $status) {
+            return;
+        }
+
+        $scope = function (Builder $orders) use ($eventId, $status) {
+            if ($status) {
+                $orders->where('status', $status);
+            }
+            if ($eventId) {
+                $orders->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
+            }
+        };
+
+        $customersQuery->whereHas('orders', $scope);
     }
 
     private function applyEventScopeToOrdersQuery($query, ?Event $event): void
