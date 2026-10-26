@@ -11,6 +11,17 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CustomerController extends Controller
 {
+    public const ORDER_STATUSES = [
+        'pending_approval' => 'Pending Approval',
+        'pending_payment' => 'Pending Payment',
+        'on_hold' => 'On Hold',
+        'paid' => 'Paid',
+        'refunded' => 'Refunded',
+        'partially_refunded' => 'Partially Refunded',
+        'canceled' => 'Canceled',
+        'rejected' => 'Rejected',
+    ];
+
     public function index(Request $request)
     {
         $managedEvents = $request->user()?->managedEvents ?? collect();
@@ -40,12 +51,7 @@ class CustomerController extends Controller
             });
         }
 
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $eventId = $request->integer('event_id');
-            $customersQuery->whereHas('orders', function (Builder $q) use ($eventId) {
-                $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
-            });
-        }
+        $this->applyOrderFilters($customersQuery, $request, $canFilterByEvent);
 
         $customers = $customersQuery->latest()->paginate(15)->withQueryString();
 
@@ -53,7 +59,9 @@ class CustomerController extends Controller
             ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : collect();
 
-        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent'));
+        $exportColumns = self::exportColumns();
+
+        return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent', 'exportColumns') + ['statusOptions' => self::ORDER_STATUSES]);
     }
 
     public function export(Request $request): StreamedResponse
@@ -86,28 +94,44 @@ class CustomerController extends Controller
             });
         }
 
-        if ($canFilterByEvent && $request->filled('event_id')) {
-            $eventId = $request->integer('event_id');
-            $customersQuery->whereHas('orders', function (Builder $q) use ($eventId) {
-                $q->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
-            });
+        $this->applyOrderFilters($customersQuery, $request, $canFilterByEvent);
+
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
+        if ($ids) {
+            $customersQuery->whereIn('customers.id', $ids);
         }
 
-        $customers = $customersQuery->latest()->get();
+        $available = self::exportColumns();
+        $columns = array_values(array_intersect(array_keys($available), (array) $request->input('columns', [])));
+        if (! $columns) {
+            $columns = array_keys($available);
+        }
 
-        return response()->streamDownload(function () use ($customers) {
+        $customersQuery->withMax('orders as last_order_at', 'created_at');
+
+        return response()->streamDownload(function () use ($customersQuery, $columns, $available) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Name', 'Email', 'Phone', 'Orders Count']);
-            foreach ($customers as $customer) {
-                fputcsv($handle, [
-                    $customer->full_name,
-                    $customer->email,
-                    $customer->phone,
-                    $customer->orders_count,
-                ]);
+            fputcsv($handle, array_map(fn ($key) => $available[$key]['label'], $columns));
+            foreach ($customersQuery->latest()->cursor() as $customer) {
+                fputcsv($handle, array_map(fn ($key) => $available[$key]['value']($customer), $columns));
             }
             fclose($handle);
         }, 'customers-export.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /** @return array<string, array{label: string, value: \Closure}> */
+    public static function exportColumns(): array
+    {
+        return [
+            'name' => ['label' => 'Name', 'value' => fn ($c) => $c->full_name],
+            'first_name' => ['label' => 'First Name', 'value' => fn ($c) => $c->first_name],
+            'last_name' => ['label' => 'Last Name', 'value' => fn ($c) => $c->last_name],
+            'email' => ['label' => 'Email', 'value' => fn ($c) => $c->email],
+            'phone' => ['label' => 'Phone', 'value' => fn ($c) => $c->phone],
+            'orders_count' => ['label' => 'Orders Count', 'value' => fn ($c) => $c->orders_count],
+            'created_at' => ['label' => 'Customer Since', 'value' => fn ($c) => $c->created_at?->format('Y-m-d H:i')],
+            'last_order_at' => ['label' => 'Last Order', 'value' => fn ($c) => $c->last_order_at ? \Illuminate\Support\Carbon::parse($c->last_order_at)->format('Y-m-d H:i') : ''],
+        ];
     }
 
     public function show(Request $request, Customer $customer)
@@ -138,6 +162,28 @@ class CustomerController extends Controller
         }]);
 
         return view('admin.customers.show', compact('customer'));
+    }
+
+    /** Event and order status are matched on the same order. */
+    private function applyOrderFilters(Builder $customersQuery, Request $request, bool $canFilterByEvent): void
+    {
+        $eventId = $canFilterByEvent && $request->filled('event_id') ? $request->integer('event_id') : null;
+        $status = array_key_exists((string) $request->input('status'), self::ORDER_STATUSES) ? (string) $request->input('status') : null;
+
+        if (! $eventId && ! $status) {
+            return;
+        }
+
+        $scope = function (Builder $orders) use ($eventId, $status) {
+            if ($status) {
+                $orders->where('status', $status);
+            }
+            if ($eventId) {
+                $orders->whereHas('items', fn (Builder $iq) => $iq->where('event_id', $eventId));
+            }
+        };
+
+        $customersQuery->whereHas('orders', $scope);
     }
 
     private function applyEventScopeToOrdersQuery($query, ?Event $event): void
