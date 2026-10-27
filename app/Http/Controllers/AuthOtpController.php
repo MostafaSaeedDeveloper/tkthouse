@@ -89,7 +89,8 @@ class AuthOtpController extends Controller
         Auth::login($user);
         $request->session()->regenerate(); // keeps the checkout selection, rotates the session id
         $request->session()->put('auth.otp_verified_at', now()->timestamp);
-        GuestOrderAccess::claim($request, $user, $linkedOrder); // this browser's own pre-verification orders join the account
+        GuestOrderAccess::claim($request, $user, $linkedOrder);
+        GuestOrderAccess::releaseFor($user); // the mailbox is proven: guest orders from any browser/device join the account
         $user->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->save();
 
         return response()->json([

@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Numbers for the admin dashboard, all computed from real rows. Rules:
@@ -20,6 +21,9 @@ use Illuminate\Support\Collection;
  */
 class DashboardMetrics
 {
+    /** Order value without checkout fees: tickets minus promo discount (older rows without a subtotal fall back to the total). */
+    private const NET = 'CASE WHEN subtotal_amount > 0 THEN subtotal_amount - COALESCE(discount_amount, 0) ELSE total_amount END';
+
     public const RANGES = ['7d' => 'Last 7 days', '30d' => 'Last 30 days', '3m' => 'Last 3 months', '1y' => 'Last year', 'custom' => 'Custom'];
 
     /** @param array<int> $managedEventIds events this user is limited to (empty = all) */
@@ -91,8 +95,8 @@ class DashboardMetrics
         $prevEnd = $start->copy()->subSecond();
         $prevStart = $start->copy()->subDays($days);
 
-        $sales = (float) $this->paidInRange($start, $end)->sum('total_amount');
-        $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount');
+        $sales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET));
+        $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET));
         $tickets = $this->ticketsSold($start, $end);
         $prevTickets = $this->ticketsSold($prevStart, $prevEnd);
         $paidOrders = $this->paidInRange($start, $end)->count();
@@ -137,7 +141,7 @@ class DashboardMetrics
             default => $d->format('Y-m'),
         };
 
-        $paid = $this->paidInRange($start, $end)->get(['paid_at', 'created_at', 'total_amount']);
+        $paid = $this->paidInRange($start, $end)->selectRaw('paid_at, created_at, '.self::NET.' as net_amount')->get();
         $created = $this->orders()->whereBetween('created_at', [$start, $end])->get(['created_at']);
 
         $labels = [];
@@ -152,7 +156,7 @@ class DashboardMetrics
         foreach ($paid as $o) {
             $k = $key(Carbon::parse($o->paid_at ?? $o->created_at));
             if (isset($slots[$k])) {
-                $slots[$k]['sales'] += (float) $o->total_amount;
+                $slots[$k]['sales'] += (float) $o->net_amount;
             }
         }
         foreach ($created as $o) {
@@ -173,17 +177,17 @@ class DashboardMetrics
     /** Paid / pending / refunded value, and paid value by payment method. Never merged into one "revenue" figure. */
     public function revenue(Carbon $start, Carbon $end): array
     {
-        $paid = $this->paidInRange($start, $end)->get(['payment_method', 'total_amount']);
+        $paid = $this->paidInRange($start, $end)->selectRaw('payment_method, '.self::NET.' as net_amount')->get();
         $labels = PaymentMethod::query()->get(['code', 'name', 'checkout_label'])->mapWithKeys(fn ($m) => [(string) $m->code => trim((string) ($m->checkout_label ?: $m->name))]);
-        $paidTotal = (float) $paid->sum('total_amount');
+        $paidTotal = (float) $paid->sum('net_amount');
 
         $byMethod = $paid->groupBy(fn ($o) => (string) $o->payment_method)->map(function (Collection $rows, string $code) use ($labels, $paidTotal) {
-            $amount = (float) $rows->sum('total_amount');
+            $amount = (float) $rows->sum('net_amount');
 
             return ['label' => $code === '' ? 'No method recorded' : ($labels[$code] ?? $code), 'amount' => $amount, 'orders' => $rows->count(), 'share' => $paidTotal > 0 ? round($amount / $paidTotal * 100, 1) : 0];
         })->sortByDesc('amount')->values();
 
-        $window = fn (array $statuses) => (float) $this->orders()->whereIn('status', $statuses)->whereBetween('created_at', [$start, $end])->sum('total_amount');
+        $window = fn (array $statuses) => (float) $this->orders()->whereIn('status', $statuses)->whereBetween('created_at', [$start, $end])->sum(DB::raw(self::NET));
 
         return [
             'paid' => $paidTotal,

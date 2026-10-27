@@ -49,6 +49,17 @@ class GuestOrderAccess
         return Order::query()->where('user_id', $user->id)->where('owner_unverified', true)->whereIn('id', $ids)->update(['owner_unverified' => false]);
     }
 
+    /**
+     * The mailbox of this account is proven (e-mail code, password reset, verified registration): every order placed
+     * on the account before that moment belongs to its owner, whichever browser/device placed it or whether that
+     * session still exists. Only accounts that already exist reach this point, and checkout refuses an existing
+     * address without a code, so nobody can push orders into a verified account.
+     */
+    public static function releaseFor(\App\Models\User $user): int
+    {
+        return Order::query()->where('user_id', $user->id)->where('owner_unverified', true)->update(['owner_unverified' => false]);
+    }
+
     public static function mask(string $email): string
     {
         [$local, $domain] = array_pad(explode('@', $email, 2), 2, '');
