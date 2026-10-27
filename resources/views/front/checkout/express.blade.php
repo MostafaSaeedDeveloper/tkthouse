@@ -6,7 +6,7 @@
     $money = fn ($n) => number_format((float) $n, 2).' EGP';
     $attendeeValue = fn (int $i, string $field) => old("attendees.$i.$field", data_get($attendees, "$i.$field", ''));
     $buyerName = old('full_name', $buyer['full_name'] ?? trim(($buyer['first_name'] ?? '').' '.($buyer['last_name'] ?? '')));
-    $buyerEmail = old('email', $buyer['email'] ?? '');
+    $buyerEmail = $signedIn ? auth()->user()->email : old('email', $buyer['email'] ?? '');
     $buyerPhone = old('phone', $buyer['phone'] ?? '');
     $chosenMethod = old('payment_method', $selectedMethod ?: ($methods->count() === 1 ? $methods->first()->code : ''));
     $payLabel = $requiresApproval ? 'Submit booking request' : 'Pay now — '.$money($quote->total);
@@ -58,7 +58,7 @@
             <section class="tkt-card tkt-section-card" aria-labelledby="buyerTitle" @if($wizard) data-wz-step="buyer" @endif>
                 <h2 class="tkt-section-card__title" id="buyerTitle">Your contact details</h2>
                 <p class="tkt-section-card__sub">
-                    @if($signedIn)Signed in as {{ auth()->user()->email }}. These details apply to this order only.
+                    @if($signedIn)Signed in as {{ auth()->user()->email }}. Your email is locked to your account; other details apply to this order only.
                     @else We send your confirmation here. No account or password needed.@endif
                 </p>
                 <div class="tkt-form-grid tkt-form-grid--2">
@@ -69,7 +69,7 @@
                     </div>
                     <div class="tkt-field">
                         <label class="tkt-label" for="buyer_email">Email address</label>
-                        <input class="tkt-input {{ $errors->has('email') ? 'is-invalid' : '' }}" id="buyer_email" name="email" type="email" inputmode="email" value="{{ $buyerEmail }}" autocomplete="email" placeholder="jane@domain.com" required data-buyer-email>
+                        <input class="tkt-input {{ $errors->has('email') ? 'is-invalid' : '' }}" id="buyer_email" name="email" type="email" inputmode="email" value="{{ $buyerEmail }}" autocomplete="email" placeholder="jane@domain.com" required data-buyer-email @if($signedIn) readonly @endif>
                         @error('email')<div class="tkt-field__error">{{ $message }}</div>@enderror
                     </div>
                     <div class="tkt-field">

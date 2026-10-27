@@ -787,6 +787,11 @@ class CheckoutController extends Controller
     /** @return array{first_name: string, last_name: string, email: string, phone: ?string} */
     private function validateBuyer(Request $request): array
     {
+        // Signed in (including right after confirming the e-mail code): the contact e-mail is the account's confirmed one, never a typed one.
+        if ($user = $request->user()) {
+            $request->merge(['email' => $user->email]);
+        }
+
         if ($request->filled('full_name') && ! $request->filled('first_name')) {
             $parts = preg_split('/\s+/', trim((string) $request->input('full_name')), 2) ?: [];
             $request->merge(['first_name' => $parts[0] ?? '', 'last_name' => $parts[1] ?? '-']);
