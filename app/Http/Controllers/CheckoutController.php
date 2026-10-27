@@ -679,6 +679,59 @@ class CheckoutController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /** @return array<int, string> the account e-mail plus the addresses this browser proved with a code during checkout */
+    private function confirmedContacts(Request $request, \App\Models\User $user): array
+    {
+        return array_merge([\App\Services\Auth\EmailOtpService::normalize((string) $user->email)], (array) $request->session()->get('checkout.verified_contacts', []));
+    }
+
+    /** "Change email" while signed in: mails a code to the new address (nothing changes until it is confirmed). */
+    public function sendContactCode(Request $request)
+    {
+        abort_unless($request->user(), 403);
+        $data = $request->validate(['email' => ['required', 'email', 'max:255', $this->notBlockedEmailDomain()]]);
+        $email = \App\Services\Auth\EmailOtpService::normalize($data['email']);
+
+        $key = 'checkout-contact:'.sha1($request->user()->id.'|'.$email);
+        if (RateLimiter::tooManyAttempts('checkout-contact-send:'.$request->user()->id, 5)) {
+            return response()->json(['ok' => false, 'message' => 'Too many codes requested. Please wait a while and try again.'], 429);
+        }
+        if (! Cache::has($key.':cooldown')) {
+            RateLimiter::hit('checkout-contact-send:'.$request->user()->id, 3600);
+            Cache::put($key.':cooldown', 1, 30);
+            $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            Cache::put($key, ['hash' => \Illuminate\Support\Facades\Hash::make($code), 'attempts' => 0], now()->addMinutes(10));
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoginOtpMail($code));
+        }
+
+        return response()->json(['ok' => true, 'message' => 'A code is on its way to '.GuestOrderAccess::mask($email).'.']);
+    }
+
+    public function verifyContactCode(Request $request)
+    {
+        abort_unless($request->user(), 403);
+        $data = $request->validate(['email' => ['required', 'email', 'max:255'], 'code' => ['required', 'string', 'max:10']]);
+        $email = \App\Services\Auth\EmailOtpService::normalize($data['email']);
+        $key = 'checkout-contact:'.sha1($request->user()->id.'|'.$email);
+        $record = Cache::get($key);
+        $fail = fn () => response()->json(['ok' => false, 'message' => 'That code is not valid or has expired. Ask for a new one.'], 422);
+
+        if (! is_array($record) || ($record['attempts'] ?? 0) >= 5) {
+            return $fail();
+        }
+        if (! preg_match('/^\d{6}$/', trim($data['code'])) || ! \Illuminate\Support\Facades\Hash::check(trim($data['code']), (string) $record['hash'])) {
+            $record['attempts'] = ($record['attempts'] ?? 0) + 1;
+            Cache::put($key, $record, now()->addMinutes(10));
+
+            return $fail();
+        }
+
+        Cache::forget($key);
+        $request->session()->put('checkout.verified_contacts', array_values(array_unique(array_merge((array) $request->session()->get('checkout.verified_contacts', []), [$email]))));
+
+        return response()->json(['ok' => true, 'email' => $email]);
+    }
+
     /** A guest with a brand-new e-mail must choose a password for the account created for them (existing e-mails use the code). */
     private function guestPassword(Request $request, array $buyer): ?string
     {
@@ -787,9 +840,16 @@ class CheckoutController extends Controller
     /** @return array{first_name: string, last_name: string, email: string, phone: ?string} */
     private function validateBuyer(Request $request): array
     {
-        // Signed in (including right after confirming the e-mail code): the contact e-mail is the account's confirmed one, never a typed one.
+        // Signed in (including right after confirming the e-mail code): the contact e-mail is the account's confirmed one,
+        // or another address this browser confirmed with a code ("Change" button). A typed address alone is never enough.
         if ($user = $request->user()) {
-            $request->merge(['email' => $user->email]);
+            $typed = \App\Services\Auth\EmailOtpService::normalize((string) $request->input('email', ''));
+            if ($typed === '' || ! in_array($typed, $this->confirmedContacts($request, $user), true)) {
+                if ($typed !== '') {
+                    throw ValidationException::withMessages(['email' => 'Please confirm this email with a code, or use your account email.']);
+                }
+                $request->merge(['email' => $user->email]);
+            }
         }
 
         if ($request->filled('full_name') && ! $request->filled('first_name')) {

@@ -58,7 +58,7 @@
             <section class="tkt-card tkt-section-card" aria-labelledby="buyerTitle" @if($wizard) data-wz-step="buyer" @endif>
                 <h2 class="tkt-section-card__title" id="buyerTitle">Your contact details</h2>
                 <p class="tkt-section-card__sub">
-                    @if($signedIn)Signed in as {{ auth()->user()->email }}. Your email is locked to your account; other details apply to this order only.
+                    @if($signedIn)Signed in as {{ auth()->user()->email }}. Your email is your account email unless you change and confirm another; other details apply to this order only.
                     @else We send your confirmation here. No account or password needed.@endif
                 </p>
                 <div class="tkt-form-grid tkt-form-grid--2">
@@ -71,6 +71,21 @@
                         <label class="tkt-label" for="buyer_email">Email address</label>
                         <input class="tkt-input {{ $errors->has('email') ? 'is-invalid' : '' }}" id="buyer_email" name="email" type="email" inputmode="email" value="{{ $buyerEmail }}" autocomplete="email" placeholder="jane@domain.com" required data-buyer-email @if($signedIn) readonly @endif>
                         @error('email')<div class="tkt-field__error">{{ $message }}</div>@enderror
+                        @if($signedIn)
+                            <div data-contact-email data-account-email="{{ auth()->user()->email }}" data-send-url="{{ route('front.checkout.contact.send') }}" data-verify-url="{{ route('front.checkout.contact.verify') }}" style="margin-top:6px">
+                                <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-contact-change>Change email</button>
+                                <div data-contact-box hidden style="margin-top:8px">
+                                    <button type="button" class="tkt-btn tkt-btn--ghost" data-contact-send>Send code to this email</button>
+                                    <button type="button" class="tkt-link" style="background:none;border:0;padding:0;margin-left:8px" data-contact-cancel>Cancel</button>
+                                    <div data-contact-code-row hidden style="margin-top:8px">
+                                        <input class="tkt-input tkt-otp__input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······" data-contact-code>
+                                        <button type="button" class="tkt-btn tkt-btn--primary" style="margin-top:8px" data-contact-verify>Confirm email</button>
+                                    </div>
+                                    <div class="tkt-field__hint" data-contact-info hidden></div>
+                                    <div class="tkt-field__error" data-contact-error hidden></div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                     <div class="tkt-field">
                         <label class="tkt-label" for="buyer_phone">Phone number <span class="tkt-text-muted" style="font-weight:500">(optional)</span></label>
@@ -257,5 +272,6 @@
     <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
     <script src="{{ asset('js/tkt-checkout.js') }}?v={{ filemtime(public_path('js/tkt-checkout.js')) }}"></script>
     @if($wizard)<script src="{{ asset('js/tkt-checkout-wizard.js') }}?v={{ filemtime(public_path('js/tkt-checkout-wizard.js')) }}"></script>@endif
+    <script src="{{ asset('js/tkt-contact-email.js') }}?v={{ filemtime(public_path('js/tkt-contact-email.js')) }}"></script>
     <script src="{{ asset('js/tkt-express.js') }}?v={{ filemtime(public_path('js/tkt-express.js')) }}"></script>
 @endpush
