@@ -17,6 +17,7 @@ use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PaymentService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -256,6 +257,15 @@ class CheckoutController extends Controller
                 }
             }
 
+            // A guest with a brand-new e-mail sets the password of the account created for them (existing e-mails use the code instead).
+            $newPassword = null;
+            if (! $request->user() && ! \App\Services\Auth\EmailOtpService::findUser(\App\Services\Auth\EmailOtpService::normalize($buyer['email']))) {
+                $newPassword = $request->validate(['password' => ['required', 'string', 'min:8', 'max:255']], [
+                    'password.required' => 'Please create a password for your account.',
+                    'password.min' => 'Your password must be at least 8 characters.',
+                ])['password'];
+            }
+
             // Who does this order belong to? Never decided by a typed e-mail alone.
             try {
                 [$user, $newAccount] = $identity->resolve($request, $buyer);
@@ -275,7 +285,16 @@ class CheckoutController extends Controller
                 return $this->handlePlacementError($request, $e, $event);
             }
 
-            if (! $request->user()) {
+            $signedInNow = false;
+            if ($newAccount && $newPassword !== null) {
+                // The buyer chose the password of the account just created for them: sign them in, the order is theirs.
+                $user->forceFill(['password' => $newPassword, 'passwordless_since' => null])->save(); // 'hashed' cast
+                Auth::login($user);
+                $request->session()->regenerate();
+                $signedInNow = true;
+            }
+
+            if (! $request->user() && ! $signedInNow) {
                 // The mailbox is not proven: keep this order out of account pages until the owner confirms it with a code.
                 $order->forceFill(['owner_unverified' => true])->saveQuietly();
             }

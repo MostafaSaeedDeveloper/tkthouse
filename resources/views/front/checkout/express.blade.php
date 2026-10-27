@@ -77,6 +77,13 @@
                         <input class="tkt-input {{ $errors->has('phone') ? 'is-invalid' : '' }}" id="buyer_phone" name="phone" type="tel" inputmode="tel" value="{{ $buyerPhone }}" autocomplete="tel" placeholder="100 000 0000" data-phone-intl data-buyer-phone>
                         @error('phone')<div class="tkt-field__error">{{ $message }}</div>@enderror
                     </div>
+                    @unless($signedIn)
+                        <div class="tkt-field is-full">
+                            <label class="tkt-label" for="buyer_password">Create a password <span class="tkt-text-muted" style="font-weight:500">(for your new account — not needed if you already have one)</span></label>
+                            <input class="tkt-input {{ $errors->has('password') ? 'is-invalid' : '' }}" id="buyer_password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" data-buyer-password>
+                            @error('password')<div class="tkt-field__error">{{ $message }}</div>@enderror
+                        </div>
+                    @endunless
                 </div>
                 @if($wizard)
                     {{-- Confirm the mailbox right here when this e-mail already has an account (no separate page) --}}
