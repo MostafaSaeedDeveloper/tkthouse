@@ -450,3 +450,5 @@ body.a-body { margin: 0; background: var(--a-bg); color: var(--a-ink); font-fami
     .a-notif__panel { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; max-width: none; }
     .a-notif__list { max-height: calc(100vh - 220px); }
 }
+
+@media (min-width: 1200px) { .a-grid--kpi5 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
