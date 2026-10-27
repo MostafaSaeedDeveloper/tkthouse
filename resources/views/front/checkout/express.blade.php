@@ -57,7 +57,7 @@
             {{-- Buyer --}}
             <section class="tkt-card tkt-section-card" aria-labelledby="buyerTitle" @if($wizard) data-wz-step="buyer" @endif>
                 <h2 class="tkt-section-card__title" id="buyerTitle">Your contact details</h2>
-                <p class="tkt-section-card__sub">
+                <p class="tkt-section-card__sub" data-signed-in-note>
                     @if($signedIn)Signed in as {{ auth()->user()->email }}. Your email is your account email unless you change and confirm another; other details apply to this order only.
                     @else We send your confirmation here. No account or password needed.@endif
                 </p>
@@ -71,8 +71,7 @@
                         <label class="tkt-label" for="buyer_email">Email address</label>
                         <input class="tkt-input {{ $errors->has('email') ? 'is-invalid' : '' }}" id="buyer_email" name="email" type="email" inputmode="email" value="{{ $buyerEmail }}" autocomplete="email" placeholder="jane@domain.com" required data-buyer-email @if($signedIn) readonly @endif>
                         @error('email')<div class="tkt-field__error">{{ $message }}</div>@enderror
-                        @if($signedIn)
-                            <div data-contact-email data-account-email="{{ auth()->user()->email }}" data-send-url="{{ route('front.checkout.contact.send') }}" data-verify-url="{{ route('front.checkout.contact.verify') }}" style="margin-top:6px">
+                        <div data-contact-email @if(! $signedIn) hidden @endif data-account-email="{{ $signedIn ? auth()->user()->email : '' }}" data-send-url="{{ route('front.checkout.contact.send') }}" data-verify-url="{{ route('front.checkout.contact.verify') }}" style="margin-top:6px">
                                 <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-contact-change>Change email</button>
                                 <div data-contact-box hidden style="margin-top:8px">
                                     <button type="button" class="tkt-btn tkt-btn--ghost" data-contact-send>Send code to this email</button>
@@ -84,8 +83,7 @@
                                     <div class="tkt-field__hint" data-contact-info hidden></div>
                                     <div class="tkt-field__error" data-contact-error hidden></div>
                                 </div>
-                            </div>
-                        @endif
+                        </div>
                     </div>
                     <div class="tkt-field">
                         <label class="tkt-label" for="buyer_phone">Phone number <span class="tkt-text-muted" style="font-weight:500">(optional)</span></label>
@@ -93,7 +91,7 @@
                         @error('phone')<div class="tkt-field__error">{{ $message }}</div>@enderror
                     </div>
                     @unless($signedIn)
-                        <div class="tkt-field is-full">
+                        <div class="tkt-field is-full" data-guest-password>
                             <label class="tkt-label" for="buyer_password">Create a password <span class="tkt-text-muted" style="font-weight:500">(for your new account — not needed if you already have one)</span></label>
                             <input class="tkt-input {{ $errors->has('password') ? 'is-invalid' : '' }}" id="buyer_password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" data-buyer-password>
                             @error('password')<div class="tkt-field__error">{{ $message }}</div>@enderror

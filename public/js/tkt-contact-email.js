@@ -10,6 +10,18 @@
     var panel = $('[data-contact-box]'), codeRow = $('[data-contact-code-row]'), code = $('[data-contact-code]');
     var info = $('[data-contact-info]'), err = $('[data-contact-error]');
     var account = box.getAttribute('data-account-email');
+    var hint = document.querySelector('[data-signed-in-note]');
+
+    // Called right after the e-mail code signed the buyer in (ajax): the page now behaves as for a signed-in customer.
+    window.TktContactEmail = {
+        activate: function () {
+            account = input.value.trim();
+            box.setAttribute('data-account-email', account);
+            box.hidden = false; input.readOnly = true;
+            Array.prototype.forEach.call(document.querySelectorAll('[data-guest-password]'), function (el) { el.remove(); });
+            if (hint) hint.textContent = 'Signed in as ' + account + '. Your email is your account email unless you change and confirm another; other details apply to this order only.';
+        }
+    };
 
     function csrf() { var m = document.querySelector('meta[name="csrf-token"]'); return (m && m.content) || ''; }
     function say(el, text) { el.textContent = text || ''; el.hidden = !text; }

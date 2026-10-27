@@ -123,6 +123,7 @@
         modalPanel.addEventListener('tkt:otp-verified', function (e) {
             setCsrf(e.detail && e.detail.csrf);
             modal.modal('hide');
+            if (window.TktContactEmail) window.TktContactEmail.activate();
             submit(); // same details, now as the verified account owner
         });
     }
@@ -130,6 +131,7 @@
         inlinePanel.addEventListener('tkt:otp-verified', function (e) {
             setCsrf(e.detail && e.detail.csrf);
             window.TktWizard.verified();
+            if (window.TktContactEmail) window.TktContactEmail.activate();
             if (verifyOrigin === 'submit') submit(); else window.TktWizard.advanceFromDetails();
         });
     }
