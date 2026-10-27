@@ -27,11 +27,12 @@
             </form>
 
             <div class="tkt-header__actions">
-                @auth
-                    <div class="tkt-account" id="tktAccount">
+                {{-- Both states are rendered so an ajax sign-in (checkout e-mail code) can swap them without a reload --}}
+                @php($isAuth = auth()->check())
+                    <div class="tkt-account" id="tktAccount" data-header-account @if(! $isAuth) hidden @endif>
                         <button type="button" class="tkt-account__toggle" aria-haspopup="true" aria-expanded="false">
-                            <span class="tkt-account__avatar">{{ $initial }}</span>
-                            <span class="tkt-account__name">{{ $headerUser->name ?: 'My account' }}</span>
+                            <span class="tkt-account__avatar" data-header-initial>{{ $initial }}</span>
+                            <span class="tkt-account__name" data-header-name>{{ $headerUser?->name ?: 'My account' }}</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                         </button>
                         <div class="tkt-account__menu" role="menu">
@@ -45,12 +46,10 @@
                             </form>
                         </div>
                     </div>
-                @else
-                    <div class="tkt-header__guest">
+                    <div class="tkt-header__guest" data-header-guest @if($isAuth) hidden @endif>
                         <button type="button" class="tkt-btn tkt-btn--outline-light tkt-btn--sm" data-toggle="modal" data-target="#login-register1" data-auth-open="login">Log in</button>
                         <button type="button" class="tkt-btn tkt-btn--primary tkt-btn--sm" data-toggle="modal" data-target="#login-register1" data-auth-open="register">Sign up</button>
                     </div>
-                @endauth
 
                 <button type="button" class="tkt-burger" id="tktBurger" aria-label="Toggle menu" aria-expanded="false" aria-controls="tktMobilePanel">
                     <svg class="tkt-ico-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -71,7 +70,7 @@
             @endforeach
         </nav>
         @guest
-            <div class="tkt-mobile-panel__guest">
+            <div class="tkt-mobile-panel__guest" data-header-guest>
                 <button type="button" class="tkt-btn tkt-btn--outline-light" data-toggle="modal" data-target="#login-register1" data-auth-open="login">Log in</button>
                 <button type="button" class="tkt-btn tkt-btn--primary" data-toggle="modal" data-target="#login-register1" data-auth-open="register">Sign up</button>
             </div>

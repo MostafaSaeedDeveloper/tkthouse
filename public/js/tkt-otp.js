@@ -89,3 +89,14 @@
         Array.prototype.forEach.call(document.querySelectorAll('[data-otp-panel]'), init);
     });
 })();
+
+/* A code accepted via ajax signs the visitor in: swap the header's "Log in / Sign up" for the account menu, no reload. */
+document.addEventListener('tkt:otp-verified', function (e) {
+    var d = (e && e.detail) || {};
+    var set = function (sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); };
+    set('[data-header-guest]', function (el) { el.hidden = true; el.style.display = 'none'; });
+    set('[data-header-account]', function (el) { el.hidden = false; });
+    set('[data-header-name]', function (el) { if (d.name) el.textContent = d.name; });
+    set('[data-header-initial]', function (el) { if (d.name) el.textContent = d.name.trim().charAt(0).toUpperCase(); });
+    if (d.csrf) set('input[name="_token"]', function (el) { el.value = d.csrf; }); // the session id was rotated
+});
