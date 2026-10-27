@@ -273,7 +273,7 @@ class CheckoutController extends Controller
             if (! $request->user()) {
                 $this->stashPassword($request, $user, $newPassword);
 
-                return $this->respondVerification($request, $user->email);
+                return $this->respondVerification($request, $user->email, $identity->sessionCreatedAccount($request)?->id !== $user->id);
             }
 
             try {
@@ -537,7 +537,7 @@ class CheckoutController extends Controller
             : back()->with('error', $message);
     }
 
-    private function respondVerification(Request $request, string $email)
+    private function respondVerification(Request $request, string $email, bool $existing = true)
     {
         // Probing e-mails through this step is throttled per client; the wording never says "account exists".
         $key = 'checkout-verify:'.($request->ip() ?? 'x');
@@ -550,7 +550,10 @@ class CheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'ok' => false, 'needs_verification' => true, 'masked' => GuestOrderAccess::mask($email),
+                'ok' => false, 'needs_verification' => true, 'masked' => GuestOrderAccess::mask($email), 'existing' => $existing,
+                'notice' => $existing
+                    ? 'This email is already registered. Enter the code we sent to sign in to your account and continue — your booking details are kept.'
+                    : 'We sent a code to confirm this email. Enter it to create your account and continue.',
                 'message' => 'To keep your booking safe, confirm this email with a code. Your booking details are kept.',
             ], 409);
         }
@@ -664,7 +667,7 @@ class CheckoutController extends Controller
                 $this->stashPassword($request, $guest, $newPassword);
                 session()->forget('checkout.preflight_email');
 
-                return $this->respondVerification($request, $guest->email);
+                return $this->respondVerification($request, $guest->email, false);
             }
         } catch (EmailVerificationRequired $e) {
             session()->forget('checkout.preflight_email');

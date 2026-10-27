@@ -102,6 +102,7 @@
                     {{-- Confirm the mailbox right here when this e-mail already has an account (no separate page) --}}
                     <div class="tkt-wz__otp" data-wz-otp hidden>
                         <h3 class="tkt-wz__otp-title">Confirm your email</h3>
+                        <div class="tkt-alert" role="status" data-otp-notice hidden style="margin-bottom:12px"></div>
                         <x-tkt.otp-panel email="" id-suffix="inline" />
                         <p class="tkt-text-muted tkt-text-sm" style="margin-top:12px">Typed it wrong? <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-otp-edit-email>Edit my email</button> — everything you entered stays.</p>
                     </div>
@@ -256,6 +257,7 @@
                 <h4 class="modal-title" id="otpTitle">Confirm your email</h4>
             </div>
             <div class="modal-body">
+                <div class="tkt-alert" role="status" data-otp-notice hidden style="margin-bottom:12px"></div>
                 <p class="tkt-text-sm" style="margin-bottom:12px">To keep your booking safe we need to confirm this email. We've sent a code if it can receive one. Your booking details are saved — nothing is lost.</p>
                 <x-tkt.otp-panel email="" id-suffix="modal" />
                 <p class="tkt-text-muted tkt-text-sm" style="margin-top:14px">Typed it wrong? <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-otp-edit-email>Edit my email</button> — your tickets and details stay as they are.</p>
