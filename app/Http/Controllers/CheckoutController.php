@@ -17,7 +17,6 @@ use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\PaymentService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -42,6 +41,7 @@ class CheckoutController extends Controller
     private const DRAFT = 'checkout.draft';
     private const PROMO = 'checkout.promo';
     private const SELECTION_ID = 'checkout.selection_id';
+    public const PENDING_PASSWORD = 'checkout.pending_password';
     private const NEW_ACCOUNT_ORDERS = 'checkout.new_account_orders';
 
     public function __construct(
@@ -257,14 +257,7 @@ class CheckoutController extends Controller
                 }
             }
 
-            // A guest with a brand-new e-mail sets the password of the account created for them (existing e-mails use the code instead).
-            $newPassword = null;
-            if (! $request->user() && ! \App\Services\Auth\EmailOtpService::findUser(\App\Services\Auth\EmailOtpService::normalize($buyer['email']))) {
-                $newPassword = $request->validate(['password' => ['required', 'string', 'min:8', 'max:255']], [
-                    'password.required' => 'Please create a password for your account.',
-                    'password.min' => 'Your password must be at least 8 characters.',
-                ])['password'];
-            }
+            $newPassword = $this->guestPassword($request, $buyer);
 
             // Who does this order belong to? Never decided by a typed e-mail alone.
             try {
@@ -273,6 +266,14 @@ class CheckoutController extends Controller
                 return $this->respondVerification($request, $e->email);
             } catch (StaffEmailNotAllowed $e) {
                 throw ValidationException::withMessages(['email' => $e->getMessage()]);
+            }
+
+            // A guest must prove the mailbox before ordering: the account just created waits for the e-mail code
+            // (and for the password chosen here, which only takes effect once that code is entered).
+            if (! $request->user()) {
+                $this->stashPassword($request, $user, $newPassword);
+
+                return $this->respondVerification($request, $user->email);
             }
 
             try {
@@ -285,16 +286,7 @@ class CheckoutController extends Controller
                 return $this->handlePlacementError($request, $e, $event);
             }
 
-            $signedInNow = false;
-            if ($newAccount && $newPassword !== null) {
-                // The buyer chose the password of the account just created for them: sign them in, the order is theirs.
-                $user->forceFill(['password' => $newPassword, 'passwordless_since' => null])->save(); // 'hashed' cast
-                Auth::login($user);
-                $request->session()->regenerate();
-                $signedInNow = true;
-            }
-
-            if (! $request->user() && ! $signedInNow) {
+            if (! $request->user()) {
                 // The mailbox is not proven: keep this order out of account pages until the owner confirms it with a code.
                 $order->forceFill(['owner_unverified' => true])->saveQuietly();
             }
@@ -664,6 +656,16 @@ class CheckoutController extends Controller
 
         try {
             $identity->inspect($request, $buyer);
+
+            if (! $request->user()) {
+                // New e-mail: create the (still unconfirmed) account now so the code can be mailed right here in the wizard.
+                $newPassword = $this->guestPassword($request, $buyer);
+                [$guest] = $identity->resolve($request, $buyer);
+                $this->stashPassword($request, $guest, $newPassword);
+                session()->forget('checkout.preflight_email');
+
+                return $this->respondVerification($request, $guest->email);
+            }
         } catch (EmailVerificationRequired $e) {
             session()->forget('checkout.preflight_email');
 
@@ -675,6 +677,27 @@ class CheckoutController extends Controller
         session(['checkout.preflight_email' => \App\Services\Auth\EmailOtpService::normalize($buyer['email'])]);
 
         return response()->json(['ok' => true]);
+    }
+
+    /** A guest with a brand-new e-mail must choose a password for the account created for them (existing e-mails use the code). */
+    private function guestPassword(Request $request, array $buyer): ?string
+    {
+        if ($request->user() || \App\Services\Auth\EmailOtpService::findUser(\App\Services\Auth\EmailOtpService::normalize($buyer['email']))) {
+            return null;
+        }
+
+        return $request->validate(['password' => ['required', 'string', 'min:8', 'max:255']], [
+            'password.required' => 'Please create a password for your account.',
+            'password.min' => 'Your password must be at least 8 characters.',
+        ])['password'];
+    }
+
+    /** Kept hashed in the session until the mailbox is confirmed with the e-mail code (AuthOtpController applies it). */
+    private function stashPassword(Request $request, \App\Models\User $user, ?string $password): void
+    {
+        if ($password !== null) {
+            $request->session()->put(self::PENDING_PASSWORD, ['id' => $user->id, 'hash' => \Illuminate\Support\Facades\Hash::make($password)]);
+        }
     }
 
     /** Wizard: keeps what has been typed so far (session only) so a refresh restores it. Nothing is validated or created. */

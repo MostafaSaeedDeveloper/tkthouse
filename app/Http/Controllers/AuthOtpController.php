@@ -86,6 +86,12 @@ class AuthOtpController extends Controller
             $user->forceFill(['email_verified_at' => now()])->save();
         }
 
+        // Password chosen at checkout for the account this browser just created: valid only now that the mailbox is proven.
+        $pending = $request->session()->pull(\App\Http\Controllers\CheckoutController::PENDING_PASSWORD);
+        if (is_array($pending) && (int) ($pending['id'] ?? 0) === (int) $user->id && $user->passwordless_since !== null) {
+            $user->forceFill(['password' => $pending['hash'], 'passwordless_since' => null])->save();
+        }
+
         Auth::login($user);
         $request->session()->regenerate(); // keeps the checkout selection, rotates the session id
         $request->session()->put('auth.otp_verified_at', now()->timestamp);

@@ -137,7 +137,7 @@
     // Wizard step 1: validate the buyer block and learn whether the code box is needed now. Creates nothing.
     function buyerData() {
         var fd = new FormData(form);
-        Array.from(fd.keys()).forEach(function (k) { if (!/^(_token|full_name|email|phone)/.test(k)) fd.delete(k); });
+        Array.from(fd.keys()).forEach(function (k) { if (!/^(_token|full_name|email|phone|password)/.test(k)) fd.delete(k); });
         return fd;
     }
 
