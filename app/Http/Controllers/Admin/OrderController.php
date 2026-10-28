@@ -681,7 +681,7 @@ class OrderController extends Controller
 
 
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): \Symfony\Component\HttpFoundation\Response
     {
         abort_unless($this->isSuperAdmin($request->user()), 403);
 
