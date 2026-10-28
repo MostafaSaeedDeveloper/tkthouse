@@ -351,7 +351,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="a-btn a-btn--outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-download me-1"></i> Download CSV</button>
+                    <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-download me-1"></i> Download</button>
                 </div>
             </form>
         </div>
