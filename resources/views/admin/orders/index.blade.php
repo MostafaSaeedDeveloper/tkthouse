@@ -283,6 +283,18 @@
                                 @endforeach
                             </select>
                         </div>
+                        @if($assignmentOn && $assignees->isNotEmpty())
+                        <div class="col-md-6">
+                            <label class="form-label">Assigned to</label>
+                            <select name="assignee" class="form-select" id="exportAssigneeSelect">
+                                <option value="">Everyone</option>
+                                <option value="unassigned">Unassigned only</option>
+                                @foreach($assignees as $agent)
+                                    <option value="{{ $agent->id }}">{{ $agent->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @endif
                         @if($canFilterByEvent)
                         <div class="col-md-6">
                             <label class="form-label">Event</label>
@@ -313,7 +325,7 @@
                                 'payment_method' => 'Payment Method',
                                 'created_at'     => 'Created At',
                                 'paid_at'        => 'Paid At',
-                            ];
+                            ] + ($assignmentOn ? ['assigned_to' => 'Assigned To'] : []);
                         @endphp
                         @foreach($exportColumns as $colKey => $colLabel)
                         <div>

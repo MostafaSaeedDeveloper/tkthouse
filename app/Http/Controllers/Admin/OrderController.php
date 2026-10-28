@@ -688,7 +688,7 @@ class OrderController extends Controller
         $managedEvents = $request->user()?->managedEvents ?? collect();
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
 
-        $ordersQuery = Order::query()->visibleTo($request->user())->with(['customer', 'items.event']);
+        $ordersQuery = Order::query()->visibleTo($request->user())->with(['customer', 'items.event', 'assignedUser:id,name', 'assignees:users.id,users.name']);
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
         $this->applyOrderFilters($ordersQuery, $request, $canFilterByEvent);
@@ -708,7 +708,7 @@ class OrderController extends Controller
             'payment_method' => 'Payment Method',
             'created_at'     => 'Created At',
             'paid_at'        => 'Paid At',
-        ];
+        ] + (\App\Orders\OrderAccess::enabled() ? ['assigned_to' => 'Assigned To'] : []);
 
         $selected = collect($request->input('columns', array_keys($availableColumns)))
             ->filter(fn ($col) => array_key_exists($col, $availableColumns))
@@ -753,6 +753,7 @@ class OrderController extends Controller
                         'payment_method' => $order->payment_method,
                         'created_at'     => optional($order->created_at)->format('Y-m-d H:i'),
                         'paid_at'        => optional($order->paid_at)->format('Y-m-d H:i') ?? '',
+                        'assigned_to'    => collect([$order->assignedUser?->name])->merge($order->assignees->pluck('name'))->filter()->unique()->implode(', '),
                         default          => '',
                     };
                 }
@@ -786,12 +787,15 @@ class OrderController extends Controller
         // Assignee filter (only meaningful while Order Assignment is on; visibleTo() already limits what a user can reach).
         if (\App\Orders\OrderAccess::enabled() && $request->filled('assignee')) {
             $assignee = (string) $request->input('assignee');
+            // An order may have several assigned agents (primary + extra): "assigned to X" means X is any of them.
+            $assignedTo = fn (int $id) => fn ($q) => $q->where('assigned_user_id', $id)
+                ->orWhereHas('assignees', fn ($a) => $a->where('users.id', $id));
             if ($assignee === 'unassigned') {
-                $query->whereNull('assigned_user_id');
+                $query->whereNull('assigned_user_id')->whereDoesntHave('assignees');
             } elseif ($assignee === 'me') {
-                $query->where('assigned_user_id', $request->user()->id);
+                $query->where($assignedTo((int) $request->user()->id));
             } elseif (ctype_digit($assignee)) {
-                $query->where('assigned_user_id', (int) $assignee);
+                $query->where($assignedTo((int) $assignee));
             }
         }
 
