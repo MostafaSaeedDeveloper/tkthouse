@@ -719,49 +719,65 @@ class OrderController extends Controller
             $selected = array_keys($availableColumns);
         }
 
-        return response()->streamDownload(function () use ($orders, $selected, $availableColumns) {
+        $rowFor = function ($order) use ($selected) {
+            $eventNames = $order->items
+                ->map(fn ($item) => str_contains((string) $item->ticket_name, ' - ')
+                    ? trim((string) str($item->ticket_name)->before(' - '))
+                    : null)
+                ->filter()
+                ->unique()
+                ->implode(', ');
+
+            $ticketTypes = $order->items
+                ->pluck('ticket_name')
+                ->unique()
+                ->implode(', ');
+
+            $row = [];
+            foreach ($selected as $col) {
+                $row[] = match ($col) {
+                    'order_number'   => preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number,
+                    'customer_name'  => $order->customer?->full_name ?? '',
+                    'customer_email' => $order->customer?->email ?? '',
+                    'customer_phone' => $order->customer?->phone ?? '',
+                    'event'          => $eventNames,
+                    'ticket_types'   => $ticketTypes,
+                    'items_count'    => $order->items->count(),
+                    'total'          => number_format((float) $order->total_amount, 2),
+                    'status'         => $order->status,
+                    'payment_method' => $order->payment_method,
+                    'created_at'     => optional($order->created_at)->format('Y-m-d H:i'),
+                    'paid_at'        => optional($order->paid_at)->format('Y-m-d H:i') ?? '',
+                    'assigned_to'    => collect([$order->assignedUser?->name])->merge($order->assignees->pluck('name'))->filter()->unique()->implode(', '),
+                    default          => '',
+                };
+            }
+
+            return $row;
+        };
+        $headers = array_map(fn ($col) => $availableColumns[$col], $selected);
+        $baseName = 'orders-export-' . now()->format('Y-m-d_H-i');
+
+        // Excel (.xlsx): real UTF-8 cells, so Arabic text and long numbers open correctly.
+        if ($request->input('format') === 'xlsx') {
+            $path = \App\Support\XlsxWriter::build($headers, $orders->map($rowFor), 'Orders');
+
+            return response()->download($path, $baseName . '.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        }
+
+        return response()->streamDownload(function () use ($orders, $headers, $rowFor) {
             $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF"); // UTF-8 BOM: Excel needs it to read Arabic in a CSV
 
-            fputcsv($handle, array_map(fn ($col) => $availableColumns[$col], $selected));
-
+            fputcsv($handle, $headers);
             foreach ($orders as $order) {
-                $eventNames = $order->items
-                    ->map(fn ($item) => str_contains((string) $item->ticket_name, ' - ')
-                        ? trim((string) str($item->ticket_name)->before(' - '))
-                        : null)
-                    ->filter()
-                    ->unique()
-                    ->implode(', ');
-
-                $ticketTypes = $order->items
-                    ->pluck('ticket_name')
-                    ->unique()
-                    ->implode(', ');
-
-                $row = [];
-                foreach ($selected as $col) {
-                    $row[] = match ($col) {
-                        'order_number'   => preg_replace('/\D+/', '', (string) $order->order_number) ?: $order->order_number,
-                        'customer_name'  => $order->customer?->full_name ?? '',
-                        'customer_email' => $order->customer?->email ?? '',
-                        'customer_phone' => $order->customer?->phone ?? '',
-                        'event'          => $eventNames,
-                        'ticket_types'   => $ticketTypes,
-                        'items_count'    => $order->items->count(),
-                        'total'          => number_format((float) $order->total_amount, 2),
-                        'status'         => $order->status,
-                        'payment_method' => $order->payment_method,
-                        'created_at'     => optional($order->created_at)->format('Y-m-d H:i'),
-                        'paid_at'        => optional($order->paid_at)->format('Y-m-d H:i') ?? '',
-                        'assigned_to'    => collect([$order->assignedUser?->name])->merge($order->assignees->pluck('name'))->filter()->unique()->implode(', '),
-                        default          => '',
-                    };
-                }
-                fputcsv($handle, $row);
+                fputcsv($handle, $rowFor($order));
             }
 
             fclose($handle);
-        }, 'orders-export-' . now()->format('Y-m-d_H-i') . '.csv', ['Content-Type' => 'text/csv']);
+        }, $baseName . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /** Relations the list/trash tables render (kept narrow so a 100-row page stays cheap). */

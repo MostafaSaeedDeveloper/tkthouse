@@ -27,7 +27,7 @@
         <a class="a-btn a-btn--outline" href="{{ route('admin.orders.deleted') }}"><i class="fa fa-trash-can"></i> Deleted Orders <x-admin.badge variant="dark">{{ $deletedOrdersCount ?? 0 }}</x-admin.badge></a>
     @endcan
     @if($canExport)
-        <button type="button" class="a-btn a-btn--dark" data-bs-toggle="modal" data-bs-target="#exportOrdersModal"><i class="fa fa-download"></i> Export CSV</button>
+        <button type="button" class="a-btn a-btn--dark" data-bs-toggle="modal" data-bs-target="#exportOrdersModal"><i class="fa fa-download"></i> Export</button>
     @endif
 </x-admin.page-header>
 
@@ -253,12 +253,20 @@
         <div class="modal-content">
             <form method="GET" action="{{ route('admin.orders.export') }}" id="exportOrdersForm">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exportOrdersModalLabel"><i class="fa fa-download me-2"></i>Export Orders to CSV</h5>
+                    <h5 class="modal-title" id="exportOrdersModalLabel"><i class="fa fa-download me-2"></i>Export Orders</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
 
                     {{-- Filters --}}
+                    <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">File format</h6>
+                    <div class="mb-4">
+                        <select name="format" class="form-select" id="exportFormatSelect">
+                            <option value="xlsx">Excel (.xlsx) — recommended for Arabic</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </div>
+
                     <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Filters</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
