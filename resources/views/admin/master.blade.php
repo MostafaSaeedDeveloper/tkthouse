@@ -121,16 +121,31 @@
 <script src="{{ asset('admin-v2/multiselect.js') }}?v={{ filemtime(public_path('admin-v2/multiselect.js')) }}"></script>
 <script src="{{ asset('admin-v2/notifications.js') }}?v={{ filemtime(public_path('admin-v2/notifications.js')) }}" defer></script>
 <script src="{{ asset('admin/assets/js/plugins/chart.js/chart.umd.js') }}"></script>
-<script src="{{ asset('admin/assets/js/plugins/ckeditor5-classic/build/ckeditor.js') }}"></script>
+{{-- Super-build: the bundled classic build has no font size / colour plugins --}}
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/super-build/ckeditor.js"></script>
 <script src="{{ asset('admin/assets/js/plugins/flatpickr/flatpickr.min.js') }}"></script>
 <script src="{{ asset('admin-v2/datepicker.js') }}?v={{ filemtime(public_path('admin-v2/datepicker.js')) }}"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
 (() => {
-  if (typeof ClassicEditor === 'undefined') return;
+  const Editor = window.CKEDITOR && window.CKEDITOR.ClassicEditor;
+  if (!Editor) return;
+  // Only what the public page keeps (see App\Support\SafeHtml): text styles, lists, links, quotes.
+  const config = {
+    toolbar: { items: ['undo', 'redo', '|', 'heading', '|', 'fontSize', 'fontColor', 'fontBackgroundColor', '|', 'bold', 'italic', 'underline', 'strikethrough', '|', 'alignment', '|', 'link', 'blockQuote', '|', 'bulletedList', 'numberedList', 'outdent', 'indent', '|', 'removeFormat'], shouldNotGroupWhenFull: true },
+    heading: { options: [
+      { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+      { model: 'heading2', view: 'h2', title: 'Heading 1', class: 'ck-heading_heading2' },
+      { model: 'heading3', view: 'h3', title: 'Heading 2', class: 'ck-heading_heading3' },
+      { model: 'heading4', view: 'h4', title: 'Heading 3', class: 'ck-heading_heading4' },
+    ] },
+    fontSize: { options: [12, 14, 'default', 18, 20, 24, 28, 32, 40], supportAllValues: false },
+    alignment: { options: ['left', 'center', 'right', 'justify'] },
+    removePlugins: ['AIAssistant', 'CKBox', 'CKFinder', 'EasyImage', 'MultiLevelList', 'RealTimeCollaborativeComments', 'RealTimeCollaborativeTrackChanges', 'RealTimeCollaborativeRevisionHistory', 'PresenceList', 'Comments', 'TrackChanges', 'TrackChangesData', 'RevisionHistory', 'Pagination', 'WProofreader', 'MathType', 'SlashCommand', 'Template', 'DocumentOutline', 'FormatPainter', 'TableOfContents', 'PasteFromOfficeEnhanced', 'CaseChange'],
+  };
   document.querySelectorAll('.js-ckeditor-description').forEach(el => {
     if (el.dataset.ckeditorInitialized === '1') return;
-    ClassicEditor.create(el)
+    Editor.create(el, config)
       .then(e => { e.ui.view.editable.element.style.minHeight = '220px'; el.dataset.ckeditorInitialized = '1'; })
       .catch(console.error);
   });

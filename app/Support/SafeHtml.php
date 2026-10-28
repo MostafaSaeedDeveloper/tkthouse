@@ -17,6 +17,34 @@ class SafeHtml
         'h2', 'h3', 'h4', 'blockquote', 'a', 'span', 'hr',
     ];
 
+    /** Tags that may carry the editor's font size / colour / alignment (and nothing else) in a style attribute. */
+    private const STYLED_TAGS = ['span', 'p', 'h2', 'h3', 'h4', 'li', 'blockquote'];
+
+    /** Keeps only safe color / background-color / font-size / text-align declarations with strictly validated values. */
+    private static function cleanStyle(string $style): string
+    {
+        $color = '(?:#[0-9a-f]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*(?:0|1|0?\.\d+)\s*)?\)|hsla?\(\s*\d{1,3}(?:\.\d+)?\s*,\s*\d{1,3}(?:\.\d+)?%\s*,\s*\d{1,3}(?:\.\d+)?%\s*(?:,\s*(?:0|1|0?\.\d+)\s*)?\)|[a-z]{3,20})';
+        $rules = [
+            'color' => '~^'.$color.'$~i',
+            'background-color' => '~^'.$color.'$~i',
+            'font-size' => '~^(?:\d{1,3}(?:\.\d{1,2})?(?:px|em|rem|%)|xx-small|x-small|small|medium|large|x-large|xx-large)$~i',
+            'text-align' => '~^(?:left|right|center|justify)$~i',
+        ];
+
+        $kept = [];
+        foreach (explode(';', $style) as $declaration) {
+            [$property, $value] = array_pad(explode(':', $declaration, 2), 2, '');
+            $property = strtolower(trim($property));
+            $value = trim($value);
+
+            if (isset($rules[$property]) && preg_match($rules[$property], $value)) {
+                $kept[$property] = $property.':'.$value;
+            }
+        }
+
+        return implode(';', $kept);
+    }
+
     public static function clean(?string $html): string
     {
         $html = trim((string) $html);
@@ -86,6 +114,17 @@ class SafeHtml
             foreach (iterator_to_array($node->attributes) as $attribute) {
                 $name = strtolower($attribute->name);
                 $keep = $tag === 'a' && in_array($name, ['href', 'title'], true);
+
+                if ($name === 'style' && in_array($tag, self::STYLED_TAGS, true)) {
+                    $style = self::cleanStyle($attribute->value);
+                    if ($style !== '') {
+                        $node->setAttribute('style', $style);
+                    } else {
+                        $node->removeAttribute('style');
+                    }
+
+                    continue;
+                }
 
                 if ($keep && $name === 'href' && ! preg_match('#^(https?://|mailto:|tel:|/(?!/))#i', trim($attribute->value))) {
                     $keep = false;
