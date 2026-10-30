@@ -20,7 +20,7 @@
     <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}"><i class="fa fa-rotate-left"></i> Refund</button>
     <div class="modal fade" id="{{ $uid }}" tabindex="-1" aria-labelledby="{{ $uid }}t" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
-            <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form" data-provider="{{ str_starts_with((string) $order->payment_method, 'fawaterak') ? 'fawaterak' : 'other' }}" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;max-height:calc(100vh - 3.5rem)">
+            <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form" data-dashboard="{{ \App\Services\Payments\Refunds\FawaterakRefundLinks::dashboardUrl() }}" data-provider="{{ str_starts_with((string) $order->payment_method, 'fawaterak') ? 'fawaterak' : 'other' }}" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;max-height:calc(100vh - 3.5rem)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ \Illuminate\Support\Str::uuid() }}">
                 <div class="modal-header"><h5 class="modal-title" id="{{ $uid }}t">{{ $cap->isApi() ? 'Refund payment' : 'Record manual / external refund' }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -78,9 +78,12 @@
         <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
             <div class="modal-header"><h5 class="modal-title" id="{{ $uid }}waitT">Waiting for <span data-w="provider">the provider</span></h5></div>
             <div class="modal-body" style="display:grid;gap:12px">
-                <div class="a-alert a-alert--info" role="status"><strong>Refund <span data-w="ref"></span> was recorded: <span data-w="amount"></span>.</strong>
-                    <div class="a-hint">Carry it out in <span data-w="provider2">the provider</span> now. Nothing is completed yet: tickets stay valid and the order stays unchanged until you confirm the refund.</div></div>
+                <div class="a-alert a-alert--info" role="status" style="display:block">
+                    <div style="font-weight:700;margin-bottom:4px">Refund <span data-w="ref"></span> recorded · <span data-w="amount"></span></div>
+                    <div>Carry it out in <span data-w="provider2">the provider</span> now. Nothing is completed yet: tickets stay valid and the order stays unchanged until you confirm the refund.</div>
+                </div>
                 <div data-w="tabnote" class="a-hint" hidden>The transaction page was opened in a new tab. If it did not open, use the button below.</div>
+                <div data-w="nolink" class="a-hint" hidden>The Fawaterak dashboard link is not configured, so no tab was opened. Copy the ID below, open your Fawaterak dashboard and search for it.</div>
                 <div data-w="idbox" hidden><span class="a-hint d-block">Original invoice / transaction ID</span><strong data-w="invoice"></strong></div>
             </div>
             <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
@@ -115,7 +118,7 @@
             if (!form.checkValidity()) { form.reportValidity(); return; }
             var btn = form.querySelector('button[type="submit"]'); errBox.hidden = true;
             // the provider tab must be opened inside this click, otherwise the browser blocks it as a pop-up
-            var tab = form.dataset.provider === 'fawaterak' ? window.open('', '_blank') : null;
+            var tab = form.dataset.provider === 'fawaterak' && form.dataset.dashboard ? window.open('', '_blank') : null;
             if (btn) btn.disabled = true;
             var done = function () { if (btn) btn.disabled = false; };
             var fail = function (msg) { if (tab) tab.close(); showError(msg); done(); };
@@ -136,7 +139,7 @@
                     w('idbox').hidden = !id; w('invoice').textContent = id || '';
                     var copy = w('copy'); copy.hidden = !id; copy.onclick = function () { (navigator.clipboard ? navigator.clipboard.writeText(id) : Promise.reject()).then(function () { copy.textContent = 'Copied'; }).catch(function () { window.prompt('Copy the id:', id); }); };
                     var re = w('reopen'); re.hidden = !url; if (url) re.href = url;
-                    w('tabnote').hidden = !url;
+                    w('tabnote').hidden = !url; w('nolink').hidden = !!url || j.provider !== 'Fawaterak';
                     bootstrap.Modal.getOrCreateInstance(document.getElementById(@json($uid))).hide();
                     bootstrap.Modal.getOrCreateInstance(wait).show();
                 })
