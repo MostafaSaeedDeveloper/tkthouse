@@ -226,6 +226,10 @@ class RefundService
             return $refund;
         });
 
+        if ($refund->wasRecentlyCreated) {
+            // "received" while it waits for approval; "approved / processing" as soon as external processing is authorized
+            $this->mailAfterCommit($refund, $refund->awaiting_approval ? 'received' : 'approved');
+        }
         if ($refund->wasRecentlyCreated && $refund->mode === 'api' && ! $refund->awaiting_approval) {
             $this->submit($refund);
         }
@@ -330,6 +334,18 @@ class RefundService
         });
     }
 
+    /** Customer e-mails run after the commit, never inside it, and can never break the refund. */
+    private function mailAfterCommit(PaymentRefund $refund, string $kind): void
+    {
+        $id = $refund->id;
+        DB::afterCommit(function () use ($id, $kind) {
+            $r = PaymentRefund::query()->find($id);
+            if ($r) {
+                app(RefundCustomerNotifier::class)->{$kind}($r);
+            }
+        });
+    }
+
     /** The second-person policy. Default ON; read at the moment of every send / confirmation, never cached on the refund. */
     public function approvalRequired(): bool
     {
@@ -384,6 +400,7 @@ class RefundService
         });
 
         $fresh = $refund->fresh();
+        $this->mailAfterCommit($fresh, 'approved');
         if ($fresh->mode === 'api') {
             $this->submit($fresh);
         }
@@ -417,6 +434,7 @@ class RefundService
             $r->forceFill(['awaiting_approval' => false, 'status' => PaymentRefund::PROCESSING, 'submitted_at' => now()])->save();
             $this->note($r, 'released_without_second_approval', $by, $note, 'staff');
         });
+        $this->mailAfterCommit($refund, 'approved');
 
         return $refund->fresh();
     }
@@ -489,6 +507,9 @@ class RefundService
     {
         try {
             $this->applyLocked($refund, $o, $source);
+            if ($o->status === RefundOutcome::SUCCEEDED) {
+                $this->mailAfterCommit($refund, 'completed'); // the notifier re-checks that the refund really is succeeded
+            }
         } catch (\Throwable $e) {
             // The provider outcome and the ticket/order side effects commit together. If they could not, NOTHING was changed: the refund stays
             // where it was and the next inquiry (or webhook) applies it again. Never leave a half-applied confirmation.
@@ -567,6 +588,9 @@ class RefundService
         } catch (\Throwable $e) {
             report($e);
             throw ValidationException::withMessages(['refund' => 'The confirmation could not be completed, so nothing was changed (the refund, the tickets and the order are exactly as before). Please try again; if it keeps failing contact support.']);
+        }
+        if ($to === PaymentRefund::SUCCEEDED) {
+            $this->mailAfterCommit($refund, 'completed'); // only after the confirmation (and its ticket / order effects) are committed
         }
 
         return $refund->fresh();

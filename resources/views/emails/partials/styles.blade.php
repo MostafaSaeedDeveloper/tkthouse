@@ -71,4 +71,6 @@ a { color: #f5b800; }
   .einfo-val { text-align: left !important; }
   .eticket-links a { font-size: 11px; padding: 5px 10px; }
 }
+[dir=rtl] .ep { text-align: right; }
+[dir=rtl] .einfo-val { text-align: left; }
 </style>

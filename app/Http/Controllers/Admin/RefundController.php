@@ -220,6 +220,16 @@ class RefundController extends Controller
         return $this->guard(fn () => $this->refunds->recordOriginalReference($refund, $request->user(), $data['original_reference']), 'Original Fawaterak id recorded.');
     }
 
+    /** Re-send a customer e-mail whose delivery FAILED (never re-sends one that was delivered). */
+    public function resendEmail(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $kind = (string) $request->validate(['kind' => ['required', 'in:received,approved,completed']])['kind'];
+        app(\App\Services\Payments\Refunds\RefundCustomerNotifier::class)->retry($refund, $kind);
+
+        return back()->with('success', 'The e-mail was re-sent if the earlier delivery had failed.');
+    }
+
     /** Ticket cancellation for a confirmed refund that could not be matched automatically (needs the approve permission). */
     public function tickets(Request $request, PaymentRefund $refund)
     {

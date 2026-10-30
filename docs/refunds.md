@@ -61,3 +61,17 @@ No official Fawaterak refund-creation API could be confirmed. The official refer
 **Requests that were created while approval was ON and still wait:** turning the setting off does **not** approve or change them. Each shows a notice on its refund page and an explicit **"Release for external processing"** action (note required, audited as `released_without_second_approval`), available to staff with the approve permission or to the requester on their own order; or *Withdraw request*. Release only moves it to "processing externally"; it still needs the verified confirmation. Releasing is refused while the setting is ON. Before deploying, review the Refunds list for "Awaiting approval" items.
 
 **Refunds already in flight** (processing) are not disturbed if approval is switched back ON; new requests are gated again.
+
+## Customer refund e-mails
+Three e-mails in the standard TKT House layout (`emails.layouts.base`, same logo, components, footer and tone as the order status / canceled e-mails), sent to the order's customer e-mail through the normal mailer, synchronously (no queue worker or scheduler):
+| E-mail | Sent when | Subject |
+|---|---|---|
+| Request received | a request is created and waits for approval | Refund Request Received — TKT House |
+| Approved / processing | external processing is authorized (no approval needed, approved, or released) | Your Refund Request Has Been Approved — TKT House |
+| Completed | ONLY when the refund is confirmed succeeded (audited manual confirmation) | Your Refund Has Been Processed Successfully — TKT House |
+- Wording: approved/received never say the money was returned or tickets canceled; completed says the amount is *being returned through the original payment method*, never that it reached the bank, and states the ticket outcome only when known (full: canceled; partial: N canceled, the rest remain valid; money-only: none canceled).
+- **No gateway names**: data comes from `RefundMailData` (own REF-… reference, no provider id/reference, no dashboard/API text). The staff-typed *reason* is shown to the customer (the form says so); if it contains a provider name, link, e-mail, long number or words like gateway/dashboard/internal, it is replaced by "Refund arranged by our team". Use *Internal notes* for private details.
+- **Timing text**: no official Fawaterak refund/settlement timeline could be found, so none is promised. Default: "…may take some additional time … depending on your bank or payment provider." Editable in Settings → Notifications (*Refund e-mail: time-to-appear note*; text naming a provider is ignored) and translatable in `lang/*/refund_mail.php` (English and Arabic provided; the layout switches to RTL for `ar`; the e-mails use `config('app.locale')` because customers have no stored language).
+- **Delivery**: dispatched via `DB::afterCommit`; a failure is logged (`Log`, `order_delivery` activity "Delivery failed: refund_…", refund timeline) and never rolls back the refund or tickets; a *Resend* button appears on the refund page for failed e-mails only. Idempotent per refund and kind (row-locked claim in the refund meta; max 3 attempts), so repeated webhooks/confirmations never duplicate.
+
+Previews (rendered from the real templates): `docs/email-previews/`.

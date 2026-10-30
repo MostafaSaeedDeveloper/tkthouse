@@ -73,6 +73,8 @@ final class Registry
                 'help' => 'ON (default): every refund waits for a DIFFERENT person with payments.refunds.approve. OFF: the person with refund rights on the order requests the refund and it is immediately "processing externally" (the refund itself is carried out in the provider dashboard, e.g. Fawaterak); no second TKT House user is needed. Either way nothing is marked completed until a person confirms the verified external refund (reference, date, evidence). Switching OFF is audited, takes effect immediately and never approves or changes refunds that already wait for approval: release those explicitly from the refund page.', 'rules' => ['boolean']],
 
             // ---- Notifications
+            'refund_email_timing_note' => ['group' => 'notifications', 'type' => 'text', 'label' => 'Refund e-mail: time-to-appear note', 'default' => null,
+                'help' => 'Optional. Replaces the default sentence in the "refund processed" e-mail about how long the amount may take to appear. Leave empty to use the default (no timeline is promised). Never name a payment provider here: such text is ignored.', 'rules' => ['nullable', 'string', 'max:400']],
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,
                 'help' => 'Disable to stop WhatsApp sending from admin and post-payment flows.', 'rules' => ['boolean']],
 
