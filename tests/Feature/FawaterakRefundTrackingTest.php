@@ -125,6 +125,7 @@ class FawaterakRefundTrackingTest extends TestCase
         $page()->assertOk()->assertSee('Available once the refund is approved')->assertDontSee('Open Transaction in Fawaterak');
         $this->svc->approve($r, $this->staff(null, ['payments.refunds.approve', 'payments.refunds.view', 'orders.view', 'orders.view_all'], ['can_receive_orders' => false]));
 
+        config(['payments.fawaterak.dashboard_url' => null]);
         // no documented deep link: the dashboard address is only ever the configured one
         $res = $page()->assertOk()->assertSee('Open Transaction in Fawaterak')->assertSee($a->transaction_id)->assertSee('link is not configured')->assertSee('Copy invoice / transaction ID');
         $this->assertStringNotContainsString($a->order->payment_link_token ?: 'no-token', $res->getContent(), 'the customer payment link is never the admin link');
