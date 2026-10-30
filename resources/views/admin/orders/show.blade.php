@@ -189,9 +189,15 @@
         <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
             @if($canInq)<form method="POST" action="{{ route('admin.payments.transactions.inquire', $primary) }}" data-a-loading>@csrf<button class="a-btn a-btn--outline" type="submit"><i class="fa fa-rotate"></i> Check payment status</button></form>@endif
             @if($canTx)<a class="a-btn a-btn--outline" href="{{ route('admin.payments.transactions.show', $primary) }}">View transaction details</a>@endif
-            @includeIf('admin.orders._refund-actions', ['attempt' => $primary])
         </div>
         @endif
+        @can('payments.refunds.create')
+        @php $paidAttempts = $attempts->where('status', 'paid'); @endphp
+        <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
+            @foreach($paidAttempts as $pa)@include('admin.orders._refund-actions', ['attempt' => $pa])@endforeach
+            @if($paidAttempts->isEmpty() && in_array($order->status, ['paid', 'partially_refunded'], true))@include('admin.orders._refund-actions', ['attempt' => null])@endif
+        </div>
+        @endcan
     </x-admin.card>
 
     <x-admin.card flush title="Payment Attempts History" :subtitle="$attempts->count().' attempt(s) — a retry never overwrites an earlier attempt'">
@@ -218,14 +224,7 @@
     </x-admin.card>
 
     @can('payments.refunds.view')
-    @php $orderRefunds = \App\Models\PaymentRefund::query()->where('order_id', $order->id)->latest('id')->get(); @endphp
-    <x-admin.card flush title="Refund History" :subtitle="$orderRefunds->count().' refund record(s) — financial status only; the order and tickets are not changed'">
-        @if($orderRefunds->isEmpty())<p class="a-hint" style="padding:16px">No refunds recorded for this order.</p>
-        @else
-        <x-admin.table stack compact caption="Refunds"><thead><tr><th>Reference</th><th>Mode</th><th class="a-num">Amount</th><th>Status</th><th>Requested</th></tr></thead><tbody>
-            @foreach($orderRefunds as $r)<tr><td data-label="Reference"><a class="a-table__main" href="{{ route('admin.payments.refunds.show', $r) }}">{{ $r->internal_reference }}</a></td><td data-label="Mode">{{ $r->mode === 'api' ? 'Provider API' : 'Manual' }}</td><td data-label="Amount" class="a-num">{{ $r->amount() }} {{ $r->currency }}</td><td data-label="Status">@include('admin.payments._refund-status', ['refund' => $r])</td><td data-label="Requested">{{ $r->requested_at->format('d M Y, H:i') }}</td></tr>@endforeach
-        </tbody></x-admin.table>@endif
-    </x-admin.card>
+    @include('admin.orders._refund-panel')
     @endcan
 
     <x-admin.card title="Internal Notes" :subtitle="$notes->count().' notes'">

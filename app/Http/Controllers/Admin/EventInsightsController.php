@@ -131,7 +131,7 @@ class EventInsightsController extends Controller
         return OrderItem::query()
             ->where('event_id', $event->id)
             ->whereHas('order', function ($query) use ($startAt, $endAt) {
-                $query->where('status', 'paid')
+                $query->captured()
                     ->includedInStatistics();
 
                 if ($startAt && $endAt) {

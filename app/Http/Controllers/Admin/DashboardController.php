@@ -75,7 +75,7 @@ class DashboardController extends Controller
         }
 
         $totalOrders = (clone $ordersQuery)->count();
-        $paidOrdersQuery = Order::query()->includedInStatistics()->assignedScope($user)->where('status', 'paid');
+        $paidOrdersQuery = Order::query()->includedInStatistics()->assignedScope($user)->captured();
         if (! empty($userManagedEventIds) && ! $selectedEvent) {
             $this->applyManagedEventsScope($paidOrdersQuery, $userManagedEventIds);
         } else {
@@ -103,7 +103,7 @@ class DashboardController extends Controller
             $this->applyEventScopeToOrderItemsQuery($ticketsSoldQuery, $selectedEvent);
         }
         $ticketsSoldQuery->whereHas('order', function ($query) use ($startAt, $endAt, $user) {
-            $query->where('status', 'paid')
+            $query->captured()
                 ->includedInStatistics()->assignedScope($user);
 
             if ($startAt && $endAt) {
@@ -163,7 +163,7 @@ class DashboardController extends Controller
             $this->applyEventScopeToOrderItemsQuery($topEventsQuery, $selectedEvent);
         }
         $topEventsQuery->whereHas('order', function ($q) use ($startAt, $endAt, $user) {
-            $q->where('status', 'paid')
+            $q->captured()
                 ->includedInStatistics()->assignedScope($user);
 
             if ($startAt && $endAt) {

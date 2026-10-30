@@ -33,6 +33,7 @@
 
 <x-admin.flash />
 
+@unless($refundMode)
 <section class="a-ord-summary" aria-label="Orders summary">
     <dl class="a-ord-summary__grid">
         <div><dt>All orders</dt><dd>{{ number_format($summary['all']) }}</dd></div>
@@ -49,6 +50,16 @@
     <a href="{{ $chipUrl('paid') }}" class="a-chip {{ $activeGroup === 'paid' ? 'is-active' : '' }}" @if($activeGroup === 'paid') aria-current="true" @endif>Paid <span>{{ number_format($summary['paid']) }}</span></a>
     <a href="{{ $chipUrl('canceled') }}" class="a-chip {{ $activeGroup === 'canceled' ? 'is-active' : '' }}" @if($activeGroup === 'canceled') aria-current="true" @endif>Canceled <span>{{ number_format($summary['canceled']) }}</span></a>
 </nav>
+@endunless
+
+@if($refundMode)
+<div class="a-alert a-alert--info" role="status" style="margin-bottom:16px">
+    <strong>Orders with confirmed refunds</strong>
+    @if($refundTotals['from'] && $refundTotals['to']) · refunds completed {{ $refundTotals['from']->format('d M Y') }} – {{ $refundTotals['to']->format('d M Y') }}@endif
+    · {{ number_format($refundTotals['orders']) }} order(s) · {{ \App\Models\PaymentRefund::minorToDecimal($refundTotals['amount_minor']) }} EGP refunded in this period.
+    Pending or failed requests are not counted. <a class="a-link" href="{{ route('admin.orders.index') }}">Show all orders</a>
+</div>
+@endif
 
 @include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o'])
 
@@ -56,10 +67,13 @@
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
     @if($orders->isEmpty())
         <x-admin.empty icon="fa-receipt" title="No orders found" text="No order matches the current search and filters.">
-            @if(request()->hasAny(['search','status','group','payment_method','event_id','reference','customer','date_from','date_to']))
+            @if(request()->hasAny(['search','status','group','payment_method','event_id','reference','customer','date_from','date_to','refunded']))
                 <a class="a-btn a-btn--outline" href="{{ route('admin.orders.index') }}">Clear filters</a>
             @endif
         </x-admin.empty>
+    @else
+    @if($refundMode)
+        @include('admin.orders.partials.refunded-table')
     @else
     @if($canBulk)
     <form method="POST" action="{{ route('admin.orders.assign.bulk') }}" id="bulkAssignForm" class="a-ord-bulk" hidden>
@@ -188,6 +202,7 @@
         @endforeach
         </tbody>
     </x-admin.table>
+    @endif
     <x-admin.pager :paginator="$orders" />
     @endif
 </x-admin.card>

@@ -116,6 +116,17 @@
     <x-admin.kpi label="Paid orders" :value="number_format($kpis['paid_orders'])" icon="fa-receipt" :hint="number_format($kpis['pending_orders']).' awaiting payment or approval'" />
 </div>
 
+@php
+    // The KPI link carries the dashboard's own scope (period by refund completion date, event, statistics exclusion) so the list shows exactly what the card counted.
+    $refundParams = ['refunded' => 1, 'stats' => 1, 'refunded_from' => $from, 'refunded_to' => $to] + ($selectedEvent ? ['refund_event_id' => $selectedEvent->id] : []);
+    $refundHref = auth()->user()->can('orders.view') ? route('admin.orders.index', $refundParams) : null;
+    $refundPending = $kpis['refunds_pending_count'] > 0 ? number_format($kpis['refunds_pending_count']).' pending request(s) · '.$moneyShort($kpis['refunds_pending_amount']).' (not refunded yet)' : null;
+@endphp
+<div class="a-grid a-grid--2" style="margin-bottom:20px">
+    <x-admin.kpi label="Total Refunded" :value="$moneyShort($kpis['refunded'])" icon="fa-rotate-left" :href="$refundHref" :hint="'Confirmed refunds · '.$rangeLabel.($refundPending ? ' · '.$refundPending : '')" />
+    <x-admin.kpi label="Refunded Orders" :value="number_format($kpis['refunded_orders'])" icon="fa-file-invoice-dollar" :href="$refundHref" :hint="'Orders with a confirmed refund · '.$rangeLabel" />
+</div>
+
 <div class="a-dash__grid">
     <div class="a-dash__col">
         <div class="a-dash__charts">
@@ -145,7 +156,8 @@
                 @endif
                 <div class="a-split">
                     <div><span class="a-muted">Pending (not yet paid)</span><b>{{ $moneyShort($revenue['pending']) }}</b></div>
-                    <div><span class="a-muted">Refunded</span><b>{{ $moneyShort($revenue['refunded']) }}</b></div>
+                    <div><span class="a-muted" title="Confirmed refunds only">Refunded</span><b>{{ $moneyShort($revenue['refunded']) }}</b></div>
+                    <div><span class="a-muted" title="Paid minus confirmed refunds">Net collected</span><b>{{ $moneyShort($revenue['net_collected']) }}</b></div>
                 </div>
             </x-admin.card>
         </div>

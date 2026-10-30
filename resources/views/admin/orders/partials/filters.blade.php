@@ -6,7 +6,7 @@
     $idp = $idp ?? 'o';
 @endphp
 <form method="GET" action="{{ $action }}" class="a-ord-filters" role="search" data-a-loading-table>
-    @foreach(['group', 'sort', 'dir'] as $keep)
+    @foreach(['group', 'sort', 'dir', 'refunded', 'stats', 'refunded_from', 'refunded_to', 'refund_event_id'] as $keep)
         @if(filled(request($keep)))<input type="hidden" name="{{ $keep }}" value="{{ request($keep) }}">@endif
     @endforeach
     <div class="a-ord-filters__bar">

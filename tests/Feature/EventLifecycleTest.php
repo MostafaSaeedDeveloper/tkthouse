@@ -272,7 +272,7 @@ class EventLifecycleTest extends TestCase
         $attempt = $this->attemptFor($order);
         $this->lifecycle()->archive($event, $this->admin);
 
-        $refund = app(RefundService::class)->request($attempt->fresh(), $this->admin, 'partial', '100', 'customer asked for money back', 'archived-1');
+        $refund = app(RefundService::class)->request($attempt->fresh(), $this->admin, 'partial', '100', 'customer asked for money back', 'archived-1', ['no_tickets' => true]);
 
         $this->assertSame('requested', $refund->status);
         $this->assertSame($order->id, $refund->order_id);

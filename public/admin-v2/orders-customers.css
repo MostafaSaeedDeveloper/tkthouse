@@ -216,3 +216,13 @@
     .a-ord-bulk__delete { flex: 1 0 100%; }
 }
 @media (max-width: 767px) { .a-ordt.a-table--stack td.c-assignee { grid-column: 1; grid-row: 5; } }
+
+/* Orders with confirmed refunds (dashboard KPI target) */
+.a-reft td, .a-reft th { white-space: normal; vertical-align: middle; }
+.a-reft thead th { padding: 10px 12px; } .a-reft tbody td { padding: 12px; }
+.a-reft .a-table__main { font-variant-numeric: tabular-nums; }
+.a-reft a.a-table__main:hover { text-decoration: underline; }
+.a-reft .a-ord-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 220px; }
+.a-reft .a-table__actions { gap: 4px; flex-wrap: nowrap; }
+.a-reft .a-table__main, .a-reft td.a-num, .a-reft th.a-num { white-space: nowrap; }
+.a-reft .a-table__sub { white-space: normal; }

@@ -22,6 +22,24 @@
         </ul>
     </x-admin.card>
 
+    <x-admin.card title="Tickets" subtitle="Tickets are canceled only when this refund is confirmed as completed.">
+        @php $links = $refund->ticketLinks; @endphp
+        @if($links->isEmpty())
+            <p class="a-hint">{{ $refund->effects_status === 'not_applicable' ? 'Money-only refund: no tickets are affected.' : 'No tickets are linked to this refund.' }}</p>
+        @else
+            <ul class="a-timeline">@foreach($links as $l)<li><strong>#{{ $l->ticket?->ticket_number }}</strong> <span class="a-table__sub">{{ $l->canceled_at ? 'Canceled '.$l->canceled_at->format('d M Y, H:i').($l->was_checked_in ? ' · was checked in (check-in record kept, flagged for audit)' : '') : 'Selected · still valid until the refund is confirmed' }}</span></li>@endforeach</ul>
+        @endif
+        @if($refund->status === 'succeeded' && in_array($refund->effects_status, ['needs_review', null], true))
+            <x-admin.alert type="warning">{{ $refund->effects_note ?: 'This refund was confirmed but its tickets were not matched automatically.' }}</x-admin.alert>
+            @if($canApprove && $ticketChoices->isNotEmpty())
+            <form method="POST" action="{{ route('admin.payments.refunds.tickets', $refund) }}" data-a-confirm="Cancel the selected tickets? This cannot be undone." data-a-confirm-ok="Cancel tickets" style="display:grid;gap:6px">@csrf
+                @foreach($ticketChoices as $c)<label class="a-m-switch"><input class="form-check-input" type="checkbox" name="tickets[]" value="{{ $c->ticket->id }}" @disabled(! $c->selectable && $c->ticket->status !== 'canceled')><span>#{{ $c->ticket->ticket_number }} · {{ $c->ticket->holder_name ?: $c->ticket->name }}<span class="a-hint d-block">{{ $c->note ?: ($c->ticket->status === 'checked_in' ? 'Checked in' : 'Valid') }}</span></span></label>@endforeach
+                <button class="a-btn a-btn--danger" type="submit">Cancel selected tickets</button>
+            </form>
+            @endif
+        @endif
+    </x-admin.card>
+
     @if(! $refund->isFinal() && ($canCreate || $canApprove))
     <x-admin.card title="Actions">
         <div class="a-btn-group" style="flex-wrap:wrap;gap:12px;align-items:flex-start">
@@ -39,9 +57,12 @@
                 @if($refund->mode === 'manual' && $refund->status === 'requested')
                     <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">Mark as submitted to the provider</button></form>
                 @endif
-                <form method="POST" action="{{ route('admin.payments.refunds.confirm', $refund) }}" data-a-confirm="Record this refund as COMPLETED? Only do this after verifying it with the provider." data-a-confirm-ok="Record completed" style="display:grid;gap:6px">@csrf
+                <form method="POST" action="{{ route('admin.payments.refunds.confirm', $refund) }}" data-a-confirm="Record this refund as COMPLETED? Its tickets will be canceled and the order updated. Only do this after verifying it with the provider." data-a-confirm-ok="Record completed" style="display:grid;gap:6px">@csrf
                     <strong>Confirm completed (verified with the provider)</strong>
-                    <input class="form-control" name="provider_reference" placeholder="Provider refund reference" required maxlength="120" aria-label="Provider refund reference">
+                    <input class="form-control" name="provider_reference" placeholder="Provider / external refund reference" required maxlength="120" aria-label="Provider refund reference" value="{{ old('provider_reference', $refund->provider_reference) }}">
+                    <label class="a-hint" for="rfdate">Actual refund date</label>
+                    <input class="form-control" id="rfdate" type="date" name="refunded_at" required max="{{ now()->toDateString() }}" value="{{ old('refunded_at', $refund->refunded_at?->toDateString()) }}" aria-label="Actual refund date">
+                    @if($refund->mode === 'manual')<select class="form-select" name="external_method" aria-label="Refund method">@foreach(\App\Models\PaymentRefund::EXTERNAL_METHODS as $k => $label)<option value="{{ $k }}" @selected(old('external_method', $refund->external_method) === $k)>{{ $label }}</option>@endforeach</select>@endif
                     <input class="form-control" name="note" placeholder="Evidence (e.g. portal screenshot id)" minlength="5" required aria-label="Evidence">
                     <button class="a-btn a-btn--success" type="submit">Record completed</button></form>
                 <form method="POST" action="{{ route('admin.payments.refunds.fail', $refund) }}" data-a-confirm="Record this refund as FAILED? The amount becomes available again." data-a-confirm-ok="Record failed" style="display:grid;gap:6px">@csrf
@@ -61,17 +82,24 @@
             <div><dt>Mode</dt><dd>{{ $refund->mode === 'api' ? 'Provider API' : 'Manual / external' }}</dd></div>
             <div><dt>Provider</dt><dd>{{ ucfirst($refund->provider) }}</dd></div>
             @if($seeAccounts)<div><dt>Merchant account</dt><dd>{{ $refund->account?->name ?? 'Legacy configuration' }}</dd></div>@endif
-            <div><dt>Payment</dt><dd><a href="{{ route('admin.payments.transactions.show', $refund->attempt) }}">{{ $refund->attempt->internal_reference ?: '#'.$refund->payment_attempt_id }}</a></dd></div>
+            <div><dt>Payment</dt><dd>@if($refund->attempt)<a href="{{ route('admin.payments.transactions.show', $refund->attempt) }}">{{ $refund->attempt->internal_reference ?: '#'.$refund->payment_attempt_id }}</a>@else<span class="a-muted">Legacy payment — no gateway transaction</span>@endif</dd></div>
             <div><dt>Provider refund ID</dt><dd>{{ $refund->provider_refund_id ?: '—' }}</dd></div>
-            @if($refund->provider_reference)<div><dt>Provider reference</dt><dd>{{ $refund->provider_reference }}</dd></div>@endif
+            @if($refund->provider_reference)<div><dt>Provider / external reference</dt><dd>{{ $refund->provider_reference }}</dd></div>@endif
+            @if($refund->mode === 'manual')<div><dt>Refund method</dt><dd>{{ \App\Models\PaymentRefund::EXTERNAL_METHODS[$refund->external_method] ?? 'Manual / external' }}</dd></div>@endif
+            <div><dt>Original paid</dt><dd>{{ \App\Models\PaymentRefund::minorToDecimal((int) ($refund->captured_minor ?? 0)) }} {{ $refund->currency }}</dd></div>
+            <div><dt>Payment method</dt><dd>{{ $refund->payment_method ?: '—' }}</dd></div>
             <div><dt>Reason</dt><dd>{{ $refund->reason }}</dd></div>
+            @if($refund->internal_notes)<div><dt>Internal notes</dt><dd>{{ $refund->internal_notes }}</dd></div>@endif
             @if($refund->approved_by)<div><dt>Approved by</dt><dd>{{ \App\Models\User::find($refund->approved_by)?->name ?? '—' }} · {{ $refund->approved_at?->format('d M Y, H:i') }}</dd></div>@endif
             <div><dt>Requested by</dt><dd>{{ $refund->requester?->name ?? '—' }} · {{ $refund->requested_at->format('d M Y, H:i') }}</dd></div>
+            @if($refund->submitted_by)<div><dt>Submitted by</dt><dd>{{ $refund->submitter?->name ?? '—' }} · {{ $refund->submitted_at?->format('d M Y, H:i') }}</dd></div>@endif
+            @if($refund->confirmed_by)<div><dt>Confirmed by</dt><dd>{{ $refund->confirmer?->name ?? '—' }} · {{ $refund->confirmed_at?->format('d M Y, H:i') }}</dd></div>@endif
+            <div><dt>Actual refund date</dt><dd>{{ $refund->refunded_at?->format('d M Y') ?? '—' }}</dd></div>
             <div><dt>Completed</dt><dd>{{ $refund->completed_at?->format('d M Y, H:i') ?? '—' }}</dd></div>
             <div><dt>Last checked</dt><dd>{{ $refund->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>
             @if($refund->failure_reason)<div><dt>Note</dt><dd>{{ $refund->failure_reason }}</dd></div>@endif
         </dl>
-        <p class="a-hint">A refund never cancels the order or removes tickets. Handle those separately under your business policy.</p>
+        <p class="a-hint">When this refund is confirmed as completed, the tickets it covers are canceled (never deleted; scan history is kept) and the order becomes refunded or partially refunded. Until then nothing changes.</p>
     </x-admin.card>
   </div>
 </div>

@@ -19,7 +19,7 @@
             <tr>
                 <td data-label="Reference"><a class="a-table__main" href="{{ route('admin.payments.refunds.show', $r) }}">{{ $r->internal_reference }}</a><span class="a-table__sub">{{ $r->type }}</span></td>
                 <td data-label="Order"><a href="{{ route('admin.orders.show', $r->order) }}">#{{ $r->order->order_number }}</a></td>
-                <td data-label="Payment">{{ $r->attempt->internal_reference ?: '#'.$r->payment_attempt_id }}<span class="a-table__sub">{{ ucfirst($r->provider) }}</span></td>
+                <td data-label="Payment">{{ $r->attempt ? ($r->attempt->internal_reference ?: '#'.$r->payment_attempt_id) : 'Legacy payment' }}<span class="a-table__sub">{{ ucfirst($r->provider) }}</span></td>
                 @if($seeAccounts)<td data-label="Account">{{ $r->account?->name ?? 'Legacy' }}</td>@endif
                 <td data-label="Mode">{{ $r->mode === 'api' ? 'Provider API' : 'Manual / external' }}</td>
                 <td data-label="Amount" class="a-num">{{ $r->amount() }} {{ $r->currency }}</td>

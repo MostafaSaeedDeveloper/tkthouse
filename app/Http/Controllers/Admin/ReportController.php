@@ -40,7 +40,7 @@ class ReportController extends Controller
         $itemsQuery = OrderItem::query()
             ->with(['order:id,created_at,status,total_amount,paid_at,exclude_from_statistics'])
             ->whereHas('order', function ($query) use ($startAt, $endAt) {
-                $query->where('status', 'paid')
+                $query->captured()
                     ->includedInStatistics();
                 if ($startAt && $endAt) {
                     $query->where(function ($inner) use ($startAt, $endAt) {

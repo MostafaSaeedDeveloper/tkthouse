@@ -284,7 +284,7 @@ class RefundTest extends TestCase
         $this->assertCount(1, array_filter($this->httpLog, fn ($l) => isset($l['refund_call'])));
     }
 
-    public function test_refund_never_changes_order_status_or_tickets_and_late_signals_never_overwrite_a_final_state(): void
+    public function test_only_a_confirmed_refund_changes_the_order_status_and_late_signals_never_overwrite_a_final_state(): void
     {
         $acc = $this->account('fake', 'F');
         $a = $this->refundable($acc, 'fake_card');
@@ -292,11 +292,12 @@ class RefundTest extends TestCase
         $tickets = IssuedTicket::where('order_id', $a->order_id)->count();
 
         $r = $this->request($a, 'full', null);
+        $this->assertSame('paid', $a->order->fresh()->status, 'a pending refund changes nothing');
         $r->forceFill(['meta' => array_merge($r->meta, ['fake_refund_state' => 'succeeded'])])->save();
         $this->svc->inquire($r->fresh());
 
-        $this->assertSame('paid', $a->order->fresh()->status);
-        $this->assertSame($tickets, IssuedTicket::where('order_id', $a->order_id)->count());
+        $this->assertSame('refunded', $a->order->fresh()->status, 'a confirmed full refund moves the order to refunded');
+        $this->assertSame($tickets, IssuedTicket::where('order_id', $a->order_id)->count(), 'issued ticket records are never deleted');
 
         $r = $r->fresh();
         $r->forceFill(['meta' => array_merge($r->meta, ['fake_refund_state' => 'failed'])])->save();
@@ -363,7 +364,7 @@ class RefundTest extends TestCase
         }
 
         $this->svc->markSubmitted($r, $approver);
-        $done = $this->svc->confirmSucceeded($r->fresh(), $approver, 'FW-REF-1', 'portal screenshot 4411');
+        $done = $this->svc->confirmSucceeded($r->fresh(), $approver, 'FW-REF-1', 'portal screenshot 4411', now()->toDateString());
         $this->assertSame(['succeeded', 'FW-REF-1'], [$done->status, $done->provider_reference]);
         $this->assertSame(12000, $this->svc->balance($a)['refunded']);
         $this->assertTrue(collect($done->timeline())->pluck('event')->contains('confirmed_by_staff'));
@@ -387,7 +388,7 @@ class RefundTest extends TestCase
         $this->assertSame('succeeded', $r->fresh()->status);
         $e = WebhookEvent::where('event_type', 'refund')->where('signature_status', 'valid')->firstOrFail();
         $this->assertSame('processed', $e->processing_status);
-        $this->assertSame('paid', $a->order->fresh()->status, 'payment state is untouched by the refund event');
+        $this->assertSame('partially_refunded', $a->order->fresh()->status, 'a confirmed partial refund marks the order partially refunded');
 
         $this->postJson(route('front.paymob.callback').'?hmac='.$this->paymobSign($obj, 'HMAC-A'), ['obj' => $obj])->assertOk(); // duplicate
         $this->assertSame(1, PaymentRefund::count());
@@ -410,7 +411,7 @@ class RefundTest extends TestCase
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.store', $a), $payload)->assertRedirect();
         $r = PaymentRefund::firstOrFail();
         $this->actingAs($this->staff)->get(route('admin.payments.refunds.show', $r))->assertOk()->assertSee($r->internal_reference);
-        $this->actingAs($this->staff)->get(route('admin.orders.show', $a->order))->assertOk()->assertSee('Refund History')->assertSee($r->internal_reference);
+        $this->actingAs($this->staff)->get(route('admin.orders.show', $a->order))->assertOk()->assertSee('Refunds')->assertSee($r->internal_reference);
 
         // an assignment-scoped agent cannot touch a refund on someone else's order
         SystemSettings::set('order_assignment_enabled', true);
@@ -558,7 +559,7 @@ class RefundTest extends TestCase
         $this->assertSame(['requested', true], [$api->fresh()->status, (bool) $api->fresh()->awaiting_approval]);
 
         try {
-            $this->svc->confirmSucceeded($manual, $this->staff, 'FA-REF-1', 'portal shows the refund');
+            $this->svc->confirmSucceeded($manual, $this->staff, 'FA-REF-1', 'portal shows the refund', now()->toDateString());
             $this->fail('manual confirmation must wait for approval');
         } catch (ValidationException $e) {
             $this->assertStringContainsString('waiting for approval', $e->errors()['refund'][0]);
@@ -570,7 +571,7 @@ class RefundTest extends TestCase
         $this->svc->approve($api, $approver);
         $this->assertSame(1, $this->refundCalls());
         $this->svc->approve($manual, $approver);
-        $this->assertSame('succeeded', $this->svc->confirmSucceeded($manual->fresh(), $this->staff, 'FA-REF-1', 'portal shows the refund')->status);
+        $this->assertSame('succeeded', $this->svc->confirmSucceeded($manual->fresh(), $this->staff, 'FA-REF-1', 'portal shows the refund', now()->toDateString())->status);
     }
 
     public function test_switching_the_policy_off_never_auto_approves_a_waiting_refund(): void

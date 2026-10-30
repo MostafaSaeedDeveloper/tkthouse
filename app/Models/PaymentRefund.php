@@ -22,13 +22,23 @@ class PaymentRefund extends Model
         'internal_reference', 'payment_attempt_id', 'order_id', 'integration_account_id', 'provider', 'mode', 'type', 'status', 'awaiting_approval',
         'currency', 'amount_minor', 'reason', 'idempotency_key', 'provider_refund_id', 'provider_reference', 'requested_by', 'approved_by', 'approved_at',
         'requested_at', 'submitted_at', 'completed_at', 'last_checked_at', 'failure_reason', 'meta',
+        'captured_minor', 'payment_method', 'external_method', 'internal_notes', 'refunded_at', 'submitted_by', 'confirmed_by', 'confirmed_at',
+        'effects_status', 'effects_applied_at', 'effects_note',
     ];
+
+    /** effects_status values. NULL = the refund predates ticket integration and is never touched automatically. */
+    public const EFFECTS_PENDING = 'pending';
+    public const EFFECTS_APPLIED = 'applied';
+    public const EFFECTS_REVIEW = 'needs_review';
+    public const EFFECTS_NONE = 'not_applicable';
+
+    public const EXTERNAL_METHODS = ['provider_portal' => 'Provider dashboard / portal', 'bank_transfer' => 'Bank transfer', 'cash' => 'Cash', 'wallet' => 'Mobile wallet', 'other' => 'Other'];
 
     protected function casts(): array
     {
         return [
             'awaiting_approval' => 'boolean', 'amount_minor' => 'integer', 'meta' => 'array',
-            'requested_at' => 'datetime', 'approved_at' => 'datetime', 'submitted_at' => 'datetime', 'completed_at' => 'datetime', 'last_checked_at' => 'datetime',
+            'requested_at' => 'datetime', 'refunded_at' => 'datetime', 'confirmed_at' => 'datetime', 'effects_applied_at' => 'datetime', 'captured_minor' => 'integer', 'approved_at' => 'datetime', 'submitted_at' => 'datetime', 'completed_at' => 'datetime', 'last_checked_at' => 'datetime',
         ];
     }
 
@@ -50,6 +60,42 @@ class PaymentRefund extends Model
     public function requester()
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function confirmer()
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function submitter()
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+    public function ticketLinks()
+    {
+        return $this->hasMany(PaymentRefundTicket::class);
+    }
+
+    /** A paid order from before the payment-attempt system: refunded manually against the order, never against an invented transaction. */
+    public function isLegacyPayment(): bool
+    {
+        return $this->payment_attempt_id === null;
+    }
+
+    public function scopeConfirmed($query)
+    {
+        return $query->where($query->getModel()->getTable().'.status', self::SUCCEEDED);
+    }
+
+    public function isFull(): bool
+    {
+        return in_array($this->type, ['full', 'void'], true);
     }
 
     public function amount(): string

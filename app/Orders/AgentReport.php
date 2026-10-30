@@ -31,21 +31,21 @@ class AgentReport
         $workflow = $visible()->whereNotNull('assigned_user_id')->whereBetween('created_at', [$from, $to])
             ->select('assigned_user_id', 'status', DB::raw('COUNT(*) as c'))->groupBy('assigned_user_id', 'status')->get();
 
-        $sales = $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])
+        $sales = $visible()->captured()->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])
             ->select('sold_by_user_id', DB::raw('COUNT(*) as c'), DB::raw('SUM(total_amount) as amount'))->groupBy('sold_by_user_id')->get()->keyBy('sold_by_user_id');
 
         $tickets = OrderItem::query()->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->whereIn('orders.id', $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->select('orders.id'))
+            ->whereIn('orders.id', $visible()->captured()->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->select('orders.id'))
             ->whereNull('orders.deleted_at')
             ->select('orders.sold_by_user_id', DB::raw('SUM(order_items.quantity) as qty'))->groupBy('orders.sold_by_user_id')->pluck('qty', 'sold_by_user_id');
 
-        $methods = $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])
+        $methods = $visible()->captured()->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])
             ->select('sold_by_user_id', 'payment_method', DB::raw('COUNT(*) as c'))->groupBy('sold_by_user_id', 'payment_method')->get()->groupBy('sold_by_user_id');
 
         // Which merchant account actually collected each attributed sale (paid attempts only; NULL = legacy configuration).
         $accounts = \App\Models\PaymentAttempt::query()->join('orders', 'orders.id', '=', 'payment_attempts.order_id')
             ->where('payment_attempts.status', 'paid')
-            ->whereIn('orders.id', $visible()->where('status', 'paid')->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->select('orders.id'))
+            ->whereIn('orders.id', $visible()->captured()->whereNotNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->select('orders.id'))
             ->select('orders.sold_by_user_id', 'payment_attempts.integration_account_id', DB::raw('COUNT(*) as c'))->groupBy('orders.sold_by_user_id', 'payment_attempts.integration_account_id')->get()->groupBy('sold_by_user_id');
 
         // Refunds that SUCCEEDED in the range, attributed to the agent who held the sale (sold_by snapshot), never to the current assignee.
@@ -61,7 +61,7 @@ class AgentReport
         $rows = $ids->map(function ($id) use ($workflow, $sales, $tickets, $methods, $users, $accounts, $refunded) {
             $by = $workflow->where('assigned_user_id', $id)->pluck('c', 'status');
             $assigned = (int) $by->sum();
-            $paidNow = (int) ($by['paid'] ?? 0);
+            $paidNow = (int) (($by['paid'] ?? 0) + ($by['refunded'] ?? 0) + ($by['partially_refunded'] ?? 0)); // a refunded order was still a won sale
             $pending = (int) collect(self::PENDING)->sum(fn ($s) => $by[$s] ?? 0);
             $canceled = (int) collect(self::CANCELED)->sum(fn ($s) => $by[$s] ?? 0);
             $closed = $paidNow + $canceled;
@@ -87,8 +87,8 @@ class AgentReport
                 'pending' => (int) $visible()->whereNull('assigned_user_id')->whereIn('status', self::PENDING)->whereBetween('created_at', [$from, $to])->count(),
             ],
             'unattributed' => [
-                'orders' => (int) $visible()->where('status', 'paid')->whereNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->count(),
-                'amount' => (float) $visible()->where('status', 'paid')->whereNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->sum('total_amount'),
+                'orders' => (int) $visible()->captured()->whereNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->count(),
+                'amount' => (float) $visible()->captured()->whereNull('sold_by_user_id')->whereBetween('paid_at', [$from, $to])->sum('total_amount'),
             ],
             'totals' => [
                 'assigned' => $rows->sum('assigned'), 'collected' => $rows->sum('collected'), 'tickets' => $rows->sum('tickets'),
@@ -111,17 +111,17 @@ class AgentReport
         $workflow = $items()->whereBetween('orders.created_at', [$from, $to])
             ->select('order_items.event_id', 'orders.status', DB::raw('COUNT(DISTINCT orders.id) as c'))->groupBy('order_items.event_id', 'orders.status')->get();
 
-        $paid = $items()->where('orders.status', 'paid')->whereBetween('orders.paid_at', [$from, $to])
+        $paid = $items()->where(Order::capturedConstraint())->whereBetween('orders.paid_at', [$from, $to])
             ->select('order_items.event_id', DB::raw('SUM(order_items.quantity) as qty'), DB::raw('SUM(order_items.line_total) as amount'))->groupBy('order_items.event_id')->get()->keyBy('event_id');
 
-        $methods = $items()->where('orders.status', 'paid')->whereBetween('orders.paid_at', [$from, $to])
+        $methods = $items()->where(Order::capturedConstraint())->whereBetween('orders.paid_at', [$from, $to])
             ->select('order_items.event_id', 'orders.payment_method', DB::raw('COUNT(DISTINCT orders.id) as c'))->groupBy('order_items.event_id', 'orders.payment_method')->get()->groupBy('event_id');
 
         $names = \App\Models\Event::query()->whereIn('id', $workflow->pluck('event_id')->merge($paid->keys())->unique())->pluck('name', 'id');
 
         return $names->keys()->map(function ($id) use ($workflow, $paid, $methods, $names) {
             $by = $workflow->where('event_id', $id)->pluck('c', 'status');
-            $paidNow = (int) ($by['paid'] ?? 0);
+            $paidNow = (int) (($by['paid'] ?? 0) + ($by['refunded'] ?? 0) + ($by['partially_refunded'] ?? 0)); // a refunded order was still a won sale
             $canceled = (int) collect(self::CANCELED)->sum(fn ($s) => $by[$s] ?? 0);
             $closed = $paidNow + $canceled;
 

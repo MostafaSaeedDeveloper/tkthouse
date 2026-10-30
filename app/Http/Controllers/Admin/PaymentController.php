@@ -33,7 +33,7 @@ class PaymentController extends Controller
             'processing' => (clone $base)->where('status', 'initiated')->count(),
             'failed' => (clone $base)->where('status', 'failed')->count(),
             'review' => (clone $base)->where('meta->needs_review', true)->count(),
-            'refunded' => Order::query()->visibleTo($user)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
+            'refunded' => Order::query()->visibleTo($user)->withConfirmedRefund()->count(), // orders with a CONFIRMED refund, not orders someone edited to "refunded"
         ];
 
         $attempts = (clone $base)->with(['order.customer', 'failedWebhookEvent'])

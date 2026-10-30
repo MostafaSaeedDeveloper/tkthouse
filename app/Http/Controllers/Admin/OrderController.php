@@ -74,6 +74,23 @@ class OrderController extends Controller
         $summary = $this->buildSummary($summaryQuery);
 
         $this->applyOrderFilters($ordersQuery, $request, $canFilterByEvent);
+
+        // Refund view (dashboard KPI target): ONLY orders with a confirmed refund, with the figures the operations team reconciles against.
+        $refundMode = $request->boolean('refunded');
+        $refundTotals = null;
+        if ($refundMode) {
+            $ordersQuery->withSum(['refunds as refunded_minor' => fn ($q) => $q->confirmed()], 'amount_minor')
+                ->withMax(['refunds as last_refund_at' => fn ($q) => $q->confirmed()], 'completed_at')
+                ->with(['refunds' => fn ($q) => $q->confirmed()->latest('completed_at')]);
+            [$rf, $rt] = $this->refundWindow($request);
+            $refundTotals = [
+                'orders' => (clone $summaryQuery)->count(),
+                'amount_minor' => (int) \App\Models\PaymentRefund::query()->confirmed()
+                    ->when($rf && $rt, fn ($q) => $q->whereBetween(\Illuminate\Support\Facades\DB::raw('COALESCE(payment_refunds.completed_at, payment_refunds.updated_at)'), [$rf, $rt]))
+                    ->whereIn('order_id', (clone $summaryQuery)->reorder()->select('orders.id'))->sum('amount_minor'),
+                'from' => $rf, 'to' => $rt,
+            ];
+        }
         [$sortKey, $sortDir] = $this->applySorting($ordersQuery, $request);
 
         $orders = $ordersQuery->paginate($this->perPage($request))->withQueryString();
@@ -110,7 +127,7 @@ class OrderController extends Controller
 
         $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport'));
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals'));
     }
 
     public function deleted(Request $request)
@@ -270,6 +287,10 @@ class OrderController extends Controller
             'items.*.holder_email' => ['required', 'email', 'max:255'],
             'items.*.holder_phone' => ['nullable', 'string', 'max:255'],
         ]);
+
+        if ($message = $this->refundGuard($order, (string) $validated['status'], $this->moneyChanged($order, $validated))) {
+            return back()->withErrors(['status' => $message])->withInput();
+        }
 
         $oldStatus = $order->status;
         $oldPaymentMethod = $order->payment_method;
@@ -624,6 +645,47 @@ class OrderController extends Controller
         return back()->with($failed || ! $done ? 'error' : 'success', $message);
     }
 
+    /**
+     * Money rules for manual edits. "Refunded" / "partially refunded" are DERIVED from confirmed refund records: typing them in proves
+     * nothing, and an order with confirmed refunds keeps the status its refunds gave it. While a refund exists, the amounts it was
+     * calculated from cannot be edited. Returns the reason an edit is refused, or null.
+     */
+    private function refundGuard(Order $order, string $newStatus, bool $moneyChanged): ?string
+    {
+        $old = (string) $order->status;
+        $confirmed = $order->refunds()->where('status', \App\Models\PaymentRefund::SUCCEEDED)->exists();
+        $holding = $order->refunds()->whereIn('status', \App\Models\PaymentRefund::HOLDING)->exists();
+
+        if ($newStatus !== $old && in_array($newStatus, Order::REFUND_STATUSES, true)) {
+            return 'Refunded and partially refunded are set automatically when a refund is confirmed. Record the refund from the order\'s payment section instead of editing the status.';
+        }
+        if ($newStatus !== $old && $confirmed) {
+            return 'This order has a confirmed refund, so its status follows the refund records and cannot be changed by hand (refunded tickets stay canceled).';
+        }
+        if ($moneyChanged && $holding) {
+            return 'This order has a refund request or a confirmed refund: ticket quantities, prices, promo code and fees can no longer be edited.';
+        }
+
+        return null;
+    }
+
+    /** Whether the edit form would change what the customer paid (items, promo code or fees). */
+    private function moneyChanged(Order $order, array $validated): bool
+    {
+        foreach ($validated['items'] ?? [] as $row) {
+            $item = $order->items()->whereKey($row['id'])->first();
+            if ($item && (((int) $row['quantity'] !== (int) $item->quantity) || (array_key_exists('ticket_price', $row) && $row['ticket_price'] !== null && abs((float) $row['ticket_price'] - (float) $item->ticket_price) > 0.004))) {
+                return true;
+            }
+        }
+        if (strtoupper(trim((string) ($validated['promo_code'] ?? ''))) !== strtoupper((string) $order->promo_code)) {
+            return true;
+        }
+        $impliedFees = (float) $order->total_amount - ((float) $order->subtotal_amount - (float) $order->discount_amount);
+
+        return abs((float) ($validated['extra_fees'] ?? 0) - max(0, $impliedFees)) > 0.004;
+    }
+
     public function updateStatus(Request $request, Order $order)
     {
         $this->abortIfOrderNotAccessible($request, $order);
@@ -634,6 +696,10 @@ class OrderController extends Controller
 
         $oldStatus = (string) $order->status;
         $newStatus = (string) $validated['status'];
+
+        if ($message = $this->refundGuard($order, $newStatus, false)) {
+            return back()->withErrors(['status' => $message]);
+        }
 
         if ($oldStatus === $newStatus) {
             return redirect()->route('admin.orders.show', $order)->with('success', 'Order status is already set to the selected value.');
@@ -826,6 +892,22 @@ class OrderController extends Controller
             }
         }
 
+        if ($request->boolean('refunded')) {
+            [$rf, $rt] = $this->refundWindow($request);
+            $query->whereHas('refunds', function ($f) use ($rf, $rt) {
+                $f->where('status', \App\Models\PaymentRefund::SUCCEEDED);
+                if ($rf && $rt) {
+                    $f->whereBetween(\Illuminate\Support\Facades\DB::raw('COALESCE(payment_refunds.completed_at, payment_refunds.updated_at)'), [$rf, $rt]);
+                }
+            });
+            if ($request->boolean('stats')) {
+                $query->includedInStatistics(); // same exclusion the dashboard applies, so the card number and this list agree
+            }
+            if ($request->filled('refund_event_id')) {
+                $query->whereHas('items', fn ($i) => $i->where('event_id', $request->integer('refund_event_id')));
+            }
+        }
+
         if ($request->filled('payment_method')) {
             $query->where('payment_method', (string) $request->input('payment_method'));
         }
@@ -863,6 +945,15 @@ class OrderController extends Controller
         }
     }
 
+    /** @return array{0: ?Carbon, 1: ?Carbon} the refund completion window (both or neither) */
+    private function refundWindow(Request $request): array
+    {
+        $from = $this->parseDate($request->input('refunded_from'));
+        $to = $this->parseDate($request->input('refunded_to'));
+
+        return $from && $to ? [$from->startOfDay(), $to->endOfDay()] : [null, null];
+    }
+
     /** Every word must match the customer's name, e-mail or phone ("jane doe" finds Jane / Doe). */
     private function matchCustomer($customerQuery, string $text): void
     {
@@ -898,14 +989,20 @@ class OrderController extends Controller
     /** @return array{0: string, 1: string} the applied sort key and direction */
     private function applySorting(Builder $query, Request $request): array
     {
-        $key = (string) $request->input('sort', 'created_at');
-        if (! isset(self::SORTABLE_COLUMNS[$key])) {
-            $key = 'created_at';
+        $columns = self::SORTABLE_COLUMNS;
+        $default = 'created_at';
+        if ($request->boolean('refunded')) {
+            $columns += ['refund_date' => 'last_refund_at', 'refunded_amount' => 'refunded_minor'];
+            $default = 'refund_date';
+        }
+        $key = (string) $request->input('sort', $default);
+        if (! isset($columns[$key])) {
+            $key = $default;
         }
         $dir = strtolower((string) $request->input('dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
-        $query->orderBy(self::SORTABLE_COLUMNS[$key], $dir);
-        if (self::SORTABLE_COLUMNS[$key] !== 'id') {
+        $query->orderBy($columns[$key], $dir);
+        if ($columns[$key] !== 'id') {
             $query->orderByDesc('id');
         }
 

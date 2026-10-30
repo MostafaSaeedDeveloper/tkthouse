@@ -307,6 +307,13 @@ html, body {
 .sc-status.checked_in     { color: var(--green); background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); }
 .sc-status.not_checked_in { color: var(--amber); background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); }
 .sc-status.canceled       { color: var(--red);   background: rgba(232,68,90,.12);  border: 1px solid rgba(232,68,90,.3); }
+.sc-status.refunded       { color: #fff;         background: var(--red);          border: 1px solid var(--red); }
+.sc-result--refunded { border-color: var(--red); }
+.sc-refund-banner { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; margin-bottom: 14px; border-radius: 12px; background: rgba(232,68,90,.14); border: 1px solid var(--red); color: var(--text); }
+.sc-refund-banner > i { font-size: 26px; color: var(--red); flex: none; margin-top: 2px; }
+.sc-refund-banner strong { display: block; font-size: 16px; letter-spacing: .04em; color: var(--red); }
+.sc-refund-banner span, .sc-refund-banner small { display: block; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.sc-refund-banner small { font-size: 12px; opacity: .8; margin-top: 2px; }
 
 /* Holder row */
 .sc-holder {

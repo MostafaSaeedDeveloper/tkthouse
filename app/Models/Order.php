@@ -142,6 +142,53 @@ class Order extends Model
         return $this->hasMany(IssuedTicket::class);
     }
 
+    public function refunds()
+    {
+        return $this->hasMany(PaymentRefund::class);
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    /** Statuses a refund moves an order into. They are DERIVED from confirmed refunds, never typed in by hand. */
+    public const REFUND_STATUSES = ['refunded', 'partially_refunded'];
+
+    /**
+     * Orders whose payment was actually captured: paid ones, plus orders that a confirmed refund moved to refunded / partially_refunded.
+     * Reports use this so a refund never erases the original sale (gross stays gross; the refund is subtracted separately).
+     * An order merely EDITED to "refunded" by hand has no confirmed refund record and stays out, exactly as before.
+     */
+    public function scopeCaptured($query)
+    {
+        return $query->where(self::capturedConstraint($query->getModel()->getTable()));
+    }
+
+    /** The same rule as a closure for any query that has the orders table (joins, sub-selects). */
+    public static function capturedConstraint(string $table = 'orders'): \Closure
+    {
+        return function ($q) use ($table) {
+            $q->where($table.'.status', 'paid')->orWhere(function ($r) use ($table) {
+                $r->whereIn($table.'.status', self::REFUND_STATUSES)->whereExists(function ($e) use ($table) {
+                    $e->select(\Illuminate\Support\Facades\DB::raw(1))->from('payment_refunds')
+                        ->whereColumn('payment_refunds.order_id', $table.'.id')->where('payment_refunds.status', PaymentRefund::SUCCEEDED);
+                });
+            });
+        };
+    }
+
+    /** Orders with at least one confirmed (succeeded) refund, optionally completed inside a window. */
+    public function scopeWithConfirmedRefund($query, $from = null, $to = null)
+    {
+        return $query->whereHas('refunds', function ($f) use ($from, $to) {
+            $f->where('status', PaymentRefund::SUCCEEDED);
+            if ($from && $to) {
+                $f->whereBetween('completed_at', [$from, $to]);
+            }
+        });
+    }
+
     /**
      * Orders a signed-in customer may see in their portal. Ownership is never "same e-mail typed at checkout":
      *  - orders bound to the account (user_id), unless they were placed before the mailbox was proven (owner_unverified), or

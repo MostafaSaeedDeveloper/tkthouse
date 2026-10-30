@@ -96,7 +96,8 @@ class PaymentReport
             }
             // refunds attributed to the PAYMENT's provider/account/method (never to the refund's creator or the current assignee)
             $refundCol = ['provider' => 'payment_refunds.provider', 'integration_account_id' => 'payment_refunds.integration_account_id', 'method_code' => 'payment_attempts.method_code'][$col];
-            $q = $done()->join('payment_attempts', 'payment_attempts.id', '=', 'payment_refunds.payment_attempt_id')->select(DB::raw($refundCol.' as k'), DB::raw('SUM(payment_refunds.amount_minor) m'))->groupBy(DB::raw($refundCol));
+            // legacy refunds have no attempt: they stay in the totals (provider "manual") instead of vanishing from an inner join
+            $q = $done()->leftJoin('payment_attempts', 'payment_attempts.id', '=', 'payment_refunds.payment_attempt_id')->select(DB::raw($refundCol.' as k'), DB::raw('SUM(payment_refunds.amount_minor) m'))->groupBy(DB::raw($refundCol));
             foreach ($q->get() as $r) {
                 $rows[(string) $r->k] ??= ['count' => 0, 'collected' => 0, 'refunded' => 0];
                 $rows[(string) $r->k]['refunded'] = (int) $r->m;
