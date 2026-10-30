@@ -472,4 +472,18 @@ class RefundEndToEndJourneyTest extends TestCase
         $page->assertSee($r->internal_reference)->assertSee('is already open')->assertSee('Refund is not available')->assertSee('Open refund '.$r->internal_reference);
         $this->assertStringNotContainsString('Nothing is left to refund', $page->getContent());
     }
+
+    public function test_the_refund_page_shows_which_tickets_a_full_refund_will_cancel_even_for_an_unlinked_request(): void
+    {
+        $a = $this->paid($this->agentA, 2, 100);
+        $r = $this->svc->request($a, $this->agentA, 'full', null, 'old style request', 'old-1');
+        \App\Models\PaymentRefundTicket::where('payment_refund_id', $r->id)->delete();   // how a request created before ticket linking looks
+        $r->forceFill(['effects_status' => null])->save();
+        $page = $this->actingAs($this->agentA)->get(route('admin.payments.refunds.show', $r))->assertOk();
+        $page->assertSee('all 2 valid ticket(s) of this order')->assertSee('created before ticket linking');
+        $this->assertStringNotContainsString('No tickets are linked', $page->getContent());
+
+        Ticket::where('order_id', $a->order_id)->delete();                                    // an order with no ticket records at all
+        $this->actingAs($this->agentA)->get(route('admin.payments.refunds.show', $r))->assertOk()->assertSee('no ticket records');
+    }
 }

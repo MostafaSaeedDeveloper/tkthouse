@@ -29,7 +29,21 @@
     <x-admin.card title="Tickets" subtitle="Tickets are canceled only when this refund is confirmed as completed.">
         @php $links = $refund->ticketLinks; @endphp
         @if($links->isEmpty())
-            <p class="a-hint">{{ $refund->effects_status === 'not_applicable' ? 'Money-only refund: no tickets are affected.' : 'No tickets are linked to this refund.' }}</p>
+            @php
+                $orderTickets = \App\Models\Ticket::query()->where('order_id', $refund->order_id)->orderBy('id')->get();
+                $validNow = $orderTickets->where('status', '!=', 'canceled');
+            @endphp
+            @if($refund->effects_status === 'not_applicable')
+                <p class="a-hint">Money-only refund: no tickets are affected.</p>
+            @elseif(! $refund->isFinal() && $refund->isFull() && $validNow->isNotEmpty())
+                <p class="a-hint">Full refund: when it is confirmed, <strong>all {{ $validNow->count() }} valid ticket(s) of this order</strong> are canceled:</p>
+                <ul class="a-timeline">@foreach($validNow as $t)<li><strong>#{{ $t->ticket_number }}</strong> <span class="a-table__sub">{{ $t->holder_name ?: $t->name }} · {{ str_replace('_', ' ', $t->status) }}</span></li>@endforeach</ul>
+                @if($refund->effects_status === null)<p class="a-hint">This request was created before ticket linking existed. Cancel its tickets after confirming with the "Cancel selected tickets" action.</p>@endif
+            @elseif($orderTickets->isEmpty())
+                <x-admin.alert type="warning">This order has <strong>no ticket records</strong> in the system (an older order), so confirming this refund cannot cancel any ticket. Check and handle the tickets manually.</x-admin.alert>
+            @else
+                <p class="a-hint">No tickets are linked to this refund.</p>
+            @endif
         @else
             <ul class="a-timeline">@foreach($links as $l)<li><strong>#{{ $l->ticket?->ticket_number }}</strong> <span class="a-table__sub">{{ $l->canceled_at ? 'Canceled '.$l->canceled_at->format('d M Y, H:i').($l->was_checked_in ? ' · was checked in (check-in record kept, flagged for audit)' : '') : 'Selected · still valid until the refund is confirmed' }}</span></li>@endforeach</ul>
         @endif
@@ -46,7 +60,7 @@
 
     @if(! $refund->isFinal() && ($canCreate || $canApprove))
     <x-admin.card title="Actions">
-        <div class="a-btn-group" style="flex-wrap:wrap;gap:12px;align-items:flex-start">
+        <div style="display:grid;gap:16px">
             @if($refund->awaiting_approval && $canApprove && (int) $refund->requested_by !== (int) auth()->id())
                 <form method="POST" action="{{ route('admin.payments.refunds.approve', $refund) }}" data-a-confirm="Approve this refund{{ $refund->mode === 'api' ? ' and send it to the provider' : '' }}?" data-a-confirm-ok="Approve" style="display:grid;gap:6px">@csrf
                     <input class="form-control" name="note" placeholder="Approval note (optional)" maxlength="300" aria-label="Approval note">
@@ -64,21 +78,38 @@
                 @if($canApprove)<form method="POST" action="{{ route('admin.payments.refunds.reject', $refund) }}" class="a-btn-group">@csrf<input class="form-control" name="note" placeholder="Reason for withdrawing / rejecting" minlength="5" required aria-label="Rejection reason"><button class="a-btn a-btn--outline" type="submit">Withdraw request</button></form>@endif
                 @endif
             @elseif(! $refund->awaiting_approval)
+                @php $box = 'border:1px solid var(--a-line);border-radius:12px;padding:16px;display:grid;gap:10px;align-content:start;background:var(--a-surface)'; @endphp
                 @if($refund->mode === 'manual' && ($refund->status === 'requested' || ($refund->status === 'processing' && ! $refund->submitted_by)))
-                    <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">I carried it out in the provider dashboard (record who)</button></form>
+                    <div style="{{ $box }}">
+                        <strong>1 · Carry out the refund</strong>
+                        <span class="a-hint">Refund the customer in the provider dashboard (use “Open Transaction in Fawaterak” above to copy the invoice ID). Then record that you did it, so the history shows who.</span>
+                        <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">I carried it out in the provider dashboard</button></form>
+                    </div>
                 @endif
-                <form method="POST" action="{{ route('admin.payments.refunds.confirm', $refund) }}" data-a-confirm="Record this refund as COMPLETED? Its tickets will be canceled and the order updated. Only do this after verifying it with the provider." data-a-confirm-ok="Record completed" style="display:grid;gap:6px">@csrf
-                    <strong>Confirm completed (verified with the provider)</strong>
-                    <input class="form-control" name="provider_reference" placeholder="Provider / external refund reference" required maxlength="120" aria-label="Provider refund reference" value="{{ old('provider_reference', $refund->provider_reference) }}">
-                    <label class="a-hint" for="rfdate">Actual refund date</label>
-                    <input class="form-control" id="rfdate" type="date" name="refunded_at" required max="{{ now()->toDateString() }}" value="{{ old('refunded_at', $refund->refunded_at?->toDateString()) }}" aria-label="Actual refund date">
-                    @if($refund->mode === 'manual')<select class="form-select" name="external_method" aria-label="Refund method">@foreach(\App\Models\PaymentRefund::EXTERNAL_METHODS as $k => $label)<option value="{{ $k }}" @selected(old('external_method', $refund->external_method) === $k)>{{ $label }}</option>@endforeach</select>@endif
-                    <input class="form-control" name="note" placeholder="Evidence (e.g. portal screenshot id)" minlength="5" required aria-label="Evidence">
-                    <button class="a-btn a-btn--success" type="submit">Record completed</button></form>
-                <form method="POST" action="{{ route('admin.payments.refunds.fail', $refund) }}" data-a-confirm="Record this refund as FAILED? The amount becomes available again." data-a-confirm-ok="Record failed" style="display:grid;gap:6px">@csrf
-                    <strong>Confirm it did not happen</strong>
-                    <input class="form-control" name="note" placeholder="Evidence" minlength="5" required aria-label="Evidence">
-                    <button class="a-btn a-btn--danger" type="submit">Record failed</button></form>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start">
+                    <form method="POST" action="{{ route('admin.payments.refunds.confirm', $refund) }}" data-a-confirm="Record this refund as COMPLETED? Its tickets will be canceled and the order updated. Only do this after verifying it with the provider." data-a-confirm-ok="Record completed" style="{{ $box }}">@csrf
+                        <strong>Confirm completed</strong>
+                        <span class="a-hint">Only after you verified the refund in the provider dashboard. This cancels the tickets and updates the order.</span>
+                        <div class="a-field"><label class="form-label" for="rfref">Provider / external refund reference</label>
+                            <input class="form-control" id="rfref" name="provider_reference" required maxlength="120" value="{{ old('provider_reference', $refund->provider_reference) }}"></div>
+                        <div class="a-field"><label class="form-label" for="rfdate">Actual refund date</label>
+                            <input class="form-control" id="rfdate" type="date" name="refunded_at" required max="{{ now()->toDateString() }}" value="{{ old('refunded_at', $refund->refunded_at?->toDateString()) }}"></div>
+                        @if($refund->mode === 'manual')
+                        <div class="a-field"><label class="form-label" for="rfmethod">Refund method</label>
+                            <select class="form-select" id="rfmethod" name="external_method">@foreach(\App\Models\PaymentRefund::EXTERNAL_METHODS as $k => $label)<option value="{{ $k }}" @selected(old('external_method', $refund->external_method) === $k)>{{ $label }}</option>@endforeach</select></div>
+                        @endif
+                        <div class="a-field"><label class="form-label" for="rfnote">Evidence</label>
+                            <input class="form-control" id="rfnote" name="note" minlength="5" required placeholder="e.g. portal screenshot id" maxlength="300"></div>
+                        <button class="a-btn a-btn--success" type="submit" style="width:100%">Record completed</button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.payments.refunds.fail', $refund) }}" data-a-confirm="Record this refund as FAILED? The amount becomes available again." data-a-confirm-ok="Record failed" style="{{ $box }}">@csrf
+                        <strong>It did not happen</strong>
+                        <span class="a-hint">The refund failed or was never made. The amount becomes available again and you can request a new refund.</span>
+                        <div class="a-field"><label class="form-label" for="rffail">Evidence</label>
+                            <input class="form-control" id="rffail" name="note" minlength="5" required maxlength="300"></div>
+                        <button class="a-btn a-btn--danger" type="submit" style="width:100%">Record failed</button>
+                    </form>
+                </div>
             @endif
         </div>
     </x-admin.card>
