@@ -101,7 +101,7 @@
          data-checkout-base="{{ route('front.checkout') }}"
          data-event-id="{{ $event->id }}"
          data-booking-closed="{{ $isBookingClosed ? 1 : 0 }}"
-         data-fold-initial="6" data-fold-step="6"
+         data-fold-initial="1000" data-fold-step="1000"
          data-fees='@json($fees)'>
 
         {{-- Content --}}
