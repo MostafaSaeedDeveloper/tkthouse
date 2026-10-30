@@ -104,10 +104,14 @@
 @elseif($eligible && ($user->can('payments.refunds.view') || $user->can('payments.refunds.create')))
     {{-- The button is never silently missing: when a refund cannot be started, it is shown disabled and says why. --}}
     @php
+        $open = \App\Models\PaymentRefund::query()->where('order_id', $order->id)->whereIn('status', \App\Models\PaymentRefund::HOLDING)
+            ->when($attempt, fn ($q) => $q->where('payment_attempt_id', $attempt->id), fn ($q) => $q->whereNull('payment_attempt_id'))->latest('id')->first();
         $why = match (true) {
             ! $user->can('payments.refunds.create') => 'You do not have the refund permission (payments.refunds.create). Ask an administrator to grant it to your role.',
             ! \App\Orders\OrderAccess::canManage($order, $user) => 'You can only refund orders that are assigned to you and that you may manage.',
             $cap->mode === 'none' => (string) $cap->note,
+            $bal['captured'] <= 0 => 'No paid amount is recorded on this payment, so there is nothing to refund.',
+            $open !== null => 'A refund of '.$minorToDec($open->amount_minor).' '.$currency.' is already '.($open->status === 'succeeded' ? 'completed' : 'open ('.str_replace('_', ' ', $open->status).')').' for this payment — '.$open->internal_reference.'. Open it from the Refunds section below.',
             default => 'Nothing is left to refund on this payment.',
         };
     @endphp

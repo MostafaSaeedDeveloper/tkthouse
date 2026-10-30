@@ -463,4 +463,13 @@ class RefundEndToEndJourneyTest extends TestCase
         $page = $this->actingAs($viewer)->get(route('admin.orders.show', $o3))->assertOk()->assertSee('payments.refunds.create');
         $this->assertStringContainsString('disabled', substr($page->getContent(), 0, strpos($page->getContent(), 'a-ord-summary')));
     }
+
+    public function test_the_disabled_refund_button_explains_an_open_refund_instead_of_saying_nothing_is_left(): void
+    {
+        $a = $this->paid($this->agentA, 2, 100);
+        $r = $this->svc->request($a, $this->agentA, 'full', null, 'already requested refund', 'open-1');
+        $page = $this->actingAs($this->agentA)->get(route('admin.orders.show', $a->order))->assertOk();
+        $page->assertSee($r->internal_reference)->assertSee('is already open');
+        $this->assertStringNotContainsString('Nothing is left to refund', $page->getContent());
+    }
 }
