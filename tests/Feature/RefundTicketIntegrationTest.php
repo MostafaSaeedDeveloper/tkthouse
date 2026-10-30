@@ -822,4 +822,28 @@ class RefundTicketIntegrationTest extends TestCase
         $this->actingAs($plain)->get(route('admin.orders.index', ['refunded' => 1]))->assertForbidden();
         $this->actingAs($plain)->get(route('admin.orders.index'))->assertOk();
     }
+
+    public function test_the_refund_screens_label_each_state_for_the_operations_team(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        $target = $this->paidOrder('manual', 2, 100);
+        $r = $this->request($target);
+        $page = fn () => $this->actingAs($this->approver)->get(route('admin.payments.refunds.show', $r))->assertOk();
+
+        $page()->assertSee('Awaiting approval');
+        $this->svc->approve($r, $this->approver);
+        $page()->assertSee('Refund requested');
+        $this->svc->markSubmitted($r->fresh(), $this->approver);
+        $page()->assertSee('Processing externally');
+        $this->confirm($r->fresh());
+        $page()->assertSee('Refund confirmed');
+
+        $f = $this->request($this->paidOrder('manual', 1, 100));
+        $this->svc->approve($f, $this->approver);
+        $this->svc->confirmFailed($f->fresh(), $this->approver, 'portal says it failed');
+        $this->actingAs($this->approver)->get(route('admin.payments.refunds.show', $f))->assertSee('Refund failed');
+        $u = $this->request($this->paidOrder('manual', 1, 100));
+        $u->forceFill(['status' => 'unknown', 'awaiting_approval' => false])->save();
+        $this->actingAs($this->approver)->get(route('admin.payments.refunds.show', $u))->assertSee('Needs review');
+    }
 }

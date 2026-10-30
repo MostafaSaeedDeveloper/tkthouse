@@ -414,4 +414,25 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertSame(0, \App\Models\ScanLog::where('action', 'refund_canceled')->count());
         $this->assertSame(0, \App\Models\PaymentRefundTicket::whereNotNull('canceled_at')->count());
     }
+
+    public function test_payment_callbacks_racing_a_refund_confirmation_can_never_restore_or_duplicate_tickets(): void
+    {
+        [$o, $a, $staff] = $this->orderWithTickets();
+        $o->forceFill(['tickets_generated_at' => now()])->saveQuietly();
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->request($a, $staff, 'full', null, 'callback race', 'cb-1');
+
+        $jobs = [];
+        foreach (range(1, 4) as $i) {
+            $jobs[] = ['refund-confirm', (string) $r->id, (string) $staff->id, (string) $i];
+            $jobs[] = ['issue', (string) $o->id];
+            $jobs[] = ['issue', (string) $o->id];
+        }
+        $out = $this->spawn($jobs);
+
+        $this->assertSame(1, collect($out)->filter(fn ($l) => $l === 'OK:succeeded')->count(), implode(' / ', $out));
+        $this->assertSame('refunded', $o->fresh()->status);
+        $this->assertSame(['canceled', 'canceled', 'canceled'], \App\Models\Ticket::where('order_id', $o->id)->orderBy('id')->pluck('status')->all(), 'no callback restored a refunded ticket');
+        $this->assertSame(3, \App\Models\Ticket::where('order_id', $o->id)->count(), 'no ticket was duplicated');
+        $this->assertSame(3, \App\Models\ScanLog::where('action', 'refund_canceled')->count());
+    }
 }

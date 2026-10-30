@@ -87,6 +87,9 @@ try {
             ? $svc->request(PaymentAttempt::findOrFail((int) $a), $by, 'partial', null, 'concurrency ticket claim', $e, $opts)
             : $svc->requestForOrder(Order::findOrFail((int) $b), $by, 'partial', null, 'concurrency ticket claim', $e, $opts);
         echo 'OK:'.$r->id;
+    } elseif ($mode === 'issue') {             // what every payment callback / reconcile / admin save runs: order id
+        app(\App\Services\TicketIssuanceService::class)->issueIfPaid(Order::withTrashed()->findOrFail((int) $a));
+        echo 'OK:issued';
     } elseif ($mode === 'tx') {                // many workers race to bind the same gateway transaction id
         PaymentAttempt::create(['order_id' => (int) $a, 'provider' => 'paymob', 'method_code' => 'paymob_card', 'amount' => 100, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => $b]);
         echo 'OK';
