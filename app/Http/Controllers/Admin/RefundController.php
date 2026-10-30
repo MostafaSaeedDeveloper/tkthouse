@@ -96,10 +96,10 @@ class RefundController extends Controller
         try {
             $refund = $this->refunds->request($attempt, $user, $data['type'], $data['amount'] ?? null, $data['reason'], $data['idempotency_key'], $this->options($data));
         } catch (ValidationException $e) {
-            return back()->withErrors($e->errors())->withInput();
+            return $this->failed($request, $e->errors());
         }
 
-        return $this->afterRequest($refund);
+        return $this->afterRequest($refund, $request);
     }
 
     /** Legacy paid order (no payment attempt): the manual refund is recorded against the order itself. */
@@ -111,19 +111,29 @@ class RefundController extends Controller
 
         $data = $this->validateRequest($request);
         if (! $this->refunds->isLegacyOrder($order)) {
-            return back()->withErrors(['refund' => 'This order has an online payment: refund that payment instead.'])->withInput();
+            return $this->failed($request, ['refund' => ['This order has an online payment: refund that payment instead.']]);
         }
 
         try {
             $refund = $this->refunds->requestForOrder($order, $user, $data['type'], $data['amount'] ?? null, $data['reason'], $data['idempotency_key'], $this->options($data));
         } catch (ValidationException $e) {
-            return back()->withErrors($e->errors())->withInput();
+            return $this->failed($request, $e->errors());
         }
 
-        return $this->afterRequest($refund);
+        return $this->afterRequest($refund, $request);
     }
 
-    private function afterRequest(PaymentRefund $refund)
+    /** Validation / business refusals: JSON for the order-page modal (it stays open and shows them), the usual redirect otherwise. */
+    private function failed(Request $request, array $errors)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => (string) (collect($errors)->flatten()->first() ?? 'The refund could not be recorded.'), 'errors' => $errors], 422);
+        }
+
+        return back()->withErrors($errors)->withInput();
+    }
+
+    private function afterRequest(PaymentRefund $refund, ?Request $request = null)
     {
         $msg = match (true) {
             $refund->awaiting_approval => 'Refund requested; it waits for approval before anything is sent.',
@@ -133,6 +143,21 @@ class RefundController extends Controller
             $refund->status === PaymentRefund::SUCCEEDED => 'Refund confirmed by the provider.',
             default => 'Refund sent to the provider. It is not complete until the provider confirms it.',
         };
+
+        if ($request?->expectsJson()) {
+            $t = \App\Services\Payments\Refunds\RefundTracking::snapshot($refund);
+            $fawaterak = $refund->provider === 'fawaterak' || str_starts_with((string) $refund->order->payment_method, 'fawaterak');
+
+            return response()->json([
+                'ok' => true, 'message' => $msg, 'redirect' => route('admin.payments.refunds.show', $refund),
+                // the "waiting for the provider" pop-up is only for a manual refund that is free to be carried out now
+                'waiting' => $refund->mode === 'manual' && ! $refund->awaiting_approval && ! $refund->isFinal(),
+                'provider' => $fawaterak ? 'Fawaterak' : 'the provider', 'dashboard_url' => $fawaterak ? ($t['dashboard_url'] ?? null) : null,
+                'invoice_id' => $t['invoice_id'] ?? null, 'reference_number' => $t['reference_number'] ?? null,
+                'refund' => $refund->internal_reference, 'amount' => $refund->amount(), 'currency' => $refund->currency,
+                'opened_url' => route('admin.payments.refunds.opened', $refund),
+            ])->header('Cache-Control', 'no-store');
+        }
 
         return redirect()->route('admin.payments.refunds.show', $refund)->with($refund->status === PaymentRefund::REJECTED ? 'error' : 'success', $msg);
     }

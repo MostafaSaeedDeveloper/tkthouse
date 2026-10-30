@@ -159,6 +159,27 @@ class RefundNoApprovalWorkflowTest extends TestCase
         }
     }
 
+    public function test_the_order_page_modal_gets_json_with_what_the_waiting_popup_needs_and_refusals_stay_in_the_modal(): void
+    {
+        config(['payments.fawaterak.dashboard_url' => 'https://dashboard.example.test/']);
+        [$order] = $this->paid($this->agentA, 2, 100);
+        $json = ['Accept' => 'application/json'];
+        $attempt = $order->paymentAttempts()->where('status', 'paid')->first();
+        $url = route('admin.payments.refunds.store', $attempt);
+
+        $this->actingAs($this->agentA)->postJson($url, ['type' => 'full', 'reason' => 'x', 'idempotency_key' => Str::uuid()->toString(), 'confirm' => 1])->assertStatus(422);
+
+        $ok = $this->actingAs($this->agentA)->postJson($url, ['type' => 'full', 'reason' => 'customer cannot attend any more', 'idempotency_key' => Str::uuid()->toString(), 'confirm' => 1])
+            ->assertOk()->assertJsonPath('ok', true)->assertJsonPath('waiting', true)->assertJsonPath('provider', 'Fawaterak')->assertJsonPath('dashboard_url', 'https://dashboard.example.test/');
+        $this->assertNotEmpty($ok->json('refund'));
+        $this->assertNotEmpty($ok->json('redirect'));
+        $this->assertSame('processing', PaymentRefund::first()->status);
+
+        $again = $this->actingAs($this->agentA)->postJson($url, ['type' => 'full', 'reason' => 'customer cannot attend any more', 'idempotency_key' => Str::uuid()->toString(), 'confirm' => 1])->assertStatus(422);
+        $this->assertNotEmpty($again->json('message'));
+        $this->assertSame(1, PaymentRefund::count());
+    }
+
     public function test_confirmation_stays_with_authorized_staff_of_that_order_and_the_merchant_account_is_untouched(): void
     {
         [$order, $a] = $this->paid($this->agentA);
