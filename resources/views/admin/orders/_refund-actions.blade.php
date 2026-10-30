@@ -20,7 +20,7 @@
     <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}"><i class="fa fa-rotate-left"></i> Refund</button>
     <div class="modal fade" id="{{ $uid }}" tabindex="-1" aria-labelledby="{{ $uid }}t" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
-            <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form" data-dashboard="{{ \App\Services\Payments\Refunds\FawaterakRefundLinks::dashboardUrl() }}" data-provider="{{ str_starts_with((string) $order->payment_method, 'fawaterak') ? 'fawaterak' : 'other' }}" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;max-height:calc(100vh - 3.5rem)">
+            <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form" data-dashboard="{{ \App\Services\Payments\Refunds\FawaterakRefundLinks::anyConfigured() ? 1 : '' }}" data-provider="{{ str_starts_with((string) $order->payment_method, 'fawaterak') ? 'fawaterak' : 'other' }}" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;max-height:calc(100vh - 3.5rem)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ \Illuminate\Support\Str::uuid() }}">
                 <div class="modal-header"><h5 class="modal-title" id="{{ $uid }}t">{{ $cap->isApi() ? 'Refund payment' : 'Record manual / external refund' }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>

@@ -24,7 +24,7 @@
   <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
     <div class="modal-header"><h5 class="modal-title" id="fwTrackT">Refund {{ $refund->internal_reference }} · order #{{ $t['order'] }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
     <div class="modal-body">
-        <div class="a-alert a-alert--{{ $stateClass }}" role="status" id="fwStateBox" data-fw="state-box"><strong data-fw="label">{{ $t['label'] }}</strong>
+        <div class="a-alert a-alert--{{ $stateClass }}" role="status" id="fwStateBox" data-fw="state-box" style="display:block"><strong data-fw="label">{{ $t['label'] }}</strong>
             <div class="a-hint" data-fw="completed-note">{{ $t['completed'] ? 'The refund was confirmed with a provider reference. Tickets were canceled and the order updated.' : 'Opening Fawaterak does not mean the money was returned. This page shows success only after the refund is confirmed.' }}</div></div>
         <ol class="a-timeline" data-fw="steps">@foreach($t['steps'] as $k => $l)<li data-step="{{ $k }}" @if($k === $t['state']) style="font-weight:700" @endif>{{ $l }}</li>@endforeach</ol>
         <dl class="a-kv">
@@ -52,7 +52,7 @@
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
         @if($copyId)<button type="button" class="a-btn a-btn--outline" data-fw="copy" data-copy="{{ $copyId }}"><i class="fa fa-copy"></i> Copy invoice / transaction ID</button>@endif
-        @if($t['dashboard_url'] && ! $refund->isFinal())<a class="a-btn a-btn--outline" href="{{ $t['dashboard_url'] }}" target="_blank" rel="noopener noreferrer" data-fw="reopen">Reopen Fawaterak</a>@endif
+        @if($t['dashboard_url'] && ! $refund->isFinal())<a class="a-btn a-btn--outline" href="{{ $t['dashboard_url'] }}" target="_blank" rel="noopener noreferrer" data-fw="reopen"><i class="fa fa-arrow-up-right-from-square"></i> {{ $t['direct_link'] ? 'Open this transaction in Fawaterak' : 'Open Fawaterak dashboard' }}</a>@endif
         <button type="button" class="a-btn a-btn--outline" data-fw="refresh"><i class="fa fa-rotate"></i> Check status</button>
         @if(in_array($refund->status, ['requested', 'processing'], true) && ! $refund->submitted_by && ($canCreate || $canApprove) && ! $refund->awaiting_approval)
             <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">I submitted it in Fawaterak</button></form>

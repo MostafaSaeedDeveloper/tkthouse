@@ -38,6 +38,9 @@ return [
         // address of YOUR authenticated Fawaterak merchant dashboard (https only, no credentials or query) so staff can open it in one click
         // and paste the copied invoice id. Unset = the screens show the copy button and a "dashboard link not configured" note.
         'dashboard_url' => env('FAWATERAK_DASHBOARD_URL'),
+        // Optional: the address of ONE transaction page in your Fawaterak dashboard, copied from your browser while viewing an invoice, with
+        // the invoice id replaced by {id} (e.g. https://<your-dashboard>/invoices/{id}). Used only when set; never guessed.
+        'transaction_url' => env('FAWATERAK_TRANSACTION_URL'),
     ],
 
     /*

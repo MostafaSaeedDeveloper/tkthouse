@@ -38,4 +38,35 @@ final class FawaterakRefundLinks
 
         return $url;
     }
+
+    /**
+     * Optional operator-supplied pattern for the link to ONE transaction in the merchant dashboard, e.g. https://host/path/{id}.
+     * Fawaterak documents no such link, so none is built into the code: it is only used when the operator copied the pattern
+     * from their own dashboard. https only, no credentials, and it must contain {id}.
+     */
+    public static function transactionUrl(?string $id): ?string
+    {
+        $tpl = trim((string) config('payments.fawaterak.transaction_url'));
+        $id = trim((string) $id);
+        if ($tpl === '' || $id === '' || substr_count($tpl, '{id}') !== 1) {
+            return null;
+        }
+        $p = parse_url(str_replace('{id}', 'x', $tpl));
+        if (! $p || ($p['scheme'] ?? '') !== 'https' || empty($p['host']) || isset($p['user']) || isset($p['pass'])) {
+            return null;
+        }
+
+        return str_replace('{id}', rawurlencode($id), $tpl);
+    }
+
+    /** The page to open for this payment: the exact transaction when a pattern is configured, else the dashboard. */
+    public static function openUrl(?string $id): ?string
+    {
+        return self::transactionUrl($id) ?? self::dashboardUrl();
+    }
+
+    public static function anyConfigured(): bool
+    {
+        return self::transactionUrl('x') !== null || self::dashboardUrl() !== null;
+    }
 }

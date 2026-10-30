@@ -129,14 +129,14 @@ class FawaterakRefundTrackingTest extends TestCase
         $res = $page()->assertOk()->assertSee('Open Transaction in Fawaterak')->assertSee($a->transaction_id)->assertSee('link is not configured')->assertSee('Copy invoice / transaction ID');
         $this->assertStringNotContainsString($a->order->payment_link_token ?: 'no-token', $res->getContent(), 'the customer payment link is never the admin link');
         $this->assertStringNotContainsString('FKEY-', $res->getContent(), 'no API key');
-        $this->assertStringNotContainsString('Reopen Fawaterak', $res->getContent());
+        $this->assertStringNotContainsString('Open Fawaterak dashboard', $res->getContent());
 
         foreach (['http://insecure.example/x', 'https://user:pw@dash.example/', 'https://dash.example/?token=abc', 'javascript:alert(1)', ''] as $bad) {
             config(['payments.fawaterak.dashboard_url' => $bad]);
-            $this->assertStringNotContainsString('Reopen Fawaterak', $page()->getContent(), "unsafe dashboard url refused: $bad");
+            $this->assertStringNotContainsString('Open Fawaterak dashboard', $page()->getContent(), "unsafe dashboard url refused: $bad");
         }
         config(['payments.fawaterak.dashboard_url' => 'https://dashboard.example.test/']);
-        $page()->assertSee('href="https://dashboard.example.test/"', false)->assertSee('Reopen Fawaterak');
+        $page()->assertSee('href="https://dashboard.example.test/"', false)->assertSee('Open Fawaterak dashboard');
 
         // clicking "open" is audit-only; refreshing and reopening never create refunds or move money
         $before = [PaymentRefund::count(), $r->fresh()->status, $this->svc->balance($a)['held']];
@@ -147,6 +147,21 @@ class FawaterakRefundTrackingTest extends TestCase
         $this->assertSame($before, [PaymentRefund::count(), $r->fresh()->status, $this->svc->balance($a)['held']]);
         $this->assertSame(1, collect($r->fresh()->timeline())->where('event', 'opened_in_provider')->count(), 'one audit entry per user per 5 minutes');
         $this->assertSame('paid', $a->order->fresh()->status);
+    }
+
+    public function test_an_operator_supplied_transaction_pattern_builds_the_exact_link_and_unsafe_patterns_are_refused(): void
+    {
+        $L = \App\Services\Payments\Refunds\FawaterakRefundLinks::class;
+        config(['payments.fawaterak.dashboard_url' => null, 'payments.fawaterak.transaction_url' => 'https://merchant.example.test/invoices/{id}']);
+        $this->assertSame('https://merchant.example.test/invoices/3331818773', $L::transactionUrl('3331818773'));
+        $this->assertSame('https://merchant.example.test/invoices/a%2Fb%20c', $L::transactionUrl('a/b c'), 'the id is encoded');
+        $this->assertNull($L::transactionUrl(''));
+        foreach (['http://merchant.example.test/{id}', 'https://u:p@merchant.example.test/{id}', 'https://merchant.example.test/', 'https://merchant.example.test/{id}/{id}', 'javascript:alert({id})'] as $bad) {
+            config(['payments.fawaterak.transaction_url' => $bad]);
+            $this->assertNull($L::transactionUrl('1'), "refused: $bad");
+        }
+        config(['payments.fawaterak.transaction_url' => null]);
+        $this->assertFalse($L::anyConfigured());
     }
 
     public function test_a_legacy_payment_without_a_stored_id_gets_an_actionable_message_and_a_recorded_reference_is_used(): void
