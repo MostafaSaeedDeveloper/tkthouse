@@ -101,6 +101,16 @@
     })();
     </script>
     @endpush
-@elseif($user->can('payments.refunds.view') && $eligible && $cap->mode === 'none')
-    <span class="a-hint">{{ $cap->note }}</span>
+@elseif($eligible && ($user->can('payments.refunds.view') || $user->can('payments.refunds.create')))
+    {{-- The button is never silently missing: when a refund cannot be started, it is shown disabled and says why. --}}
+    @php
+        $why = match (true) {
+            ! $user->can('payments.refunds.create') => 'You do not have the refund permission (payments.refunds.create). Ask an administrator to grant it to your role.',
+            ! \App\Orders\OrderAccess::canManage($order, $user) => 'You can only refund orders that are assigned to you and that you may manage.',
+            $cap->mode === 'none' => (string) $cap->note,
+            default => 'Nothing is left to refund on this payment.',
+        };
+    @endphp
+    <button type="button" class="a-btn a-btn--danger" disabled title="{{ $why }}" aria-disabled="true" style="opacity:.55;cursor:not-allowed"><i class="fa fa-rotate-left"></i> Refund</button>
+    <span class="a-hint" style="max-width:260px">{{ $why }}</span>
 @endif

@@ -454,9 +454,13 @@ class RefundEndToEndJourneyTest extends TestCase
         $this->assertNotFalse($headerEnd);
         $this->assertStringContainsString('</i> Refund</button>', substr($html, 0, $headerEnd), 'the refund button is in the page header next to Edit / Change Status');
         $this->assertStringNotContainsString('Merchant account', $html, 'no merchant-account card on a paid order');
-        // staff without refund rights get no button; a paid legacy order (no payment attempt) gets one too
+        // staff without any refund right see no button; staff who can only VIEW refunds see it disabled with the reason, never silently missing
         $plain = $this->staff('Order Agent', []);
         $o2 = $this->paid($plain, 1, 100)->order;
         $this->assertStringNotContainsString('</i> Refund</button>', $this->actingAs($plain)->get(route('admin.orders.show', $o2))->getContent());
+        $viewer = $this->staff('Order Agent', ['payments.refunds.view']);
+        $o3 = $this->paid($viewer, 1, 100)->order;
+        $page = $this->actingAs($viewer)->get(route('admin.orders.show', $o3))->assertOk()->assertSee('payments.refunds.create');
+        $this->assertStringContainsString('disabled', substr($page->getContent(), 0, strpos($page->getContent(), 'a-ord-summary')));
     }
 }

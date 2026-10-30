@@ -42,11 +42,11 @@
     <button type="button" class="a-btn a-btn--outline" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
   @endcan
   {{-- Refund straight from the order header (no need to open a payment first). Shown only to staff who may create refunds on this order. --}}
-  @can('payments.refunds.create')
+  @canany(['payments.refunds.create', 'payments.refunds.view'])
     @php $headerPaid = $paymentAttempts->where('status', 'paid'); @endphp
     @foreach($headerPaid as $pa)@include('admin.orders._refund-actions', ['attempt' => $pa])@endforeach
     @if($headerPaid->isEmpty() && in_array($order->status, ['paid', 'partially_refunded'], true))@include('admin.orders._refund-actions', ['attempt' => null])@endif
-  @endcan
+  @endcanany
   <a href="{{ route('admin.orders.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back</a>
 </x-admin.page-header>
 
