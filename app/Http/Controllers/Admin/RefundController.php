@@ -51,6 +51,7 @@ class RefundController extends Controller
             'refund' => $refund, 'seeAccounts' => TransactionController::canSeeAccounts($user),
             'canCreate' => $user->can('payments.refunds.create') && OrderAccess::canManage($refund->order, $user),
             'canApprove' => $user->can('payments.refunds.approve') && OrderAccess::canManage($refund->order, $user),
+            'approvalRequired' => $this->refunds->approvalRequired(),
             'tracking' => \App\Services\Payments\Refunds\RefundTracking::snapshot($refund),
             'ticketChoices' => ($refund->status === PaymentRefund::SUCCEEDED && in_array($refund->effects_status, [PaymentRefund::EFFECTS_REVIEW, null], true)) ? $this->refunds->ticketChoices($refund->order) : collect(),
         ]);
@@ -150,6 +151,14 @@ class RefundController extends Controller
         $data = $request->validate(['note' => ['nullable', 'string', 'max:300']]);
 
         return $this->guard(fn () => $this->refunds->approve($refund, $request->user(), $data['note'] ?? null), 'Refund approved.');
+    }
+
+    public function release(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300']]);
+
+        return $this->guard(fn () => $this->refunds->releaseWithoutApproval($refund, $request->user(), $data['note']), 'Released: the refund is now waiting for the external refund. It is not completed until you confirm it.');
     }
 
     public function reject(Request $request, PaymentRefund $refund)

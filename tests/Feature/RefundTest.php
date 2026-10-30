@@ -343,11 +343,11 @@ class RefundTest extends TestCase
         $this->httpLog = [];
 
         $r = $this->request($a->fresh(), 'partial', '120');
-        $this->assertSame(['manual', 'requested'], [$r->mode, $r->status]);
+        $this->assertSame(['manual', 'processing'], [$r->mode, $r->status]);
         $this->assertEmpty($this->httpLog, 'nothing is sent to Fawaterak: no refund API is documented');
 
         $this->postJson(route('front.fawaterak.webhook'), ['transactionId' => 'INV-77', 'amount' => '120', 'currency' => 'EGP', 'status' => 'approved', 'reason' => 'x', 'approvedAt' => '2026-10-16'])->assertOk();
-        $this->assertSame('requested', $r->fresh()->status, 'an unauthenticated "approved" notification does not complete the refund');
+        $this->assertSame('processing', $r->fresh()->status, 'an unauthenticated "approved" notification does not complete the refund');
         $this->assertTrue($r->fresh()->meta['provider_reported_approval']);
         $this->assertSame(0, $this->svc->balance($a)['refunded']);
 
@@ -549,6 +549,7 @@ class RefundTest extends TestCase
         // a manual refund and an API refund both created with the policy off, but a send/confirmation attempt happens after it is on
         $manual = $this->request($fa, 'partial', '50');
         $this->assertFalse((bool) $manual->awaiting_approval);
+        $manual->forceFill(['status' => 'requested', 'submitted_at' => null])->save(); // how a manual refund created BEFORE this release looks (now new ones start as processing)
         $api = PaymentRefund::create(['internal_reference' => 'REF-LATE', 'payment_attempt_id' => $a->id, 'order_id' => $a->order_id, 'integration_account_id' => $a->integration_account_id, 'provider' => 'paymob', 'mode' => 'api',
             'type' => 'partial', 'status' => 'requested', 'awaiting_approval' => false, 'currency' => 'EGP', 'amount_minor' => 10000, 'reason' => 'created before policy', 'idempotency_key' => 'late-key', 'requested_by' => $this->staff->id, 'meta' => ['timeline' => []]]);
 

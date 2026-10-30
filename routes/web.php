@@ -222,6 +222,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('payments/refunds/{refund}/tickets', [$rc, 'tickets'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.tickets');
     Route::post('payments/refunds/{refund}/check', [$rc, 'check'])->middleware('permission:payments.refunds.create|payments.refunds.approve|payments.transactions.inquire')->name('payments.refunds.check');
     Route::post('payments/refunds/{refund}/approve', [$rc, 'approve'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.approve');
+    Route::post('payments/refunds/{refund}/release', [$rc, 'release'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.release');
     Route::post('payments/refunds/{refund}/reject', [$rc, 'reject'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.reject');
     Route::post('payments/refunds/{refund}/submitted', [$rc, 'submitted'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.submitted');
     Route::post('payments/refunds/{refund}/confirm', [$rc, 'confirm'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.confirm');

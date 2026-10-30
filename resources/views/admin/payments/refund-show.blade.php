@@ -52,14 +52,20 @@
                     <input class="form-control" name="note" placeholder="Approval note (optional)" maxlength="300" aria-label="Approval note">
                     <button class="a-btn a-btn--primary" type="submit">Approve</button></form>
                 <form method="POST" action="{{ route('admin.payments.refunds.reject', $refund) }}" class="a-btn-group">@csrf<input class="form-control" name="note" placeholder="Reason for rejecting" minlength="5" required aria-label="Rejection reason"><button class="a-btn a-btn--outline" type="submit">Reject request</button></form>
+            @elseif($refund->awaiting_approval && ! $approvalRequired && $refund->mode === 'manual' && ($canApprove || ($canCreate && (int) $refund->requested_by === (int) auth()->id())))
+                <x-admin.alert type="warning">This request was created while a second approval was required. That requirement is now off, but nothing was approved automatically. Release it explicitly to move it to "processing externally" (it still needs a verified confirmation to complete).</x-admin.alert>
+                <form method="POST" action="{{ route('admin.payments.refunds.release', $refund) }}" data-a-confirm="Release this request without a second approval?" data-a-confirm-ok="Release" style="display:grid;gap:6px">@csrf
+                    <input class="form-control" name="note" placeholder="Why is it released without a second approval?" minlength="5" maxlength="300" required aria-label="Release note">
+                    <button class="a-btn a-btn--primary" type="submit">Release for external processing</button></form>
+                <form method="POST" action="{{ route('admin.payments.refunds.reject', $refund) }}" class="a-btn-group">@csrf<input class="form-control" name="note" placeholder="Reason for withdrawing / rejecting" minlength="5" required aria-label="Rejection reason"><button class="a-btn a-btn--outline" type="submit">Withdraw request</button></form>
             @elseif($refund->awaiting_approval)
                 <x-admin.alert type="info">Waiting for approval by a <strong>different</strong> person with the refund-approval permission. {{ (int) $refund->requested_by === (int) auth()->id() ? 'You requested this refund, so you cannot approve it.' : '' }} Nothing is sent to the provider until then.</x-admin.alert>
                 @if($canApprove || $canCreate)
                 <form method="POST" action="{{ route('admin.payments.refunds.reject', $refund) }}" class="a-btn-group">@csrf<input class="form-control" name="note" placeholder="Reason for withdrawing / rejecting" minlength="5" required aria-label="Rejection reason"><button class="a-btn a-btn--outline" type="submit">Withdraw request</button></form>
                 @endif
             @elseif(! $refund->awaiting_approval)
-                @if($refund->mode === 'manual' && $refund->status === 'requested')
-                    <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">Mark as submitted to the provider</button></form>
+                @if($refund->mode === 'manual' && ($refund->status === 'requested' || ($refund->status === 'processing' && ! $refund->submitted_by)))
+                    <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">I carried it out in the provider dashboard (record who)</button></form>
                 @endif
                 <form method="POST" action="{{ route('admin.payments.refunds.confirm', $refund) }}" data-a-confirm="Record this refund as COMPLETED? Its tickets will be canceled and the order updated. Only do this after verifying it with the provider." data-a-confirm-ok="Record completed" style="display:grid;gap:6px">@csrf
                     <strong>Confirm completed (verified with the provider)</strong>

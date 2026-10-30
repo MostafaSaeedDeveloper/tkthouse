@@ -109,7 +109,7 @@ class RefundTicketIntegrationTest extends TestCase
         $this->assertCount(3, Ticket::where('order_id', $order->id)->get());
 
         $r = $this->request($target, 'full', null, ['external_method' => 'provider_portal', 'internal_notes' => 'secret internal note']);
-        $this->assertSame(['manual', 'requested', 'pending'], [$r->mode, $r->status, $r->effects_status]);
+        $this->assertSame(['manual', 'processing', 'pending'], [$r->mode, $r->status, $r->effects_status]);
         $this->assertSame(['not_checked_in', 'not_checked_in', 'not_checked_in'], $this->statuses($order), 'a request cancels nothing');
 
         $done = $this->confirm($r);
@@ -593,7 +593,7 @@ class RefundTicketIntegrationTest extends TestCase
 
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.confirm', $r), $base)->assertSessionHasErrors('refunded_at');
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.confirm', $r), $base + ['refunded_at' => now()->addDay()->toDateString()])->assertSessionHasErrors('refunded_at');
-        $this->assertSame('requested', $r->fresh()->status);
+        $this->assertSame('processing', $r->fresh()->status);
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.confirm', $r), $base + ['refunded_at' => now()->toDateString(), 'external_method' => 'wallet'])->assertSessionHasNoErrors();
         $this->assertSame(['succeeded', 'wallet'], [$r->fresh()->status, $r->fresh()->external_method]);
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.tickets', $r), ['tickets' => [1]])->assertForbidden();
@@ -684,7 +684,7 @@ class RefundTicketIntegrationTest extends TestCase
             $this->assertStringContainsString('nothing was changed', $e->errors()['refund'][0]);
         }
         $fresh = $r->fresh();
-        $this->assertSame(['requested', 'pending'], [$fresh->status, $fresh->effects_status]);
+        $this->assertSame(['processing', 'pending'], [$fresh->status, $fresh->effects_status]);
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertSame(['not_checked_in', 'not_checked_in'], $this->statuses($order));
         $this->assertSame(0, $this->svc->balance($target[1])['refunded'], 'no money is counted as refunded');

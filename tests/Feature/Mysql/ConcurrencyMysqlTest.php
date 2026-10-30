@@ -408,7 +408,7 @@ class ConcurrencyMysqlTest extends TestCase
         }
         \App\Models\Ticket::flushEventListeners();
 
-        $this->assertSame('requested', $r->fresh()->status);
+        $this->assertSame('processing', $r->fresh()->status);
         $this->assertSame('paid', $o->fresh()->status);
         $this->assertSame(0, \App\Models\Ticket::where('order_id', $o->id)->where('status', 'canceled')->count());
         $this->assertSame(0, \App\Models\ScanLog::where('action', 'refund_canceled')->count());

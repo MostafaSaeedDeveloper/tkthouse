@@ -70,7 +70,7 @@ final class Registry
                 'options' => ['default_account' => 'Use the default merchant account', 'block_online' => 'Block online payment (manual confirmation only)'], 'rules' => ['required', 'in:default_account,block_online']],
 
             'refund_approval_required' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Require a second person to approve refunds', 'default' => true,
-                'help' => 'ON by default. Every refund waits for a DIFFERENT person with payments.refunds.approve; nothing is sent to the provider (and no manual refund can be confirmed) before that. Self-approval is impossible. Turning this off is audited and takes effect immediately.', 'rules' => ['boolean']],
+                'help' => 'ON (default): every refund waits for a DIFFERENT person with payments.refunds.approve. OFF: the person with refund rights on the order requests the refund and it is immediately "processing externally" (the refund itself is carried out in the provider dashboard, e.g. Fawaterak); no second TKT House user is needed. Either way nothing is marked completed until a person confirms the verified external refund (reference, date, evidence). Switching OFF is audited, takes effect immediately and never approves or changes refunds that already wait for approval: release those explicitly from the refund page.', 'rules' => ['boolean']],
 
             // ---- Notifications
             'whatsapp_ticket_sending_enabled' => ['group' => 'notifications', 'type' => 'bool', 'label' => 'Send tickets via WhatsApp', 'default' => true,

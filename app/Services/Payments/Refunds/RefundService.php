@@ -201,7 +201,9 @@ class RefundService
                 'internal_reference' => $ref, 'payment_attempt_id' => $locked?->id, 'order_id' => $lockedOrder->id,
                 'integration_account_id' => $locked?->integration_account_id, // the ORIGINAL account, whoever owns the order now
                 'provider' => $locked ? $locked->provider : 'manual', 'mode' => $cap->isApi() ? 'api' : 'manual', 'type' => $type,
-                'status' => PaymentRefund::REQUESTED, 'awaiting_approval' => $needsApproval, 'currency' => $locked ? ($locked->currency ?: 'EGP') : 'EGP',
+                // No second-person approval: a manual refund is waiting for the external (provider dashboard) refund from the first moment.
+                'status' => (! $needsApproval && ! $cap->isApi()) ? PaymentRefund::PROCESSING : PaymentRefund::REQUESTED, 'awaiting_approval' => $needsApproval,
+                'submitted_at' => (! $needsApproval && ! $cap->isApi()) ? now() : null, 'currency' => $locked ? ($locked->currency ?: 'EGP') : 'EGP',
                 'amount_minor' => $minor, 'reason' => mb_substr($reason, 0, 300), 'idempotency_key' => $key,
                 'requested_by' => $by->id, 'requested_at' => now(),
                 'captured_minor' => $bal['captured'], 'payment_method' => mb_substr((string) ($lockedOrder->payment_method ?? ''), 0, 100) ?: null,
@@ -217,6 +219,9 @@ class RefundService
                 PaymentRefundTicket::create(['payment_refund_id' => $refund->id, 'ticket_id' => $ticketId, 'amount_minor' => $share]);
             }
             $this->note($refund, 'requested', $by, $needsApproval ? 'Waiting for approval' : null);
+            if (! $needsApproval && ! $cap->isApi()) {
+                $this->note($refund, 'waiting_external_refund', null, 'No second approval is required: waiting for the refund to be carried out in the provider dashboard. Nothing is confirmed until a person records the verified completion.');
+            }
 
             return $refund;
         });
@@ -386,6 +391,36 @@ class RefundService
         return $fresh->fresh();
     }
 
+    /**
+     * Explicit, audited handling of a MANUAL refund that was left waiting for approval while the approval policy was still on.
+     * Only possible once the policy is switched off; never happens automatically (a deployment or a settings change approves nothing).
+     * Allowed for staff with the approve permission, or for the requester themself (the policy no longer asks for a second person).
+     * It does not confirm anything: the refund only becomes "processing externally".
+     */
+    public function releaseWithoutApproval(PaymentRefund $refund, User $by, string $note): PaymentRefund
+    {
+        $fail = fn (string $m) => throw ValidationException::withMessages(['refund' => $m]);
+        if (mb_strlen(trim($note)) < 5) {
+            $fail('A note explaining why the request is released without a second approval is required.');
+        }
+        if ($this->approvalRequired()) {
+            $fail('Second-person approval is still required by the settings. Switch it off in Settings → Payments → Payment Routing first, or have another person approve.');
+        }
+        DB::transaction(function () use ($refund, $by, $note, $fail) {
+            $r = PaymentRefund::query()->lockForUpdate()->findOrFail($refund->id);
+            if ($r->mode !== 'manual' || ! $r->awaiting_approval || $r->status !== PaymentRefund::REQUESTED) {
+                $fail('This is not a manual refund waiting for approval.');
+            }
+            if (! ($by->can('payments.refunds.approve') || ((int) $r->requested_by === (int) $by->id && $by->can('payments.refunds.create')))) {
+                $fail('You are not allowed to release this refund.');
+            }
+            $r->forceFill(['awaiting_approval' => false, 'status' => PaymentRefund::PROCESSING, 'submitted_at' => now()])->save();
+            $this->note($r, 'released_without_second_approval', $by, $note, 'staff');
+        });
+
+        return $refund->fresh();
+    }
+
     public function reject(PaymentRefund $refund, User $by, string $note): PaymentRefund
     {
         return $this->transition($refund, $by, [PaymentRefund::REQUESTED], PaymentRefund::REJECTED, 'rejected', $note);
@@ -436,7 +471,7 @@ class RefundService
     /** Manual / external workflow and human resolution of UNKNOWN refunds. */
     public function markSubmitted(PaymentRefund $refund, User $by): PaymentRefund
     {
-        return $this->transition($refund, $by, [PaymentRefund::REQUESTED], PaymentRefund::PROCESSING, 'submitted_externally', null, mode: 'manual', blockAwaiting: true);
+        return $this->transition($refund, $by, [PaymentRefund::REQUESTED, PaymentRefund::PROCESSING], PaymentRefund::PROCESSING, 'submitted_externally', null, mode: 'manual', blockAwaiting: true);
     }
 
     public function confirmSucceeded(PaymentRefund $refund, User $by, string $providerReference, string $note, ?string $refundedAt = null, ?string $externalMethod = null): PaymentRefund

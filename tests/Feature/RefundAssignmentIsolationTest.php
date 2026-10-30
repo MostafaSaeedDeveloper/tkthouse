@@ -429,7 +429,7 @@ class RefundAssignmentIsolationTest extends TestCase
         $r = $this->request([$order, $a->fresh()]);
 
         $this->postJson(route('front.fawaterak.webhook'), ['transactionId' => $a->transaction_id, 'amount' => '300', 'currency' => 'EGP', 'status' => 'approved', 'reason' => 'x', 'approvedAt' => now()->toDateString()])->assertOk();
-        $this->assertSame('requested', $r->fresh()->status, 'an unauthenticated "approved" is a hint only');
+        $this->assertSame('processing', $r->fresh()->status, 'an unauthenticated "approved" is a hint only');
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertSame(['not_checked_in', 'not_checked_in'], Ticket::where('order_id', $order->id)->pluck('status')->all());
 

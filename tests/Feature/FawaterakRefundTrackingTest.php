@@ -195,7 +195,7 @@ class FawaterakRefundTrackingTest extends TestCase
         $this->note($a, '200')->assertOk()->assertJson(['authenticated' => false]);
 
         $fresh = $r->fresh();
-        $this->assertSame('requested', $fresh->status, 'a notification never changes the money state');
+        $this->assertSame('processing', $fresh->status, 'a notification never changes the money state');
         $this->assertSame('notification_received', RefundTracking::state($fresh));
         $this->assertTrue($fresh->meta['provider_reported_approval']);
         $this->assertFalse($fresh->meta['provider_notification']['authenticated']);

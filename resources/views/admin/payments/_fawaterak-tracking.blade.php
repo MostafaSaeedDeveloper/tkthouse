@@ -8,7 +8,7 @@
 @endphp
 <x-admin.card title="Fawaterak refund tracking" subtitle="You carry out the refund in the Fawaterak dashboard; TKT House tracks it and updates the order and tickets only after it is confirmed.">
     @if(! $approved)
-        <p class="a-hint">Available once the refund is approved by a second person.</p>
+        <p class="a-hint">Available once the refund is approved{{ $approvalRequired ? ' by a second person' : ' or released' }}.</p>
     @elseif($refund->isFinal())
         <p class="a-hint">{{ $t['label'] }}.</p>
         <button type="button" class="a-btn a-btn--outline" data-bs-toggle="modal" data-bs-target="#fwTrack">View tracking</button>
@@ -54,7 +54,7 @@
         @if($copyId)<button type="button" class="a-btn a-btn--outline" data-fw="copy" data-copy="{{ $copyId }}"><i class="fa fa-copy"></i> Copy invoice / transaction ID</button>@endif
         @if($t['dashboard_url'] && ! $refund->isFinal())<a class="a-btn a-btn--outline" href="{{ $t['dashboard_url'] }}" target="_blank" rel="noopener noreferrer" data-fw="reopen">Reopen Fawaterak</a>@endif
         <button type="button" class="a-btn a-btn--outline" data-fw="refresh"><i class="fa fa-rotate"></i> Check status</button>
-        @if($refund->status === 'requested' && ($canCreate || $canApprove) && ! $refund->awaiting_approval)
+        @if(in_array($refund->status, ['requested', 'processing'], true) && ! $refund->submitted_by && ($canCreate || $canApprove) && ! $refund->awaiting_approval)
             <form method="POST" action="{{ route('admin.payments.refunds.submitted', $refund) }}">@csrf<button class="a-btn a-btn--outline" type="submit">I submitted it in Fawaterak</button></form>
         @endif
         <button type="button" class="a-btn a-btn--primary" data-bs-dismiss="modal">Close (tracking continues)</button>
