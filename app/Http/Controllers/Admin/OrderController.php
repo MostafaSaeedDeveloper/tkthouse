@@ -63,6 +63,9 @@ class OrderController extends Controller
 
         $managedEvents = $request->user()?->managedEvents ?? collect();
 
+        // The refund view exposes refund amounts and reasons: it needs the refund permission on top of orders.view.
+        abort_if($request->boolean('refunded') && ! $request->user()?->can('payments.refunds.view'), 403);
+
         $ordersQuery = Order::query()->visibleTo($request->user())->with(self::listRelations());
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 

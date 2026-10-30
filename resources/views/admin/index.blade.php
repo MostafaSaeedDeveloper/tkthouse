@@ -122,10 +122,12 @@
     $refundHref = auth()->user()->can('orders.view') ? route('admin.orders.index', $refundParams) : null;
     $refundPending = $kpis['refunds_pending_count'] > 0 ? number_format($kpis['refunds_pending_count']).' pending request(s) · '.$moneyShort($kpis['refunds_pending_amount']).' (not refunded yet)' : null;
 @endphp
+@can('payments.refunds.view')
 <div class="a-grid a-grid--2" style="margin-bottom:20px">
     <x-admin.kpi label="Total Refunded" :value="$moneyShort($kpis['refunded'])" icon="fa-rotate-left" :href="$refundHref" :hint="'Confirmed refunds · '.$rangeLabel.($refundPending ? ' · '.$refundPending : '')" />
     <x-admin.kpi label="Refunded Orders" :value="number_format($kpis['refunded_orders'])" icon="fa-file-invoice-dollar" :href="$refundHref" :hint="'Orders with a confirmed refund · '.$rangeLabel" />
 </div>
+@endcan
 
 <div class="a-dash__grid">
     <div class="a-dash__col">

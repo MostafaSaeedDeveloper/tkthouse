@@ -301,4 +301,117 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertCount(1, collect($out)->unique(), 'every worker saw the same row');
         $this->assertSame(0, Order::count());
     }
+
+    /** Paid order with real ticket rows (committed), a manual (Fawaterak) payment or none at all (legacy). */
+    private function orderWithTickets(bool $legacy = false, int $n = 3): array
+    {
+        SystemSettings::set('refund_approval_required', false);
+        foreach (['payments.refunds.create', 'payments.refunds.approve'] as $perm) {
+            \Spatie\Permission\Models\Permission::findOrCreate($perm, 'web');
+        }
+        $staff = User::factory()->create();
+        $staff->givePermissionTo(['payments.refunds.create', 'payments.refunds.approve']);
+        $c = Customer::create(['first_name' => 'R', 'last_name' => 'T', 'email' => 'rt@example.test', 'phone' => '0100']);
+        $o = Order::create(['customer_id' => $c->id, 'order_number' => (string) random_int(1000000000, 9999999999), 'status' => 'paid', 'payment_method' => 'fawaterak_card', 'total_amount' => 100 * $n, 'subtotal_amount' => 100 * $n, 'paid_at' => now()]);
+        $a = null;
+        if (! $legacy) {
+            $acc = $this->account('fawaterak', 'FW'.random_int(1, 9999), [], [], ['refund_enabled_at' => now()]);
+            $o->forceFill(['integration_account_id' => $acc->id])->saveQuietly();
+            $a = \App\Models\PaymentAttempt::create(['order_id' => $o->id, 'provider' => 'fawaterak', 'method_code' => 'fawaterak_card', 'amount' => 100 * $n, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => 'FW-'.random_int(1, 99999), 'integration_account_id' => $acc->id, 'paid_at' => now()]);
+        }
+        $tickets = [];
+        for ($i = 1; $i <= $n; $i++) {
+            $tickets[] = \App\Models\Ticket::create(['order_id' => $o->id, 'name' => 'Night - GA', 'price' => 100, 'status' => 'not_checked_in', 'ticket_number' => (string) (7000000000 + $o->id * 10 + $i), 'qr_payload' => 'q'.$o->id.$i]);
+        }
+
+        return [$o, $a, $staff, $tickets];
+    }
+
+    private function consistent(Order $o): void
+    {
+        $refunds = \App\Models\PaymentRefund::where('order_id', $o->id)->get();
+        $ok = $refunds->where('status', 'succeeded');
+        $canceled = \App\Models\Ticket::where('order_id', $o->id)->where('status', 'canceled')->count();
+        $this->assertSame($ok->isNotEmpty(), $canceled > 0, 'tickets are canceled if and only if a refund succeeded');
+        $this->assertSame($ok->isNotEmpty() ? 'refunded' : 'paid', $o->fresh()->status);
+    }
+
+    public function test_parallel_confirmations_of_one_refund_succeed_once_and_cancel_each_ticket_once(): void
+    {
+        [$o, $a, $staff] = $this->orderWithTickets();
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->request($a, $staff, 'full', null, 'concurrency confirm', 'cc-1');
+
+        $out = $this->spawn(array_map(fn ($i) => ['refund-confirm', (string) $r->id, (string) $staff->id, (string) $i], range(1, 8)));
+
+        $this->assertSame(1, collect($out)->filter(fn ($l) => $l === 'OK:succeeded')->count(), implode(' / ', $out));
+        $this->assertSame(7, collect($out)->filter(fn ($l) => str_starts_with($l, 'INVALID:'))->count(), implode(' / ', $out));
+        $this->assertSame(3, \App\Models\ScanLog::where('action', 'refund_canceled')->count(), 'exactly one cancellation per ticket');
+        $this->assertSame(3, \App\Models\PaymentRefundTicket::whereNotNull('canceled_at')->count());
+        $this->assertSame(30000, (int) \App\Models\PaymentRefund::where('order_id', $o->id)->where('status', 'succeeded')->sum('amount_minor'));
+        $this->consistent($o);
+    }
+
+    public function test_a_confirmation_racing_a_failure_never_leaves_a_mixed_state(): void
+    {
+        [$o, $a, $staff] = $this->orderWithTickets();
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->request($a, $staff, 'full', null, 'concurrency mixed', 'cc-2');
+
+        $jobs = [];
+        foreach (range(1, 4) as $i) {
+            $jobs[] = ['refund-confirm', (string) $r->id, (string) $staff->id, (string) $i];
+            $jobs[] = ['refund-fail', (string) $r->id, (string) $staff->id];
+        }
+        $out = $this->spawn($jobs);
+
+        $this->assertSame(1, collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->count(), implode(' / ', $out));
+        $this->assertContains($r->fresh()->status, ['succeeded', 'failed']);
+        $this->consistent($o);
+    }
+
+    public function test_parallel_requests_for_the_same_ticket_create_one_refund_even_with_different_keys(): void
+    {
+        [$o, $a, $staff, $t] = $this->orderWithTickets();
+        $out = $this->spawn(array_map(fn ($i) => ['refund-tickets', (string) $a->id, (string) $o->id, (string) $staff->id, (string) $t[0]->id, 'tk-'.$i], range(1, 8)));
+
+        $this->assertSame(1, collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->count(), implode(' / ', $out));
+        $this->assertSame(1, \App\Models\PaymentRefund::where('order_id', $o->id)->count());
+        $this->assertSame(1, \App\Models\PaymentRefundTicket::where('ticket_id', $t[0]->id)->count());
+    }
+
+    public function test_parallel_legacy_requests_for_the_same_tickets_create_one_refund(): void
+    {
+        [$o, , $staff, $t] = $this->orderWithTickets(true);
+        $out = $this->spawn(array_map(fn ($i) => ['refund-tickets', '0', (string) $o->id, (string) $staff->id, $t[0]->id.','.$t[1]->id, 'lg-'.$i], range(1, 8)));
+
+        $this->assertSame(1, collect($out)->filter(fn ($l) => str_starts_with($l, 'OK:'))->count(), implode(' / ', $out));
+        $this->assertSame(1, \App\Models\PaymentRefund::where('order_id', $o->id)->whereNull('payment_attempt_id')->count());
+    }
+
+    public function test_a_failure_in_the_middle_of_a_confirmation_rolls_back_for_real_on_mysql(): void
+    {
+        [$o, $a, $staff, $t] = $this->orderWithTickets();
+        $svc = app(\App\Services\Payments\Refunds\RefundService::class);
+        $r = $svc->request($a, $staff, 'full', null, 'rollback probe', 'rb-1');
+
+        // the SECOND ticket fails to save: the first cancellation, the status change and the order status must all be undone
+        $n = 0;
+        \App\Models\Ticket::saving(function ($tk) use (&$n) {
+            if ($tk->status === 'canceled' && ++$n === 2) {
+                throw new \RuntimeException('simulated failure');
+            }
+        });
+        try {
+            $svc->confirmSucceeded($r, $staff, 'EXT-1', 'portal screenshot verified', now()->toDateString());
+            $this->fail('expected the failure to surface');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('nothing was changed', $e->errors()['refund'][0]);
+        }
+        \App\Models\Ticket::flushEventListeners();
+
+        $this->assertSame('requested', $r->fresh()->status);
+        $this->assertSame('paid', $o->fresh()->status);
+        $this->assertSame(0, \App\Models\Ticket::where('order_id', $o->id)->where('status', 'canceled')->count());
+        $this->assertSame(0, \App\Models\ScanLog::where('action', 'refund_canceled')->count());
+        $this->assertSame(0, \App\Models\PaymentRefundTicket::whereNotNull('canceled_at')->count());
+    }
 }

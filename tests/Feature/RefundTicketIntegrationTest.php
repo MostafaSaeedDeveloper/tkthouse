@@ -709,4 +709,117 @@ class RefundTicketIntegrationTest extends TestCase
         $this->assertSame(8000, $report['totals']['refunded'], 'legacy refunds are part of the totals');
         $this->assertSame(8000, collect($report['by_provider'])->sum('refunded'));
     }
+
+    /* ------------------------------------------------------------ end-to-end lifecycle over HTTP */
+
+    public function test_full_lifecycle_of_a_legacy_fawaterak_order_over_http_with_the_audit_trail(): void
+    {
+        SystemSettings::set('refund_approval_required', true);
+        [$order] = $this->paidOrder('legacy', 2, 250);
+        $ticket = Ticket::where('order_id', $order->id)->orderBy('id')->first();
+        $requester = $this->user(['payments.refunds.create', 'payments.refunds.view', 'orders.view', 'dashboard.view']);
+        $approver = $this->user(['payments.refunds.approve', 'payments.refunds.view', 'orders.view']);
+        $scanner = $this->scanner();
+
+        // 1. request: amount, reason, method, reference, date are recorded; nothing else changes
+        $this->actingAs($requester)->post(route('admin.payments.refunds.store-order', $order), [
+            'type' => 'full', 'reason' => 'event moved to another city', 'idempotency_key' => 'life-1', 'confirm' => 1,
+            'external_method' => 'provider_portal', 'provider_reference' => 'FAW-INV-5521', 'refunded_at' => now()->toDateString(), 'internal_notes' => 'asked by phone',
+        ])->assertRedirect();
+        $r = PaymentRefund::firstOrFail();
+        $this->assertSame([50000, 50000, 'requested', true, 'FAW-INV-5521', null], [$r->amount_minor, $r->captured_minor, $r->status, $r->awaiting_approval, $r->provider_reference, $r->payment_attempt_id]);
+        $this->assertSame('event moved to another city', $r->reason);
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.lookup'), ['code' => $ticket->ticket_number])->assertOk();
+
+        // 2. the requester cannot approve or confirm; a second person approves
+        $this->actingAs($requester)->post(route('admin.payments.refunds.approve', $r))->assertForbidden();
+        $this->actingAs($requester)->post(route('admin.payments.refunds.confirm', $r), ['provider_reference' => 'X-1', 'note' => 'portal screenshot', 'refunded_at' => now()->toDateString()])->assertSessionHasErrors('refund');
+        $this->assertSame('requested', $r->fresh()->status);
+        $this->actingAs($approver)->post(route('admin.payments.refunds.approve', $r), ['note' => 'verified with the organiser'])->assertSessionHasNoErrors();
+        $this->assertSame($approver->id, $r->fresh()->approved_by);
+        $this->assertSame('paid', $order->fresh()->status, 'approval changes nothing');
+
+        // 3. external submission, then explicit confirmation with evidence
+        $this->actingAs($requester)->post(route('admin.payments.refunds.submitted', $r))->assertSessionHasNoErrors();
+        $this->assertSame('processing', $r->fresh()->status);
+        $this->assertSame('paid', $order->fresh()->status, 'submitting externally is not success');
+        $this->actingAs($approver)->post(route('admin.payments.refunds.confirm', $r), ['provider_reference' => 'FAW-REF-77', 'note' => 'portal screenshot 4411', 'refunded_at' => now()->toDateString(), 'external_method' => 'provider_portal'])->assertSessionHasNoErrors();
+
+        $r = $r->fresh();
+        $this->assertSame(['succeeded', 'FAW-REF-77', 'applied'], [$r->status, $r->provider_reference, $r->effects_status]);
+        $this->assertSame([$requester->id, $approver->id, $requester->id, $approver->id], [$r->requested_by, $r->approved_by, $r->submitted_by, $r->confirmed_by]);
+        $this->assertSame('refunded', $order->fresh()->status);
+        $this->assertSame(['canceled', 'canceled'], $this->statuses($order));
+        $this->assertSame('500.00', number_format((float) $order->fresh()->total_amount, 2, '.', ''), 'original amount untouched');
+
+        // audit log: every transition has an entry naming who did it
+        $log = \Spatie\Activitylog\Models\Activity::where('subject_type', PaymentRefund::class)->where('subject_id', $r->id)->orderBy('id')->get();
+        $names = $log->map(fn ($a) => $a->description)->all();
+        foreach (['Refund requested', 'Refund approved', 'Refund submitted externally', 'Refund confirmed by staff', 'Refund effects applied'] as $d) {
+            $this->assertContains($d, $names);
+        }
+        $this->assertSame($approver->id, $log->firstWhere('description', 'Refund approved')->causer_id);
+        $this->assertSame($requester->id, $log->firstWhere('description', 'Refund requested')->causer_id);
+        $this->assertTrue(\Spatie\Activitylog\Models\Activity::where('subject_type', Order::class)->where('subject_id', $order->id)->where('description', 'Order status changed')->exists());
+
+        // 4. scanner rejects with the reason, 5. dashboard shows the money, the link lists the order
+        $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.lookup'), ['code' => $ticket->ticket_number])->assertStatus(409)->assertJsonFragment(['code' => 'refunded']);
+        $m = new DashboardMetrics([], null, $requester, []);
+        $stats = $m->refundStats(now()->startOfDay(), now()->endOfDay());
+        $this->assertSame([500.0, 1], [$stats['amount'], $stats['orders']]);
+        $this->assertSame(0.0, $m->kpis(now()->startOfDay(), now()->endOfDay())['net_collected']);
+        $list = $this->actingAs($requester)->get(route('admin.orders.index', ['refunded' => 1, 'stats' => 1, 'refunded_from' => now()->toDateString(), 'refunded_to' => now()->toDateString()]));
+        $this->assertSame([$order->id], $list->viewData('orders')->getCollection()->pluck('id')->all());
+    }
+
+    public function test_multiple_payment_attempts_partial_refund_of_one_attempt_cancels_only_selected_tickets(): void
+    {
+        [$order, $first] = $this->paidOrder('manual', 2, 100);
+        PaymentAttempt::create(['order_id' => $order->id, 'provider' => 'fawaterak', 'method_code' => 'fawaterak_card', 'amount' => 200, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => '888002',
+            'reference' => $order->order_number.'-dup', 'integration_account_id' => $first->integration_account_id, 'internal_reference' => PaymentAttempt::newInternalReference(), 'paid_at' => now()]);
+        $t = Ticket::where('order_id', $order->id)->orderBy('id')->get();
+
+        $r = $this->svc->request($first, $this->staff, 'partial', null, 'one attendee cancelled', 'ma-1', ['tickets' => [$t[0]->id]]);
+        $this->assertSame('pending', $r->effects_status, 'an explicit selection is not ambiguous');
+        $this->confirm($r);
+        $this->assertSame(['canceled', 'not_checked_in'], $this->statuses($order));
+        $this->assertSame('partially_refunded', $order->fresh()->status);
+        $this->assertSame(10000, $this->svc->balance($first)['refunded']);
+    }
+
+    public function test_an_unknown_api_outcome_cancels_nothing_until_a_person_confirms_it(): void
+    {
+        $this->makeMethod('paymob', 'paymob_card', ['api_key' => 'L', 'iframe_id' => '1', 'integration_id' => '1']);
+        $acc = $this->account('paymob', 'PMX');
+        $acc->forceFill(['refund_enabled_at' => now()])->save();
+        $order = $this->makePendingOrder(User::factory()->create(), null, 2, 100, 'paymob_card');
+        $order->forceFill(['integration_account_id' => $acc->id])->saveQuietly();
+        $a = PaymentAttempt::create(['order_id' => $order->id, 'provider' => 'paymob', 'method_code' => 'paymob_card', 'amount' => 200, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => '445566',
+            'reference' => $order->order_number.'-p', 'integration_account_id' => $acc->id, 'internal_reference' => PaymentAttempt::newInternalReference(), 'paid_at' => now(), 'settled_at' => now()]);
+        $order->forceFill(['status' => 'paid', 'paid_at' => now()])->saveQuietly();
+        app(TicketIssuanceService::class)->issueIfPaid($order->fresh());
+        $this->paymobPays($a, 'KEY-PMX', '445566');
+
+        $this->paymobRefundMode = 'timeout';
+        $r = $this->svc->request($a->fresh(), $this->staff, 'full', null, 'api refund that times out', 'unk-1');
+        $this->assertSame('unknown', $r->status);
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertSame(['not_checked_in', 'not_checked_in'], $this->statuses($order));
+        $this->assertSame(0, (new DashboardMetrics([], null, $this->staff, []))->refundStats(now()->startOfDay(), now()->endOfDay())['orders'], 'unknown is not money returned');
+
+        $this->confirm($r->fresh()); // verified in the provider dashboard by a person
+        $this->assertSame('refunded', $order->fresh()->status);
+        $this->assertSame(['canceled', 'canceled'], $this->statuses($order));
+    }
+
+    public function test_refund_figures_and_the_refund_order_list_need_the_refund_permission(): void
+    {
+        $this->dashboardFixture();
+        $plain = $this->user(['orders.view', 'dashboard.view']);
+
+        $this->actingAs($plain)->get(route('admin.dashboard', ['range' => '30d']))->assertOk()->assertDontSee('Refunded Orders')->assertDontSee('Total Refunded');
+        $this->actingAs($plain)->get(route('admin.orders.index', ['refunded' => 1]))->assertForbidden();
+        $this->actingAs($plain)->get(route('admin.orders.index'))->assertOk();
+    }
 }

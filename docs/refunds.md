@@ -32,3 +32,9 @@
 
 ## Tests
 `tests/Feature/RefundTicketIntegrationTest.php` (new), `RefundTest.php` (updated).
+
+## Production-readiness review notes
+- **Migration name**: `2026_12_11_000001_...` is intentionally kept. It must sort after `2026_12_03_000001_create_payment_refunds` and `2026_12_10_000004_add_created_by_to_tickets`; an October-dated name would run BEFORE the table it alters and break fresh installs. Verified on MariaDB against a database holding pre-existing refund/order/ticket rows (untouched, FK kept), plus rollback and re-migrate.
+- **Permissions**: the dashboard refund cards and the `Orders?refunded=1` list require `payments.refunds.view` (plus `orders.view` for the link).
+- **MySQL/MariaDB**: `DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=<port> DB_DATABASE=<scratch db> php artisan test tests/Feature/Mysql` runs the multi-process concurrency suite (confirmation races, ticket-claim races, real rollback).
+- **Known gap**: the customer ticket download pages still serve the PDF/QR of a refunded ticket; the scanner rejects it server-side.
