@@ -3,6 +3,7 @@
     $needsReview = $refund->status === 'unknown' || ($refund->status === 'succeeded' && $refund->effects_status === 'needs_review');
     $label = match (true) {
         $refund->status === 'requested' && $refund->awaiting_approval => 'Awaiting approval',
+        ! $refund->isFinal() && filled(data_get($refund->meta, 'provider_notified_at')) => 'Notification received — verify',
         $refund->status === 'requested' => 'Refund requested',
         $refund->status === 'processing' => $manual ? 'Processing externally' : 'Processing',
         $refund->status === 'succeeded' && $needsReview => 'Confirmed — tickets need review',
@@ -13,7 +14,7 @@
         default => $refund->status,
     };
     $variant = match (true) {
-        $needsReview => 'warning',
+        $needsReview, (! $refund->isFinal() && filled(data_get($refund->meta, 'provider_notified_at'))) => 'warning',
         $refund->status === 'succeeded' => 'success',
         in_array($refund->status, ['failed', 'rejected'], true) => 'danger',
         $refund->status === 'processing' => 'info',

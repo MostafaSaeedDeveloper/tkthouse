@@ -210,7 +210,8 @@ class RefundService
                 'refunded_at' => filled($options['refunded_at'] ?? null) ? $this->parseRefundDate((string) $options['refunded_at'], $lockedOrder) : null,
                 'effects_status' => $effects,
                 'effects_note' => $ambiguous ? 'The order has more than one paid payment: tickets are not cancelled automatically. Select the tickets manually after confirmation.' : null,
-                'meta' => ['timeline' => [], 'legacy_payment' => $locked === null, 'previous_order_status' => $lockedOrder->status],
+                'meta' => ['timeline' => [], 'legacy_payment' => $locked === null, 'previous_order_status' => $lockedOrder->status]
+                    + (($locked === null && filled($options['original_reference'] ?? null)) ? ['original_transaction_ref' => mb_substr(trim((string) $options['original_reference']), 0, 120)] : []),
             ]);
             foreach ($tickets['selected'] as $ticketId => $share) {
                 PaymentRefundTicket::create(['payment_refund_id' => $refund->id, 'ticket_id' => $ticketId, 'amount_minor' => $share]);
@@ -722,6 +723,47 @@ class RefundService
         }
 
         return $refund->fresh();
+    }
+
+    /** Legacy payment without a stored provider id: a person records the original Fawaterak id they found in the dashboard (audited, never invented). */
+    public function recordOriginalReference(PaymentRefund $refund, User $by, string $reference): PaymentRefund
+    {
+        $fail = fn (string $m) => throw ValidationException::withMessages(['refund' => $m]);
+        $reference = trim($reference);
+        if ($reference === '' || mb_strlen($reference) > 120 || preg_match('/\s/', $reference)) {
+            $fail('Enter the original Fawaterak invoice / transaction id exactly as shown in the Fawaterak dashboard (no spaces, max 120 characters).');
+        }
+        DB::transaction(function () use ($refund, $by, $reference, $fail) {
+            $r = PaymentRefund::query()->lockForUpdate()->findOrFail($refund->id);
+            if ($r->mode !== 'manual' || $r->isFinal()) {
+                $fail('The original reference can only be recorded on an open manual refund.');
+            }
+            $r->loadMissing('attempt');
+            if (filled($r->attempt?->transaction_id) || filled($r->attempt?->provider_reference)) {
+                $fail('TKT House already holds the original provider reference of this payment; it cannot be overwritten.');
+            }
+            $meta = (array) $r->meta;
+            $meta['original_transaction_ref'] = $reference;
+            $r->meta = $meta;
+            $this->note($r, 'original_reference_recorded', $by, 'Original provider id recorded by staff', 'staff');
+        });
+
+        return $refund->fresh();
+    }
+
+    /** Audit entry for "the operator opened the provider dashboard from the tracking modal". Changes no status; at most one entry per user per 5 minutes. */
+    public function logOpenedInProvider(PaymentRefund $refund, User $by): void
+    {
+        DB::transaction(function () use ($refund, $by) {
+            $r = PaymentRefund::query()->lockForUpdate()->findOrFail($refund->id);
+            if ($r->mode !== 'manual' || $r->isFinal() || $r->awaiting_approval) {
+                return;
+            }
+            $recent = collect($r->timeline())->contains(fn ($t) => ($t['event'] ?? '') === 'opened_in_provider' && ($t['by'] ?? null) === $by->name && now()->diffInMinutes(\Illuminate\Support\Carbon::parse($t['at'])) < 5);
+            if (! $recent) {
+                $this->note($r, 'opened_in_provider', $by, 'Opened the provider dashboard to carry out the refund (not a completion)', 'staff');
+            }
+        });
     }
 
     /** Appends to the visible timeline and the audit log. Never writes secrets. */

@@ -22,6 +22,10 @@
         </ul>
     </x-admin.card>
 
+    @if($refund->mode === 'manual' && ($refund->provider === 'fawaterak' || str_starts_with((string) $refund->order->payment_method, 'fawaterak')))
+        @include('admin.payments._fawaterak-tracking', ['tracking' => $tracking])
+    @endif
+
     <x-admin.card title="Tickets" subtitle="Tickets are canceled only when this refund is confirmed as completed.">
         @php $links = $refund->ticketLinks; @endphp
         @if($links->isEmpty())

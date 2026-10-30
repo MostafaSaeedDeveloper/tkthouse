@@ -51,6 +51,7 @@ class RefundController extends Controller
             'refund' => $refund, 'seeAccounts' => TransactionController::canSeeAccounts($user),
             'canCreate' => $user->can('payments.refunds.create') && OrderAccess::canManage($refund->order, $user),
             'canApprove' => $user->can('payments.refunds.approve') && OrderAccess::canManage($refund->order, $user),
+            'tracking' => \App\Services\Payments\Refunds\RefundTracking::snapshot($refund),
             'ticketChoices' => ($refund->status === PaymentRefund::SUCCEEDED && in_array($refund->effects_status, [PaymentRefund::EFFECTS_REVIEW, null], true)) ? $this->refunds->ticketChoices($refund->order) : collect(),
         ]);
     }
@@ -71,6 +72,7 @@ class RefundController extends Controller
             'internal_notes' => ['nullable', 'string', 'max:2000'],
             'provider_reference' => ['nullable', 'string', 'max:120'],
             'refunded_at' => ['nullable', 'date', 'before_or_equal:today'],
+            'original_reference' => ['nullable', 'string', 'max:120'],
         ], ['confirm.accepted' => 'Please confirm that you understand this is a financial operation.']);
     }
 
@@ -78,7 +80,7 @@ class RefundController extends Controller
     {
         return [
             'tickets' => $data['tickets'] ?? [], 'no_tickets' => (bool) ($data['no_tickets'] ?? false), 'external_method' => $data['external_method'] ?? null,
-            'internal_notes' => $data['internal_notes'] ?? null, 'provider_reference' => $data['provider_reference'] ?? null, 'refunded_at' => $data['refunded_at'] ?? null,
+            'internal_notes' => $data['internal_notes'] ?? null, 'original_reference' => $data['original_reference'] ?? null, 'provider_reference' => $data['provider_reference'] ?? null, 'refunded_at' => $data['refunded_at'] ?? null,
         ];
     }
 
@@ -182,6 +184,31 @@ class RefundController extends Controller
         $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300']]);
 
         return $this->guard(fn () => $this->refunds->confirmFailed($refund, $request->user(), $data['note']), 'Refund recorded as failed. The amount is available again.');
+    }
+
+    /** Read-only tracking snapshot (the modal polls this). Same access rule as the refund page; no side effects, no provider call. */
+    public function tracking(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund, false);
+
+        return response()->json(\App\Services\Payments\Refunds\RefundTracking::snapshot($refund))->header('Cache-Control', 'no-store');
+    }
+
+    /** "Open Transaction in Fawaterak" was clicked: audit only. */
+    public function opened(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $this->refunds->logOpenedInProvider($refund, $request->user());
+
+        return response()->json(['ok' => true])->header('Cache-Control', 'no-store');
+    }
+
+    public function originalReference(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate(['original_reference' => ['required', 'string', 'max:120']]);
+
+        return $this->guard(fn () => $this->refunds->recordOriginalReference($refund, $request->user(), $data['original_reference']), 'Original Fawaterak id recorded.');
     }
 
     /** Ticket cancellation for a confirmed refund that could not be matched automatically (needs the approve permission). */

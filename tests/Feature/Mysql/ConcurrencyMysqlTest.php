@@ -435,4 +435,30 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertSame(3, \App\Models\Ticket::where('order_id', $o->id)->count(), 'no ticket was duplicated');
         $this->assertSame(3, \App\Models\ScanLog::where('action', 'refund_canceled')->count());
     }
+
+    public function test_parallel_fawaterak_refund_notifications_and_a_confirmation_record_the_hint_once_and_complete_once(): void
+    {
+        [$o, $a, $staff] = $this->orderWithTickets();
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->request($a, $staff, 'full', null, 'webhook race', 'wh-1');
+
+        $jobs = [];
+        foreach (range(1, 6) as $i) {
+            $jobs[] = ['faw-refund-webhook', (string) $a->transaction_id, '300'];
+        }
+        $jobs[] = ['refund-confirm', (string) $r->id, (string) $staff->id, '1'];
+        $jobs[] = ['refund-confirm', (string) $r->id, (string) $staff->id, '2'];
+        $out = $this->spawn($jobs);
+
+        foreach (array_slice($out, 0, 6) as $line) {
+            $this->assertSame('OK:200', $line, implode(' / ', $out));
+        }
+        $this->assertSame(1, collect($out)->filter(fn ($l) => $l === 'OK:succeeded')->count(), implode(' / ', $out));
+        $r = $r->fresh();
+        $this->assertSame('succeeded', $r->status);
+        $this->assertLessThanOrEqual(1, collect($r->timeline())->where('event', 'provider_notification_received')->count(), 'the hint is recorded at most once');
+        $this->assertSame(1, \App\Models\WebhookEvent::where('event_type', 'refund')->count(), 'one event row for identical deliveries');
+        $this->assertSame(3, \App\Models\ScanLog::where('action', 'refund_canceled')->count(), 'tickets canceled exactly once');
+        $this->assertSame('refunded', $o->fresh()->status);
+        $this->assertSame(30000, (int) \App\Models\PaymentRefund::where('order_id', $o->id)->where('status', 'succeeded')->sum('amount_minor'));
+    }
 }

@@ -28,7 +28,7 @@ class FawaterakWebhookController extends Controller
             isset($p['invoice_status']) && strtolower((string) $p['invoice_status']) === 'paid' => 'payment.succeeded',
             isset($p['errorMessage']) || isset($p['response']['gatewayCode']) => 'payment.failed',
             isset($p['referenceId'], $p['status']) && strtoupper((string) $p['status']) === 'EXPIRED' => 'payment.cancelled',
-            isset($p['transactionId'], $p['status']) && strtolower((string) $p['status']) === 'approved' => 'refund',
+            isset($p['transactionId'], $p['status'], $p['amount']) && ! isset($p['invoice_id']) => 'refund', // any status: the handler decides; only "approved" is documented
             default => 'unknown',
         };
 
@@ -55,7 +55,7 @@ class FawaterakWebhookController extends Controller
         };
 
         $tx = (string) ($p['invoice_id'] ?? $p['transactionId'] ?? $p['referenceId'] ?? '');
-        [$event] = $webhooks->record('fawaterak', $type, [$tx, $type, $p['amount'] ?? '', $p['invoice_status'] ?? $p['status'] ?? ''], $tx ?: null, $signature, $p, $account, $attempt);
+        [$event] = $webhooks->record('fawaterak', $type, [$tx, $type, $p['amount'] ?? '', $p['invoice_status'] ?? $p['status'] ?? '', $p['currency'] ?? '', $p['approvedAt'] ?? ''], $tx ?: null, $signature, $p, $account, $attempt);
 
         if ($attempt && ! empty($p['referenceNumber']) && blank($attempt->provider_reference)) {
             PaymentAttempt::query()->whereKey($attempt->id)->update(['provider_reference' => mb_substr((string) $p['referenceNumber'], 0, 250)]);
@@ -68,7 +68,7 @@ class FawaterakWebhookController extends Controller
             return response()->json(['received' => false], 403);
         }
 
-        if (! $attempt) {
+        if (! $attempt && $type !== 'refund') {
             $webhooks->finish($event, 'needs_review', 'No payment attempt matches the ids in this event.');
 
             return response()->json(['received' => true, 'matched' => false]);

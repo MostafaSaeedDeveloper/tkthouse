@@ -87,6 +87,10 @@ try {
             ? $svc->request(PaymentAttempt::findOrFail((int) $a), $by, 'partial', null, 'concurrency ticket claim', $e, $opts)
             : $svc->requestForOrder(Order::findOrFail((int) $b), $by, 'partial', null, 'concurrency ticket claim', $e, $opts);
         echo 'OK:'.$r->id;
+    } elseif ($mode === 'faw-refund-webhook') { // the real HTTP route, as Fawaterak would call it: transactionId, amount
+        $json = json_encode(['transactionId' => $a, 'amount' => $b, 'currency' => 'EGP', 'status' => 'approved', 'reason' => 'x', 'approvedAt' => '2026-10-30 12:00:00']);
+        $res = $app->handle(Illuminate\Http\Request::create('/payments/fawaterak/webhook_json', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], $json));
+        echo 'OK:'.$res->getStatusCode();
     } elseif ($mode === 'issue') {             // what every payment callback / reconcile / admin save runs: order id
         app(\App\Services\TicketIssuanceService::class)->issueIfPaid(Order::withTrashed()->findOrFail((int) $a));
         echo 'OK:issued';
