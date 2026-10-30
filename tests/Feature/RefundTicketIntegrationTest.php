@@ -591,7 +591,6 @@ class RefundTicketIntegrationTest extends TestCase
         $r = $this->request($target);
         $base = ['provider_reference' => 'FW-9', 'note' => 'portal screenshot 12'];
 
-        $this->actingAs($this->staff)->post(route('admin.payments.refunds.confirm', $r), $base)->assertSessionHasErrors('refunded_at');
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.confirm', $r), $base + ['refunded_at' => now()->addDay()->toDateString()])->assertSessionHasErrors('refunded_at');
         $this->assertSame('processing', $r->fresh()->status);
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.confirm', $r), $base + ['refunded_at' => now()->toDateString(), 'external_method' => 'wallet'])->assertSessionHasNoErrors();

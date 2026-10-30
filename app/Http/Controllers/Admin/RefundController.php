@@ -194,6 +194,18 @@ class RefundController extends Controller
         return $this->guard(fn () => $this->refunds->reject($refund, $request->user(), $data['note']), 'Refund request rejected.');
     }
 
+    /** Adds the reference / date / evidence that were left out at confirmation. */
+    public function details(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate([
+            'provider_reference' => ['nullable', 'string', 'max:120'], 'refunded_at' => ['nullable', 'date', 'before_or_equal:today'],
+            'external_method' => ['nullable', 'string', 'max:30'], 'note' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        return $this->guard(fn () => $this->refunds->addDetails($refund, $request->user(), $data['provider_reference'] ?? null, $data['refunded_at'] ?? null, $data['note'] ?? null, $data['external_method'] ?? null), 'Refund details saved.');
+    }
+
     public function submitted(Request $request, PaymentRefund $refund)
     {
         $this->authorizeRefund($request, $refund);
@@ -205,11 +217,11 @@ class RefundController extends Controller
     {
         $this->authorizeRefund($request, $refund);
         $data = $request->validate([
-            'provider_reference' => ['required', 'string', 'max:120'], 'note' => ['required', 'string', 'min:5', 'max:300'],
-            'refunded_at' => ['required', 'date', 'before_or_equal:today'], 'external_method' => ['nullable', 'string', 'max:30'],
+            'provider_reference' => ['nullable', 'string', 'max:120'], 'note' => ['nullable', 'string', 'max:300'],
+            'refunded_at' => ['nullable', 'date', 'before_or_equal:today'], 'external_method' => ['nullable', 'string', 'max:30'],
         ]);
 
-        return $this->guard(fn () => $this->refunds->confirmSucceeded($refund, $request->user(), $data['provider_reference'], $data['note'], $data['refunded_at'], $data['external_method'] ?? null), 'Refund recorded as completed. Its tickets were canceled and the order updated.');
+        return $this->guard(fn () => $this->refunds->confirmSucceeded($refund, $request->user(), $data['provider_reference'] ?? null, $data['note'] ?? null, $data['refunded_at'] ?? null, $data['external_method'] ?? null), 'Refund recorded as completed. Its tickets were canceled and the order updated.');
     }
 
     public function fail(Request $request, PaymentRefund $refund)

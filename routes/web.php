@@ -226,6 +226,7 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('payments/refunds/{refund}/release', [$rc, 'release'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.release');
     Route::post('payments/refunds/{refund}/reject', [$rc, 'reject'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.reject');
     Route::post('payments/refunds/{refund}/submitted', [$rc, 'submitted'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.submitted');
+    Route::post('payments/refunds/{refund}/details', [$rc, 'details'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.details');
     Route::post('payments/refunds/{refund}/confirm', [$rc, 'confirm'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.confirm');
     Route::post('payments/refunds/{refund}/fail', [$rc, 'fail'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.fail');
     Route::get('settings/payments/webhooks', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'index'])->middleware(['permission:payments.webhooks.view', 'orders.global'])->name('payments.webhooks');

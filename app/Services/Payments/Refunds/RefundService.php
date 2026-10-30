@@ -486,9 +486,57 @@ class RefundService
         return $this->transition($refund, $by, [PaymentRefund::REQUESTED, PaymentRefund::PROCESSING], PaymentRefund::PROCESSING, 'submitted_externally', null, mode: 'manual', blockAwaiting: true);
     }
 
-    public function confirmSucceeded(PaymentRefund $refund, User $by, string $providerReference, string $note, ?string $refundedAt = null, ?string $externalMethod = null): PaymentRefund
+    /** The reference, the actual date and the evidence note may be left out now and added later ({@see addDetails}); the confirmation itself is always a person's audited act. */
+    public function confirmSucceeded(PaymentRefund $refund, User $by, ?string $providerReference = null, ?string $note = null, ?string $refundedAt = null, ?string $externalMethod = null): PaymentRefund
     {
-        return $this->transition($refund, $by, [PaymentRefund::REQUESTED, PaymentRefund::PROCESSING, PaymentRefund::UNKNOWN], PaymentRefund::SUCCEEDED, 'confirmed_by_staff', $note, providerReference: $providerReference, blockAwaiting: true, refundedAt: $refundedAt, externalMethod: $externalMethod);
+        $missing = array_values(array_filter([
+            blank($providerReference) ? 'reference' : null, blank($refundedAt) ? 'date' : null, mb_strlen(trim((string) $note)) < 5 ? 'evidence' : null,
+        ]));
+        $fresh = $this->transition($refund, $by, [PaymentRefund::REQUESTED, PaymentRefund::PROCESSING, PaymentRefund::UNKNOWN], PaymentRefund::SUCCEEDED, 'confirmed_by_staff', mb_strlen(trim((string) $note)) >= 5 ? $note : 'Confirmed as completed; details to be added', providerReference: $providerReference, blockAwaiting: true, refundedAt: filled($refundedAt) ? $refundedAt : now()->toDateString(), externalMethod: $externalMethod);
+        if ($missing && $fresh->status === PaymentRefund::SUCCEEDED) {
+            DB::transaction(function () use ($fresh, $missing, $by) {
+                $r = PaymentRefund::query()->lockForUpdate()->findOrFail($fresh->id);
+                $meta = (array) $r->meta;
+                $meta['details_pending'] = $missing;
+                $r->meta = $meta;
+                $this->note($r, 'details_pending', $by, 'Confirmed without: '.implode(', ', $missing).'. To be added later.', 'staff');
+            });
+            $fresh = $fresh->fresh();
+        }
+
+        return $fresh;
+    }
+
+    /** Fills in what was left out when the refund was confirmed. Never changes the money, tickets or order. */
+    public function addDetails(PaymentRefund $refund, User $by, ?string $providerReference, ?string $refundedAt, ?string $note, ?string $externalMethod = null): PaymentRefund
+    {
+        DB::transaction(function () use ($refund, $by, $providerReference, $refundedAt, $note, $externalMethod) {
+            $r = PaymentRefund::query()->lockForUpdate()->findOrFail($refund->id);
+            if ($r->status !== PaymentRefund::SUCCEEDED) {
+                throw ValidationException::withMessages(['refund' => 'Details can only be added to a confirmed refund.']);
+            }
+            if (filled($refundedAt)) {
+                $r->refunded_at = $this->parseRefundDate((string) $refundedAt, Order::query()->withTrashed()->find($r->order_id));
+            }
+            if (filled($providerReference)) {
+                $r->provider_reference = mb_substr($providerReference, 0, 250);
+            }
+            if ($externalMethod !== null && $externalMethod !== '') {
+                if (! array_key_exists($externalMethod, PaymentRefund::EXTERNAL_METHODS)) {
+                    throw ValidationException::withMessages(['refund' => 'Unknown external refund method.']);
+                }
+                $r->external_method = $externalMethod;
+            }
+            $meta = (array) $r->meta;
+            $pending = array_values(array_diff((array) ($meta['details_pending'] ?? []), array_filter([
+                filled($providerReference) ? 'reference' : null, filled($refundedAt) ? 'date' : null, mb_strlen(trim((string) $note)) >= 5 ? 'evidence' : null,
+            ])));
+            if ($pending) { $meta['details_pending'] = $pending; } else { unset($meta['details_pending']); }
+            $r->meta = $meta;
+            $this->note($r, 'details_added', $by, trim((string) $note) !== '' ? $note : 'Details added', 'staff');
+        });
+
+        return $refund->fresh();
     }
 
     public function confirmFailed(PaymentRefund $refund, User $by, string $note): PaymentRefund
@@ -565,11 +613,8 @@ class RefundService
     private function transition(PaymentRefund $refund, User $by, array $from, string $to, string $event, ?string $note, ?string $providerReference = null, ?string $mode = null, bool $requireAwaiting = false, bool $blockAwaiting = false, ?string $refundedAt = null, ?string $externalMethod = null): PaymentRefund
     {
         $fail = fn (string $m) => throw ValidationException::withMessages(['refund' => $m]);
-        if (in_array($event, ['confirmed_by_staff', 'marked_failed_by_staff'], true) && mb_strlen(trim((string) $note)) < 5) {
+        if ($event === 'marked_failed_by_staff' && mb_strlen(trim((string) $note)) < 5) {
             $fail('A note describing the evidence is required.');
-        }
-        if ($event === 'confirmed_by_staff' && blank($providerReference)) {
-            $fail('The provider\'s refund reference is required to record a completed refund.');
         }
 
         if ($blockAwaiting) {

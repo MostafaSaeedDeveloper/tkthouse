@@ -45,17 +45,17 @@
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start">
                     <form method="POST" action="{{ route('admin.payments.refunds.confirm', $refund) }}" data-a-confirm="Record this refund as COMPLETED? Its tickets will be canceled and the order updated. Only do this after verifying it with the provider." data-a-confirm-ok="Record completed" style="{{ $box }}">@csrf
                         <strong>Confirm completed</strong>
-                        <span class="a-hint">Only after you verified the refund in the provider dashboard. This cancels the tickets and updates the order.</span>
-                        <div class="a-field"><label class="form-label" for="rfref">Provider / external refund reference</label>
-                            <input class="form-control" id="rfref" name="provider_reference" required maxlength="120" value="{{ old('provider_reference', $refund->provider_reference) }}"></div>
-                        <div class="a-field"><label class="form-label" for="rfdate">Actual refund date</label>
-                            <input class="form-control" id="rfdate" type="date" name="refunded_at" required max="{{ now()->toDateString() }}" value="{{ old('refunded_at', $refund->refunded_at?->toDateString()) }}"></div>
+                        <span class="a-hint">Only after you verified the refund in the provider dashboard. This cancels the tickets and updates the order. The details below can be filled in now or added afterwards.</span>
+                        <div class="a-field"><label class="form-label" for="rfref">Provider / external refund reference <span class="a-hint">(optional, can be added later)</span></label>
+                            <input class="form-control" id="rfref" name="provider_reference" maxlength="120" value="{{ old('provider_reference', $refund->provider_reference) }}"></div>
+                        <div class="a-field"><label class="form-label" for="rfdate">Actual refund date <span class="a-hint">(optional, defaults to today)</span></label>
+                            <input class="form-control" id="rfdate" type="date" name="refunded_at" max="{{ now()->toDateString() }}" value="{{ old('refunded_at', $refund->refunded_at?->toDateString()) }}"></div>
                         @if($refund->mode === 'manual')
                         <div class="a-field"><label class="form-label" for="rfmethod">Refund method</label>
                             <select class="form-select" id="rfmethod" name="external_method">@foreach(\App\Models\PaymentRefund::EXTERNAL_METHODS as $k => $label)<option value="{{ $k }}" @selected(old('external_method', $refund->external_method) === $k)>{{ $label }}</option>@endforeach</select></div>
                         @endif
-                        <div class="a-field"><label class="form-label" for="rfnote">Evidence</label>
-                            <input class="form-control" id="rfnote" name="note" minlength="5" required placeholder="e.g. portal screenshot id" maxlength="300"></div>
+                        <div class="a-field"><label class="form-label" for="rfnote">Evidence <span class="a-hint">(optional, can be added later)</span></label>
+                            <input class="form-control" id="rfnote" name="note" placeholder="e.g. portal screenshot id" maxlength="300"></div>
                         <button class="a-btn a-btn--success" type="submit" style="width:100%">Record completed</button>
                     </form>
                     <form method="POST" action="{{ route('admin.payments.refunds.fail', $refund) }}" data-a-confirm="Record this refund as FAILED? The amount becomes available again." data-a-confirm-ok="Record failed" style="{{ $box }}">@csrf
@@ -73,6 +73,18 @@
 
     @if($refund->mode === 'manual' && ($refund->provider === 'fawaterak' || str_starts_with((string) $refund->order->payment_method, 'fawaterak')))
         @include('admin.payments._fawaterak-tracking', ['tracking' => $tracking])
+    @endif
+
+    @if($refund->status === 'succeeded' && ! empty($refund->meta['details_pending']) && ($canCreate || $canApprove))
+    <x-admin.card title="Add the missing details" subtitle="This refund is confirmed. Add what was left out when you can; it is saved in the audit trail.">
+        <form method="POST" action="{{ route('admin.payments.refunds.details', $refund) }}" style="display:grid;gap:10px">@csrf
+            <x-admin.alert type="info">Missing: <strong>{{ implode(', ', array_map(fn ($m) => ['reference' => 'refund reference', 'date' => 'actual refund date', 'evidence' => 'evidence note'][$m] ?? $m, (array) $refund->meta['details_pending'])) }}</strong></x-admin.alert>
+            @if(in_array('reference', (array) $refund->meta['details_pending'], true))<div class="a-field"><label class="form-label" for="dref">Provider / external refund reference</label><input class="form-control" id="dref" name="provider_reference" maxlength="120"></div>@endif
+            @if(in_array('date', (array) $refund->meta['details_pending'], true))<div class="a-field"><label class="form-label" for="ddate">Actual refund date</label><input class="form-control" id="ddate" type="date" name="refunded_at" max="{{ now()->toDateString() }}"></div>@endif
+            @if(in_array('evidence', (array) $refund->meta['details_pending'], true))<div class="a-field"><label class="form-label" for="dnote">Evidence</label><input class="form-control" id="dnote" name="note" maxlength="300" placeholder="e.g. portal screenshot id"></div>@endif
+            <button class="a-btn a-btn--primary" type="submit">Save details</button>
+        </form>
+    </x-admin.card>
     @endif
 
     <x-admin.card title="Tickets" subtitle="Tickets are canceled only when this refund is confirmed as completed.">

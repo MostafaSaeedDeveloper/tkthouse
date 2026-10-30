@@ -352,16 +352,6 @@ class RefundTest extends TestCase
         $this->assertSame(0, $this->svc->balance($a)['refunded']);
 
         $approver = $this->user(['payments.refunds.approve']);
-        try {
-            $this->svc->confirmSucceeded($r, $approver, '', 'verified in portal');
-            $this->fail('reference required');
-        } catch (ValidationException) {
-        }
-        try {
-            $this->svc->confirmSucceeded($r, $approver, 'FW-REF-1', 'x');
-            $this->fail('note required');
-        } catch (ValidationException) {
-        }
 
         $this->svc->markSubmitted($r, $approver);
         $done = $this->svc->confirmSucceeded($r->fresh(), $approver, 'FW-REF-1', 'portal screenshot 4411', now()->toDateString());

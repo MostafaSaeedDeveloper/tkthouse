@@ -180,6 +180,27 @@ class RefundNoApprovalWorkflowTest extends TestCase
         $this->assertSame(1, PaymentRefund::count());
     }
 
+    public function test_a_refund_can_be_confirmed_with_no_details_and_they_are_added_later(): void
+    {
+        $t = $this->paid($this->agentA, 2, 100);
+        $r = $this->request($t, $this->agentA);
+
+        $this->actingAs($this->agentA)->post(route('admin.payments.refunds.confirm', $r), [])->assertSessionHasNoErrors();
+        $done = $r->fresh();
+        $this->assertSame('succeeded', $done->status);
+        $this->assertSame('refunded', $t[0]->fresh()->status);
+        $this->assertSame(['canceled', 'canceled'], $this->statuses($t[0]));
+        $this->assertEqualsCanonicalizing(['reference', 'date', 'evidence'], $done->meta['details_pending']);
+        $this->actingAs($this->agentA)->get(route('admin.payments.refunds.show', $r))->assertSee('Add the missing details');
+
+        $this->actingAs($this->agentA)->post(route('admin.payments.refunds.details', $r), ['provider_reference' => 'FW-77', 'refunded_at' => now()->toDateString(), 'note' => 'portal screenshot 9'])->assertSessionHasNoErrors();
+        $after = $r->fresh();
+        $this->assertSame('FW-77', $after->provider_reference);
+        $this->assertArrayNotHasKey('details_pending', (array) $after->meta);
+        $this->assertSame('refunded', $t[0]->fresh()->status);
+        $this->actingAs($this->agentA)->post(route('admin.payments.refunds.details', $r), ['refunded_at' => now()->addDay()->toDateString()])->assertSessionHasErrors('refunded_at');
+    }
+
     public function test_confirmation_stays_with_authorized_staff_of_that_order_and_the_merchant_account_is_untouched(): void
     {
         [$order, $a] = $this->paid($this->agentA);
