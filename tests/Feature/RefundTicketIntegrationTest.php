@@ -492,7 +492,7 @@ class RefundTicketIntegrationTest extends TestCase
         $k = $m->kpis($start, $end);
 
         // captured: a 300 + b 200 + c 100 + d 100 + f 100 (e is hidden); a, b and d are now (partially) refunded orders but still count as sales
-        $this->assertSame(800.0, $k['sales']);
+        $this->assertSame(800.0, $k['gross_sales']);
         $this->assertSame(5, $k['paid_orders']);
         $this->assertSame(375.0, $k['refunded']);
         $this->assertSame(425.0, $k['net_collected']);
@@ -503,7 +503,7 @@ class RefundTicketIntegrationTest extends TestCase
         [$manual] = $this->paidOrder('legacy', 1, 500);
         $manual->forceFill(['status' => 'refunded'])->saveQuietly();
         $k2 = $m->kpis($start, $end);
-        $this->assertSame([800.0, 375.0], [$k2['sales'], $k2['refunded']]);
+        $this->assertSame([800.0, 375.0], [$k2['gross_sales'], $k2['refunded']]);
         $this->assertSame(0, Order::query()->captured()->whereKey($manual->id)->count());
     }
 

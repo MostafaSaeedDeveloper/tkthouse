@@ -121,27 +121,30 @@ class DashboardMetrics
         $prevEnd = $start->copy()->subSecond();
         $prevStart = $start->copy()->subDays($days);
 
-        $sales = (float) $this->paidInRange($start, $end)->sum('total_amount');
-        $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount');
-        $netSales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET));
-        $prevNetSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET));
+        $refunds = $this->refundStats($start, $end);
+        $prevRefunds = $this->refundStats($prevStart, $prevEnd);
+        // Confirmed refunds are deducted from the sales figures (by the date the refund was confirmed); the gross is kept separately.
+        $grossSales = (float) $this->paidInRange($start, $end)->sum('total_amount');
+        $sales = $grossSales - $refunds['amount'];
+        $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount') - $prevRefunds['amount'];
+        $netSales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET)) - $refunds['amount'];
+        $prevNetSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET)) - $prevRefunds['amount'];
         $tickets = $this->ticketsSold($start, $end);
         $prevTickets = $this->ticketsSold($prevStart, $prevEnd);
         $paidOrders = $this->paidInRange($start, $end)->count();
-        $refunds = $this->refundStats($start, $end);
 
         $activeEvents = Event::query()->where('status', 'active')
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))->count();
 
         return [
-            'sales' => $sales, 'sales_change' => self::change($sales, $prevSales),
+            'sales' => $sales, 'gross_sales' => $grossSales, 'sales_change' => self::change($sales, $prevSales),
             'net_sales' => $netSales, 'net_sales_change' => self::change($netSales, $prevNetSales),
             'tickets' => $tickets, 'tickets_change' => self::change($tickets, $prevTickets),
             'active_events' => $activeEvents,
             'paid_orders' => $paidOrders,
             'refunded' => $refunds['amount'], 'refunded_orders' => $refunds['orders'],
             'refunds_pending_amount' => $refunds['pending_amount'], 'refunds_pending_count' => $refunds['pending_count'],
-            'net_collected' => $sales - $refunds['amount'],
+            'net_collected' => $sales,
             'pending_orders' => $this->orders()->whereIn('status', ['pending_payment', 'pending_approval', 'pending', 'on_hold'])->whereBetween('created_at', [$start, $end])->count(),
         ];
     }

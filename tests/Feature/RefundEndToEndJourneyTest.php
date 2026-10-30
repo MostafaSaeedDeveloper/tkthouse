@@ -118,7 +118,7 @@ class RefundEndToEndJourneyTest extends TestCase
         $m = new DashboardMetrics([], null, $u, []);
         $k = $m->kpis(now()->subDays(2)->startOfDay(), now()->endOfDay());
 
-        return ['sales' => $k['sales'], 'refunded' => $k['refunded'], 'orders' => $k['refunded_orders'], 'net' => $k['net_collected'], 'paid_orders' => $k['paid_orders'], 'tickets' => $k['tickets']];
+        return ['sales' => $k['gross_sales'], 'shown' => $k['sales'], 'refunded' => $k['refunded'], 'orders' => $k['refunded_orders'], 'net' => $k['net_collected'], 'paid_orders' => $k['paid_orders'], 'tickets' => $k['tickets']];
     }
 
     /* ------------------------------------------------------------ the journey: full and partial */
@@ -181,6 +181,7 @@ class RefundEndToEndJourneyTest extends TestCase
         $after = $this->dash($this->agentA);
         $this->assertSame([400.0, 400.0, 1, 0.0, 1, 4], [$after['sales'], $after['refunded'], $after['orders'], $after['net'], $after['paid_orders'], $after['tickets']]);
         $this->assertSame($after['sales'], $before['sales'], 'gross sales are unchanged by a refund');
+        $this->assertSame($after['net'], $after['shown'], 'the Total sales card is the gross minus confirmed refunds');
         $this->assertSame([400.0, 1], [$this->dash($this->super)['refunded'], $this->dash($this->super)['orders']]);
         $this->assertSame([0.0, 0], [$this->dash($this->agentB)['refunded'], $this->dash($this->agentB)['orders']]);
 

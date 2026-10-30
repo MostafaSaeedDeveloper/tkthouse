@@ -335,9 +335,9 @@ class RefundAssignmentIsolationTest extends TestCase
 
         // Net collected for a scoped agent = THEIR captured payments - THEIR confirmed refunds
         $k = (new DashboardMetrics([], null, $this->agentA, []))->kpis(...$w);
-        $this->assertSame([2500.0, 1500.0, 1000.0], [$k['sales'], $k['refunded'], $k['net_collected']]);
+        $this->assertSame([2500.0, 1500.0, 1000.0], [$k['gross_sales'], $k['refunded'], $k['net_collected']]);
         $kb = (new DashboardMetrics([], null, $this->agentB, []))->kpis(...$w);
-        $this->assertSame([2500.0, 2000.0, 500.0], [$kb['sales'], $kb['refunded'], $kb['net_collected']]);
+        $this->assertSame([2500.0, 2000.0, 500.0], [$kb['gross_sales'], $kb['refunded'], $kb['net_collected']]);
 
         // the rendered dashboards and their KPI links
         $range = ['range' => 'custom', 'from' => $w[0]->toDateString(), 'to' => $w[1]->toDateString()];
