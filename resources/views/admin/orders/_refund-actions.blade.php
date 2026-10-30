@@ -115,6 +115,15 @@
             default => 'Nothing is left to refund on this payment.',
         };
     @endphp
-    <button type="button" class="a-btn a-btn--danger" disabled title="{{ $why }}" aria-disabled="true" style="opacity:.55;cursor:not-allowed"><i class="fa fa-rotate-left"></i> Refund</button>
-    <span class="a-hint" style="max-width:260px">{{ $why }}</span>
+    <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}x"><i class="fa fa-rotate-left"></i> Refund</button>
+    <div class="modal fade" id="{{ $uid }}x" tabindex="-1" aria-labelledby="{{ $uid }}xt" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="{{ $uid }}xt">Refund is not available</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body"><div class="a-alert a-alert--warning" role="alert">{{ $why }}</div></div>
+            <div class="modal-footer">
+                @if($open && $user->can('payments.refunds.view'))<a class="a-btn a-btn--primary" href="{{ route('admin.payments.refunds.show', $open) }}">Open refund {{ $open->internal_reference }}</a>@endif
+                <button type="button" class="a-btn a-btn--outline" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div></div>
+    </div>
 @endif
