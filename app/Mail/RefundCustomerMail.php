@@ -11,7 +11,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Customer refund e-mails (kind: received | approved | completed) in the standard TKT House e-mail layout.
+ * The ONE customer refund e-mail: "refund completed", in the standard TKT House e-mail layout. There are deliberately no earlier-stage e-mails.
  * Sent synchronously through the normal mailer (no queue needed). Customer-facing: the data comes from RefundMailData, which never carries
  * a payment provider, gateway, dashboard, reference of the provider or internal note.
  */
@@ -19,9 +19,9 @@ class RefundCustomerMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public const KINDS = ['received', 'approved', 'completed'];
+    public const KINDS = ['completed'];
 
-    public function __construct(public PaymentRefund $refund, public string $kind, ?string $locale = null)
+    public function __construct(public PaymentRefund $refund, public string $kind = 'completed', ?string $locale = null)
     {
         $this->locale($locale ?: config('app.locale'));
     }

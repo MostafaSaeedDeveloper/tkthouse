@@ -2,23 +2,6 @@
 
 /** Customer refund e-mails. Customer-facing: never name a payment provider, gateway, dashboard, API or internal note. */
 return [
-    'received' => [
-        'subject' => 'Refund Request Received — TKT House',
-        'hero_title' => 'We Received Your Refund Request',
-        'hero_text' => 'Our team has recorded a refund request for your order and is reviewing it.',
-        'intro' => 'We have received a refund request for your order <strong><bdi>#:order</bdi></strong>. Our team is reviewing it and we will email you again as soon as it has been approved.',
-        'notice' => 'No refund has been issued yet. You do not need to do anything for now.',
-        'footer' => 'This email was sent regarding a refund request on your TKT House order.',
-    ],
-    'approved' => [
-        'subject' => 'Your Refund Request Has Been Approved — TKT House',
-        'hero_title' => 'Your Refund Request Has Been Approved',
-        'hero_text' => 'Your refund request has been accepted and is now being processed.',
-        'intro' => 'Good news — the refund request for your order <strong><bdi>#:order</bdi></strong> has been accepted and processing is underway.',
-        'notice' => 'This is not yet a confirmation that the money has been returned. We will email you again once the refund has been completed. You do not need to take any further action.',
-        'tickets' => 'Your tickets remain valid until the refund has been completed.',
-        'footer' => 'This email was sent regarding a refund on your TKT House order.',
-    ],
     'completed' => [
         'subject' => 'Your Refund Has Been Processed Successfully — TKT House',
         'hero_title' => 'Your Refund Has Been Processed',
@@ -35,7 +18,7 @@ return [
         'greeting' => 'Hi', 'there' => 'there', 'order' => 'Order', 'event' => 'Event', 'type' => 'Refund type', 'amount' => 'Refund amount', 'tickets' => 'Tickets included',
         'reason' => 'Reason', 'status' => 'Status', 'reference' => 'Refund reference', 'date' => 'Confirmation date',
         'full' => 'Full refund', 'partial' => 'Partial refund',
-        'st_request' => 'Request received', 'st_processing' => 'Processing', 'st_completed' => 'Completed',
+        'st_completed' => 'Completed',
     ],
     'contact' => 'If you have any questions, reply to this email and mention your order number <strong style="color:#dddde8;"><bdi>#:order</bdi></strong>.',
     'reason_fallback' => 'Refund arranged by our team',

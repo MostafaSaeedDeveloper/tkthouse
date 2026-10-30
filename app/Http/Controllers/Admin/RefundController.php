@@ -224,7 +224,7 @@ class RefundController extends Controller
     public function resendEmail(Request $request, PaymentRefund $refund)
     {
         $this->authorizeRefund($request, $refund);
-        $kind = (string) $request->validate(['kind' => ['required', 'in:received,approved,completed']])['kind'];
+        $kind = (string) $request->validate(['kind' => ['required', 'in:completed']])['kind'];
         app(\App\Services\Payments\Refunds\RefundCustomerNotifier::class)->retry($refund, $kind);
 
         return back()->with('success', 'The e-mail was re-sent if the earlier delivery had failed.');

@@ -111,7 +111,7 @@
         </dl>
         @php $mails = (array) data_get($refund->meta, 'customer_emails', []); @endphp
         @if($mails)
-        <dl class="a-kv"><div><dt>Customer e-mails</dt><dd>@foreach(['received' => 'Request received', 'approved' => 'Approved / processing', 'completed' => 'Completed'] as $k => $label)@if(isset($mails[$k]))<div>{{ $label }}: {{ ! empty($mails[$k]['sent_at']) ? 'sent '.\Illuminate\Support\Carbon::parse($mails[$k]['sent_at'])->format('d M H:i') : (! empty($mails[$k]['skipped']) ? 'not sent (no valid e-mail)' : (! empty($mails[$k]['failed_at']) ? 'FAILED (refund unaffected)' : 'sending…')) }}
+        <dl class="a-kv"><div><dt>Customer e-mails</dt><dd>@foreach(['completed' => 'Refund completed'] as $k => $label)@if(isset($mails[$k]))<div>{{ $label }}: {{ ! empty($mails[$k]['sent_at']) ? 'sent '.\Illuminate\Support\Carbon::parse($mails[$k]['sent_at'])->format('d M H:i') : (! empty($mails[$k]['skipped']) ? 'not sent (no valid e-mail)' : (! empty($mails[$k]['failed_at']) ? 'FAILED (refund unaffected)' : 'sending…')) }}
             @if(! empty($mails[$k]['failed_at']) && ($canCreate || $canApprove))<form method="POST" action="{{ route('admin.payments.refunds.resend-email', $refund) }}" style="display:inline">@csrf<input type="hidden" name="kind" value="{{ $k }}"><button class="a-btn a-btn--outline a-btn--sm" type="submit">Resend</button></form>@endif</div>@endif @endforeach</dd></div></dl>
         @endif
         <p class="a-hint">When this refund is confirmed as completed, the tickets it covers are canceled (never deleted; scan history is kept) and the order becomes refunded or partially refunded. Until then nothing changes.</p>

@@ -3,33 +3,25 @@
 namespace App\Services\Payments\Refunds;
 
 use App\Mail\RefundCustomerMail;
+use App\Models\Order;
 use App\Models\PaymentRefund;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Customer e-mails about a refund: received (waiting for approval) → approved (processing; NOT a completion) → completed (verified).
- *  - dispatched only AFTER the database commit (callers use DB::afterCommit), synchronously through the normal mailer (no queue needed);
- *  - a send failure is logged and recorded, and can never undo a refund, ticket cancellation or order status;
- *  - idempotent per refund and kind: a row-locked claim in the refund's meta (webhooks, repeated confirmations or retries never send twice);
- *  - each kind is only sent for a state that really justifies it (re-checked under the lock): "completed" needs status succeeded.
+ * The ONE customer e-mail about a refund: "completed". Nothing is sent for a request, an approval, processing, a provider notification or
+ * an unverified refund. It is sent only when ALL of these are true (re-checked under a row lock):
+ *   - the refund is `succeeded` (verified: audited confirmation or trusted provider evidence),
+ *   - its ticket effects are done (`applied`, or `not_applicable` for a money-only refund) - so the tickets it covers are really canceled,
+ *   - the order status already follows it (`refunded` / `partially_refunded`).
+ * Further guarantees: dispatched only AFTER the commit (callers use DB::afterCommit), synchronous (no queue); a failure is logged/recorded and can
+ * never undo anything; exactly one per refund (row-locked claim in the refund meta, so webhooks/repeated confirmations/retries never duplicate).
  */
 class RefundCustomerNotifier
 {
     private const STALE_CLAIM_MINUTES = 10;
     private const MAX_ATTEMPTS = 3;
-
-    public function received(PaymentRefund $r): void
-    {
-        $this->send($r->id, 'received');
-    }
-
-    /** "Approved / processing": only once external processing is authorized (approval given, released, or no approval required). */
-    public function approved(PaymentRefund $r): void
-    {
-        $this->send($r->id, 'approved');
-    }
 
     public function completed(PaymentRefund $r): void
     {
@@ -44,12 +36,13 @@ class RefundCustomerNotifier
 
     private function eligible(PaymentRefund $r, string $kind): bool
     {
-        return match ($kind) {
-            'received' => $r->status === PaymentRefund::REQUESTED && $r->awaiting_approval,
-            'approved' => ! $r->awaiting_approval && in_array($r->status, [PaymentRefund::REQUESTED, PaymentRefund::PROCESSING], true),
-            'completed' => $r->status === PaymentRefund::SUCCEEDED,
-            default => false,
-        };
+        if ($kind !== 'completed' || $r->status !== PaymentRefund::SUCCEEDED) {
+            return false;
+        }
+        $ticketsDone = in_array($r->effects_status, [PaymentRefund::EFFECTS_APPLIED, PaymentRefund::EFFECTS_NONE], true);
+        $orderStatus = Order::query()->withTrashed()->whereKey($r->order_id)->value('status');
+
+        return $ticketsDone && in_array($orderStatus, Order::REFUND_STATUSES, true);
     }
 
     private function send(int $id, string $kind): void

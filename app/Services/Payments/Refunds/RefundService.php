@@ -226,10 +226,6 @@ class RefundService
             return $refund;
         });
 
-        if ($refund->wasRecentlyCreated) {
-            // "received" while it waits for approval; "approved / processing" as soon as external processing is authorized
-            $this->mailAfterCommit($refund, $refund->awaiting_approval ? 'received' : 'approved');
-        }
         if ($refund->wasRecentlyCreated && $refund->mode === 'api' && ! $refund->awaiting_approval) {
             $this->submit($refund);
         }
@@ -334,8 +330,8 @@ class RefundService
         });
     }
 
-    /** Customer e-mails run after the commit, never inside it, and can never break the refund. */
-    private function mailAfterCommit(PaymentRefund $refund, string $kind): void
+    /** The completed-refund e-mail runs after the commit, never inside it, and can never break the refund. */
+    private function mailAfterCommit(PaymentRefund $refund, string $kind = 'completed'): void
     {
         $id = $refund->id;
         DB::afterCommit(function () use ($id, $kind) {
@@ -400,7 +396,6 @@ class RefundService
         });
 
         $fresh = $refund->fresh();
-        $this->mailAfterCommit($fresh, 'approved');
         if ($fresh->mode === 'api') {
             $this->submit($fresh);
         }
@@ -434,7 +429,6 @@ class RefundService
             $r->forceFill(['awaiting_approval' => false, 'status' => PaymentRefund::PROCESSING, 'submitted_at' => now()])->save();
             $this->note($r, 'released_without_second_approval', $by, $note, 'staff');
         });
-        $this->mailAfterCommit($refund, 'approved');
 
         return $refund->fresh();
     }
@@ -780,6 +774,7 @@ class RefundService
             report($e);
             $fail('The ticket cancellation could not be completed, so nothing was changed. Please try again.');
         }
+        $this->mailAfterCommit($refund, 'completed'); // a refund held back for ticket review is announced only once its tickets are canceled
 
         return $refund->fresh();
     }

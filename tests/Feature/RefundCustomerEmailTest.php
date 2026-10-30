@@ -98,62 +98,63 @@ class RefundCustomerEmailTest extends TestCase
         }
     }
 
-    /* ------------------------------------------------------------ which e-mail, when */
+    /* ------------------------------------------------------------ one e-mail, only when truly completed */
 
-    public function test_received_while_awaiting_approval_then_approved_then_completed_each_exactly_once(): void
+    public function test_the_customer_gets_no_email_for_requests_approvals_processing_or_notifications_only_one_when_completed(): void
     {
-        Mail::fake();
-        SystemSettings::set('refund_approval_required', true);
-        $t = $this->paid();
-        $r = $this->ask($t);
-        $this->assertSame(['received'], $this->kinds());
-        $this->assertStringContainsString('Refund Request Received — TKT House', $this->body('received', $r));
-        $this->assertStringNotContainsString('Your Refund Request Has Been Approved', $this->body('received', $r));
+        foreach ([true, false] as $approval) {                       // second-person approval ON and OFF behave the same for the customer
+            Mail::fake();
+            SystemSettings::set('refund_approval_required', $approval);
+            $t = $this->paid();
+            $r = $this->ask($t);
+            $this->assertSame([], $this->kinds(), 'a request sends nothing');
+            if ($approval) {
+                $this->svc->approve($r, $this->approver);
+                $this->assertSame([], $this->kinds(), 'an approval sends nothing');
+            }
+            $this->svc->markSubmitted($r->fresh(), $this->staff);
+            $this->postJson(route('front.fawaterak.webhook'), ['transactionId' => $t[1]->transaction_id, 'amount' => '300', 'currency' => 'EGP', 'status' => 'approved', 'reason' => 'x', 'approvedAt' => '2026-10-30 12:00:00'])->assertOk();
+            $this->assertSame([], $this->kinds(), 'processing and an "approved" provider notification send nothing');
+            $this->assertSame('paid', $t[0]->fresh()->status);
 
-        $this->svc->approve($r, $this->approver);
-        $this->assertSame(['received', 'approved'], $this->kinds());
-        $this->svc->markSubmitted($r->fresh(), $this->staff);
-        $this->assertSame(['received', 'approved'], $this->kinds(), 'nothing is completed yet');
-
-        $this->confirm($r->fresh());
-        $this->assertSame(['received', 'approved', 'completed'], $this->kinds());
+            $this->confirm($r->fresh());
+            $this->assertSame(['completed'], $this->kinds(), 'exactly one e-mail, after the verified completion');
+        }
+        $this->assertSame(['completed'], RefundCustomerMail::KINDS, 'the early-stage e-mails no longer exist');
+        $this->assertFalse(view()->exists('emails.refunds.approved'));
+        $this->assertFalse(view()->exists('emails.refunds.received'));
+        $this->assertArrayNotHasKey('approved', trans('refund_mail'));
+        $this->assertArrayNotHasKey('received', trans('refund_mail'));
     }
 
-    public function test_without_second_approval_the_customer_gets_approved_on_request_and_completed_on_confirmation(): void
+    public function test_the_email_waits_for_the_tickets_and_the_order_status_not_only_for_succeeded(): void
     {
         Mail::fake();
-        $t = $this->paid();
-        $r = $this->ask($t);
-        $this->assertSame(['approved'], $this->kinds(), 'no "received" mail when it is processing from the first moment');
-        $this->assertSame('processing', $r->status);
-        $this->assertStringContainsString('Your Refund Request Has Been Approved — TKT House', $this->body('approved', $r));
+        $notifier = app(RefundCustomerNotifier::class);
 
-        // a request released from the approval queue is announced as approved/processing, once
-        SystemSettings::set('refund_approval_required', true);
+        // succeeded, but the tickets could not be matched automatically (two paid payments): held back until a person cancels them
+        $t = $this->paid();
+        PaymentAttempt::create(['order_id' => $t[0]->id, 'provider' => 'fawaterak', 'method_code' => 'fawaterak_card', 'amount' => 300, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => 'DUP-'.random_int(1000, 9999),
+            'reference' => $t[0]->order_number.'-dup', 'integration_account_id' => $t[1]->integration_account_id, 'internal_reference' => PaymentAttempt::newInternalReference(), 'paid_at' => now()]);
+        $r = $this->svc->request($t[1], $this->staff, 'full', null, 'duplicate payment given back', 'held-1');
+        $done = $this->confirm($r->fresh());
+        $this->assertSame('needs_review', $done->effects_status);
+        $this->assertSame([], $this->kinds(), 'tickets are not canceled yet: no e-mail');
+        $this->svc->resolveTickets($done->fresh(), $this->approver, Ticket::where('order_id', $t[0]->id)->pluck('id')->all());
+        $this->assertSame(['completed'], $this->kinds(), 'sent once the tickets are really canceled');
+        $this->assertStringContainsString('canceled', $this->body('completed', $done));
+
+        // an order whose status does not follow the refund (not in a refundable state) is never announced
         $t2 = $this->paid();
         $r2 = $this->ask($t2);
-        SystemSettings::set('refund_approval_required', false);
-        $this->svc->releaseWithoutApproval($r2->fresh(), $this->staff, 'released after the policy change');
-        $this->assertSame(['approved', 'received', 'approved'], $this->kinds());
+        $t2[0]->forceFill(['status' => 'canceled'])->saveQuietly();
+        $this->confirm($r2->fresh());
+        $this->assertNotSame('refunded', $t2[0]->fresh()->status);
+        $notifier->completed($r2->fresh());
+        $this->assertSame(['completed'], $this->kinds());
     }
 
     /* ------------------------------------------------------------ content */
-
-    public function test_the_approved_mail_is_accurate_it_promises_nothing_that_has_not_happened(): void
-    {
-        $t = $this->paid();
-        $r = $this->ask($t, 'partial', null, ['tickets' => [Ticket::where('order_id', $t[0]->id)->value('id')]]);
-        $html = $this->body('approved', $r);
-
-        foreach ([$t[0]->order_number, 'Summer Fest', '100.00 EGP', 'Partial refund', 'customer cannot attend any more', 'not yet a confirmation that the money has been returned', 'do not need to take any further action', 'remain valid until the refund has been completed', 'Buyer Test'] as $needle) {
-            $this->assertStringContainsString($needle, $html);
-        }
-        foreach (['has been returned', 'have been returned', 'already received', 'canceled', 'can no longer be used', 'successfully'] as $claim) {
-            $this->assertStringNotContainsStringIgnoringCase($claim, str_replace('not yet a confirmation that the money has been returned', '', $html), "no premature claim: $claim");
-        }
-        $this->assertClean($html, 'approved');
-        $this->assertClean($this->body('received', $r), 'received');
-    }
 
     public function test_the_completed_mail_shows_the_confirmed_facts_the_ticket_outcome_and_no_false_money_claim(): void
     {
@@ -203,7 +204,7 @@ class RefundCustomerEmailTest extends TestCase
         SystemSettings::set('refund_email_timing_note', 'Paymob usually takes 7 days.');
         $done = $this->confirm($r->fresh());
 
-        foreach (['received', 'approved', 'completed'] as $kind) {
+        foreach (['completed'] as $kind) {
             $html = $this->body($kind, $done);
             $this->assertClean($html, $kind);
             $this->assertStringNotContainsString((string) $t[1]->transaction_id, $html, 'the provider transaction id is not shown');
@@ -248,7 +249,7 @@ class RefundCustomerEmailTest extends TestCase
         for ($i = 0; $i < 3; $i++) {
             $this->postJson(route('front.fawaterak.webhook'), ['transactionId' => $t[1]->transaction_id, 'amount' => '300', 'currency' => 'EGP', 'status' => 'approved', 'reason' => 'x', 'approvedAt' => '2026-10-30 12:00:00'])->assertOk();
         }
-        $this->assertSame(['approved'], $this->kinds(), 'a webhook only records a hint: no e-mail');
+        $this->assertSame([], $this->kinds(), 'a webhook only records a hint: no e-mail');
         $done = $this->confirm($r->fresh());
         try {
             $this->confirm($done);
@@ -258,15 +259,14 @@ class RefundCustomerEmailTest extends TestCase
         $notifier = app(RefundCustomerNotifier::class);
         $notifier->completed($done->fresh());
         $notifier->completed($done->fresh());
-        $notifier->approved($done->fresh());   // no longer an "approved" state: refused
         $notifier->retry($done->fresh(), 'completed');
-        $this->assertSame(['approved', 'completed'], $this->kinds());
-        // a double form submit is one refund and one approved e-mail
+        $this->assertSame(['completed'], $this->kinds());
+        // a double form submit is one refund and no e-mail
         $t2 = $this->paid();
         $key = 'dup-1';
         $this->svc->request($t2[1], $this->staff, 'full', null, 'a duplicate submit', $key);
         $this->svc->request($t2[1], $this->staff, 'full', null, 'a duplicate submit', $key);
-        $this->assertSame(['approved', 'completed', 'approved'], $this->kinds());
+        $this->assertSame(['completed'], $this->kinds());
     }
 
     public function test_no_completed_email_for_unverified_failed_rejected_unknown_or_processing_refunds(): void
@@ -286,7 +286,7 @@ class RefundCustomerEmailTest extends TestCase
         $r->forceFill(['status' => 'rejected'])->save();
         $notifier->completed($r->fresh());
         $this->assertNotContains('completed', $this->kinds());
-        $this->assertSame(['approved'], $this->kinds());
+        $this->assertSame([], $this->kinds());
         $this->assertSame('paid', $t[0]->fresh()->status);
     }
 
@@ -326,9 +326,9 @@ class RefundCustomerEmailTest extends TestCase
         $legacy = $this->paid('legacy', 2, 150);
         $r = $this->ask($legacy);
         $done = $this->confirm($r->fresh());
-        $this->assertSame(['approved', 'completed'], $this->kinds());
+        $this->assertSame(['completed'], $this->kinds());
         Mail::assertSent(RefundCustomerMail::class, fn ($m) => $m->hasTo($legacy[0]->customer->email) && ! $m->hasTo($this->staff->email) && ! $m->hasTo($this->approver->email));
-        $this->assertSame(2, Mail::sent(RefundCustomerMail::class)->count());
+        $this->assertSame(1, Mail::sent(RefundCustomerMail::class)->count());
         $html = $this->body('completed', $done);
         $this->assertStringContainsString('Full refund', $html);
         $this->assertStringContainsString('300.00 EGP', $html);
@@ -340,7 +340,7 @@ class RefundCustomerEmailTest extends TestCase
         $r2 = $this->confirm($this->ask($noMail));
         $this->assertSame('no_valid_recipient', $r2->fresh()->meta['customer_emails']['completed']['skipped']);
         $this->assertSame('refunded', $noMail[0]->fresh()->status);
-        $this->assertSame(2, Mail::sent(RefundCustomerMail::class)->count());
+        $this->assertSame(1, Mail::sent(RefundCustomerMail::class)->count());
     }
 
     public function test_the_email_is_only_sent_after_the_transaction_commits(): void
