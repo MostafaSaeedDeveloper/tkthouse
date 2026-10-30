@@ -65,7 +65,6 @@ class RefundController extends Controller
             'amount' => ['nullable', 'string', 'max:14'],
             'reason' => ['required', 'string', 'min:5', 'max:300'],
             'idempotency_key' => ['required', 'string', 'max:64'],
-            'confirm' => ['accepted'],
             'tickets' => ['nullable', 'array', 'max:500'],
             'tickets.*' => ['integer'],
             'no_tickets' => ['nullable', 'boolean'],

@@ -66,7 +66,6 @@
                     @if(! $cap->isApi())
                     @unless($attempt)<x-admin.field label="Original Fawaterak invoice / transaction ID (legacy order)" name="original_reference" :for="$uid.'orig'" hint="Copy it from the Fawaterak dashboard. Used to open and match the transaction; nothing is guessed."><input id="{{ $uid }}orig" class="form-control" name="original_reference" maxlength="120" value="{{ old('original_reference') }}"></x-admin.field>@endunless
                     @endif
-                    <div class="a-m-switch form-check form-switch"><input class="form-check-input" type="checkbox" id="{{ $uid }}ok" name="confirm" value="1" required><label class="form-check-label" for="{{ $uid }}ok"><strong>I confirm this refund request</strong><span class="a-hint d-block">{{ $cap->isApi() ? 'The request is sent through the original merchant account. It is not complete until the provider confirms it.' : 'Nothing is sent from here. Do the refund outside the system, then confirm it on the refund page.' }} Tickets and the order status change only after the refund is confirmed as completed.</span></label></div>
                     <div class="a-error" role="alert" data-refund-error hidden></div>
                     @error('refund')<div class="a-error" role="alert">{{ $message }}</div>@enderror
                 </div>

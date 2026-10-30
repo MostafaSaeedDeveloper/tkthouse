@@ -817,7 +817,7 @@ class RefundTicketIntegrationTest extends TestCase
         $this->dashboardFixture();
         $plain = $this->user(['orders.view', 'dashboard.view']);
 
-        $this->actingAs($plain)->get(route('admin.dashboard', ['range' => '30d']))->assertOk()->assertDontSee('Refunded Orders')->assertDontSee('Total Refunded');
+        $this->actingAs($plain)->get(route('admin.dashboard', ['range' => '30d']))->assertOk()->assertDontSee('Refunded Orders')->assertSee('Total Refunded')->assertDontSee('refunded=1', false);
         $this->actingAs($plain)->get(route('admin.orders.index', ['refunded' => 1]))->assertForbidden();
         $this->actingAs($plain)->get(route('admin.orders.index'))->assertOk();
     }

@@ -119,14 +119,14 @@
 @php
     // The KPI link carries the dashboard's own scope (period by refund completion date, event, statistics exclusion) so the list shows exactly what the card counted.
     $refundParams = ['refunded' => 1, 'stats' => 1, 'refunded_from' => $from, 'refunded_to' => $to] + ($selectedEvent ? ['refund_event_id' => $selectedEvent->id] : []);
-    $refundHref = auth()->user()->can('orders.view') ? route('admin.orders.index', $refundParams) : null;
+    $refundHref = auth()->user()->can('orders.view') && auth()->user()->can('payments.refunds.view') ? route('admin.orders.index', $refundParams) : null;
     $refundPending = $kpis['refunds_pending_count'] > 0 ? number_format($kpis['refunds_pending_count']).' pending request(s) · '.$moneyShort($kpis['refunds_pending_amount']).' (not refunded yet)' : null;
 @endphp
-@can('payments.refunds.view')
+@if(auth()->user()->can('payments.refunds.view') || auth()->user()->can('orders.view'))
 <div class="a-grid" style="margin-bottom:20px">
     <x-admin.kpi label="Total Refunded" :value="$moneyShort($kpis['refunded'])" icon="fa-rotate-left" :href="$refundHref" :hint="'Confirmed refunds · '.$rangeLabel.($refundPending ? ' · '.$refundPending : '')" />
 </div>
-@endcan
+@endif
 
 <div class="a-dash__grid">
     <div class="a-dash__col">

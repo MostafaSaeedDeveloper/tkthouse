@@ -214,7 +214,10 @@ class RefundAssignmentIsolationTest extends TestCase
         $own->assertOk();
         $this->noneOf($own->getContent(), [$r2->internal_reference, 'Confirmed refunded', 'Record manual / external refund'], 'agent without refund permission');
         $dash = $this->actingAs($plain)->get(route('admin.dashboard', ['range' => '30d']))->getContent();
-        $this->noneOf($dash, ['Total Refunded', 'Refunded Orders'], 'dashboard cards');
+        $this->assertStringContainsString('Total Refunded', $dash);
+        $this->assertStringContainsString('90 EGP', $dash, 'the agent sees the refunds of their own orders');
+        $this->assertStringNotContainsString('Refunded Orders', $dash);
+        $this->assertStringNotContainsString('refunded=1', $dash, 'no link to the refund list without the refund permission');
         $this->actingAs($plain)->post(route('admin.payments.refunds.store-order', $order2), ['type' => 'full', 'reason' => 'no permission here', 'idempotency_key' => 'p-1', 'confirm' => 1])->assertForbidden();
 
         // view-only agent can see their refund but cannot act (needs create/approve + orders.manage_assigned)

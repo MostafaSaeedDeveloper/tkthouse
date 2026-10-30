@@ -395,8 +395,6 @@ class RefundTest extends TestCase
 
         $viewer = $this->user(['payments.refunds.view', 'payments.transactions.view', 'orders.view']);
         $this->actingAs($viewer)->post(route('admin.payments.refunds.store', $a), $payload)->assertForbidden();
-
-        $this->actingAs($this->staff)->post(route('admin.payments.refunds.store', $a), ['confirm' => null] + $payload)->assertSessionHasErrors('confirm');
         $this->assertSame(0, PaymentRefund::count());
         $this->actingAs($this->staff)->post(route('admin.payments.refunds.store', $a), $payload)->assertRedirect();
         $r = PaymentRefund::firstOrFail();
@@ -419,7 +417,7 @@ class RefundTest extends TestCase
         $a = $this->refundable($acc, 'fake_card');
         $page = fn (User $u) => $this->actingAs($u)->get(route('admin.orders.show', $a->order))->assertOk();
 
-        $page($this->staff)->assertSee('Refund payment')->assertSee('I confirm this refund');
+        $page($this->staff)->assertSee('Refund payment');
         $page($this->user(['orders.view', 'payments.transactions.view']))->assertDontSee('Refund payment');
 
         $fa = $this->account('fawaterak', 'FA');
