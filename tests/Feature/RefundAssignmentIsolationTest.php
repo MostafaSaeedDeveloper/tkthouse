@@ -212,7 +212,7 @@ class RefundAssignmentIsolationTest extends TestCase
         $this->actingAs($plain)->get(route('admin.orders.index', ['refunded' => 1]))->assertForbidden();
         $own = $this->actingAs($plain)->get(route('admin.orders.show', $order2));
         $own->assertOk();
-        $this->noneOf($own->getContent(), [$r2->internal_reference, 'Confirmed refunded', 'Record manual refund'], 'agent without refund permission');
+        $this->noneOf($own->getContent(), [$r2->internal_reference, 'Confirmed refunded', 'Record manual / external refund'], 'agent without refund permission');
         $dash = $this->actingAs($plain)->get(route('admin.dashboard', ['range' => '30d']))->getContent();
         $this->noneOf($dash, ['Total Refunded', 'Refunded Orders'], 'dashboard cards');
         $this->actingAs($plain)->post(route('admin.payments.refunds.store-order', $order2), ['type' => 'full', 'reason' => 'no permission here', 'idempotency_key' => 'p-1', 'confirm' => 1])->assertForbidden();

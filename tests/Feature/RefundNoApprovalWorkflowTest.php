@@ -107,7 +107,7 @@ class RefundNoApprovalWorkflowTest extends TestCase
         $tickets = Ticket::where('order_id', $order->id)->orderBy('id')->get();
 
         // 1-5: the agent requests a PARTIAL refund of one ticket; no second user, immediately processing externally
-        $this->actingAs($this->agentA)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual refund');
+        $this->actingAs($this->agentA)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual / external refund');
         $this->submit($this->agentA, $order->fresh(), 'partial', ['tickets' => [$tickets[0]->id], 'external_method' => 'provider_portal'])->assertSessionHasNoErrors();
         $r = PaymentRefund::firstOrFail();
         $this->assertSame([false, 'processing', $this->agentA->id, null, null], [(bool) $r->awaiting_approval, $r->status, $r->requested_by, $r->approved_by, $r->confirmed_by]);

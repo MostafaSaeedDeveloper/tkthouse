@@ -17,7 +17,7 @@
     $eligible = ($attempt ? $attempt->status === 'paid' : in_array($order->status, ['paid', 'partially_refunded'], true));
 @endphp
 @if($canCreate && $cap->mode !== 'none' && $bal['available'] > 0 && $eligible)
-    <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}"><i class="fa fa-rotate-left"></i> {{ $cap->isApi() ? 'Refund' : 'Record manual refund' }}</button>
+    <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}"><i class="fa fa-rotate-left"></i> Refund</button>
     <div class="modal fade" id="{{ $uid }}" tabindex="-1" aria-labelledby="{{ $uid }}t" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
             <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form">

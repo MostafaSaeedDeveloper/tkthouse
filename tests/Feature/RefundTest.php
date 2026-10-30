@@ -434,7 +434,7 @@ class RefundTest extends TestCase
 
         $fa = $this->account('fawaterak', 'FA');
         $f = $this->refundable($fa, 'fawaterak_card');
-        $this->actingAs($this->staff)->get(route('admin.orders.show', $f->order))->assertOk()->assertSee('Record manual refund')->assertSee('no documented refund API')->assertDontSee('>Refund<', false);
+        $this->actingAs($this->staff)->get(route('admin.orders.show', $f->order))->assertOk()->assertSee('Record manual / external refund')->assertSee('no documented refund API')->assertDontSee('>Refund<', false);
     }
 
     public function test_legacy_orders_without_attempts_or_accounts_still_render_and_can_use_the_manual_workflow(): void
@@ -442,7 +442,7 @@ class RefundTest extends TestCase
         $order = $this->makePendingOrder(User::factory()->create(), null, 2, 100, 'paymob_card');
         $legacy = PaymentAttempt::create(['order_id' => $order->id, 'provider' => 'paymob', 'method_code' => 'paymob_card', 'amount' => 200, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => '555001', 'paid_at' => now()]);
 
-        $this->actingAs($this->staff)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual refund');
+        $this->actingAs($this->staff)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual / external refund');
         $r = $this->request($legacy, 'partial', '50');
         $this->assertSame(['manual', null], [$r->mode, $r->integration_account_id]);
     }

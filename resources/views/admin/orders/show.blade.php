@@ -41,6 +41,12 @@
   @can('update_status')
     <button type="button" class="a-btn a-btn--outline" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
   @endcan
+  {{-- Refund straight from the order header (no need to open a payment first). Shown only to staff who may create refunds on this order. --}}
+  @can('payments.refunds.create')
+    @php $headerPaid = $paymentAttempts->where('status', 'paid'); @endphp
+    @foreach($headerPaid as $pa)@include('admin.orders._refund-actions', ['attempt' => $pa])@endforeach
+    @if($headerPaid->isEmpty() && in_array($order->status, ['paid', 'partially_refunded'], true))@include('admin.orders._refund-actions', ['attempt' => null])@endif
+  @endcan
   <a href="{{ route('admin.orders.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back</a>
 </x-admin.page-header>
 
@@ -191,13 +197,6 @@
             @if($canTx)<a class="a-btn a-btn--outline" href="{{ route('admin.payments.transactions.show', $primary) }}">View transaction details</a>@endif
         </div>
         @endif
-        @can('payments.refunds.create')
-        @php $paidAttempts = $attempts->where('status', 'paid'); @endphp
-        <div class="a-btn-group" style="margin-top:12px;flex-wrap:wrap">
-            @foreach($paidAttempts as $pa)@include('admin.orders._refund-actions', ['attempt' => $pa])@endforeach
-            @if($paidAttempts->isEmpty() && in_array($order->status, ['paid', 'partially_refunded'], true))@include('admin.orders._refund-actions', ['attempt' => null])@endif
-        </div>
-        @endcan
     </x-admin.card>
 
     <x-admin.card flush title="Payment Attempts History" :subtitle="$attempts->count().' attempt(s) — a retry never overwrites an earlier attempt'">
@@ -253,7 +252,7 @@
   </div>
 
   <div class="a-ord-col">
-    @if($canSeeAccounts)
+    @if($canSeeAccounts && $switchTargets->isNotEmpty())
     <x-admin.card title="Merchant account" subtitle="Where this order's online payments are collected.">
         <dl class="a-kv">
             <div><dt>Pinned account</dt><dd>@if($pinnedAccount)<strong>{{ $pinnedAccount->name }}</strong> <span class="a-muted">{{ ucfirst($pinnedAccount->provider) }} · {{ $pinnedAccount->environment }}</span>@else<span class="a-muted">Legacy configuration</span>@endif</dd></div>

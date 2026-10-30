@@ -72,3 +72,12 @@ It is sent only when ALL of these are true (re-checked under a row lock): the re
 - **No gateway names**: data comes from `RefundMailData` (no provider id/reference, dashboard, API or internal notes). The staff reason is shown to the customer; reasons containing provider names, links, e-mails, long numbers or words like gateway/dashboard/internal become "Refund arranged by our team". The timing sentence is editable in Settings → Notifications (*Refund e-mail: time-to-appear note*; provider names are ignored) and translatable in `lang/{en,ar}/refund_mail.php` (Arabic with RTL; customers have no stored language, so the app locale is used).
 - Delivery: dispatched with `DB::afterCommit`; one per refund (row-locked claim in the refund meta; repeated webhooks/confirmations/retries never duplicate); a failure is logged (`order_delivery` activity "Delivery failed: refund_completed", refund timeline) and never rolls back the refund, order or tickets; the refund page shows a **Resend** button for a failed e-mail only (a delivered one is never re-sent).
 - Preview: `docs/email-previews/` (desktop + mobile, English + Arabic).
+
+## Known limitations (final audit)
+- No official Fawaterak refund-creation or refund-status API could be confirmed, so completion is always a human confirmation with provider evidence; the refund webhook is unsigned and only a hint.
+- No official Fawaterak merchant deep link exists; the dashboard action is the configured address + copy of the invoice id.
+- Customers have no stored language: refund e-mails use the app locale (EN/AR provided).
+- Check-in statistics count `checked_in` tickets, so a ticket refunded after check-in leaves that count (scan history remains).
+- 59 checkout/front-end tests fail on main for reasons unrelated to refunds (see PR audit): a brand-new guest e-mail now needs a password and an e-mail code, attendee names must be letters only; the tests were not updated. Real checkout still needs a staging check.
+- The refund tracking modal polls every 5 s while open; it does not push. Tracking itself is stored in the database.
+- Manual QA: `docs/refunds-manual-qa.md`.

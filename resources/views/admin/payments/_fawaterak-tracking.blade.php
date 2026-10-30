@@ -79,7 +79,7 @@
         if (s.final) { stop(); if (m.dataset.final !== '1') { m.dataset.final = '1'; } }
         if (s.completed && !window.__fwReloaded) { window.__fwReloaded = true; setTimeout(function () { location.reload(); }, 1500); }
     }
-    function check() { return fetch(m.dataset.snapshotUrl, {headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}, credentials: 'same-origin'}).then(function (r) { return r.ok ? r.json() : null; }).then(function (s) { if (s) paint(s); }).catch(function () {}); }
+    function check() { return fetch(m.dataset.snapshotUrl, {headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}, credentials: 'same-origin'}).then(function (r) { if (r.status === 401 || r.status === 419 || r.redirected) { stop(); q('label').textContent = 'Your session expired. Sign in again to see the latest status — tracking continues on the server.'; return null; } if (r.status === 403 || r.status === 404) { stop(); q('label').textContent = 'You no longer have access to this refund.'; return null; } return r.ok ? r.json() : null; }).then(function (s) { if (s) paint(s); }).catch(function () {}); }
     function start() { stop(); if (m.dataset.final !== '1') timer = setInterval(check, 5000); }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
     m.addEventListener('shown.bs.modal', function () { check(); start(); });

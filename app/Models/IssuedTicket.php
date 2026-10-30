@@ -54,11 +54,11 @@ class IssuedTicket extends Model
     {
         // One grouped condition, so extra constraints added by the caller (e.g. whereKey) can never be OR-ed around it.
         return $query->where(function ($outer) use ($user) {
-            $outer->whereHas('order', fn ($order) => $order->where('status', 'paid')->ownedByCustomer($user));
+            $outer->whereHas('order', fn ($order) => $order->whereIn('status', ['paid', 'partially_refunded'])->ownedByCustomer($user)); // a partly refunded order keeps its valid tickets
 
             if ($user->email_verified_at) {
                 $outer->orWhere(fn ($gift) => $gift->whereRaw('LOWER(holder_email) = ?', [mb_strtolower((string) $user->email)])
-                    ->whereHas('order', fn ($o) => $o->where('status', 'paid')->where('owner_unverified', false)));
+                    ->whereHas('order', fn ($o) => $o->whereIn('status', ['paid', 'partially_refunded'])->where('owner_unverified', false)));
             }
         });
     }

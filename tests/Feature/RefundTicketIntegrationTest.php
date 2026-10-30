@@ -159,7 +159,7 @@ class RefundTicketIntegrationTest extends TestCase
         $order = $target[0];
         $payload = ['type' => 'full', 'reason' => 'customer cancelled the event', 'idempotency_key' => 'leg-1', 'confirm' => 1, 'external_method' => 'bank_transfer'];
 
-        $this->actingAs($this->staff)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual refund')->assertSee('Remaining refundable')->assertSee('Refund method');
+        $this->actingAs($this->staff)->get(route('admin.orders.show', $order))->assertOk()->assertSee('Record manual / external refund')->assertSee('Remaining refundable')->assertSee('Refund method');
         $nobody = $this->user(['orders.view']);
         $this->actingAs($nobody)->post(route('admin.payments.refunds.store-order', $order), $payload)->assertForbidden();
         $this->assertSame(0, PaymentRefund::count());
