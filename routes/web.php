@@ -238,6 +238,10 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
     Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
 
+    Route::get('settings/backups', [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('backups.index');
+    Route::post('settings/backups', [\App\Http\Controllers\Admin\BackupController::class, 'store'])->middleware('throttle:6,1')->name('backups.store');
+    Route::get('settings/backups/{name}', [\App\Http\Controllers\Admin\BackupController::class, 'download'])->middleware('throttle:20,1')->name('backups.download');
+    Route::delete('settings/backups/{name}', [\App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('backups.destroy');
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
 
