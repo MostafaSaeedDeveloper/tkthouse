@@ -142,6 +142,7 @@ class CustomerAuthController extends Controller
             'password' => $pending['password_hash'],
             'referred_by_user_id' => ((int) ($pending['referrer_id'] ?? 0)) > 0 ? (int) $pending['referrer_id'] : null,
         ]);
+        $user->forceFill(['email_verified_at' => now()])->save(); // the registration code was just confirmed from this mailbox
 
         $request->session()->forget('affiliate.referrer_id');
         $request->session()->forget('affiliate.referrer_code');

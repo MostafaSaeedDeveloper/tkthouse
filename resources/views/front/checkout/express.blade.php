@@ -6,7 +6,7 @@
     $money = fn ($n) => number_format((float) $n, 2).' EGP';
     $attendeeValue = fn (int $i, string $field) => old("attendees.$i.$field", data_get($attendees, "$i.$field", ''));
     $buyerName = old('full_name', $buyer['full_name'] ?? trim(($buyer['first_name'] ?? '').' '.($buyer['last_name'] ?? '')));
-    $buyerEmail = old('email', $buyer['email'] ?? '');
+    $buyerEmail = $signedIn ? auth()->user()->email : old('email', $buyer['email'] ?? '');
     $buyerPhone = old('phone', $buyer['phone'] ?? '');
     $chosenMethod = old('payment_method', $selectedMethod ?: ($methods->count() === 1 ? $methods->first()->code : ''));
     $payLabel = $requiresApproval ? 'Submit booking request' : 'Pay now — '.$money($quote->total);
@@ -57,8 +57,8 @@
             {{-- Buyer --}}
             <section class="tkt-card tkt-section-card" aria-labelledby="buyerTitle" @if($wizard) data-wz-step="buyer" @endif>
                 <h2 class="tkt-section-card__title" id="buyerTitle">Your contact details</h2>
-                <p class="tkt-section-card__sub">
-                    @if($signedIn)Signed in as {{ auth()->user()->email }}. These details apply to this order only.
+                <p class="tkt-section-card__sub" data-signed-in-note>
+                    @if($signedIn)Signed in as {{ auth()->user()->email }}. Your email is your account email unless you change and confirm another; other details apply to this order only.
                     @else We send your confirmation here. No account or password needed.@endif
                 </p>
                 <div class="tkt-form-grid tkt-form-grid--2">
@@ -69,19 +69,40 @@
                     </div>
                     <div class="tkt-field">
                         <label class="tkt-label" for="buyer_email">Email address</label>
-                        <input class="tkt-input {{ $errors->has('email') ? 'is-invalid' : '' }}" id="buyer_email" name="email" type="email" inputmode="email" value="{{ $buyerEmail }}" autocomplete="email" placeholder="jane@domain.com" required data-buyer-email>
+                        <input class="tkt-input {{ $errors->has('email') ? 'is-invalid' : '' }}" id="buyer_email" name="email" type="email" inputmode="email" value="{{ $buyerEmail }}" autocomplete="email" placeholder="jane@domain.com" required data-buyer-email @if($signedIn) readonly @endif>
                         @error('email')<div class="tkt-field__error">{{ $message }}</div>@enderror
+                        <div data-contact-email @if(! $signedIn) hidden @endif data-account-email="{{ $signedIn ? auth()->user()->email : '' }}" data-send-url="{{ route('front.checkout.contact.send') }}" data-verify-url="{{ route('front.checkout.contact.verify') }}" style="margin-top:6px">
+                                <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-contact-change>Change email</button>
+                                <div data-contact-box hidden style="margin-top:8px">
+                                    <button type="button" class="tkt-btn tkt-btn--ghost" data-contact-send>Send code to this email</button>
+                                    <button type="button" class="tkt-link" style="background:none;border:0;padding:0;margin-left:8px" data-contact-cancel>Cancel</button>
+                                    <div data-contact-code-row hidden style="margin-top:8px">
+                                        <input class="tkt-input tkt-otp__input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······" data-contact-code>
+                                        <button type="button" class="tkt-btn tkt-btn--primary" style="margin-top:8px" data-contact-verify>Confirm email</button>
+                                    </div>
+                                    <div class="tkt-field__hint" data-contact-info hidden></div>
+                                    <div class="tkt-field__error" data-contact-error hidden></div>
+                                </div>
+                        </div>
                     </div>
                     <div class="tkt-field">
                         <label class="tkt-label" for="buyer_phone">Phone number <span class="tkt-text-muted" style="font-weight:500">(optional)</span></label>
                         <input class="tkt-input {{ $errors->has('phone') ? 'is-invalid' : '' }}" id="buyer_phone" name="phone" type="tel" inputmode="tel" value="{{ $buyerPhone }}" autocomplete="tel" placeholder="100 000 0000" data-phone-intl data-buyer-phone>
                         @error('phone')<div class="tkt-field__error">{{ $message }}</div>@enderror
                     </div>
+                    @unless($signedIn)
+                        <div class="tkt-field is-full" data-guest-password>
+                            <label class="tkt-label" for="buyer_password">Create a password <span class="tkt-text-muted" style="font-weight:500">(for your new account — not needed if you already have one)</span></label>
+                            <input class="tkt-input {{ $errors->has('password') ? 'is-invalid' : '' }}" id="buyer_password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" data-buyer-password>
+                            @error('password')<div class="tkt-field__error">{{ $message }}</div>@enderror
+                        </div>
+                    @endunless
                 </div>
                 @if($wizard)
                     {{-- Confirm the mailbox right here when this e-mail already has an account (no separate page) --}}
                     <div class="tkt-wz__otp" data-wz-otp hidden>
                         <h3 class="tkt-wz__otp-title">Confirm your email</h3>
+                        <div class="tkt-alert" role="status" data-otp-notice hidden style="margin-bottom:12px"></div>
                         <x-tkt.otp-panel email="" id-suffix="inline" />
                         <p class="tkt-text-muted tkt-text-sm" style="margin-top:12px">Typed it wrong? <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-otp-edit-email>Edit my email</button> — everything you entered stays.</p>
                     </div>
@@ -236,6 +257,7 @@
                 <h4 class="modal-title" id="otpTitle">Confirm your email</h4>
             </div>
             <div class="modal-body">
+                <div class="tkt-alert" role="status" data-otp-notice hidden style="margin-bottom:12px"></div>
                 <p class="tkt-text-sm" style="margin-bottom:12px">To keep your booking safe we need to confirm this email. We've sent a code if it can receive one. Your booking details are saved — nothing is lost.</p>
                 <x-tkt.otp-panel email="" id-suffix="modal" />
                 <p class="tkt-text-muted tkt-text-sm" style="margin-top:14px">Typed it wrong? <button type="button" class="tkt-link" style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline" data-otp-edit-email>Edit my email</button> — your tickets and details stay as they are.</p>
@@ -250,5 +272,6 @@
     <script src="{{ asset('js/tkt-otp.js') }}?v={{ filemtime(public_path('js/tkt-otp.js')) }}"></script>
     <script src="{{ asset('js/tkt-checkout.js') }}?v={{ filemtime(public_path('js/tkt-checkout.js')) }}"></script>
     @if($wizard)<script src="{{ asset('js/tkt-checkout-wizard.js') }}?v={{ filemtime(public_path('js/tkt-checkout-wizard.js')) }}"></script>@endif
+    <script src="{{ asset('js/tkt-contact-email.js') }}?v={{ filemtime(public_path('js/tkt-contact-email.js')) }}"></script>
     <script src="{{ asset('js/tkt-express.js') }}?v={{ filemtime(public_path('js/tkt-express.js')) }}"></script>
 @endpush

@@ -68,6 +68,8 @@ Route::group([], function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('front.checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:12,1,checkout-store')->name('front.checkout.store');
     Route::post('/checkout/buyer', [CheckoutController::class, 'preflight'])->middleware('throttle:20,1,checkout-preflight')->name('front.checkout.preflight');
+    Route::post('/checkout/contact-email/send', [CheckoutController::class, 'sendContactCode'])->middleware('throttle:10,1,checkout-contact')->name('front.checkout.contact.send');
+    Route::post('/checkout/contact-email/verify', [CheckoutController::class, 'verifyContactCode'])->middleware('throttle:20,1,checkout-contact-verify')->name('front.checkout.contact.verify');
     Route::post('/checkout/draft', [CheckoutController::class, 'draft'])->middleware('throttle:90,1,checkout-draft')->name('front.checkout.draft');
     Route::post('/checkout/promo', [CheckoutController::class, 'applyPromo'])->middleware('throttle:30,1,checkout-promo')->name('front.checkout.promo');
     Route::redirect('/checkout/review', '/checkout');

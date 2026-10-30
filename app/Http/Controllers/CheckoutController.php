@@ -41,6 +41,7 @@ class CheckoutController extends Controller
     private const DRAFT = 'checkout.draft';
     private const PROMO = 'checkout.promo';
     private const SELECTION_ID = 'checkout.selection_id';
+    public const PENDING_PASSWORD = 'checkout.pending_password';
     private const NEW_ACCOUNT_ORDERS = 'checkout.new_account_orders';
 
     public function __construct(
@@ -256,6 +257,8 @@ class CheckoutController extends Controller
                 }
             }
 
+            $newPassword = $this->guestPassword($request, $buyer);
+
             // Who does this order belong to? Never decided by a typed e-mail alone.
             try {
                 [$user, $newAccount] = $identity->resolve($request, $buyer);
@@ -263,6 +266,14 @@ class CheckoutController extends Controller
                 return $this->respondVerification($request, $e->email);
             } catch (StaffEmailNotAllowed $e) {
                 throw ValidationException::withMessages(['email' => $e->getMessage()]);
+            }
+
+            // A guest must prove the mailbox before ordering: the account just created waits for the e-mail code
+            // (and for the password chosen here, which only takes effect once that code is entered).
+            if (! $request->user()) {
+                $this->stashPassword($request, $user, $newPassword);
+
+                return $this->respondVerification($request, $user->email, $identity->sessionCreatedAccount($request)?->id !== $user->id);
             }
 
             try {
@@ -526,7 +537,7 @@ class CheckoutController extends Controller
             : back()->with('error', $message);
     }
 
-    private function respondVerification(Request $request, string $email)
+    private function respondVerification(Request $request, string $email, bool $existing = true)
     {
         // Probing e-mails through this step is throttled per client; the wording never says "account exists".
         $key = 'checkout-verify:'.($request->ip() ?? 'x');
@@ -539,7 +550,10 @@ class CheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'ok' => false, 'needs_verification' => true, 'masked' => GuestOrderAccess::mask($email),
+                'ok' => false, 'needs_verification' => true, 'masked' => GuestOrderAccess::mask($email), 'existing' => $existing,
+                'notice' => $existing
+                    ? 'This email is already registered. Enter the code we sent to sign in to your account and continue — your booking details are kept.'
+                    : 'We sent a code to confirm this email. Enter it to create your account and continue.',
                 'message' => 'To keep your booking safe, confirm this email with a code. Your booking details are kept.',
             ], 409);
         }
@@ -645,6 +659,16 @@ class CheckoutController extends Controller
 
         try {
             $identity->inspect($request, $buyer);
+
+            if (! $request->user()) {
+                // New e-mail: create the (still unconfirmed) account now so the code can be mailed right here in the wizard.
+                $newPassword = $this->guestPassword($request, $buyer);
+                [$guest] = $identity->resolve($request, $buyer);
+                $this->stashPassword($request, $guest, $newPassword);
+                session()->forget('checkout.preflight_email');
+
+                return $this->respondVerification($request, $guest->email, false);
+            }
         } catch (EmailVerificationRequired $e) {
             session()->forget('checkout.preflight_email');
 
@@ -656,6 +680,80 @@ class CheckoutController extends Controller
         session(['checkout.preflight_email' => \App\Services\Auth\EmailOtpService::normalize($buyer['email'])]);
 
         return response()->json(['ok' => true]);
+    }
+
+    /** @return array<int, string> the account e-mail plus the addresses this browser proved with a code during checkout */
+    private function confirmedContacts(Request $request, \App\Models\User $user): array
+    {
+        return array_merge([\App\Services\Auth\EmailOtpService::normalize((string) $user->email)], (array) $request->session()->get('checkout.verified_contacts', []));
+    }
+
+    /** "Change email" while signed in: mails a code to the new address (nothing changes until it is confirmed). */
+    public function sendContactCode(Request $request)
+    {
+        abort_unless($request->user(), 403);
+        $data = $request->validate(['email' => ['required', 'email', 'max:255', $this->notBlockedEmailDomain()]]);
+        $email = \App\Services\Auth\EmailOtpService::normalize($data['email']);
+
+        $key = 'checkout-contact:'.sha1($request->user()->id.'|'.$email);
+        if (RateLimiter::tooManyAttempts('checkout-contact-send:'.$request->user()->id, 5)) {
+            return response()->json(['ok' => false, 'message' => 'Too many codes requested. Please wait a while and try again.'], 429);
+        }
+        if (! Cache::has($key.':cooldown')) {
+            RateLimiter::hit('checkout-contact-send:'.$request->user()->id, 3600);
+            Cache::put($key.':cooldown', 1, 30);
+            $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            Cache::put($key, ['hash' => \Illuminate\Support\Facades\Hash::make($code), 'attempts' => 0], now()->addMinutes(10));
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoginOtpMail($code));
+        }
+
+        return response()->json(['ok' => true, 'message' => 'A code is on its way to '.GuestOrderAccess::mask($email).'.']);
+    }
+
+    public function verifyContactCode(Request $request)
+    {
+        abort_unless($request->user(), 403);
+        $data = $request->validate(['email' => ['required', 'email', 'max:255'], 'code' => ['required', 'string', 'max:10']]);
+        $email = \App\Services\Auth\EmailOtpService::normalize($data['email']);
+        $key = 'checkout-contact:'.sha1($request->user()->id.'|'.$email);
+        $record = Cache::get($key);
+        $fail = fn () => response()->json(['ok' => false, 'message' => 'That code is not valid or has expired. Ask for a new one.'], 422);
+
+        if (! is_array($record) || ($record['attempts'] ?? 0) >= 5) {
+            return $fail();
+        }
+        if (! preg_match('/^\d{6}$/', trim($data['code'])) || ! \Illuminate\Support\Facades\Hash::check(trim($data['code']), (string) $record['hash'])) {
+            $record['attempts'] = ($record['attempts'] ?? 0) + 1;
+            Cache::put($key, $record, now()->addMinutes(10));
+
+            return $fail();
+        }
+
+        Cache::forget($key);
+        $request->session()->put('checkout.verified_contacts', array_values(array_unique(array_merge((array) $request->session()->get('checkout.verified_contacts', []), [$email]))));
+
+        return response()->json(['ok' => true, 'email' => $email]);
+    }
+
+    /** A guest with a brand-new e-mail must choose a password for the account created for them (existing e-mails use the code). */
+    private function guestPassword(Request $request, array $buyer): ?string
+    {
+        if ($request->user() || \App\Services\Auth\EmailOtpService::findUser(\App\Services\Auth\EmailOtpService::normalize($buyer['email']))) {
+            return null;
+        }
+
+        return $request->validate(['password' => ['required', 'string', 'min:8', 'max:255']], [
+            'password.required' => 'Please create a password for your account.',
+            'password.min' => 'Your password must be at least 8 characters.',
+        ])['password'];
+    }
+
+    /** Kept hashed in the session until the mailbox is confirmed with the e-mail code (AuthOtpController applies it). */
+    private function stashPassword(Request $request, \App\Models\User $user, ?string $password): void
+    {
+        if ($password !== null) {
+            $request->session()->put(self::PENDING_PASSWORD, ['id' => $user->id, 'hash' => \Illuminate\Support\Facades\Hash::make($password)]);
+        }
     }
 
     /** Wizard: keeps what has been typed so far (session only) so a refresh restores it. Nothing is validated or created. */
@@ -745,6 +843,18 @@ class CheckoutController extends Controller
     /** @return array{first_name: string, last_name: string, email: string, phone: ?string} */
     private function validateBuyer(Request $request): array
     {
+        // Signed in (including right after confirming the e-mail code): the contact e-mail is the account's confirmed one,
+        // or another address this browser confirmed with a code ("Change" button). A typed address alone is never enough.
+        if ($user = $request->user()) {
+            $typed = \App\Services\Auth\EmailOtpService::normalize((string) $request->input('email', ''));
+            if ($typed === '' || ! in_array($typed, $this->confirmedContacts($request, $user), true)) {
+                if ($typed !== '') {
+                    throw ValidationException::withMessages(['email' => 'Please confirm this email with a code, or use your account email.']);
+                }
+                $request->merge(['email' => $user->email]);
+            }
+        }
+
         if ($request->filled('full_name') && ! $request->filled('first_name')) {
             $parts = preg_split('/\s+/', trim((string) $request->input('full_name')), 2) ?: [];
             $request->merge(['first_name' => $parts[0] ?? '', 'last_name' => $parts[1] ?? '-']);

@@ -95,6 +95,8 @@
     var inlineBox = $('[data-wz-otp]');
     var inlinePanel = inlineBox ? $('[data-otp-panel]', inlineBox) : null;
     var verifyOrigin = 'submit';
+    // Says plainly whether the e-mail already has an account (shown above the code box).
+    function setNotice(text) { $$('[data-otp-notice]').forEach(function (el) { el.textContent = text || ''; el.hidden = !text; }); }
     var lastMasked = '';
 
     // Classic page: the code box is a small modal. Wizard: it is shown inline in step 1 (see tkt-checkout-wizard.js).
@@ -123,6 +125,7 @@
         modalPanel.addEventListener('tkt:otp-verified', function (e) {
             setCsrf(e.detail && e.detail.csrf);
             modal.modal('hide');
+            if (window.TktContactEmail) window.TktContactEmail.activate();
             submit(); // same details, now as the verified account owner
         });
     }
@@ -130,6 +133,7 @@
         inlinePanel.addEventListener('tkt:otp-verified', function (e) {
             setCsrf(e.detail && e.detail.csrf);
             window.TktWizard.verified();
+            if (window.TktContactEmail) window.TktContactEmail.activate();
             if (verifyOrigin === 'submit') submit(); else window.TktWizard.advanceFromDetails();
         });
     }
@@ -137,7 +141,7 @@
     // Wizard step 1: validate the buyer block and learn whether the code box is needed now. Creates nothing.
     function buyerData() {
         var fd = new FormData(form);
-        Array.from(fd.keys()).forEach(function (k) { if (!/^(_token|full_name|email|phone)/.test(k)) fd.delete(k); });
+        Array.from(fd.keys()).forEach(function (k) { if (!/^(_token|full_name|email|phone|password)/.test(k)) fd.delete(k); });
         return fd;
     }
 
@@ -154,7 +158,7 @@
         }).then(function (res) {
             var d = res.d;
             if (res.ok && d.ok) return 'ok';
-            if (res.status === 409 && d.needs_verification) { window.TktExpress.lastMasked = d.masked || ''; return 'verify'; }
+            if (res.status === 409 && d.needs_verification) { window.TktExpress.lastMasked = d.masked || ''; setNotice(d.notice); return 'verify'; }
             if (res.status === 409 && d.redirect) { window.location.href = d.redirect; return 'error'; }
             if (res.status === 422 && d.errors) { showFieldErrors(d.errors); return 'error'; }
             if (res.status === 419) { showAlert('Your session expired. Please reload the page — your selection is still saved.'); return 'error'; }
@@ -202,7 +206,7 @@
             submitting = false;
             setLoading(false);
 
-            if (res.status === 409 && d.needs_verification) { openVerification(((form.querySelector('#buyer_email') || {}).value || '').trim(), d.masked); return; }
+            if (res.status === 409 && d.needs_verification) { setNotice(d.notice); openVerification(((form.querySelector('#buyer_email') || {}).value || '').trim(), d.masked); return; }
             if (res.status === 409 && d.redirect) { window.location.href = d.redirect; return; }
             if (res.status === 409 && d.price_changed) { showAlert(d.message); setTimeout(function () { window.location.reload(); }, 1800); return; }
             if (res.status === 422 && d.errors) { showFieldErrors(d.errors); return; }

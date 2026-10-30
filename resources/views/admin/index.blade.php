@@ -108,8 +108,9 @@
 
 <x-admin.flash />
 
-<div class="a-grid a-grid--4" style="margin-bottom:20px">
+<div class="a-grid a-grid--4 a-grid--kpi5" style="margin-bottom:20px">
     <x-admin.kpi label="Total sales" :value="$moneyShort($kpis['sales'])" icon="fa-wallet" :hint="$trend($kpis['sales_change']) ?? 'Paid orders · '.$rangeLabel" />
+    <x-admin.kpi label="Sales excl. fees" :value="$moneyShort($kpis['net_sales'])" icon="fa-coins" :hint="$trend($kpis['net_sales_change']) ?? 'Tickets after discounts · '.$rangeLabel" />
     <x-admin.kpi label="Tickets sold" :value="number_format($kpis['tickets'])" icon="fa-ticket" :hint="$trend($kpis['tickets_change']) ?? 'Paid orders · '.$rangeLabel" />
     <x-admin.kpi label="Active events" :value="number_format($kpis['active_events'])" icon="fa-calendar-days" hint="Currently on sale" />
     <x-admin.kpi label="Paid orders" :value="number_format($kpis['paid_orders'])" icon="fa-receipt" :hint="number_format($kpis['pending_orders']).' awaiting payment or approval'" />

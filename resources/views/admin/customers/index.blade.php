@@ -9,7 +9,7 @@
 @endphp
 <x-admin.page-header title="Customers" subtitle="Buyers who placed orders (checkout customer records). Portal login accounts are separate user records." :crumbs="['Dashboard' => route('admin.dashboard'), 'Customers']">
     @if($canExport)
-        <button type="button" class="a-btn a-btn--dark" data-bs-toggle="modal" data-bs-target="#exportCustomersModal"><i class="fa fa-download"></i> Export CSV</button>
+        <button type="button" class="a-btn a-btn--dark" data-bs-toggle="modal" data-bs-target="#exportCustomersModal"><i class="fa fa-download"></i> Export</button>
     @endif
 </x-admin.page-header>
 
@@ -78,12 +78,19 @@
                 <input type="hidden" name="event_id" value="{{ request('event_id') }}">
                 <input type="hidden" name="status" value="{{ request('status') }}">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exportCustomersLabel"><i class="fa fa-download me-2"></i>Export Customers to CSV</h5>
+                    <h5 class="modal-title" id="exportCustomersLabel"><i class="fa fa-download me-2"></i>Export Customers</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <p class="mb-3" id="custExportScope">Exporting all customers matching the current filters (search, event, order status).</p>
                     <div id="custExportIds"></div>
+                    <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">File format</h6>
+                    <div class="mb-4">
+                        <select name="format" class="form-select">
+                            <option value="xlsx">Excel (.xlsx) — recommended for Arabic</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </div>
                     <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Columns to Export</h6>
                     <div class="a-ord-export-cols">
                         @foreach($exportColumns as $colKey => $col)
@@ -100,7 +107,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="a-btn a-btn--outline" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-download me-1"></i> Download CSV</button>
+                    <button type="submit" class="a-btn a-btn--primary"><i class="fa fa-download me-1"></i> Download</button>
                 </div>
             </form>
         </div>

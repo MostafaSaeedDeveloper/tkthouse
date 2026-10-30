@@ -64,7 +64,7 @@ class CustomerController extends Controller
         return view('admin.customers.index', compact('customers', 'events', 'canFilterByEvent', 'exportColumns') + ['statusOptions' => self::ORDER_STATUSES]);
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): \Symfony\Component\HttpFoundation\Response
     {
         abort_unless($this->isSuperAdmin($request->user()), 403);
 
@@ -109,14 +109,32 @@ class CustomerController extends Controller
 
         $customersQuery->withMax('orders as last_order_at', 'created_at');
 
-        return response()->streamDownload(function () use ($customersQuery, $columns, $available) {
+        $headers = array_map(fn ($key) => $available[$key]['label'], $columns);
+        $rowFor = fn ($customer) => array_map(fn ($key) => $available[$key]['value']($customer), $columns);
+
+        // Excel (.xlsx): real UTF-8 cells, so Arabic names open correctly.
+        if ($request->input('format') === 'xlsx') {
+            $rows = (function () use ($customersQuery, $rowFor) {
+                foreach ($customersQuery->latest()->cursor() as $customer) {
+                    yield $rowFor($customer);
+                }
+            })();
+            $path = \App\Support\XlsxWriter::build($headers, $rows, 'Customers');
+
+            return response()->download($path, 'customers-export.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        }
+
+        return response()->streamDownload(function () use ($customersQuery, $headers, $rowFor) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, array_map(fn ($key) => $available[$key]['label'], $columns));
+            fwrite($handle, "\xEF\xBB\xBF"); // UTF-8 BOM: Excel needs it to read Arabic in a CSV
+            fputcsv($handle, $headers);
             foreach ($customersQuery->latest()->cursor() as $customer) {
-                fputcsv($handle, array_map(fn ($key) => $available[$key]['value']($customer), $columns));
+                fputcsv($handle, $rowFor($customer));
             }
             fclose($handle);
-        }, 'customers-export.csv', ['Content-Type' => 'text/csv']);
+        }, 'customers-export.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /** @return array<string, array{label: string, value: \Closure}> */

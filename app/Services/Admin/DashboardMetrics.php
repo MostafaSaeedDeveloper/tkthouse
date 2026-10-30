@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Numbers for the admin dashboard, all computed from real rows. Rules:
@@ -20,6 +21,9 @@ use Illuminate\Support\Collection;
  */
 class DashboardMetrics
 {
+    /** Order value without checkout fees: tickets minus promo discount (older rows without a subtotal fall back to the total). */
+    private const NET = 'CASE WHEN subtotal_amount > 0 THEN subtotal_amount - COALESCE(discount_amount, 0) ELSE total_amount END';
+
     public const RANGES = ['7d' => 'Last 7 days', '30d' => 'Last 30 days', '3m' => 'Last 3 months', '1y' => 'Last year', 'custom' => 'Custom'];
 
     /** @param array<int> $managedEventIds events this user is limited to (empty = all) */
@@ -93,6 +97,8 @@ class DashboardMetrics
 
         $sales = (float) $this->paidInRange($start, $end)->sum('total_amount');
         $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount');
+        $netSales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET));
+        $prevNetSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET));
         $tickets = $this->ticketsSold($start, $end);
         $prevTickets = $this->ticketsSold($prevStart, $prevEnd);
         $paidOrders = $this->paidInRange($start, $end)->count();
@@ -102,6 +108,7 @@ class DashboardMetrics
 
         return [
             'sales' => $sales, 'sales_change' => self::change($sales, $prevSales),
+            'net_sales' => $netSales, 'net_sales_change' => self::change($netSales, $prevNetSales),
             'tickets' => $tickets, 'tickets_change' => self::change($tickets, $prevTickets),
             'active_events' => $activeEvents,
             'paid_orders' => $paidOrders,
