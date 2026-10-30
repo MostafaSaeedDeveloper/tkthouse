@@ -20,7 +20,7 @@
     <button type="button" class="a-btn a-btn--danger" data-bs-toggle="modal" data-bs-target="#{{ $uid }}"><i class="fa fa-rotate-left"></i> Refund</button>
     <div class="modal fade" id="{{ $uid }}" tabindex="-1" aria-labelledby="{{ $uid }}t" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">
-            <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form">
+            <form method="POST" action="{{ $action }}" data-a-loading id="{{ $uid }}form" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;max-height:calc(100vh - 3.5rem)">
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ \Illuminate\Support\Str::uuid() }}">
                 <div class="modal-header"><h5 class="modal-title" id="{{ $uid }}t">{{ $cap->isApi() ? 'Refund payment' : 'Record manual / external refund' }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
@@ -33,7 +33,6 @@
                         <div><dt>Previously refunded / pending</dt><dd>{{ $minorToDec($bal['held']) }} {{ $currency }}</dd></div>
                         <div><dt>Remaining refundable</dt><dd><strong>{{ $minorToDec($bal['available']) }} {{ $currency }}</strong></dd></div>
                     </dl>
-                    @if($cap->note)<div class="a-alert a-alert--warning" role="status">{{ $cap->note }}</div>@endif
                     @if($bal['in_flight'])<div class="a-alert a-alert--warning" role="status">Another refund for this payment is still being processed; this request will be refused until it is resolved.</div>@endif
                     <x-admin.field label="Refund type" name="type" :for="$uid.'type'">
                         <select id="{{ $uid }}type" class="form-select" name="type" data-refund-type>

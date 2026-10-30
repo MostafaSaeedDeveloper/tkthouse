@@ -434,7 +434,7 @@ class RefundTest extends TestCase
 
         $fa = $this->account('fawaterak', 'FA');
         $f = $this->refundable($fa, 'fawaterak_card');
-        $this->actingAs($this->staff)->get(route('admin.orders.show', $f->order))->assertOk()->assertSee('Record manual / external refund')->assertSee('no documented refund API')->assertDontSee('>Refund<', false);
+        $this->actingAs($this->staff)->get(route('admin.orders.show', $f->order))->assertOk()->assertSee('Record manual / external refund')->assertDontSee('no documented refund API')->assertDontSee('>Refund<', false);
     }
 
     public function test_legacy_orders_without_attempts_or_accounts_still_render_and_can_use_the_manual_workflow(): void
