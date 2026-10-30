@@ -480,7 +480,7 @@ class RefundEndToEndJourneyTest extends TestCase
         \App\Models\PaymentRefundTicket::where('payment_refund_id', $r->id)->delete();   // how a request created before ticket linking looks
         $r->forceFill(['effects_status' => null])->save();
         $page = $this->actingAs($this->agentA)->get(route('admin.payments.refunds.show', $r))->assertOk();
-        $page->assertSee('all 2 valid ticket(s) of this order')->assertSee('created before ticket linking');
+        $page->assertSee('all <strong>2</strong> valid ticket(s) of this order', false)->assertSee('created before ticket linking');
         $this->assertStringNotContainsString('No tickets are linked', $page->getContent());
 
         Ticket::where('order_id', $a->order_id)->delete();                                    // an order with no ticket records at all

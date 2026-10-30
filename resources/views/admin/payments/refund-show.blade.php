@@ -36,9 +36,19 @@
             @if($refund->effects_status === 'not_applicable')
                 <p class="a-hint">Money-only refund: no tickets are affected.</p>
             @elseif(! $refund->isFinal() && $refund->isFull() && $validNow->isNotEmpty())
-                <p class="a-hint">Full refund: when it is confirmed, <strong>all {{ $validNow->count() }} valid ticket(s) of this order</strong> are canceled:</p>
-                <ul class="a-timeline">@foreach($validNow as $t)<li><strong>#{{ $t->ticket_number }}</strong> <span class="a-table__sub">{{ $t->holder_name ?: $t->name }} · {{ str_replace('_', ' ', $t->status) }}</span></li>@endforeach</ul>
-                @if($refund->effects_status === null)<p class="a-hint">This request was created before ticket linking existed. Cancel its tickets after confirming with the "Cancel selected tickets" action.</p>@endif
+                <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px">
+                    <span><strong>Full refund</strong> · on confirmation, all <strong>{{ $validNow->count() }}</strong> valid ticket(s) of this order are canceled</span>
+                    <span class="a-hint" style="margin:0">{{ $validNow->count() }} ticket(s)</span>
+                </div>
+                <div style="border:1px solid var(--a-line);border-radius:12px;overflow:hidden">
+                    @foreach($validNow as $t)
+                        <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;background:var(--a-surface);{{ $loop->first ? '' : 'border-top:1px solid var(--a-line);' }}">
+                            <div style="min-width:0"><strong>#{{ $t->ticket_number }}</strong><div class="a-table__sub">{{ $t->holder_name ?: $t->name }}</div></div>
+                            <x-admin.status kind="ticket" :status="$t->status" />
+                        </div>
+                    @endforeach
+                </div>
+                @if($refund->effects_status === null)<x-admin.alert type="info">This request was created before ticket linking existed. After confirming, cancel its tickets with the <strong>Cancel selected tickets</strong> action.</x-admin.alert>@endif
             @elseif($orderTickets->isEmpty())
                 <x-admin.alert type="warning">This order has <strong>no ticket records</strong> in the system (an older order), so confirming this refund cannot cancel any ticket. Check and handle the tickets manually.</x-admin.alert>
             @else
