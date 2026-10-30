@@ -179,9 +179,13 @@ class RefundEndToEndJourneyTest extends TestCase
 
         // dashboard: gross unchanged, refunded money, distinct order, net reduced; list shows it
         $after = $this->dash($this->agentA);
-        $this->assertSame([400.0, 400.0, 1, 0.0, 1, 4], [$after['sales'], $after['refunded'], $after['orders'], $after['net'], $after['paid_orders'], $after['tickets']]);
+        $this->assertSame([400.0, 400.0, 1, 0.0, 1, 0], [$after['sales'], $after['refunded'], $after['orders'], $after['net'], $after['paid_orders'], $after['tickets']]);
         $this->assertSame($after['sales'], $before['sales'], 'gross sales are unchanged by a refund');
         $this->assertSame($after['net'], $after['shown'], 'the Total sales card is the gross minus confirmed refunds');
+        $m = new DashboardMetrics([], null, $this->agentA, []);
+        [$from, $to] = [now()->subDays(29)->startOfDay(), now()->endOfDay()];
+        $this->assertSame(0.0, round(array_sum($m->series($from, $to)['sales']), 2), 'the chart is net of the refund');
+        $this->assertSame([0.0, 0.0], [$m->revenue($from, $to)['paid'], collect($m->revenue($from, $to)['by_method'])->sum('amount')], 'Paid and its split by method are net of the refund');
         $this->assertSame([400.0, 1], [$this->dash($this->super)['refunded'], $this->dash($this->super)['orders']]);
         $this->assertSame([0.0, 0], [$this->dash($this->agentB)['refunded'], $this->dash($this->agentB)['orders']]);
 

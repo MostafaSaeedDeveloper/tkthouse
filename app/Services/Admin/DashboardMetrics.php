@@ -129,8 +129,8 @@ class DashboardMetrics
         $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount') - $prevRefunds['amount'];
         $netSales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET)) - $refunds['amount'];
         $prevNetSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET)) - $prevRefunds['amount'];
-        $tickets = $this->ticketsSold($start, $end);
-        $prevTickets = $this->ticketsSold($prevStart, $prevEnd);
+        $tickets = $this->ticketsSold($start, $end) - $this->refundCanceledTickets($start, $end);
+        $prevTickets = $this->ticketsSold($prevStart, $prevEnd) - $this->refundCanceledTickets($prevStart, $prevEnd);
         $paidOrders = $this->paidInRange($start, $end)->count();
 
         $activeEvents = Event::query()->where('status', 'active')
@@ -147,6 +147,16 @@ class DashboardMetrics
             'net_collected' => $sales,
             'pending_orders' => $this->orders()->whereIn('status', ['pending_payment', 'pending_approval', 'pending', 'on_hold'])->whereBetween('created_at', [$start, $end])->count(),
         ];
+    }
+
+    /** Tickets canceled by a confirmed refund in the window (by the cancellation date), inside this dashboard's scope. */
+    private function refundCanceledTickets(Carbon $start, Carbon $end): int
+    {
+        return (int) \App\Models\PaymentRefundTicket::query()
+            ->whereNotNull('canceled_at')->whereBetween('canceled_at', [$start, $end])
+            ->whereIn('payment_refund_id', $this->confirmedRefunds(Carbon::create(2000), Carbon::create(2100))->select('payment_refunds.id'))
+            ->when($this->eventIds(), fn ($q, $ids) => $q->whereHas('ticket', fn ($t) => $t->whereIn('event_id', $ids)))
+            ->count();
     }
 
     private function ticketsSold(Carbon $start, Carbon $end): int
@@ -195,6 +205,13 @@ class DashboardMetrics
                 $slots[$k]['sales'] += (float) $o->total_amount;
             }
         }
+        // confirmed refunds come off the bucket they were completed in
+        foreach ($this->confirmedRefunds($start, $end)->get(['completed_at', 'updated_at', 'amount_minor']) as $r) {
+            $k = $key(Carbon::parse($r->completed_at ?? $r->updated_at));
+            if (isset($slots[$k])) {
+                $slots[$k]['sales'] -= $r->amount_minor / 100.0;
+            }
+        }
         foreach ($created as $o) {
             $k = $key(Carbon::parse($o->created_at));
             if (isset($slots[$k])) {
@@ -215,16 +232,18 @@ class DashboardMetrics
     {
         $paid = $this->paidInRange($start, $end)->get(['payment_method', 'total_amount']);
         $labels = PaymentMethod::query()->get(['code', 'name', 'checkout_label'])->mapWithKeys(fn ($m) => [(string) $m->code => trim((string) ($m->checkout_label ?: $m->name))]);
-        $paidTotal = (float) $paid->sum('total_amount');
+        $refunds = $this->refundStats($start, $end);
+        $paidTotal = (float) $paid->sum('total_amount') - $refunds['amount'];   // net of confirmed refunds
+        $refundedByMethod = $this->confirmedRefunds($start, $end)->join('orders', 'orders.id', '=', 'payment_refunds.order_id')
+            ->selectRaw('orders.payment_method as m, SUM(payment_refunds.amount_minor) as minor')->groupBy('orders.payment_method')->pluck('minor', 'm');
 
-        $byMethod = $paid->groupBy(fn ($o) => (string) $o->payment_method)->map(function (Collection $rows, string $code) use ($labels, $paidTotal) {
-            $amount = (float) $rows->sum('total_amount');
+        $byMethod = $paid->groupBy(fn ($o) => (string) $o->payment_method)->map(function (Collection $rows, string $code) use ($labels, $paidTotal, $refundedByMethod) {
+            $amount = max(0.0, (float) $rows->sum('total_amount') - ((int) ($refundedByMethod[$code] ?? 0)) / 100.0);
 
             return ['label' => $code === '' ? 'No method recorded' : ($labels[$code] ?? $code), 'amount' => $amount, 'orders' => $rows->count(), 'share' => $paidTotal > 0 ? round($amount / $paidTotal * 100, 1) : 0];
         })->sortByDesc('amount')->values();
 
         $window = fn (array $statuses) => (float) $this->orders()->whereIn('status', $statuses)->whereBetween('created_at', [$start, $end])->sum('total_amount');
-        $refunds = $this->refundStats($start, $end);
 
         return [
             'paid' => $paidTotal,
@@ -233,7 +252,7 @@ class DashboardMetrics
             // confirmed refunds only (their own completion dates): an order status edited by hand is not money returned
             'refunded' => $refunds['amount'],
             'refund_pending' => $refunds['pending_amount'],
-            'net_collected' => $paidTotal - $refunds['amount'],
+            'net_collected' => $paidTotal,
         ];
     }
 

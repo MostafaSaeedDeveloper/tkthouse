@@ -496,7 +496,7 @@ class RefundTicketIntegrationTest extends TestCase
         $this->assertSame(5, $k['paid_orders']);
         $this->assertSame(375.0, $k['refunded']);
         $this->assertSame(425.0, $k['net_collected']);
-        $this->assertSame(['paid' => 800.0, 'refunded' => 375.0, 'net_collected' => 425.0], array_intersect_key($m->revenue($start, $end), array_flip(['paid', 'refunded', 'net_collected'])));
+        $this->assertSame(['paid' => 425.0, 'refunded' => 375.0, 'net_collected' => 425.0], array_intersect_key($m->revenue($start, $end), array_flip(['paid', 'refunded', 'net_collected'])));
         $this->assertSame(8, $k['tickets'], 'ticket sales stay gross');
 
         // an order merely EDITED to "refunded" by hand (no refund record) is not a captured sale and not refunded money, exactly as before
