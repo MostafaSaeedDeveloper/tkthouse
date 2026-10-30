@@ -513,7 +513,7 @@ class RefundTicketIntegrationTest extends TestCase
         $admin = $this->user(['orders.view', 'payments.refunds.view', 'dashboard.view']);
 
         $page = $this->actingAs($admin)->get(route('admin.dashboard', ['range' => '30d']));
-        $page->assertOk()->assertSee('Total Refunded')->assertSee('Refunded Orders')->assertSee('375 EGP')->assertSee('1 pending request(s)', false);
+        $page->assertOk()->assertSee('Total Refunded')->assertDontSee('Refunded Orders')->assertSee('375 EGP')->assertSee('1 pending request(s)', false);
         $href = route('admin.orders.index', ['refunded' => 1, 'stats' => 1, 'refunded_from' => now()->subDays(29)->toDateString(), 'refunded_to' => now()->toDateString()]);
         $page->assertSee(e($href), false);
 
