@@ -29,6 +29,10 @@ class Ticket extends Model
         'checked_in_at',
         'canceled_at',
         'created_by_user_id',
+        'cancellation_source',
+        'cancellation_reason',
+        'canceled_by_refund_id',
+        'refund_flag',
     ];
 
     protected function casts(): array
@@ -73,6 +77,27 @@ class Ticket extends Model
     public function orderItem()
     {
         return $this->belongsTo(OrderItem::class);
+    }
+
+    public const SOURCE_REFUND = 'refund';
+
+    /** Invalidated by a confirmed refund (as opposed to an administrative cancellation). Such a ticket can never be re-opened by status edits. */
+    public function isRefundCanceled(): bool
+    {
+        return $this->status === 'canceled' && ($this->cancellation_source === self::SOURCE_REFUND || $this->canceled_by_refund_id !== null);
+    }
+
+    /** Text safe to show to scanner staff: the refund reason only, never amounts, provider data or internal notes. */
+    public function refundCancellationText(): string
+    {
+        $reason = trim((string) $this->cancellation_reason);
+
+        return 'Refund confirmed'.($reason !== '' ? ' — '.$reason : '');
+    }
+
+    public function refundCancellations()
+    {
+        return $this->hasMany(PaymentRefundTicket::class);
     }
 
     public function eventLabel(): string

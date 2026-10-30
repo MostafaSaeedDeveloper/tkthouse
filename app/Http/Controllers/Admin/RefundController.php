@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentRefund;
 use App\Orders\OrderAccess;
@@ -43,14 +44,44 @@ class RefundController extends Controller
     public function show(Request $request, PaymentRefund $refund)
     {
         $this->authorizeRefund($request, $refund, false);
-        $refund->load(['order.customer', 'attempt', 'account', 'requester']);
+        $refund->load(['order.customer', 'attempt', 'account', 'requester', 'approver', 'confirmer', 'submitter', 'ticketLinks.ticket']);
         $user = $request->user();
 
         return view('admin.payments.refund-show', [
             'refund' => $refund, 'seeAccounts' => TransactionController::canSeeAccounts($user),
             'canCreate' => $user->can('payments.refunds.create') && OrderAccess::canManage($refund->order, $user),
             'canApprove' => $user->can('payments.refunds.approve') && OrderAccess::canManage($refund->order, $user),
+            'approvalRequired' => $this->refunds->approvalRequired(),
+            'tracking' => \App\Services\Payments\Refunds\RefundTracking::snapshot($refund),
+            'ticketChoices' => ($refund->status === PaymentRefund::SUCCEEDED && in_array($refund->effects_status, [PaymentRefund::EFFECTS_REVIEW, null], true)) ? $this->refunds->ticketChoices($refund->order) : collect(),
         ]);
+    }
+
+    /** Validation shared by the payment-attempt form and the legacy-order form. */
+    private function validateRequest(Request $request): array
+    {
+        return $request->validate([
+            'type' => ['required', 'in:full,partial,void'],
+            'amount' => ['nullable', 'string', 'max:14'],
+            'reason' => ['required', 'string', 'min:5', 'max:300'],
+            'idempotency_key' => ['required', 'string', 'max:64'],
+            'tickets' => ['nullable', 'array', 'max:500'],
+            'tickets.*' => ['integer'],
+            'no_tickets' => ['nullable', 'boolean'],
+            'external_method' => ['nullable', 'string', 'max:30'],
+            'internal_notes' => ['nullable', 'string', 'max:2000'],
+            'provider_reference' => ['nullable', 'string', 'max:120'],
+            'refunded_at' => ['nullable', 'date', 'before_or_equal:today'],
+            'original_reference' => ['nullable', 'string', 'max:120'],
+        ], ['confirm.accepted' => 'Please confirm that you understand this is a financial operation.']);
+    }
+
+    private function options(array $data): array
+    {
+        return [
+            'tickets' => $data['tickets'] ?? [], 'no_tickets' => (bool) ($data['no_tickets'] ?? false), 'external_method' => $data['external_method'] ?? null,
+            'internal_notes' => $data['internal_notes'] ?? null, 'original_reference' => $data['original_reference'] ?? null, 'provider_reference' => $data['provider_reference'] ?? null, 'refunded_at' => $data['refunded_at'] ?? null,
+        ];
     }
 
     public function store(Request $request, PaymentAttempt $attempt)
@@ -59,28 +90,73 @@ class RefundController extends Controller
         abort_unless(TransactionController::visible($user)->whereKey($attempt->id)->exists(), 404);
         abort_unless(OrderAccess::canManage($attempt->order, $user), 403);
 
-        $data = $request->validate([
-            'type' => ['required', 'in:full,partial,void'],
-            'amount' => ['nullable', 'string', 'max:14'],
-            'reason' => ['required', 'string', 'min:5', 'max:300'],
-            'idempotency_key' => ['required', 'string', 'max:64'],
-            'confirm' => ['accepted'],
-        ], ['confirm.accepted' => 'Please confirm that you understand this is a financial operation.']);
+        $data = $this->validateRequest($request);
 
         try {
-            $refund = $this->refunds->request($attempt, $user, $data['type'], $data['amount'] ?? null, $data['reason'], $data['idempotency_key']);
+            $refund = $this->refunds->request($attempt, $user, $data['type'], $data['amount'] ?? null, $data['reason'], $data['idempotency_key'], $this->options($data));
         } catch (ValidationException $e) {
-            return back()->withErrors($e->errors())->withInput();
+            return $this->failed($request, $e->errors());
         }
 
+        return $this->afterRequest($refund, $request);
+    }
+
+    /** Legacy paid order (no payment attempt): the manual refund is recorded against the order itself. */
+    public function storeForOrder(Request $request, Order $order)
+    {
+        $user = $request->user();
+        abort_unless(Order::query()->visibleTo($user)->whereKey($order->id)->exists(), 404);
+        abort_unless(OrderAccess::canManage($order, $user), 403);
+
+        $data = $this->validateRequest($request);
+        if (! $this->refunds->isLegacyOrder($order)) {
+            return $this->failed($request, ['refund' => ['This order has an online payment: refund that payment instead.']]);
+        }
+
+        try {
+            $refund = $this->refunds->requestForOrder($order, $user, $data['type'], $data['amount'] ?? null, $data['reason'], $data['idempotency_key'], $this->options($data));
+        } catch (ValidationException $e) {
+            return $this->failed($request, $e->errors());
+        }
+
+        return $this->afterRequest($refund, $request);
+    }
+
+    /** Validation / business refusals: JSON for the order-page modal (it stays open and shows them), the usual redirect otherwise. */
+    private function failed(Request $request, array $errors)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => (string) (collect($errors)->flatten()->first() ?? 'The refund could not be recorded.'), 'errors' => $errors], 422);
+        }
+
+        return back()->withErrors($errors)->withInput();
+    }
+
+    private function afterRequest(PaymentRefund $refund, ?Request $request = null)
+    {
         $msg = match (true) {
             $refund->awaiting_approval => 'Refund requested; it waits for approval before anything is sent.',
-            $refund->mode === 'manual' => 'Manual refund recorded as requested. Carry it out with the provider, then confirm it here.',
+            $refund->mode === 'manual' => 'Manual refund recorded as requested. Carry it out with the provider, then confirm it here. Tickets stay valid until the refund is confirmed.',
             $refund->status === PaymentRefund::UNKNOWN => 'The refund request may or may not have reached the provider. Do NOT repeat it: check the status first.',
             $refund->status === PaymentRefund::REJECTED => 'The provider rejected the refund: '.$refund->failure_reason,
             $refund->status === PaymentRefund::SUCCEEDED => 'Refund confirmed by the provider.',
             default => 'Refund sent to the provider. It is not complete until the provider confirms it.',
         };
+
+        if ($request?->expectsJson()) {
+            $t = \App\Services\Payments\Refunds\RefundTracking::snapshot($refund);
+            $fawaterak = $refund->provider === 'fawaterak' || str_starts_with((string) $refund->order->payment_method, 'fawaterak');
+
+            return response()->json([
+                'ok' => true, 'message' => $msg, 'redirect' => route('admin.payments.refunds.show', $refund),
+                // the "waiting for the provider" pop-up is only for a manual refund that is free to be carried out now
+                'waiting' => $refund->mode === 'manual' && ! $refund->awaiting_approval && ! $refund->isFinal(),
+                'provider' => $fawaterak ? 'Fawaterak' : 'the provider', 'dashboard_url' => $fawaterak ? ($t['dashboard_url'] ?? null) : null,
+                'invoice_id' => $t['invoice_id'] ?? null, 'reference_number' => $t['reference_number'] ?? null,
+                'refund' => $refund->internal_reference, 'amount' => $refund->amount(), 'currency' => $refund->currency,
+                'opened_url' => route('admin.payments.refunds.opened', $refund),
+            ])->header('Cache-Control', 'no-store');
+        }
 
         return redirect()->route('admin.payments.refunds.show', $refund)->with($refund->status === PaymentRefund::REJECTED ? 'error' : 'success', $msg);
     }
@@ -101,12 +177,32 @@ class RefundController extends Controller
         return $this->guard(fn () => $this->refunds->approve($refund, $request->user(), $data['note'] ?? null), 'Refund approved.');
     }
 
+    public function release(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300']]);
+
+        return $this->guard(fn () => $this->refunds->releaseWithoutApproval($refund, $request->user(), $data['note']), 'Released: the refund is now waiting for the external refund. It is not completed until you confirm it.');
+    }
+
     public function reject(Request $request, PaymentRefund $refund)
     {
         $this->authorizeRefund($request, $refund);
         $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300']]);
 
         return $this->guard(fn () => $this->refunds->reject($refund, $request->user(), $data['note']), 'Refund request rejected.');
+    }
+
+    /** Adds the reference / date / evidence that were left out at confirmation. */
+    public function details(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate([
+            'provider_reference' => ['nullable', 'string', 'max:120'], 'refunded_at' => ['nullable', 'date', 'before_or_equal:today'],
+            'external_method' => ['nullable', 'string', 'max:30'], 'note' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        return $this->guard(fn () => $this->refunds->addDetails($refund, $request->user(), $data['provider_reference'] ?? null, $data['refunded_at'] ?? null, $data['note'] ?? null, $data['external_method'] ?? null), 'Refund details saved.');
     }
 
     public function submitted(Request $request, PaymentRefund $refund)
@@ -119,9 +215,12 @@ class RefundController extends Controller
     public function confirm(Request $request, PaymentRefund $refund)
     {
         $this->authorizeRefund($request, $refund);
-        $data = $request->validate(['provider_reference' => ['required', 'string', 'max:120'], 'note' => ['required', 'string', 'min:5', 'max:300']]);
+        $data = $request->validate([
+            'provider_reference' => ['nullable', 'string', 'max:120'], 'note' => ['nullable', 'string', 'max:300'],
+            'refunded_at' => ['nullable', 'date', 'before_or_equal:today'], 'external_method' => ['nullable', 'string', 'max:30'],
+        ]);
 
-        return $this->guard(fn () => $this->refunds->confirmSucceeded($refund, $request->user(), $data['provider_reference'], $data['note']), 'Refund recorded as completed.');
+        return $this->guard(fn () => $this->refunds->confirmSucceeded($refund, $request->user(), $data['provider_reference'] ?? null, $data['note'] ?? null, $data['refunded_at'] ?? null, $data['external_method'] ?? null), 'Refund recorded as completed. Its tickets were canceled and the order updated.');
     }
 
     public function fail(Request $request, PaymentRefund $refund)
@@ -130,6 +229,50 @@ class RefundController extends Controller
         $data = $request->validate(['note' => ['required', 'string', 'min:5', 'max:300']]);
 
         return $this->guard(fn () => $this->refunds->confirmFailed($refund, $request->user(), $data['note']), 'Refund recorded as failed. The amount is available again.');
+    }
+
+    /** Read-only tracking snapshot (the modal polls this). Same access rule as the refund page; no side effects, no provider call. */
+    public function tracking(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund, false);
+
+        return response()->json(\App\Services\Payments\Refunds\RefundTracking::snapshot($refund))->header('Cache-Control', 'no-store');
+    }
+
+    /** "Open Transaction in Fawaterak" was clicked: audit only. */
+    public function opened(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $this->refunds->logOpenedInProvider($refund, $request->user());
+
+        return response()->json(['ok' => true])->header('Cache-Control', 'no-store');
+    }
+
+    public function originalReference(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate(['original_reference' => ['required', 'string', 'max:120']]);
+
+        return $this->guard(fn () => $this->refunds->recordOriginalReference($refund, $request->user(), $data['original_reference']), 'Original Fawaterak id recorded.');
+    }
+
+    /** Re-send a customer e-mail whose delivery FAILED (never re-sends one that was delivered). */
+    public function resendEmail(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $kind = (string) $request->validate(['kind' => ['required', 'in:completed']])['kind'];
+        app(\App\Services\Payments\Refunds\RefundCustomerNotifier::class)->retry($refund, $kind);
+
+        return back()->with('success', 'The e-mail was re-sent if the earlier delivery had failed.');
+    }
+
+    /** Ticket cancellation for a confirmed refund that could not be matched automatically (needs the approve permission). */
+    public function tickets(Request $request, PaymentRefund $refund)
+    {
+        $this->authorizeRefund($request, $refund);
+        $data = $request->validate(['tickets' => ['required', 'array', 'min:1', 'max:500'], 'tickets.*' => ['integer']]);
+
+        return $this->guard(fn () => $this->refunds->resolveTickets($refund, $request->user(), $data['tickets']), 'The selected tickets were canceled.');
     }
 
     private function guard(\Closure $action, string $ok)

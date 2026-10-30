@@ -34,6 +34,13 @@ return [
         // sandbox run: set PAYMENTS_FAWATERAK_VERIFIED=true only after that.
         'invoice_status_path' => env('FAWATERAK_INVOICE_STATUS_PATH', 'getInvoiceData/{id}'),
         'verified' => filter_var(env('PAYMENTS_FAWATERAK_VERIFIED', false), FILTER_VALIDATE_BOOLEAN),
+        // Fawaterak publishes NO documented merchant-dashboard deep link to an invoice/transaction, so none is invented. Optionally set the
+        // address of YOUR authenticated Fawaterak merchant dashboard (https only, no credentials or query) so staff can open it in one click
+        // and paste the copied invoice id. Defaults to the merchant dashboard address given by the operator (https://app.fawaterk.com/); no .env change needed.
+        'dashboard_url' => env('FAWATERAK_DASHBOARD_URL', 'https://app.fawaterk.com/'),
+        // Optional: the address of ONE transaction page in your Fawaterak dashboard, copied from your browser while viewing an invoice, with
+        // the invoice id replaced by {id} (e.g. https://<your-dashboard>/invoices/{id}). Used only when set; never guessed.
+        'transaction_url' => env('FAWATERAK_TRANSACTION_URL'),
     ],
 
     /*

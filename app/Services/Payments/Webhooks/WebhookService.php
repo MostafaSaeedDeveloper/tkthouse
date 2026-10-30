@@ -71,7 +71,7 @@ class WebhookService
             throw new \DomainException('Events with an invalid signature are never processed.');
         }
         $attempt = $event->attempt;
-        if (! $attempt) {
+        if (! $attempt && ! ($event->provider === 'fawaterak' && $event->event_type === 'refund')) { // a refund of a legacy payment has no attempt to match
             $this->finish($event, 'needs_review', 'No payment attempt matches this event.');
 
             return 'needs_review';

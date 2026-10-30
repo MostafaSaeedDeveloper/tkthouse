@@ -127,6 +127,11 @@ class TicketController extends Controller
 
         $validated = $this->validateTicket($request);
 
+        // A ticket invalidated by a confirmed refund can never be re-opened from here (nor by the scanner).
+        if ($ticket->isRefundCanceled() && $validated['status'] !== 'canceled') {
+            return back()->withErrors(['status' => 'This ticket was canceled by a confirmed refund and cannot be reactivated.'])->withInput();
+        }
+
         $ticket->update($validated);
 
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Ticket updated successfully.');
@@ -136,6 +141,10 @@ class TicketController extends Controller
     {
         $this->guardAssignedTicket($request, $ticket);
         $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
+        if ($ticket->isRefundCanceled()) {
+            return back()->with('error', 'A ticket canceled by a refund is part of the financial record and cannot be deleted.');
+        }
 
         $ticket->delete();
 
@@ -282,10 +291,16 @@ class TicketController extends Controller
             return view('admin.tickets.scanner');
         }
 
-        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvent?->name);
+        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents?->pluck('name')->all() ?? []);
 
         if (! $ticket) {
             return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found.']);
+        }
+
+        if ($ticket->isRefundCanceled()) {
+            $this->logRefundRejection($request, $ticket, $payload, 'lookup_rejected_refunded');
+
+            return $this->refundRejectionResponse($request, $ticket, $payload);
         }
 
         if ($request->expectsJson()) {
@@ -309,7 +324,7 @@ class TicketController extends Controller
         ]);
 
         $ticketNumber = $this->extractTicketNumber($payload);
-        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvent?->name);
+        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents?->pluck('name')->all() ?? []);
 
         if (! $ticket) {
             ScanLog::create([
@@ -332,6 +347,13 @@ class TicketController extends Controller
             }
 
             return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found. Please scan again or type the correct ticket number.']);
+        }
+
+        // Server-side rule, independent of any label on the page: a refunded ticket is never admitted, in any session.
+        if ($ticket->isRefundCanceled()) {
+            $this->logRefundRejection($request, $ticket, $payload, 'lookup_rejected_refunded');
+
+            return $this->refundRejectionResponse($request, $ticket, $payload);
         }
 
         ScanLog::create([
@@ -371,6 +393,13 @@ class TicketController extends Controller
             'status' => ['required', 'in:not_checked_in,checked_in,canceled'],
         ]);
 
+        if ($ticket->isRefundCanceled()) {
+            // No status can be set on a refunded ticket: not check-in, not "not checked in". The attempt is recorded.
+            $this->logRefundRejection($request, $ticket, (string) $ticket->ticket_number, 'status_update_rejected_refunded');
+
+            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('error', 'REFUNDED / CANCELED — '.$ticket->refundCancellationText().'. Entry is not allowed.');
+        }
+
         $previousStatus = $ticket->status;
 
         $ticket->update([
@@ -398,6 +427,43 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('success', 'Ticket status updated successfully.');
     }
 
+
+    /** Audit trail of a refused scan. Uses its own action names so it never counts as a successful scan or check-in. */
+    private function logRefundRejection(Request $request, Ticket $ticket, string $payload, string $action): void
+    {
+        ScanLog::create([
+            'ticket_id' => $ticket->id,
+            'event_id' => $ticket->event_id,
+            'event_name' => $ticket->eventLabel(),
+            'ticket_number' => $ticket->ticket_number,
+            'action' => $action,
+            'previous_status' => $ticket->status,
+            'new_status' => $ticket->status,
+            'payload' => $payload,
+            'scanned_by_user_id' => auth()->id(),
+            'scanner_name' => auth()->user()?->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'scanned_at' => now(),
+        ]);
+    }
+
+    private function refundRejectionResponse(Request $request, Ticket $ticket, string $payload)
+    {
+        $message = 'REFUNDED / CANCELED — '.$ticket->refundCancellationText().'. Entry is not allowed.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => false,
+                'admit' => false,
+                'code' => 'refunded',
+                'message' => $message,
+                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
+            ], 409);
+        }
+
+        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload, 'errorMessage' => $message]);
+    }
 
     private function applyManagedEventScopeToTicketsQuery(Builder $query, array $eventNames): void
     {
@@ -458,7 +524,8 @@ class TicketController extends Controller
         return $payload;
     }
 
-    private function findScannedTicket(string $payload, ?string $managedEventName): ?Ticket
+    /** @param array<string> $managedEventNames events this scanner is limited to (empty = all); a ticket of another event is simply "not found" */
+    private function findScannedTicket(string $payload, array $managedEventNames): ?Ticket
     {
         $ticketNumber = $this->extractTicketNumber($payload);
 
@@ -470,7 +537,7 @@ class TicketController extends Controller
                     ->orWhere('ticket_number', $payload);
             });
 
-        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventName ? [$managedEventName] : []);
+        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventNames);
 
         return $ticketQuery->first();
     }

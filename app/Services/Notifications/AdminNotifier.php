@@ -154,4 +154,43 @@ class AdminNotifier
             ]);
         });
     }
+
+    /** Staff who may act on this refund: refund permission AND access to its order (assignment rules apply). */
+    private function refundAudience(PaymentRefund $refund): Collection
+    {
+        $order = Order::query()->find($refund->order_id);
+
+        return $this->staff()->filter(fn (User $u) => ($u->can('payments.refunds.create') || $u->can('payments.refunds.approve'))
+            && $order && $order->isVisibleTo($u) && OrderAccess::canManage($order, $u));
+    }
+
+    /** A provider notification matched a refund: it is NOT a completion, so the wording asks for verification. */
+    public function refundNotificationReceived(PaymentRefund $refund): void
+    {
+        $this->safely(function () use ($refund) {
+            $order = Order::query()->find($refund->order_id);
+            $this->send($this->refundAudience($refund), [
+                'type' => 'refund.notification', 'icon' => 'fa-bell',
+                'title' => 'Fawaterak refund notification — verify and confirm'.($order ? ' · #'.$this->number($order) : ''),
+                'body' => 'Not completed yet: check the refund in Fawaterak, then record its reference and date.',
+                'url' => route('admin.payments.refunds.show', $refund, false),
+            ]);
+        });
+    }
+
+    /** A refund event could not be matched / authenticated: only staff entitled to see it are told (no ids in the text). */
+    public function refundNotificationUnmatched(\App\Models\WebhookEvent $event, string $why, ?PaymentRefund $refund = null): void
+    {
+        $this->safely(function () use ($event, $why, $refund) {
+            $audience = $refund
+                ? $this->refundAudience($refund)
+                : $this->staff()->filter(fn (User $u) => $u->can('payments.refunds.approve') && ! OrderAccess::scoped($u));
+            $this->send($audience, [
+                'type' => 'refund.unmatched', 'icon' => 'fa-triangle-exclamation',
+                'title' => 'Fawaterak refund notification needs review',
+                'body' => mb_substr($why, 0, 160),
+                'url' => $refund ? route('admin.payments.refunds.show', $refund, false) : route('admin.payments.webhooks', [], false),
+            ]);
+        });
+    }
 }

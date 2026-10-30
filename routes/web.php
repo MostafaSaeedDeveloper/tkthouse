@@ -191,22 +191,22 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('customers', [CustomerController::class, 'index'])->middleware('permission:attendees.view')->name('customers.index');
     Route::match(['get', 'post'], 'customers/export', [CustomerController::class, 'export'])->middleware('permission:attendees.export')->name('customers.export');
     Route::get('customers/{customer}', [CustomerController::class, 'show'])->middleware('permission:attendees.view')->name('customers.show');
-    Route::get('affiliates', [AffiliateController::class, 'index'])->middleware('permission:attendees.view')->name('affiliates.index');
-    Route::get('affiliates/create', [AffiliateController::class, 'create'])->middleware('permission:attendees.export')->name('affiliates.create');
-    Route::post('affiliates', [AffiliateController::class, 'store'])->middleware('permission:attendees.export')->name('affiliates.store');
-    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware('permission:attendees.view')->name('affiliates.show');
+    Route::get('affiliates', [AffiliateController::class, 'index'])->middleware('permission:affiliates.view')->name('affiliates.index');
+    Route::get('affiliates/create', [AffiliateController::class, 'create'])->middleware('permission:affiliates.create')->name('affiliates.create');
+    Route::post('affiliates', [AffiliateController::class, 'store'])->middleware('permission:affiliates.create')->name('affiliates.store');
+    Route::get('affiliates/{affiliate}', [AffiliateController::class, 'show'])->middleware('permission:affiliates.view')->name('affiliates.show');
 
     Route::get('activity-logs', [ActivityLogController::class, 'index'])->middleware('permission:activity-logs.view')->name('activity-logs.index');
     Route::get('search', \App\Http\Controllers\Admin\SearchController::class)->name('search');
     Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->middleware('permission:orders.view|payments.transactions.view')->name('payments.index');
     // Provider-side transactions (lookup by id / CSV import) and provider sync. No order, no settlement: see docs/v2-provider-capabilities-audit.md
-    Route::get('payments/imported', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'index'])->middleware('permission:payments.accounts.view|payments.transactions.import')->name('payments.imported');
-    Route::post('payments/imported/lookup', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'lookup'])->middleware('permission:payments.transactions.import')->name('payments.imported.lookup');
-    Route::post('payments/imported/csv', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvUpload'])->middleware('permission:payments.transactions.import')->name('payments.imported.csv');
-    Route::post('payments/imported/csv/import', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvImport'])->middleware('permission:payments.transactions.import')->name('payments.imported.csv.import');
-    Route::get('payments/imported/{external}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'show'])->whereNumber('external')->middleware('permission:payments.accounts.view|payments.transactions.import')->name('payments.imported.show');
-    Route::post('payments/imported/{external}/verify', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'verify'])->whereNumber('external')->middleware('permission:payments.transactions.inquire')->name('payments.imported.verify');
-    Route::post('payments/sync/{account}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'sync'])->whereNumber('account')->middleware('permission:payments.transactions.inquire')->name('payments.sync');
+    Route::get('payments/imported', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'index'])->middleware(['permission:payments.accounts.view|payments.transactions.import', 'orders.global'])->name('payments.imported');
+    Route::post('payments/imported/lookup', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'lookup'])->middleware(['permission:payments.transactions.import', 'orders.global'])->name('payments.imported.lookup');
+    Route::post('payments/imported/csv', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvUpload'])->middleware(['permission:payments.transactions.import', 'orders.global'])->name('payments.imported.csv');
+    Route::post('payments/imported/csv/import', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'csvImport'])->middleware(['permission:payments.transactions.import', 'orders.global'])->name('payments.imported.csv.import');
+    Route::get('payments/imported/{external}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'show'])->whereNumber('external')->middleware(['permission:payments.accounts.view|payments.transactions.import', 'orders.global'])->name('payments.imported.show');
+    Route::post('payments/imported/{external}/verify', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'verify'])->whereNumber('external')->middleware(['permission:payments.transactions.inquire', 'orders.global'])->name('payments.imported.verify');
+    Route::post('payments/sync/{account}', [\App\Http\Controllers\Admin\ExternalTransactionController::class, 'sync'])->whereNumber('account')->middleware(['permission:payments.transactions.inquire', 'orders.global'])->name('payments.sync');
     Route::get('payments/transactions', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('permission:payments.transactions.view')->name('payments.transactions');
     Route::get('payments/transactions/{attempt}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('permission:payments.transactions.view')->name('payments.transactions.show');
     Route::post('payments/transactions/{attempt}/review-dismiss', [\App\Http\Controllers\Admin\TransactionController::class, 'dismissReview'])->middleware('permission:payments.transactions.inquire')->name('payments.transactions.review.dismiss');
@@ -215,13 +215,21 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('payments/refunds', [$rc, 'index'])->middleware('permission:payments.refunds.view')->name('payments.refunds');
     Route::get('payments/refunds/{refund}', [$rc, 'show'])->middleware('permission:payments.refunds.view')->name('payments.refunds.show');
     Route::post('payments/transactions/{attempt}/refunds', [$rc, 'store'])->middleware('permission:payments.refunds.create')->name('payments.refunds.store');
+    Route::post('orders/{order}/refunds', [$rc, 'storeForOrder'])->middleware('permission:payments.refunds.create')->name('payments.refunds.store-order');
+    Route::get('payments/refunds/{refund}/tracking', [$rc, 'tracking'])->middleware('permission:payments.refunds.view')->name('payments.refunds.tracking');
+    Route::post('payments/refunds/{refund}/opened', [$rc, 'opened'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.opened');
+    Route::post('payments/refunds/{refund}/original-reference', [$rc, 'originalReference'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.original-reference');
+    Route::post('payments/refunds/{refund}/resend-email', [$rc, 'resendEmail'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.resend-email');
+    Route::post('payments/refunds/{refund}/tickets', [$rc, 'tickets'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.tickets');
     Route::post('payments/refunds/{refund}/check', [$rc, 'check'])->middleware('permission:payments.refunds.create|payments.refunds.approve|payments.transactions.inquire')->name('payments.refunds.check');
     Route::post('payments/refunds/{refund}/approve', [$rc, 'approve'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.approve');
+    Route::post('payments/refunds/{refund}/release', [$rc, 'release'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.release');
     Route::post('payments/refunds/{refund}/reject', [$rc, 'reject'])->middleware('permission:payments.refunds.approve')->name('payments.refunds.reject');
     Route::post('payments/refunds/{refund}/submitted', [$rc, 'submitted'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.submitted');
+    Route::post('payments/refunds/{refund}/details', [$rc, 'details'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.details');
     Route::post('payments/refunds/{refund}/confirm', [$rc, 'confirm'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.confirm');
     Route::post('payments/refunds/{refund}/fail', [$rc, 'fail'])->middleware('permission:payments.refunds.create|payments.refunds.approve')->name('payments.refunds.fail');
-    Route::get('settings/payments/webhooks', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'index'])->middleware('permission:payments.webhooks.view')->name('payments.webhooks');
+    Route::get('settings/payments/webhooks', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'index'])->middleware(['permission:payments.webhooks.view', 'orders.global'])->name('payments.webhooks');
     Route::post('settings/payments/webhooks/events/{event}/retry', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'retry'])->middleware('permission:payments.transactions.inquire')->name('payments.webhooks.retry');
     Route::post('settings/payments/webhooks/accounts/{account}/configured', [\App\Http\Controllers\Admin\WebhookAdminController::class, 'markConfigured'])->middleware('permission:payments.accounts.manage|settings.payment-accounts.manage')->name('payments.webhooks.configured');
     Route::post('orders/{order}/assign', [\App\Http\Controllers\Admin\OrderAssignmentController::class, 'assign'])->middleware('permission:orders.view')->name('orders.assign');
@@ -230,6 +238,10 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('reports/agents', [\App\Http\Controllers\Admin\AgentReportController::class, 'index'])->middleware('permission:orders.view')->name('reports.agents');
     Route::get('reports', [ReportController::class, 'index'])->middleware(['permission:reports.view', 'orders.global'])->name('reports.index');
 
+    Route::get('settings/backups', [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('backups.index');
+    Route::post('settings/backups', [\App\Http\Controllers\Admin\BackupController::class, 'store'])->middleware('throttle:6,1')->name('backups.store');
+    Route::get('settings/backups/{name}', [\App\Http\Controllers\Admin\BackupController::class, 'download'])->middleware('throttle:20,1')->name('backups.download');
+    Route::delete('settings/backups/{name}', [\App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('backups.destroy');
     Route::get('settings', [SystemSettingController::class, 'edit'])->middleware('permission:settings.view')->name('settings.edit');
     Route::put('settings', [SystemSettingController::class, 'update'])->middleware('permission:settings.update')->name('settings.update');
 

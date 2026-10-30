@@ -24,6 +24,7 @@ class FrontTicketController extends Controller
     public function download(Request $request, IssuedTicket $ticket)
     {
         $this->authorizeTicket($request, $ticket);
+        abort_if($ticket->dashboardTicket?->isRefundCanceled(), 410, 'This ticket was canceled after a refund.');
 
         $event = $this->resolveEvent($ticket->ticket_name ?? '');
         $qrDataUri = $ticket->qrUrl();
@@ -49,6 +50,7 @@ class FrontTicketController extends Controller
         abort_unless($request->hasValidSignature(), 403);
 
         $ticket = Ticket::query()->where('ticket_number', $ticketNumber)->firstOrFail();
+        abort_if($ticket->isRefundCanceled(), 410, 'This ticket was canceled after a refund.');
         $event = $this->resolveEvent($ticket->name ?? '');
         $qrDataUri = $ticket->qr_payload
             ? 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $ticket->qr_payload)

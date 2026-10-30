@@ -2,7 +2,9 @@
   @php
     $initials = collect(explode(' ', (string)($ticket->holder_name ?: 'NA')))
       ->filter()->map(fn($p) => mb_substr($p,0,1))->take(2)->implode('');
-    $statusLabel = match($ticket->status) {
+    $refunded = $ticket->isRefundCanceled();
+    $statusClass = $refunded ? 'refunded' : $ticket->status;
+    $statusLabel = $refunded ? 'Refunded / Canceled' : match($ticket->status) {
       'checked_in'     => 'Checked In',
       'not_checked_in' => 'Not Checked In',
       'canceled'       => 'Canceled',
@@ -10,10 +12,20 @@
     };
   @endphp
 
-  <div class="sc-result">
+  <div class="sc-result {{ $refunded ? 'sc-result--refunded' : '' }}">
+    @if($refunded)
+      <div class="sc-refund-banner" role="alert">
+        <i class="fa fa-ban" aria-hidden="true"></i>
+        <div>
+          <strong>REFUNDED / CANCELED</strong>
+          <span>{{ $ticket->refundCancellationText() }}</span>
+          @if($ticket->canceled_at)<small>Canceled {{ $ticket->canceled_at->format('d M Y, H:i') }}</small>@endif
+        </div>
+      </div>
+    @endif
     <div class="sc-result-header">
-      <div class="sc-result-title">Ticket Found</div>
-      <span class="sc-status {{ $ticket->status }}">
+      <div class="sc-result-title">{{ $refunded ? 'Entry Denied' : 'Ticket Found' }}</div>
+      <span class="sc-status {{ $statusClass }}">
         @if($ticket->status === 'checked_in')
           <i class="fa fa-circle-check"></i>
         @elseif($ticket->status === 'canceled')
@@ -61,6 +73,7 @@
       @endif
     </div>
 
+    @unless($refunded)
     <form method="POST" action="{{ route('admin.tickets.scanner.status', $ticket) }}">
       @csrf
       <div class="sc-actions">
@@ -72,6 +85,7 @@
         @endif
       </div>
     </form>
+    @endunless
 
     <a href="{{ route('admin.tickets.scanner') }}" class="sc-act-btn sc-act-view sc-scan-another" data-scan-another="true">
       <i class="fa fa-qrcode"></i> Scan Another

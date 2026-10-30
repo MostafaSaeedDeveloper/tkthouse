@@ -72,6 +72,28 @@ try {
     } elseif ($mode === 'submit') {            // reconciliation / retry racing the approval: must never send before it
         app(\App\Services\Payments\Refunds\RefundService::class)->submit(\App\Models\PaymentRefund::findOrFail((int) $a));
         echo 'OK:'.\App\Models\PaymentRefund::findOrFail((int) $a)->status;
+    } elseif ($mode === 'refund-confirm') {    // confirmation race: refund id, user id
+        $svc = app(\App\Services\Payments\Refunds\RefundService::class);
+        $r = $svc->confirmSucceeded(\App\Models\PaymentRefund::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b), 'EXT-'.$c, 'portal screenshot verified', now()->toDateString());
+        echo 'OK:'.$r->status;
+    } elseif ($mode === 'refund-fail') {       // "it did not happen" racing a confirmation: refund id, user id
+        $r = app(\App\Services\Payments\Refunds\RefundService::class)->confirmFailed(\App\Models\PaymentRefund::findOrFail((int) $a), \App\Models\User::findOrFail((int) $b), 'portal shows it failed');
+        echo 'OK:'.$r->status;
+    } elseif ($mode === 'refund-tickets') {    // ticket claim race: attempt id (0 = legacy order), order id, user id, comma list of ticket ids, idempotency key
+        $svc = app(\App\Services\Payments\Refunds\RefundService::class);
+        $opts = ['tickets' => array_map('intval', explode(',', (string) $d))];
+        $by = \App\Models\User::findOrFail((int) $c);
+        $r = (int) $a > 0
+            ? $svc->request(PaymentAttempt::findOrFail((int) $a), $by, 'partial', null, 'concurrency ticket claim', $e, $opts)
+            : $svc->requestForOrder(Order::findOrFail((int) $b), $by, 'partial', null, 'concurrency ticket claim', $e, $opts);
+        echo 'OK:'.$r->id;
+    } elseif ($mode === 'faw-refund-webhook') { // the real HTTP route, as Fawaterak would call it: transactionId, amount
+        $json = json_encode(['transactionId' => $a, 'amount' => $b, 'currency' => 'EGP', 'status' => 'approved', 'reason' => 'x', 'approvedAt' => '2026-10-30 12:00:00']);
+        $res = $app->handle(Illuminate\Http\Request::create('/payments/fawaterak/webhook_json', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], $json));
+        echo 'OK:'.$res->getStatusCode();
+    } elseif ($mode === 'issue') {             // what every payment callback / reconcile / admin save runs: order id
+        app(\App\Services\TicketIssuanceService::class)->issueIfPaid(Order::withTrashed()->findOrFail((int) $a));
+        echo 'OK:issued';
     } elseif ($mode === 'tx') {                // many workers race to bind the same gateway transaction id
         PaymentAttempt::create(['order_id' => (int) $a, 'provider' => 'paymob', 'method_code' => 'paymob_card', 'amount' => 100, 'currency' => 'EGP', 'status' => 'paid', 'transaction_id' => $b]);
         echo 'OK';

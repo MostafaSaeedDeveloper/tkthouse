@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentMethod;
+use App\Models\PaymentRefund;
 use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +17,10 @@ use Illuminate\Support\Facades\DB;
  * Numbers for the admin dashboard, all computed from real rows. Rules:
  *  - orders flagged "exclude from statistics" never count (same as every other report);
  *  - "sales" are PAID orders only, dated by paid_at (created_at as the fallback for old rows);
- *  - pending / refunded value is shown separately and never mixed into sales;
+ *  - "sales" (captured payments) include orders that a confirmed refund later moved to refunded / partially_refunded: a refund never erases the sale;
+ *  - refunded money is ONLY confirmed (succeeded) PaymentRefund rows, dated by their completion time, never an order status or a pending request;
+ *  - Net collected revenue = captured payments − confirmed refunds (each by its own date, same scope), so the two stay separately auditable;
+ *  - pending value is shown separately and never mixed into sales;
  *  - no conversion rate: the system does not record visits, so it cannot be computed honestly.
  */
 class DashboardMetrics
@@ -78,9 +82,31 @@ class DashboardMetrics
 
     private function paidInRange(Carbon $start, Carbon $end): Builder
     {
-        return $this->orders()->where('status', 'paid')->where(function ($q) use ($start, $end) {
+        return $this->orders()->captured()->where(function ($q) use ($start, $end) {
             $q->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
         });
+    }
+
+    /** Confirmed refunds that completed in the window, for orders inside this dashboard's scope (event, statistics exclusion, role). */
+    public function confirmedRefunds(Carbon $start, Carbon $end): \Illuminate\Database\Eloquent\Builder
+    {
+        return PaymentRefund::query()->confirmed()
+            ->whereBetween(DB::raw('COALESCE(payment_refunds.completed_at, payment_refunds.updated_at)'), [$start, $end])
+            ->whereIn('payment_refunds.order_id', $this->orders()->select('orders.id'));
+    }
+
+    /** @return array{amount: float, orders: int, pending_amount: float, pending_count: int} confirmed money and DISTINCT orders; pending requests are separate */
+    public function refundStats(Carbon $start, Carbon $end): array
+    {
+        $done = $this->confirmedRefunds($start, $end);
+        $open = PaymentRefund::query()->whereIn('payment_refunds.status', PaymentRefund::IN_FLIGHT)->whereIn('payment_refunds.order_id', $this->orders()->select('orders.id'));
+
+        return [
+            'amount' => ((int) (clone $done)->sum('amount_minor')) / 100.0,
+            'orders' => (int) (clone $done)->distinct()->count('payment_refunds.order_id'),
+            'pending_amount' => ((int) (clone $open)->sum('amount_minor')) / 100.0,
+            'pending_count' => (int) (clone $open)->count(),
+        ];
     }
 
     /** Events for lists/counters: the selected one, else the managed ones, else (order-scoped users) the events they work in. */
@@ -95,25 +121,42 @@ class DashboardMetrics
         $prevEnd = $start->copy()->subSecond();
         $prevStart = $start->copy()->subDays($days);
 
-        $sales = (float) $this->paidInRange($start, $end)->sum('total_amount');
-        $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount');
-        $netSales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET));
-        $prevNetSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET));
-        $tickets = $this->ticketsSold($start, $end);
-        $prevTickets = $this->ticketsSold($prevStart, $prevEnd);
+        $refunds = $this->refundStats($start, $end);
+        $prevRefunds = $this->refundStats($prevStart, $prevEnd);
+        // Confirmed refunds are deducted from the sales figures (by the date the refund was confirmed); the gross is kept separately.
+        $grossSales = (float) $this->paidInRange($start, $end)->sum('total_amount');
+        $sales = $grossSales - $refunds['amount'];
+        $prevSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum('total_amount') - $prevRefunds['amount'];
+        $netSales = (float) $this->paidInRange($start, $end)->sum(DB::raw(self::NET)) - $refunds['amount'];
+        $prevNetSales = (float) $this->paidInRange($prevStart, $prevEnd)->sum(DB::raw(self::NET)) - $prevRefunds['amount'];
+        $tickets = $this->ticketsSold($start, $end) - $this->refundCanceledTickets($start, $end);
+        $prevTickets = $this->ticketsSold($prevStart, $prevEnd) - $this->refundCanceledTickets($prevStart, $prevEnd);
         $paidOrders = $this->paidInRange($start, $end)->count();
 
         $activeEvents = Event::query()->where('status', 'active')
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))->count();
 
         return [
-            'sales' => $sales, 'sales_change' => self::change($sales, $prevSales),
+            'sales' => $sales, 'gross_sales' => $grossSales, 'sales_change' => self::change($sales, $prevSales),
             'net_sales' => $netSales, 'net_sales_change' => self::change($netSales, $prevNetSales),
             'tickets' => $tickets, 'tickets_change' => self::change($tickets, $prevTickets),
             'active_events' => $activeEvents,
             'paid_orders' => $paidOrders,
+            'refunded' => $refunds['amount'], 'refunded_orders' => $refunds['orders'],
+            'refunds_pending_amount' => $refunds['pending_amount'], 'refunds_pending_count' => $refunds['pending_count'],
+            'net_collected' => $sales,
             'pending_orders' => $this->orders()->whereIn('status', ['pending_payment', 'pending_approval', 'pending', 'on_hold'])->whereBetween('created_at', [$start, $end])->count(),
         ];
+    }
+
+    /** Tickets canceled by a confirmed refund in the window (by the cancellation date), inside this dashboard's scope. */
+    private function refundCanceledTickets(Carbon $start, Carbon $end): int
+    {
+        return (int) \App\Models\PaymentRefundTicket::query()
+            ->whereNotNull('canceled_at')->whereBetween('canceled_at', [$start, $end])
+            ->whereIn('payment_refund_id', $this->confirmedRefunds(Carbon::create(2000), Carbon::create(2100))->select('payment_refunds.id'))
+            ->when($this->eventIds(), fn ($q, $ids) => $q->whereHas('ticket', fn ($t) => $t->whereIn('event_id', $ids)))
+            ->count();
     }
 
     private function ticketsSold(Carbon $start, Carbon $end): int
@@ -121,7 +164,7 @@ class DashboardMetrics
         return (int) OrderItem::query()
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('event_id', $ids))
             ->whereHas('order', function ($o) use ($start, $end) {
-                $o->where('status', 'paid')->includedInStatistics()->assignedScope($this->user)->where(function ($q) use ($start, $end) {
+                $o->captured()->includedInStatistics()->assignedScope($this->user)->where(function ($q) use ($start, $end) {
                     $q->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
                 });
             })->sum('quantity');
@@ -162,6 +205,13 @@ class DashboardMetrics
                 $slots[$k]['sales'] += (float) $o->total_amount;
             }
         }
+        // confirmed refunds come off the bucket they were completed in
+        foreach ($this->confirmedRefunds($start, $end)->get(['completed_at', 'updated_at', 'amount_minor']) as $r) {
+            $k = $key(Carbon::parse($r->completed_at ?? $r->updated_at));
+            if (isset($slots[$k])) {
+                $slots[$k]['sales'] -= $r->amount_minor / 100.0;
+            }
+        }
         foreach ($created as $o) {
             $k = $key(Carbon::parse($o->created_at));
             if (isset($slots[$k])) {
@@ -177,15 +227,18 @@ class DashboardMetrics
         ];
     }
 
-    /** Paid / pending / refunded value, and paid value by payment method. Never merged into one "revenue" figure. */
+    /** Paid / pending / refunded value (confirmed refunds only), net collected, and paid value by payment method. */
     public function revenue(Carbon $start, Carbon $end): array
     {
         $paid = $this->paidInRange($start, $end)->get(['payment_method', 'total_amount']);
         $labels = PaymentMethod::query()->get(['code', 'name', 'checkout_label'])->mapWithKeys(fn ($m) => [(string) $m->code => trim((string) ($m->checkout_label ?: $m->name))]);
-        $paidTotal = (float) $paid->sum('total_amount');
+        $refunds = $this->refundStats($start, $end);
+        $paidTotal = (float) $paid->sum('total_amount') - $refunds['amount'];   // net of confirmed refunds
+        $refundedByMethod = $this->confirmedRefunds($start, $end)->join('orders', 'orders.id', '=', 'payment_refunds.order_id')
+            ->selectRaw('orders.payment_method as m, SUM(payment_refunds.amount_minor) as minor')->groupBy('orders.payment_method')->pluck('minor', 'm');
 
-        $byMethod = $paid->groupBy(fn ($o) => (string) $o->payment_method)->map(function (Collection $rows, string $code) use ($labels, $paidTotal) {
-            $amount = (float) $rows->sum('total_amount');
+        $byMethod = $paid->groupBy(fn ($o) => (string) $o->payment_method)->map(function (Collection $rows, string $code) use ($labels, $paidTotal, $refundedByMethod) {
+            $amount = max(0.0, (float) $rows->sum('total_amount') - ((int) ($refundedByMethod[$code] ?? 0)) / 100.0);
 
             return ['label' => $code === '' ? 'No method recorded' : ($labels[$code] ?? $code), 'amount' => $amount, 'orders' => $rows->count(), 'share' => $paidTotal > 0 ? round($amount / $paidTotal * 100, 1) : 0];
         })->sortByDesc('amount')->values();
@@ -196,7 +249,10 @@ class DashboardMetrics
             'paid' => $paidTotal,
             'by_method' => $byMethod,
             'pending' => $window(['pending_payment', 'pending_approval', 'pending', 'on_hold']),
-            'refunded' => $window(['refunded', 'partially_refunded']),
+            // confirmed refunds only (their own completion dates): an order status edited by hand is not money returned
+            'refunded' => $refunds['amount'],
+            'refund_pending' => $refunds['pending_amount'],
+            'net_collected' => $paidTotal,
         ];
     }
 
@@ -210,7 +266,7 @@ class DashboardMetrics
 
         $sold = OrderItem::query()->selectRaw('event_id, SUM(quantity) as qty')
             ->whereIn('event_id', $events->pluck('id'))
-            ->whereHas('order', fn ($o) => $o->where('status', 'paid')->includedInStatistics()->assignedScope($this->user))
+            ->whereHas('order', fn ($o) => $o->captured()->includedInStatistics()->assignedScope($this->user))
             ->groupBy('event_id')->pluck('qty', 'event_id');
 
         return $events->each(fn (Event $e) => $e->setAttribute('tickets_sold', (int) ($sold[$e->id] ?? 0)));
