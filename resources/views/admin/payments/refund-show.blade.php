@@ -13,60 +13,6 @@
 @if(data_get($refund->meta, 'provider_reported_approval'))<x-admin.alert type="info">Fawaterak sent an (unauthenticated) refund notification saying "approved". That is an approval, not proof the money was returned: confirm below once you have verified it.</x-admin.alert>@endif
 <div class="a-grid a-grid--main-side">
   <div>
-    <x-admin.card title="Timeline" subtitle="Every state change is recorded and audited.">
-        <ul class="a-timeline">
-            @foreach(array_reverse($refund->timeline()) as $t)
-                <li><strong>{{ str_replace('_', ' ', $t['event']) }}</strong> <span class="a-table__sub">{{ \Illuminate\Support\Carbon::parse($t['at'])->format('d M Y, H:i:s') }} · {{ $t['source'] ?? 'system' }}@isset($t['by']) · {{ $t['by'] }}@endisset</span>
-                    @isset($t['note'])<br><span>{{ $t['note'] }}</span>@endisset</li>
-            @endforeach
-        </ul>
-    </x-admin.card>
-
-    @if($refund->mode === 'manual' && ($refund->provider === 'fawaterak' || str_starts_with((string) $refund->order->payment_method, 'fawaterak')))
-        @include('admin.payments._fawaterak-tracking', ['tracking' => $tracking])
-    @endif
-
-    <x-admin.card title="Tickets" subtitle="Tickets are canceled only when this refund is confirmed as completed.">
-        @php $links = $refund->ticketLinks; @endphp
-        @if($links->isEmpty())
-            @php
-                $orderTickets = \App\Models\Ticket::query()->where('order_id', $refund->order_id)->orderBy('id')->get();
-                $validNow = $orderTickets->where('status', '!=', 'canceled');
-            @endphp
-            @if($refund->effects_status === 'not_applicable')
-                <p class="a-hint">Money-only refund: no tickets are affected.</p>
-            @elseif(! $refund->isFinal() && $refund->isFull() && $validNow->isNotEmpty())
-                <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px">
-                    <span><strong>Full refund</strong> · on confirmation, all <strong>{{ $validNow->count() }}</strong> valid ticket(s) of this order are canceled</span>
-                    <span class="a-hint" style="margin:0">{{ $validNow->count() }} ticket(s)</span>
-                </div>
-                <div style="border:1px solid var(--a-line);border-radius:12px;overflow:hidden">
-                    @foreach($validNow as $t)
-                        <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;background:var(--a-surface);{{ $loop->first ? '' : 'border-top:1px solid var(--a-line);' }}">
-                            <div style="min-width:0"><strong>#{{ $t->ticket_number }}</strong><div class="a-table__sub">{{ $t->holder_name ?: $t->name }}</div></div>
-                            <x-admin.status kind="ticket" :status="$t->status" />
-                        </div>
-                    @endforeach
-                </div>
-                @if($refund->effects_status === null)<x-admin.alert type="info">This request was created before ticket linking existed. After confirming, cancel its tickets with the <strong>Cancel selected tickets</strong> action.</x-admin.alert>@endif
-            @elseif($orderTickets->isEmpty())
-                <x-admin.alert type="warning">This order has <strong>no ticket records</strong> in the system (an older order), so confirming this refund cannot cancel any ticket. Check and handle the tickets manually.</x-admin.alert>
-            @else
-                <p class="a-hint">No tickets are linked to this refund.</p>
-            @endif
-        @else
-            <ul class="a-timeline">@foreach($links as $l)<li><strong>#{{ $l->ticket?->ticket_number }}</strong> <span class="a-table__sub">{{ $l->canceled_at ? 'Canceled '.$l->canceled_at->format('d M Y, H:i').($l->was_checked_in ? ' · was checked in (check-in record kept, flagged for audit)' : '') : 'Selected · still valid until the refund is confirmed' }}</span></li>@endforeach</ul>
-        @endif
-        @if($refund->status === 'succeeded' && in_array($refund->effects_status, ['needs_review', null], true))
-            <x-admin.alert type="warning">{{ $refund->effects_note ?: 'This refund was confirmed but its tickets were not matched automatically.' }}</x-admin.alert>
-            @if($canApprove && $ticketChoices->isNotEmpty())
-            <form method="POST" action="{{ route('admin.payments.refunds.tickets', $refund) }}" data-a-confirm="Cancel the selected tickets? This cannot be undone." data-a-confirm-ok="Cancel tickets" style="display:grid;gap:6px">@csrf
-                @foreach($ticketChoices as $c)<label class="a-m-switch"><input class="form-check-input" type="checkbox" name="tickets[]" value="{{ $c->ticket->id }}" @disabled(! $c->selectable && $c->ticket->status !== 'canceled')><span>#{{ $c->ticket->ticket_number }} · {{ $c->ticket->holder_name ?: $c->ticket->name }}<span class="a-hint d-block">{{ $c->note ?: ($c->ticket->status === 'checked_in' ? 'Checked in' : 'Valid') }}</span></span></label>@endforeach
-                <button class="a-btn a-btn--danger" type="submit">Cancel selected tickets</button>
-            </form>
-            @endif
-        @endif
-    </x-admin.card>
 
     @if(! $refund->isFinal() && ($canCreate || $canApprove))
     <x-admin.card title="Actions">
@@ -124,6 +70,69 @@
         </div>
     </x-admin.card>
     @endif
+
+    @if($refund->mode === 'manual' && ($refund->provider === 'fawaterak' || str_starts_with((string) $refund->order->payment_method, 'fawaterak')))
+        @include('admin.payments._fawaterak-tracking', ['tracking' => $tracking])
+    @endif
+
+    <x-admin.card title="Tickets" subtitle="Tickets are canceled only when this refund is confirmed as completed.">
+        @php $links = $refund->ticketLinks; @endphp
+        @if($links->isEmpty())
+            @php
+                $orderTickets = \App\Models\Ticket::query()->where('order_id', $refund->order_id)->orderBy('id')->get();
+                $validNow = $orderTickets->where('status', '!=', 'canceled');
+            @endphp
+            @if($refund->effects_status === 'not_applicable')
+                <p class="a-hint">Money-only refund: no tickets are affected.</p>
+            @elseif(! $refund->isFinal() && $refund->isFull() && $validNow->isNotEmpty())
+                <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px">
+                    <span><strong>Full refund</strong> · on confirmation, all <strong>{{ $validNow->count() }}</strong> valid ticket(s) of this order are canceled</span>
+                    <span class="a-hint" style="margin:0">{{ $validNow->count() }} ticket(s)</span>
+                </div>
+                <div style="border:1px solid var(--a-line);border-radius:12px;overflow:hidden">
+                    @foreach($validNow as $t)
+                        <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px;background:var(--a-surface);{{ $loop->first ? '' : 'border-top:1px solid var(--a-line);' }}">
+                            <div style="min-width:0"><strong>#{{ $t->ticket_number }}</strong><div class="a-table__sub">{{ $t->holder_name ?: $t->name }}</div></div>
+                            <x-admin.status kind="ticket" :status="$t->status" />
+                        </div>
+                    @endforeach
+                </div>
+                @if($refund->effects_status === null)<x-admin.alert type="info">This request was created before ticket linking existed. After confirming, cancel its tickets with the <strong>Cancel selected tickets</strong> action.</x-admin.alert>@endif
+            @elseif($orderTickets->isEmpty())
+                <x-admin.alert type="warning">This order has <strong>no ticket records</strong> in the system (an older order), so confirming this refund cannot cancel any ticket. Check and handle the tickets manually.</x-admin.alert>
+            @else
+                <p class="a-hint">No tickets are linked to this refund.</p>
+            @endif
+        @else
+            <ul class="a-timeline">@foreach($links as $l)<li><strong>#{{ $l->ticket?->ticket_number }}</strong> <span class="a-table__sub">{{ $l->canceled_at ? 'Canceled '.$l->canceled_at->format('d M Y, H:i').($l->was_checked_in ? ' · was checked in (check-in record kept, flagged for audit)' : '') : 'Selected · still valid until the refund is confirmed' }}</span></li>@endforeach</ul>
+        @endif
+        @if($refund->status === 'succeeded' && in_array($refund->effects_status, ['needs_review', null], true))
+            <x-admin.alert type="warning">{{ $refund->effects_note ?: 'This refund was confirmed but its tickets were not matched automatically.' }}</x-admin.alert>
+            @if($canApprove && $ticketChoices->isNotEmpty())
+            <form method="POST" action="{{ route('admin.payments.refunds.tickets', $refund) }}" data-a-confirm="Cancel the selected tickets? This cannot be undone." data-a-confirm-ok="Cancel tickets" style="display:grid;gap:6px">@csrf
+                @foreach($ticketChoices as $c)<label class="a-m-switch"><input class="form-check-input" type="checkbox" name="tickets[]" value="{{ $c->ticket->id }}" @disabled(! $c->selectable && $c->ticket->status !== 'canceled')><span>#{{ $c->ticket->ticket_number }} · {{ $c->ticket->holder_name ?: $c->ticket->name }}<span class="a-hint d-block">{{ $c->note ?: ($c->ticket->status === 'checked_in' ? 'Checked in' : 'Valid') }}</span></span></label>@endforeach
+                <button class="a-btn a-btn--danger" type="submit">Cancel selected tickets</button>
+            </form>
+            @endif
+        @endif
+    </x-admin.card>
+
+
+    <x-admin.card title="Timeline" subtitle="Every state change is recorded and audited. Newest first.">
+        <div style="display:grid">
+            @foreach(array_reverse($refund->timeline()) as $t)
+                <div style="display:grid;grid-template-columns:12px 1fr;gap:12px;padding-bottom:14px;position:relative">
+                    <span style="width:10px;height:10px;border-radius:50%;background:var(--a-yellow);margin-top:5px;box-shadow:0 0 0 3px var(--a-surface)"></span>
+                    @unless($loop->last)<span style="position:absolute;left:4.5px;top:17px;bottom:0;width:1px;background:var(--a-line)"></span>@endunless
+                    <div style="min-width:0">
+                        <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><strong style="text-transform:capitalize">{{ str_replace('_', ' ', $t['event']) }}</strong><span class="a-table__sub">{{ \Illuminate\Support\Carbon::parse($t['at'])->format('d M Y, H:i') }}</span></div>
+                        <div class="a-table__sub">{{ $t['source'] ?? 'system' }}@isset($t['by']) · {{ $t['by'] }}@endisset</div>
+                        @isset($t['note'])<div style="margin-top:2px">{{ $t['note'] }}</div>@endisset
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </x-admin.card>
   </div>
   <div>
     <x-admin.card title="Refund">
@@ -134,19 +143,19 @@
             <div><dt>Provider</dt><dd>{{ ucfirst($refund->provider) }}</dd></div>
             @if($seeAccounts)<div><dt>Merchant account</dt><dd>{{ $refund->account?->name ?? 'Legacy configuration' }}</dd></div>@endif
             <div><dt>Payment</dt><dd>@if($refund->attempt)<a href="{{ route('admin.payments.transactions.show', $refund->attempt) }}">{{ $refund->attempt->internal_reference ?: '#'.$refund->payment_attempt_id }}</a>@else<span class="a-muted">Legacy payment — no gateway transaction</span>@endif</dd></div>
-            <div><dt>Provider refund ID</dt><dd>{{ $refund->provider_refund_id ?: '—' }}</dd></div>
+            @if($refund->provider_refund_id)<div><dt>Provider refund ID</dt><dd>{{ $refund->provider_refund_id ?: '—' }}</dd></div>@endif
             @if($refund->provider_reference)<div><dt>Provider / external reference</dt><dd>{{ $refund->provider_reference }}</dd></div>@endif
             @if($refund->mode === 'manual')<div><dt>Refund method</dt><dd>{{ \App\Models\PaymentRefund::EXTERNAL_METHODS[$refund->external_method] ?? 'Manual / external' }}</dd></div>@endif
             <div><dt>Original paid</dt><dd>{{ \App\Models\PaymentRefund::minorToDecimal((int) ($refund->captured_minor ?? 0)) }} {{ $refund->currency }}</dd></div>
-            <div><dt>Payment method</dt><dd>{{ $refund->payment_method ?: '—' }}</dd></div>
+            @if($refund->payment_method)<div><dt>Payment method</dt><dd>{{ $refund->payment_method ?: '—' }}</dd></div>@endif
             <div><dt>Reason</dt><dd>{{ $refund->reason }}</dd></div>
             @if($refund->internal_notes)<div><dt>Internal notes</dt><dd>{{ $refund->internal_notes }}</dd></div>@endif
             @if($refund->approved_by)<div><dt>Approved by</dt><dd>{{ \App\Models\User::find($refund->approved_by)?->name ?? '—' }} · {{ $refund->approved_at?->format('d M Y, H:i') }}</dd></div>@endif
             <div><dt>Requested by</dt><dd>{{ $refund->requester?->name ?? '—' }} · {{ $refund->requested_at->format('d M Y, H:i') }}</dd></div>
             @if($refund->submitted_by)<div><dt>Submitted by</dt><dd>{{ $refund->submitter?->name ?? '—' }} · {{ $refund->submitted_at?->format('d M Y, H:i') }}</dd></div>@endif
             @if($refund->confirmed_by)<div><dt>Confirmed by</dt><dd>{{ $refund->confirmer?->name ?? '—' }} · {{ $refund->confirmed_at?->format('d M Y, H:i') }}</dd></div>@endif
-            <div><dt>Actual refund date</dt><dd>{{ $refund->refunded_at?->format('d M Y') ?? '—' }}</dd></div>
-            <div><dt>Completed</dt><dd>{{ $refund->completed_at?->format('d M Y, H:i') ?? '—' }}</dd></div>
+            @if($refund->refunded_at)<div><dt>Actual refund date</dt><dd>{{ $refund->refunded_at?->format('d M Y') ?? '—' }}</dd></div>@endif
+            @if($refund->completed_at)<div><dt>Completed</dt><dd>{{ $refund->completed_at?->format('d M Y, H:i') ?? '—' }}</dd></div>@endif
             <div><dt>Last checked</dt><dd>{{ $refund->last_checked_at?->diffForHumans() ?? 'never' }}</dd></div>
             @if($refund->failure_reason)<div><dt>Note</dt><dd>{{ $refund->failure_reason }}</dd></div>@endif
         </dl>
