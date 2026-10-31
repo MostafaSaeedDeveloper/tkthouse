@@ -33,22 +33,11 @@
     .a-custom { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
     .a-custom.is-open { display: flex; }
     .a-custom input { min-height: 40px; padding: 0 12px; border: 1px solid var(--a-line-strong); border-radius: 10px; font: inherit; font-size: 13px; }
-    .a-er + .a-er { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--a-line); }
-    .a-er__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-    .a-er__name { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
-    .a-er__total { color: var(--a-muted); font-size: 13px; }
-    .a-er__total b { color: var(--a-ink); font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; margin-right: 4px; }
-    .a-er__row { display: grid; grid-template-columns: minmax(120px, 1.2fr) minmax(80px, 2fr) 56px 44px; gap: 14px; align-items: center; padding: 9px 0; border-top: 1px solid var(--a-line); font-size: 13.5px; }
-    .a-er__row:first-of-type { border-top: 0; }
-    .a-er__type { font-weight: 600; overflow-wrap: anywhere; }
-    .a-er__bar { height: 8px; border-radius: 99px; background: #f1f1ec; overflow: hidden; }
-    .a-er__bar i { display: block; height: 100%; border-radius: 99px; background: var(--a-yellow); }
-    .a-er__count { text-align: right; font-size: 15px; font-variant-numeric: tabular-nums; }
-    .a-er__pct { text-align: right; color: var(--a-muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-    @media (max-width: 640px) {
-        .a-er__row { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: 6px; }
-        .a-er__bar { grid-column: 1 / -1; grid-row: 2; }
-    }
+    .a-er + .a-er { margin-top: 20px; }
+    .a-er__row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 9px 0; border-top: 1px solid var(--a-line); font-size: 14px; }
+    .a-er__row span { overflow-wrap: anywhere; }
+    .a-er__row b { font-variant-numeric: tabular-nums; }
+    .a-er__row--head { border-top: 0; padding-top: 0; font-size: 15px; }
     .a-dash__grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
     @media (min-width: 1280px) { .a-dash__grid { grid-template-columns: minmax(0, 1fr) 380px; } }
     .a-dash__col { display: grid; gap: 20px; min-width: 0; align-content: start; }
@@ -146,21 +135,12 @@
 
 @if($ticketTypeSales->isNotEmpty())
 <div style="margin-bottom:20px">
-    <x-admin.card title="Event Report" subtitle="Tickets sold by type · events on sale">
+    <x-admin.card title="Event Report" subtitle="Tickets sold by type">
         @foreach($ticketTypeSales as $row)
             <section class="a-er" aria-label="Tickets sold by type for {{ $row['event']->name }}">
-                <header class="a-er__head">
-                    <b class="a-er__name">{{ $row['event']->name }}</b>
-                    <span class="a-er__total"><b>{{ number_format($row['total']) }}</b> tickets sold</span>
-                </header>
+                <div class="a-er__row a-er__row--head"><b>{{ $row['event']->name }}</b><b>{{ number_format($row['total']) }}</b></div>
                 @forelse($row['types'] as $t)
-                    @php $share = $row['total'] > 0 ? $t['sold'] / $row['total'] * 100 : 0; @endphp
-                    <div class="a-er__row">
-                        <span class="a-er__type">{{ $t['name'] }}</span>
-                        <span class="a-er__bar" aria-hidden="true"><i style="width: {{ max(2, round($share, 1)) }}%"></i></span>
-                        <b class="a-er__count">{{ number_format($t['sold']) }}</b>
-                        <span class="a-er__pct">{{ round($share) }}%</span>
-                    </div>
+                    <div class="a-er__row"><span>{{ $t['name'] }}</span><b>{{ number_format($t['sold']) }}</b></div>
                 @empty
                     <span class="a-muted a-text-sm">No tickets sold yet.</span>
                 @endforelse
