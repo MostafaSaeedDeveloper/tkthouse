@@ -123,21 +123,19 @@ class CheckoutReservationTest extends TestCase
         $this->assertSame($this->agent1->id, $this->reservation()->assignee_id);
     }
 
-    public function test_a_customer_already_in_checkout_finishes_with_the_agent_they_were_shown(): void
+    public function test_refreshing_the_payment_step_shows_the_new_default_but_a_submitted_order_keeps_the_shown_agent(): void
     {
         $this->begin(); $this->get(route('front.checkout'));
-        $token = $this->reservation()->token;
-        SystemSettings::set('order_default_assignee_ids', [$this->agent2->id]); // changed while they are on the payment step
+        SystemSettings::set('order_default_assignee_ids', [$this->agent2->id]);
 
-        $this->get(route('front.checkout'))->assertOk()->assertDontSee('fake_wallet', false); // refresh: same methods
-        $this->assertSame($token, $this->reservation()->token);
-
-        $this->postJson(route('front.checkout.store'), $this->payload())->assertOk()->assertJson(['ok' => true]);
-        $this->assertSame($this->agent1->id, Order::firstOrFail()->assigned_user_id);
-
-        // the next customer gets the new default
-        $this->browser('b'); $this->begin(); $this->get(route('front.checkout'));
+        // refresh: the new default's methods
+        $this->get(route('front.checkout'))->assertOk()->assertSee('fake_wallet', false);
         $this->assertSame($this->agent2->id, $this->reservation()->assignee_id);
+
+        // a customer who was already paying (page shown before another change) is not interrupted
+        SystemSettings::set('order_default_assignee_ids', [$this->agent1->id]);
+        $this->postJson(route('front.checkout.store'), $this->payload('nour@example.test', 'fake_wallet'))->assertOk()->assertJson(['ok' => true]);
+        $this->assertSame($this->agent2->id, Order::firstOrFail()->assigned_user_id);
     }
 
     public function test_abandoned_carts_expire(): void

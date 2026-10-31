@@ -43,16 +43,17 @@ class CheckoutRoutingService
         return DB::transaction(function () use ($token, $sessionId) {
             $this->lockState();
 
-            // A customer already in checkout keeps the agent/methods they were shown (refresh, back, paying) until the order is
-            // placed or the hold expires. Only NEW reservations follow the current default assignee, immediately.
-            if ($token && ($existing = CheckoutRouting::query()->where('token', $token)->live()->lockForUpdate()->first()) && $this->stillValid($existing)) {
+            // Opening/refreshing the payment step follows the CURRENT default assignee: a held reservation is only reused while it
+            // still names that agent. (An order already being placed keeps the reserved agent: consume() never re-checks this.)
+            [$assignee, $source] = $this->pick();
+            if ($token && ($existing = CheckoutRouting::query()->where('token', $token)->live()->lockForUpdate()->first())
+                && ($existing->assignee_id ? (int) $existing->assignee_id : null) === $assignee?->id && $this->stillValid($existing)) {
                 return $existing;
             }
             if ($token) {
                 CheckoutRouting::query()->where('token', $token)->whereNull('consumed_order_id')->whereNull('released_at')->update(['released_at' => now()]);
             }
 
-            [$assignee, $source] = $this->pick();
             $resolution = $this->resolver->forAssignee($assignee);
 
             return CheckoutRouting::create([
