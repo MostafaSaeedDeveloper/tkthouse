@@ -326,7 +326,7 @@ class GuestListController extends Controller
     {
         do {
             $ticketNumber = (string) random_int(1000000000, 9999999999);
-        } while (Ticket::query()->where('ticket_number', $ticketNumber)->exists());
+        } while (Ticket::withTrashed()->where('ticket_number', $ticketNumber)->exists());
 
         return $ticketNumber;
     }

@@ -20,7 +20,7 @@
         <a href="{{ route('admin.tickets.edit', $ticket) }}" class="a-btn a-btn--primary"><i class="fa fa-pen"></i> Edit</a>
     @endcan
     @can('tickets.delete')
-        <form method="POST" action="{{ route('admin.tickets.destroy', $ticket) }}" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete" style="display:inline">
+        <form method="POST" action="{{ route('admin.tickets.destroy', $ticket) }}" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? It moves to Deleted Tickets and can be restored." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete" style="display:inline">
             @csrf @method('DELETE')
             <button class="a-btn a-btn--danger" type="submit"><i class="fa fa-trash"></i> Delete</button>
         </form>

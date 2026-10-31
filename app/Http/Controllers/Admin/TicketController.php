@@ -149,11 +149,54 @@ class TicketController extends Controller
 
         $ticket->delete();
 
+        activity('tickets')->performedOn($ticket)->causedBy($request->user())->log('Ticket moved to trash');
+
+        $message = 'Ticket moved to trash. You can restore it from Deleted Tickets.';
+
         if ($request->input('redirect_to') === 'guest-list') {
-            return redirect()->route('admin.guest-list.index')->with('success', 'Ticket deleted successfully.');
+            return redirect()->route('admin.guest-list.index')->with('success', $message);
         }
 
-        return redirect()->route('admin.tickets.index')->with('success', 'Ticket deleted successfully.');
+        return redirect()->route('admin.tickets.index')->with('success', $message);
+    }
+
+    /** Trash: soft-deleted tickets (guest-list ones included), limited to what the user could see before deletion. */
+    public function trash(Request $request)
+    {
+        $managedEvents = $request->user()?->managedEvents ?? collect();
+
+        $query = Ticket::onlyTrashed()->with('order')
+            ->where(fn ($q) => $q->where('source', '!=', 'guest_list')->orWhereNull('source')->orWhere(fn ($g) => $g->guestListVisibleTo($request->user())));
+
+        $this->applyManagedEventScopeToTicketsQuery($query, $managedEvents);
+
+        if (\App\Orders\OrderAccess::scoped($request->user())) {
+            $query->where(fn ($q) => $q->where('source', 'guest_list')->orWhereHas('order', fn ($o) => $o->visibleTo($request->user())));
+        }
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $query->where(fn ($q) => $q->where('ticket_number', 'like', "%{$search}%")
+                ->orWhere('holder_name', 'like', "%{$search}%")
+                ->orWhere('holder_email', 'like', "%{$search}%"));
+        }
+
+        $tickets = $query->orderByDesc('deleted_at')->orderByDesc('id')->paginate(15)->withQueryString();
+
+        return view('admin.tickets.trash', compact('tickets'));
+    }
+
+    public function restore(Request $request, int $ticket)
+    {
+        $target = Ticket::onlyTrashed()->findOrFail($ticket);
+        $this->guardAssignedTicket($request, $target);
+        $this->abortIfTicketOutsideManagedEvent($request, $target);
+
+        $target->restore();
+
+        activity('tickets')->performedOn($target)->causedBy($request->user())->log('Ticket restored from trash');
+
+        return redirect()->route('admin.tickets.trash')->with('success', 'Ticket restored successfully.');
     }
 
     public function sendEmail(Request $request, Ticket $ticket)
@@ -573,7 +616,7 @@ class TicketController extends Controller
     {
         do {
             $ticketNumber = (string) random_int(1000000000, 9999999999);
-        } while (Ticket::query()->where('ticket_number', $ticketNumber)->exists());
+        } while (Ticket::withTrashed()->where('ticket_number', $ticketNumber)->exists());
 
         return $ticketNumber;
     }

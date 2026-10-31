@@ -143,6 +143,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor(['edit', 'update'], 'permission:events.update')
         ->middlewareFor('destroy', 'permission:events.delete');
 
+    Route::get('tickets/trash', [TicketController::class, 'trash'])->middleware('permission:tickets.delete')->name('tickets.trash');
+    Route::post('tickets/{ticket}/restore', [TicketController::class, 'restore'])->whereNumber('ticket')->middleware('permission:tickets.delete')->name('tickets.restore');
     Route::resource('tickets', TicketController::class)
         ->middlewareFor(['index', 'show'], 'permission:tickets.view')
         ->middlewareFor(['create', 'store'], 'permission:tickets.create')
