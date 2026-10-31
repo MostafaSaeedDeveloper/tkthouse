@@ -130,7 +130,7 @@
 
 @if($ticketTypeSales->isNotEmpty())
 <div style="margin-bottom:20px">
-    <x-admin.card title="Tickets sold by type" subtitle="Events on sale · paid orders">
+    <x-admin.card title="Event Report" subtitle="Tickets sold by type · events on sale · paid orders">
         @foreach($ticketTypeSales as $row)
             <div style="{{ $loop->first ? '' : 'margin-top:18px;padding-top:18px;border-top:1px solid var(--a-border, #eee)' }}">
                 <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px">

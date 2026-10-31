@@ -90,7 +90,7 @@ class DashboardTicketTypeSalesTest extends TestCase
         $this->assertSame(['GA' => 2], $mine[0]['types']->pluck('sold', 'name')->all());
 
         $page = $this->actingAs($a)->get(route('admin.dashboard'))->assertOk();
-        $page->assertSee('Tickets sold by type')->assertSee('GA')->assertDontSee('VIP');
+        $page->assertSee('Event Report')->assertSee('GA')->assertDontSee('VIP');
     }
 
     public function test_the_card_is_hidden_when_no_event_is_on_sale(): void
@@ -99,6 +99,6 @@ class DashboardTicketTypeSalesTest extends TestCase
         Permission::findOrCreate('dashboard.view', 'web');
         $admin = tap(User::factory()->create())->givePermissionTo('dashboard.view');
 
-        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('Tickets sold by type');
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->assertDontSee('Event Report');
     }
 }
