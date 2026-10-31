@@ -215,13 +215,14 @@ class DashboardController extends Controller
         $revenue = $metrics->revenue($metricsStart, $metricsEnd);
         $upcoming = $metrics->upcomingEvents();
         $scans = $metrics->scans();
+        $ticketTypeSales = $metrics->ticketTypeSales($metricsStart, $metricsEnd);
         $rangeKey = $selectedRange;
         $ranges = DashboardMetrics::RANGES;
         $from = $metricsStart->toDateString();
         $to = $metricsEnd->toDateString();
 
         return view('admin.index', compact(
-            'kpis', 'series', 'revenue', 'upcoming', 'scans', 'rangeKey', 'ranges', 'from', 'to',
+            'kpis', 'series', 'revenue', 'upcoming', 'scans', 'ticketTypeSales', 'rangeKey', 'ranges', 'from', 'to',
             'totalOrders',
             'totalPaidOrders',
             'totalRevenue',

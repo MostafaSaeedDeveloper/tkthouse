@@ -33,6 +33,11 @@
     .a-custom { display: none; gap: 8px; align-items: center; flex-wrap: wrap; }
     .a-custom.is-open { display: flex; }
     .a-custom input { min-height: 40px; padding: 0 12px; border: 1px solid var(--a-line-strong); border-radius: 10px; font: inherit; font-size: 13px; }
+    .a-er + .a-er { margin-top: 20px; }
+    .a-er__row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 9px 0; border-top: 1px solid var(--a-line); font-size: 14px; }
+    .a-er__row span { overflow-wrap: anywhere; }
+    .a-er__row b { font-variant-numeric: tabular-nums; }
+    .a-er__row--head { border-top: 0; padding-top: 0; font-size: 15px; }
     .a-dash__grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
     @media (min-width: 1280px) { .a-dash__grid { grid-template-columns: minmax(0, 1fr) 380px; } }
     .a-dash__col { display: grid; gap: 20px; min-width: 0; align-content: start; }
@@ -125,6 +130,23 @@
 @if(auth()->user()->can('payments.refunds.view') || auth()->user()->can('orders.view'))
 <div class="a-grid" style="margin-bottom:20px">
     <x-admin.kpi label="Total Refunded" :value="$moneyShort($kpis['refunded'])" icon="fa-rotate-left" :href="$refundHref" :hint="'Confirmed refunds · '.$rangeLabel.($refundPending ? ' · '.$refundPending : '')" />
+</div>
+@endif
+
+@if($ticketTypeSales->isNotEmpty())
+<div style="margin-bottom:20px">
+    <x-admin.card title="Event Report" :subtitle="'Tickets sold by type · '.$rangeLabel">
+        @foreach($ticketTypeSales as $row)
+            <section class="a-er" aria-label="Tickets sold by type for {{ $row['event']->name }}">
+                <div class="a-er__row a-er__row--head"><b>{{ $row['event']->name }}</b><b>{{ number_format($row['total']) }}</b></div>
+                @forelse($row['types'] as $t)
+                    <div class="a-er__row"><span>{{ $t['name'] }}</span><b>{{ number_format($t['sold']) }}</b></div>
+                @empty
+                    <span class="a-muted a-text-sm">No tickets sold yet.</span>
+                @endforelse
+            </section>
+        @endforeach
+    </x-admin.card>
 </div>
 @endif
 
