@@ -43,17 +43,16 @@ class CheckoutRoutingService
         return DB::transaction(function () use ($token, $sessionId) {
             $this->lockState();
 
-            // The agent always follows the CURRENT settings: a held reservation is only reused while it still names the agent
-            // the settings pick right now (changing the default assignee takes effect immediately, there is no grace period).
-            [$assignee, $source] = $this->pick();
-            if ($token && ($existing = CheckoutRouting::query()->where('token', $token)->live()->lockForUpdate()->first())
-                && ($existing->assignee_id ? (int) $existing->assignee_id : null) === $assignee?->id && $this->stillValid($existing)) {
+            // A customer already in checkout keeps the agent/methods they were shown (refresh, back, paying) until the order is
+            // placed or the hold expires. Only NEW reservations follow the current default assignee, immediately.
+            if ($token && ($existing = CheckoutRouting::query()->where('token', $token)->live()->lockForUpdate()->first()) && $this->stillValid($existing)) {
                 return $existing;
             }
             if ($token) {
                 CheckoutRouting::query()->where('token', $token)->whereNull('consumed_order_id')->whereNull('released_at')->update(['released_at' => now()]);
             }
 
+            [$assignee, $source] = $this->pick();
             $resolution = $this->resolver->forAssignee($assignee);
 
             return CheckoutRouting::create([
@@ -118,12 +117,6 @@ class CheckoutRoutingService
         }
         if (! $this->stillValid($r)) {
             throw ReservationInvalid::because('unavailable');
-        }
-        // Settings changed after the customer saw the methods (new default assignee): the order must not be created for the
-        // old agent. The customer re-opens the payment step and sees the new agent's methods.
-        [$current] = $this->pick();
-        if (($r->assignee_id ? (int) $r->assignee_id : null) !== $current?->id) {
-            throw ReservationInvalid::because('assignee_changed');
         }
         if ($needsPayment && $methodCode !== null && ! $this->offered->offers($this->resolutionFor($r), $methodCode)) {
             throw ReservationInvalid::because('method_not_offered');
