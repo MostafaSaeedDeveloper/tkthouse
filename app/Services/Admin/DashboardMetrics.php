@@ -331,16 +331,22 @@ class DashboardMetrics
     /**
      * Check-in numbers for the dashboard period: the tickets issued from paid orders (same rule as "Tickets sold": captured, counted in
      * statistics, within the user's order scope, paid date in the period with the created date as the fallback), of the scoped
-     * upcoming/selected events. Null when there is nothing to show.
+     * upcoming/selected events, plus the guest-list tickets added in the period. Null when there is nothing to show.
      */
     public function scans(?Carbon $start = null, ?Carbon $end = null): ?array
     {
         $q = Ticket::query()->where('status', '!=', 'canceled')
-            ->whereHas('order', function ($o) use ($start, $end) {
-                $o->captured()->includedInStatistics()->assignedScope($this->user)
-                    ->when($start && $end, fn ($q) => $q->where(function ($w) use ($start, $end) {
-                        $w->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
-                    }));
+            ->where(function ($any) use ($start, $end) {
+                $any->whereHas('order', function ($o) use ($start, $end) {
+                    $o->captured()->includedInStatistics()->assignedScope($this->user)
+                        ->when($start && $end, fn ($q) => $q->where(function ($w) use ($start, $end) {
+                            $w->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
+                        }));
+                })->orWhere(function ($guest) use ($start, $end) {
+                    // Guest-list tickets have no order: counted by the date they were added, and only the ones this user may see.
+                    $guest->where('source', 'guest_list')->guestListVisibleTo($this->user)
+                        ->when($start && $end, fn ($q) => $q->whereBetween($q->getModel()->getTable().'.created_at', [$start, $end]));
+                });
             });
         if ($this->event) {
             $q->where('event_id', $this->event->id);
