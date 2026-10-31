@@ -72,7 +72,6 @@ class DashboardTicketTypeSalesTest extends TestCase
         $this->assertSame('Fracture', $rows[0]['event']->name);
         $this->assertSame(7, $rows[0]['total']);
         $this->assertSame(['GA' => 6, 'VIP' => 1], $rows[0]['types']->pluck('sold', 'name')->all());
-        $this->assertSame(1100.0, $rows[0]['revenue']);
     }
 
     public function test_an_assigned_user_only_sees_the_sales_of_their_own_orders(): void

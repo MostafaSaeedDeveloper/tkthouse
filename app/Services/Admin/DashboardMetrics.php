@@ -273,12 +273,12 @@ class DashboardMetrics
     }
 
     /**
-     * Tickets sold per ticket type for the events on sale (status active), all time, from paid orders only.
+     * Tickets sold per ticket type (counts only, no amounts) for the events on sale (status active), all time, from paid orders only.
      * Same scope as every other figure: statistics-excluded orders never count and an order-scoped user only sees the sales of
      * their own orders (and the events they work in). The type comes from order_items.event_ticket_id when present; older rows
      * fall back to the text after "Event - " in the stored ticket name.
      *
-     * @return Collection<int, array{event: Event, total: int, revenue: float, types: Collection<int, array{name: string, sold: int, revenue: float}>}>
+     * @return Collection<int, array{event: Event, total: int, types: Collection<int, array{name: string, sold: int}>}>
      */
     public function ticketTypeSales(): Collection
     {
@@ -293,7 +293,7 @@ class DashboardMetrics
         $typeNames = \App\Models\EventTicket::query()->whereIn('event_id', $events->pluck('id'))->pluck('name', 'id');
 
         $rows = OrderItem::query()
-            ->selectRaw('event_id, event_ticket_id, ticket_name, SUM(quantity) as qty, SUM(line_total) as revenue')
+            ->selectRaw('event_id, event_ticket_id, ticket_name, SUM(quantity) as qty')
             ->whereIn('event_id', $events->pluck('id'))
             ->whereHas('order', fn ($o) => $o->captured()->includedInStatistics()->assignedScope($this->user))
             ->groupBy('event_id', 'event_ticket_id', 'ticket_name')
@@ -311,10 +311,10 @@ class DashboardMetrics
 
                     return str_starts_with($name, $prefix) ? substr($name, strlen($prefix)) : (str_contains($name, ' - ') ? trim(substr(strstr($name, ' - '), 3)) : $name);
                 })
-                ->map(fn ($group, $name) => ['name' => (string) $name, 'sold' => (int) $group->sum('qty'), 'revenue' => (float) $group->sum('revenue')])
+                ->map(fn ($group, $name) => ['name' => (string) $name, 'sold' => (int) $group->sum('qty')])
                 ->sortByDesc('sold')->values();
 
-            return ['event' => $event, 'total' => (int) $types->sum('sold'), 'revenue' => (float) $types->sum('revenue'), 'types' => $types];
+            return ['event' => $event, 'total' => (int) $types->sum('sold'), 'types' => $types];
         })->values();
     }
 
