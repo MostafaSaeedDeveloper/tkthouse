@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\IssuedTicket;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\ScanLog;
 use App\Services\UltramsgWhatsappService;
 use App\Support\SystemSettings;
@@ -31,7 +32,7 @@ class TicketController extends Controller
                 $query->whereNull('source')->orWhere('source', '!=', 'guest_list');
             });
 
-        $this->applyManagedEventScopeToTicketsQuery($ticketsQuery, $managedEventNames);
+        $this->applyManagedEventScopeToTicketsQuery($ticketsQuery, $managedEvents);
 
         // Order Assignment: only tickets that belong to orders the user may see.
         if (\App\Orders\OrderAccess::scoped($request->user())) {
@@ -252,7 +253,14 @@ class TicketController extends Controller
 
         $request->session()->regenerate();
 
-        abort_unless(auth()->user()?->can('scanner.access') || auth()->user()?->hasRole('scanner'), 403);
+        if (! (auth()->user()?->can('scanner.access') || auth()->user()?->hasRole('scanner'))) {
+            // Correct credentials but no scanner rights: do not leave the session logged in.
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            abort(403);
+        }
 
         auth()->user()?->forceFill([
             'last_login_at' => now(),
@@ -291,7 +299,7 @@ class TicketController extends Controller
             return view('admin.tickets.scanner');
         }
 
-        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents?->pluck('name')->all() ?? []);
+        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents ?? collect());
 
         if (! $ticket) {
             return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found.']);
@@ -324,7 +332,7 @@ class TicketController extends Controller
         ]);
 
         $ticketNumber = $this->extractTicketNumber($payload);
-        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents?->pluck('name')->all() ?? []);
+        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents ?? collect());
 
         if (! $ticket) {
             ScanLog::create([
@@ -402,11 +410,49 @@ class TicketController extends Controller
 
         $previousStatus = $ticket->status;
 
-        $ticket->update([
-            'status' => $data['status'],
-            'checked_in_at' => $data['status'] === 'checked_in' ? now() : null,
-            'canceled_at' => $data['status'] === 'canceled' ? now() : null,
-        ]);
+        // Check-in is atomic: the row is locked and re-read, so two scanners (or a double tap) cannot both admit the same ticket.
+        $alreadyCheckedIn = DB::transaction(function () use ($ticket, $data, &$previousStatus) {
+            $current = Ticket::query()->whereKey($ticket->id)->lockForUpdate()->first();
+
+            if ($data['status'] === 'checked_in' && $current->status === 'checked_in') {
+                $ticket->setRawAttributes($current->getAttributes(), true);
+
+                return true;
+            }
+
+            $previousStatus = $current->status;
+            $current->update([
+                'status' => $data['status'],
+                'checked_in_at' => $data['status'] === 'checked_in' ? now() : null,
+                'canceled_at' => $data['status'] === 'canceled' ? now() : null,
+            ]);
+            $ticket->setRawAttributes($current->getAttributes(), true);
+
+            return false;
+        });
+
+        if ($alreadyCheckedIn) {
+            ScanLog::create([
+                'ticket_id' => $ticket->id,
+                'event_id' => $ticket->event_id,
+                'event_name' => $ticket->eventLabel(),
+                'ticket_number' => $ticket->ticket_number,
+                'action' => 'status_update_rejected_duplicate',
+                'previous_status' => 'checked_in',
+                'new_status' => 'checked_in',
+                'payload' => $ticket->ticket_number,
+                'scanned_by_user_id' => auth()->id(),
+                'scanner_name' => auth()->user()?->name,
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'scanned_at' => now(),
+            ]);
+
+            $when = $ticket->checked_in_at?->format('d M Y, H:i');
+
+            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])
+                ->with('error', 'ALREADY CHECKED IN'.($when ? ' at '.$when : '').'. Entry is not allowed twice.');
+        }
 
         ScanLog::create([
             'ticket_id' => $ticket->id,
@@ -465,29 +511,46 @@ class TicketController extends Controller
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload, 'errorMessage' => $message]);
     }
 
-    private function applyManagedEventScopeToTicketsQuery(Builder $query, array $eventNames): void
+    /**
+     * Limits a ticket query to the given events. A ticket is matched by its event_id; only legacy tickets without one
+     * fall back to the "Event - Type" name convention (exact name or "name - ", wildcards escaped).
+     *
+     * @param \Illuminate\Support\Collection<int, Event> $events empty = no limit
+     */
+    private function applyManagedEventScopeToTicketsQuery(Builder $query, $events): void
     {
-        if (empty($eventNames)) {
+        if ($events->isEmpty()) {
             return;
         }
 
-        $query->where(function (Builder $ticketQuery) use ($eventNames) {
-            foreach ($eventNames as $name) {
-                $ticketQuery->orWhere('name', 'like', $name.' - %')
-                    ->orWhere('name', $name);
-            }
+        $query->where(function (Builder $scope) use ($events) {
+            $scope->whereIn('event_id', $events->pluck('id')->all())
+                ->orWhere(function (Builder $legacy) use ($events) {
+                    $legacy->whereNull('event_id')->where(function (Builder $names) use ($events) {
+                        foreach ($events->pluck('name') as $name) {
+                            $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], (string) $name);
+                            $names->orWhere('name', $name)->orWhereRaw("name LIKE ? ESCAPE '!'", [$escaped.' - %']);
+                        }
+                    });
+                });
         });
     }
 
     private function abortIfTicketOutsideManagedEvent(Request $request, Ticket $ticket): void
     {
-        $managedEventNames = $request->user()?->managedEvents->pluck('name')->all() ?? [];
-        if (empty($managedEventNames)) {
+        $events = $request->user()?->managedEvents ?? collect();
+        if ($events->isEmpty()) {
+            return;
+        }
+
+        if ($ticket->event_id !== null) {
+            abort_unless($events->contains('id', $ticket->event_id), 403);
+
             return;
         }
 
         $ticketName = (string) ($ticket->name ?? '');
-        $matches = collect($managedEventNames)->contains(
+        $matches = $events->pluck('name')->contains(
             fn ($name) => $ticketName === $name || str_starts_with($ticketName, $name.' - ')
         );
 
@@ -524,8 +587,8 @@ class TicketController extends Controller
         return $payload;
     }
 
-    /** @param array<string> $managedEventNames events this scanner is limited to (empty = all); a ticket of another event is simply "not found" */
-    private function findScannedTicket(string $payload, array $managedEventNames): ?Ticket
+    /** @param \Illuminate\Support\Collection<int, Event> $managedEvents events this scanner is limited to (empty = all); a ticket of another event is simply "not found" */
+    private function findScannedTicket(string $payload, $managedEvents): ?Ticket
     {
         $ticketNumber = $this->extractTicketNumber($payload);
 
@@ -537,7 +600,7 @@ class TicketController extends Controller
                     ->orWhere('ticket_number', $payload);
             });
 
-        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventNames);
+        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEvents);
 
         return $ticketQuery->first();
     }
