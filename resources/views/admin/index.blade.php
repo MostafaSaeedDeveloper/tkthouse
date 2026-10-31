@@ -135,7 +135,7 @@
 
 @if($ticketTypeSales->isNotEmpty())
 <div style="margin-bottom:20px">
-    <x-admin.card title="Event Report" subtitle="Tickets sold by type">
+    <x-admin.card title="Event Report" :subtitle="'Tickets sold by type · '.$rangeLabel">
         @foreach($ticketTypeSales as $row)
             <section class="a-er" aria-label="Tickets sold by type for {{ $row['event']->name }}">
                 <div class="a-er__row a-er__row--head"><b>{{ $row['event']->name }}</b><b>{{ number_format($row['total']) }}</b></div>

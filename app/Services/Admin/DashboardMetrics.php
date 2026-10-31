@@ -273,14 +273,14 @@ class DashboardMetrics
     }
 
     /**
-     * Tickets sold per ticket type (counts only, no amounts) for the events on sale (status active), all time, from paid orders only.
+     * Tickets sold per ticket type (counts only, no amounts) for the events on sale (status active), from paid orders only, limited to the dashboard period when one is given (paid date, created date as the fallback).
      * Same scope as every other figure: statistics-excluded orders never count and an order-scoped user only sees the sales of
      * their own orders (and the events they work in). The type comes from order_items.event_ticket_id when present; older rows
      * fall back to the text after "Event - " in the stored ticket name.
      *
      * @return Collection<int, array{event: Event, total: int, types: Collection<int, array{name: string, sold: int}>}>
      */
-    public function ticketTypeSales(): Collection
+    public function ticketTypeSales(?Carbon $start = null, ?Carbon $end = null): Collection
     {
         $events = Event::query()->where('status', 'active')
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))
@@ -295,7 +295,12 @@ class DashboardMetrics
         $rows = OrderItem::query()
             ->selectRaw('event_id, event_ticket_id, ticket_name, SUM(quantity) as qty')
             ->whereIn('event_id', $events->pluck('id'))
-            ->whereHas('order', fn ($o) => $o->captured()->includedInStatistics()->assignedScope($this->user))
+            ->whereHas('order', function ($o) use ($start, $end) {
+                $o->captured()->includedInStatistics()->assignedScope($this->user)
+                    ->when($start && $end, fn ($q) => $q->where(function ($w) use ($start, $end) {
+                        $w->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
+                    }));
+            })
             ->groupBy('event_id', 'event_ticket_id', 'ticket_name')
             ->get()
             ->groupBy('event_id');

@@ -74,6 +74,19 @@ class DashboardTicketTypeSalesTest extends TestCase
         $this->assertSame(['GA' => 6, 'VIP' => 1], $rows[0]['types']->pluck('sold', 'name')->all());
     }
 
+    public function test_it_follows_the_dashboard_period(): void
+    {
+        $event = $this->makeEvent(['name' => 'Fracture']);
+        $ga = $this->makeTicket($event, ['name' => 'GA']);
+        $this->sale($event, $ga->id, 'Fracture - GA', 2, 100);
+        $this->sale($event, $ga->id, 'Fracture - GA', 5, 100);
+        Order::query()->orderByDesc('id')->first()->forceFill(['paid_at' => now()->subDays(40)])->saveQuietly(); // the 5-ticket order is older
+
+        $recent = (new DashboardMetrics)->ticketTypeSales(now()->subDays(29)->startOfDay(), now()->endOfDay());
+        $this->assertSame(['GA' => 2], $recent[0]['types']->pluck('sold', 'name')->all());
+        $this->assertSame(['GA' => 7], (new DashboardMetrics)->ticketTypeSales()[0]['types']->pluck('sold', 'name')->all());
+    }
+
     public function test_an_assigned_user_only_sees_the_sales_of_their_own_orders(): void
     {
         SystemSettings::set('order_assignment_enabled', true);
