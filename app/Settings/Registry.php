@@ -56,7 +56,7 @@ final class Registry
             // ---- Orders (assignment keys are consumed by Stage D)
             'order_assignment_enabled' => ['group' => 'orders', 'type' => 'bool', 'label' => 'Enable order assignment', 'default' => false, 'rules' => ['boolean']],
             'order_assignment_mode' => ['group' => 'orders', 'type' => 'select', 'label' => 'Assignment mode', 'default' => 'manual',
-                'options' => ['manual' => 'Manual', 'round_robin' => 'Automatic — round robin', 'default_assignee' => 'Default assignee'], 'rules' => ['required', 'in:manual,round_robin,default_assignee']],
+                'options' => ['manual' => 'Manual', 'default_assignee' => 'Default assignee'], 'rules' => ['required', 'in:manual,default_assignee']],
             'order_default_assignee_ids' => ['group' => 'orders', 'type' => 'users', 'label' => 'Default assignees', 'default' => null,
                 'help' => 'Used when the mode is "Default assignee". Several agents can be chosen, but they must all have the same payment methods.',
                 'rules' => ['nullable', 'array', 'max:20', self::eachPositiveInt(...)]],

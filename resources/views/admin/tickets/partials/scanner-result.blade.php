@@ -80,9 +80,7 @@
         @if($ticket->status !== 'checked_in')
           <button name="status" value="checked_in" class="sc-act-btn sc-act-checkin" type="submit"><i class="fa fa-circle-check"></i> Check In</button>
         @endif
-        @if($ticket->status !== 'canceled')
-          <button name="status" value="canceled" class="sc-act-btn sc-act-cancel" type="submit"><i class="fa fa-ban"></i> Cancel</button>
-        @endif
+        {{-- The scanner "Cancel" button is removed for now (check-in only). --}}
       </div>
     </form>
     @endunless

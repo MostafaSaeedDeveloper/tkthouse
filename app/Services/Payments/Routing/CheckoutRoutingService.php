@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 /**
  * Provisional reservations (docs/v2-stage-e-design.md §3). A reservation fixes the agent + merchant account that the customer is
- * shown, but NEVER moves the final round-robin pointer: only a successful order does (consume()). Lock order everywhere is
+ * shown. Lock order everywhere is
  * assignment_state row -> reservation row -> order, so concurrent sessions serialise briefly and cannot deadlock.
  */
 class CheckoutRoutingService
@@ -43,14 +43,17 @@ class CheckoutRoutingService
         return DB::transaction(function () use ($token, $sessionId) {
             $this->lockState();
 
-            if ($token && ($existing = CheckoutRouting::query()->where('token', $token)->live()->lockForUpdate()->first()) && $this->stillValid($existing)) {
+            // Opening/refreshing the payment step follows the CURRENT default assignee: a held reservation is only reused while it
+            // still names that agent. (An order already being placed keeps the reserved agent: consume() never re-checks this.)
+            [$assignee, $source] = $this->pick();
+            if ($token && ($existing = CheckoutRouting::query()->where('token', $token)->live()->lockForUpdate()->first())
+                && ($existing->assignee_id ? (int) $existing->assignee_id : null) === $assignee?->id && $this->stillValid($existing)) {
                 return $existing;
             }
             if ($token) {
                 CheckoutRouting::query()->where('token', $token)->whereNull('consumed_order_id')->whereNull('released_at')->update(['released_at' => now()]);
             }
 
-            [$assignee, $source] = $this->pick($token);
             $resolution = $this->resolver->forAssignee($assignee);
 
             return CheckoutRouting::create([
@@ -128,7 +131,7 @@ class CheckoutRoutingService
         ];
     }
 
-    /** After the order row exists: bind the reservation to it, assign the agent, and advance the FINAL pointer (round robin only). */
+    /** After the order row exists: bind the reservation to it and assign the agent. */
     public function finalize(array $decision, Order $order): void
     {
         /** @var CheckoutRouting $r */
@@ -137,9 +140,6 @@ class CheckoutRoutingService
 
         if ($decision['assignee']) {
             $this->assignment->assignFromReservation($order, $decision['assignee'], $decision['source']);
-            if ($decision['source'] === 'round_robin') {
-                DB::table('assignment_state')->update(['last_assigned_user_id' => $decision['assignee']->id, 'updated_at' => now()]);
-            }
         }
     }
 
@@ -168,43 +168,19 @@ class CheckoutRoutingService
     }
 
     /** @return array{0: ?User, 1: string} */
-    private function pick(?string $ownToken): array
+    private function pick(): array
     {
         if (! OrderAccess::enabled()) {
             return [null, 'default'];
         }
 
-        $mode = (string) SystemSettings::get('order_assignment_mode', 'manual');
-
-        if ($mode === 'default_assignee') {
+        if ((string) SystemSettings::get('order_assignment_mode', 'manual') === 'default_assignee') {
             $u = $this->assignment->defaultAssignees()->first();
 
             return $u ? [$u, 'default_assignee'] : [null, 'manual_default'];
         }
 
-        if ($mode !== 'round_robin') {
-            return [null, 'manual_default'];
-        }
-
-        $eligible = $this->assignment->eligibleUsers();
-        if ($eligible->isEmpty()) {
-            return [null, 'manual_default'];
-        }
-
-        $pointer = (int) (DB::table('assignment_state')->value('last_assigned_user_id') ?? 0);
-        $rotation = collect(array_merge(
-            $eligible->filter(fn (User $u) => $u->id > $pointer)->values()->all(),
-            $eligible->filter(fn (User $u) => $u->id <= $pointer)->values()->all(),
-        ));
-
-        // Spread concurrent sessions: take the agent (in rotation order) with the fewest live provisional holds. Holds are
-        // provisional and expire; the final pointer still follows completed orders only.
-        $holds = CheckoutRouting::query()->live()->when($ownToken, fn ($q) => $q->where('token', '!=', $ownToken))
-            ->whereNotNull('assignee_id')->selectRaw('assignee_id, COUNT(*) c')->groupBy('assignee_id')->pluck('c', 'assignee_id');
-
-        $pick = $rotation->reduce(fn (?User $best, User $u) => $best === null || ($holds[$u->id] ?? 0) < ($holds[$best->id] ?? 0) ? $u : $best);
-
-        return [$pick, 'round_robin'];
+        return [null, 'manual_default'];
     }
 
     private function lockState(): void

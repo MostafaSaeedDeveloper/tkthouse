@@ -204,42 +204,15 @@ class OrderAssignmentTest extends TestCase
         $this->assertSame(2, OrderAssignment::count());
     }
 
-    public function test_round_robin_cycles_eligible_users_and_skips_inactive_and_unqualified(): void
+    public function test_a_leftover_round_robin_value_assigns_nobody(): void
     {
         $this->on();
-        SystemSettings::set('order_assignment_mode', 'round_robin');
-        $a = $this->agent(); $b = $this->agent(); $c = $this->agent();
-        $this->agent(['can_receive_orders' => true, 'is_active' => false]);
-        $this->agent(['can_receive_orders' => false]);
-        $svc = app(OrderAssignmentService::class);
-
-        $got = [];
-        for ($i = 0; $i < 6; $i++) {
-            $o = $this->order();
-            $svc->assignOnCreate($o);
-            $got[] = $o->fresh()->assigned_user_id;
-        }
-        $this->assertSame([$a->id, $b->id, $c->id, $a->id, $b->id, $c->id], $got);
-        $this->assertSame('round_robin', OrderAssignment::latest('id')->first()->source);
-    }
-
-    public function test_round_robin_without_eligible_users_leaves_order_in_queue_and_never_double_assigns(): void
-    {
-        $this->on();
-        SystemSettings::set('order_assignment_mode', 'round_robin');
-        $svc = app(OrderAssignmentService::class);
+        SystemSettings::set('order_assignment_mode', 'round_robin'); // removed mode: must behave like manual
+        $this->agent(); $this->agent();
         $o = $this->order();
-        $svc->assignOnCreate($o);
+        app(OrderAssignmentService::class)->assignOnCreate($o);
         $this->assertNull($o->fresh()->assigned_user_id);
-
-        $a = $this->agent(); $b = $this->agent();
-        $svc->assignOnCreate($o);
-        $first = $o->fresh()->assigned_user_id;
-        $this->assertNotNull($first);
-        $svc->assignOnCreate($o->fresh()); // second call (e.g. a retry) must not move it
-        $svc->assignOnCreate($o);          // stale instance too
-        $this->assertSame($first, $o->fresh()->assigned_user_id);
-        $this->assertSame(1, OrderAssignment::where('order_id', $o->id)->count());
+        $this->assertSame(0, OrderAssignment::count());
     }
 
     public function test_default_assignee_mode_and_ineligible_default_falls_to_queue(): void

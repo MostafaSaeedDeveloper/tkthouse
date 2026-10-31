@@ -20,7 +20,7 @@ use Tests\Support\PinnedSessionManager;
 use Tests\Support\PinnedSessionStore;
 use Tests\TestCase;
 
-/** Provisional reservations: the agent (and so the payment methods) shown to a customer, without consuming round-robin turns until an order exists. */
+/** Provisional reservations: the agent (and so the payment methods) shown to a customer, that always follow the current default assignee. */
 class CheckoutReservationTest extends TestCase
 {
     use BuildsMerchantAccounts, BuildsOrders, RefreshDatabase;
@@ -48,7 +48,8 @@ class CheckoutReservationTest extends TestCase
         $this->agent1 = $this->agent(['fake_card']);
         $this->agent2 = $this->agent(['fake_wallet', 'fake_card']);
         SystemSettings::set('order_assignment_enabled', true);
-        SystemSettings::set('order_assignment_mode', 'round_robin');
+        SystemSettings::set('order_assignment_mode', 'default_assignee');
+        SystemSettings::set('order_default_assignee_ids', [$this->agent1->id]);
         SystemSettings::set('payment_routing_enabled', true);
         SystemSettings::set('default_payment_account_id', $this->F0->id);
         $this->browser('a');
@@ -72,6 +73,8 @@ class CheckoutReservationTest extends TestCase
 
     private function begin(): void
     {
+        // a signed-in customer: guests would first have to confirm their e-mail with a code (not what is tested here)
+        $this->actingAs(User::query()->where('email', 'nour@example.test')->first() ?? User::factory()->create(['email' => 'nour@example.test']));
         $t = $this->makeTicket($this->event, ['name' => 'T'.random_int(1, 99999)]);
         $cart = rtrim(strtr(base64_encode(json_encode([['ticket_id' => $t->id, 'qty' => 1]])), '+/', '-_'), '=');
         $this->get(route('front.checkout', ['event' => $this->event->id, 'cart' => $cart]))->assertRedirect(route('front.checkout'));
@@ -79,13 +82,8 @@ class CheckoutReservationTest extends TestCase
 
     private function payload(string $email = 'nour@example.test', string $method = 'fake_card'): array
     {
-        return ['full_name' => 'Nour Hassan', 'email' => $email, 'phone' => '+201000000000', 'payment_method' => $method,
-            'attendees' => [['name' => 'Guest 1', 'email' => 'guest1@example.test', 'phone' => '+201000000001', 'gender' => 'male', 'social_profile' => 'guest1']]];
-    }
-
-    private function pointer(): ?int
-    {
-        return DB::table('assignment_state')->value('last_assigned_user_id');
+        return ['full_name' => 'Nour Hassan', 'email' => $email, 'phone' => '+201000000000', 'payment_method' => $method, 'password' => 'Secret-pass-123',
+            'attendees' => [['name' => 'Guest One', 'email' => 'guest1@example.test', 'phone' => '+201000000001', 'gender' => 'male', 'social_profile' => 'guest1']]];
     }
 
     private function reservation(): CheckoutRouting
@@ -93,7 +91,7 @@ class CheckoutReservationTest extends TestCase
         return CheckoutRouting::where('token', session(CheckoutRoutingService::SESSION_KEY))->firstOrFail();
     }
 
-    public function test_opening_the_payment_step_reserves_provisionally_and_never_moves_the_final_pointer(): void
+    public function test_opening_the_payment_step_reserves_the_default_assignee(): void
     {
         $this->begin();
         $this->get(route('front.checkout'))->assertOk()->assertSee('fake_card', false)->assertDontSee('fake_wallet', false); // agent1 offers only the card
@@ -101,7 +99,6 @@ class CheckoutReservationTest extends TestCase
 
         $this->assertSame($this->agent1->id, $r->assignee_id);
         $this->assertSame($this->F0->id, $r->integration_account_id);   // the one shared account
-        $this->assertNull($this->pointer(), 'a reservation is not a turn');
         $this->assertSame(0, Order::count());
 
         $this->get(route('front.checkout'))->assertOk();   // refresh / back button
@@ -109,31 +106,51 @@ class CheckoutReservationTest extends TestCase
         $this->assertSame($r->token, $this->reservation()->token);
     }
 
-    public function test_concurrent_sessions_are_spread_over_agents_without_consuming_turns(): void
+    public function test_a_new_customer_gets_the_new_default_assignee_immediately_and_back(): void
     {
-        $this->begin(); $this->get(route('front.checkout'));
-        $first = $this->reservation()->assignee_id;
-        $this->browser('b'); $this->begin(); $this->get(route('front.checkout'));
-        $second = $this->reservation()->assignee_id;
+        $this->begin();
+        $this->get(route('front.checkout'))->assertOk()->assertSee('fake_card', false)->assertDontSee('fake_wallet', false);
+        $this->assertSame($this->agent1->id, $this->reservation()->assignee_id);
 
-        $this->assertNotSame($first, $second);
-        $this->assertNull($this->pointer());
+        SystemSettings::set('order_default_assignee_ids', [$this->agent2->id]);
+        $this->browser('b'); $this->begin();
+        $this->get(route('front.checkout'))->assertOk()->assertSee('fake_wallet', false); // agent2's methods, no waiting
+        $this->assertSame($this->agent2->id, $this->reservation()->assignee_id);
+
+        SystemSettings::set('order_default_assignee_ids', [$this->agent1->id]);
+        $this->browser('c'); $this->begin();
+        $this->get(route('front.checkout'))->assertOk()->assertDontSee('fake_wallet', false);
+        $this->assertSame($this->agent1->id, $this->reservation()->assignee_id);
     }
 
-    public function test_abandoned_carts_expire_and_cost_no_final_turns(): void
+    public function test_refreshing_the_payment_step_shows_the_new_default_but_a_submitted_order_keeps_the_shown_agent(): void
+    {
+        $this->begin(); $this->get(route('front.checkout'));
+        SystemSettings::set('order_default_assignee_ids', [$this->agent2->id]);
+
+        // refresh: the new default's methods
+        $this->get(route('front.checkout'))->assertOk()->assertSee('fake_wallet', false);
+        $this->assertSame($this->agent2->id, $this->reservation()->assignee_id);
+
+        // a customer who was already paying (page shown before another change) is not interrupted
+        SystemSettings::set('order_default_assignee_ids', [$this->agent1->id]);
+        $this->postJson(route('front.checkout.store'), $this->payload('nour@example.test', 'fake_wallet'))->assertOk()->assertJson(['ok' => true]);
+        $this->assertSame($this->agent2->id, Order::firstOrFail()->assigned_user_id);
+    }
+
+    public function test_abandoned_carts_expire(): void
     {
         $this->begin(); $this->get(route('front.checkout'));
         $this->assertSame($this->agent1->id, $this->reservation()->assignee_id);
 
         $this->travel(45)->minutes(); // abandoned
         $this->browser('c'); $this->begin(); $this->get(route('front.checkout'));
-        $this->assertSame($this->agent1->id, $this->reservation()->assignee_id, 'agent1 is still next: the abandoned cart consumed nothing');
-        $this->assertNull($this->pointer());
+        $this->assertSame($this->agent1->id, $this->reservation()->assignee_id);
 
         $this->assertGreaterThanOrEqual(0, app(CheckoutRoutingService::class)->prune());
     }
 
-    public function test_placing_the_order_assigns_the_reserved_agent_pins_the_account_and_advances_the_pointer(): void
+    public function test_placing_the_order_assigns_the_reserved_agent_and_pins_the_account(): void
     {
         $this->begin(); $this->get(route('front.checkout'));
         $token = $this->reservation()->token;
@@ -143,30 +160,29 @@ class CheckoutReservationTest extends TestCase
         $order = Order::firstOrFail();
         $this->assertSame($this->agent1->id, $order->assigned_user_id);
         $this->assertSame($this->F0->id, $order->integration_account_id);
-        $this->assertSame($this->agent1->id, $this->pointer());
         $this->assertSame($order->id, CheckoutRouting::where('token', $token)->value('consumed_order_id'));
-        $this->assertDatabaseHas('order_assignments', ['order_id' => $order->id, 'to_user_id' => $this->agent1->id, 'source' => 'round_robin']);
+        $this->assertDatabaseHas('order_assignments', ['order_id' => $order->id, 'to_user_id' => $this->agent1->id, 'source' => 'default_assignee']);
 
         // the payment attempt that follows uses the shared account
         $this->get(route('front.orders.payment.gateway', ['order' => $order, 'token' => $order->payment_link_token, 'method' => 'fake_card']))->assertRedirect();
         $this->assertSame($this->F0->id, $order->paymentAttempts()->firstOrFail()->integration_account_id);
 
-        // the next customer gets the next agent
+        // the next customer gets the same default assignee
         $this->browser('b'); $this->begin(); $this->get(route('front.checkout'));
-        $this->assertSame($this->agent2->id, $this->reservation()->assignee_id);
+        $this->assertSame($this->agent1->id, $this->reservation()->assignee_id);
     }
 
     public function test_an_invalid_reservation_returns_the_customer_to_payment_choice_with_data_kept(): void
     {
         $this->begin(); $this->get(route('front.checkout'));
         $this->agent1->forceFill(['is_active' => false])->save(); // the offered agent disappears after the page was shown
+        SystemSettings::set('order_default_assignee_ids', [$this->agent2->id]);
 
         $this->postJson(route('front.checkout.store'), $this->payload())
             ->assertStatus(409)->assertJson(['ok' => false, 'price_changed' => true, 'routing_changed' => true])
             ->assertJsonFragment(['message' => 'Your payment options changed or expired. Please review the available payment methods and choose again — your details are saved.']);
 
         $this->assertSame(0, Order::count());
-        $this->assertNull($this->pointer());
 
         // reload: buyer data is still there, a fresh reservation points at the remaining agent, nothing was silently re-routed
         $this->get(route('front.checkout'))->assertOk()->assertSee('Nour Hassan')->assertSee('nour@example.test')->assertSee('Your payment options changed or expired');
@@ -219,21 +235,21 @@ class CheckoutReservationTest extends TestCase
         DB::transaction(fn () => $svc->consume($token, 'fake_card', true));
     }
 
-    public function test_routing_off_keeps_the_original_flow_and_assign_on_create_advances_the_pointer(): void
+    public function test_routing_off_keeps_the_original_flow_and_assigns_the_default_assignee_on_create(): void
     {
         SystemSettings::set('payment_routing_enabled', false);
         $this->begin(); $this->get(route('front.checkout'))->assertOk()->assertSee('fake_card', false)->assertSee('fake_wallet', false);
         $this->assertSame(0, CheckoutRouting::count());
 
-        $this->postJson(route('front.checkout.store'), $this->payload('x@example.test', 'fake_wallet'))->assertOk();
+        $this->postJson(route('front.checkout.store'), $this->payload('nour@example.test', 'fake_wallet'))->assertOk();
         $order = Order::firstOrFail();
         $this->assertSame($this->F0->id, optional($order->paymentAttempts()->first())->integration_account_id ?? $this->F0->id);
-        $this->assertNotNull($order->assigned_user_id);
-        $this->assertSame($order->assigned_user_id, $this->pointer());
+        $this->assertSame($this->agent1->id, $order->assigned_user_id);
     }
 
     public function test_events_that_require_approval_do_not_reserve_and_keep_the_old_assignment_path(): void
     {
+        $this->actingAs(User::factory()->create(['email' => 'nour@example.test']));
         $event = $this->makeEvent(['requires_booking_approval' => true, 'name' => 'Approval Night']);
         $t = $this->makeTicket($event, ['name' => 'AP']);
         $cart = rtrim(strtr(base64_encode(json_encode([['ticket_id' => $t->id, 'qty' => 1]])), '+/', '-_'), '=');
@@ -242,6 +258,6 @@ class CheckoutReservationTest extends TestCase
         $this->assertSame(0, CheckoutRouting::count());
 
         $this->postJson(route('front.checkout.store'), $this->payload())->assertOk();
-        $this->assertNotNull(Order::firstOrFail()->assigned_user_id);
+        $this->assertSame($this->agent1->id, Order::firstOrFail()->assigned_user_id);
     }
 }
