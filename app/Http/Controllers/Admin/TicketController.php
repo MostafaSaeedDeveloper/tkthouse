@@ -160,9 +160,11 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.index')->with('success', $message);
     }
 
-    /** Trash: soft-deleted tickets (guest-list ones included), limited to what the user could see before deletion. */
+    /** Trash: soft-deleted tickets (guest-list ones included). Super Admin only. */
     public function trash(Request $request)
     {
+        abort_unless(\App\Orders\OrderAccess::isSuper($request->user()), 403);
+
         $managedEvents = $request->user()?->managedEvents ?? collect();
 
         $query = Ticket::onlyTrashed()->with('order')
@@ -188,6 +190,8 @@ class TicketController extends Controller
 
     public function restore(Request $request, int $ticket)
     {
+        abort_unless(\App\Orders\OrderAccess::isSuper($request->user()), 403);
+
         $target = Ticket::onlyTrashed()->findOrFail($ticket);
         $this->guardAssignedTicket($request, $target);
         $this->abortIfTicketOutsideManagedEvent($request, $target);

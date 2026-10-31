@@ -8,9 +8,9 @@
     @can('scanner.access')
         <a href="{{ route('admin.tickets.scanner') }}" class="a-btn a-btn--outline"><i class="fa fa-qrcode"></i> QR Scanner</a>
     @endcan
-    @can('tickets.delete')
+    @if(\App\Orders\OrderAccess::isSuper(auth()->user()))
         <a href="{{ route('admin.tickets.trash') }}" class="a-btn a-btn--outline"><i class="fa fa-trash-can"></i> Deleted Tickets <x-admin.badge variant="dark">{{ \App\Models\Ticket::onlyTrashed()->count() }}</x-admin.badge></a>
-    @endcan
+    @endif
     @can('tickets.create')
         <a href="{{ route('admin.tickets.create') }}" class="a-btn a-btn--primary"><i class="fa fa-plus"></i> Create Ticket</a>
     @endcan
