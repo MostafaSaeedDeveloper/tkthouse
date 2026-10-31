@@ -171,8 +171,6 @@ class OrderAssignmentService
                 if ($mode === 'default_assignee') {
                     $defaults = $this->defaultAssignees(); // none eligible (or mixed payment methods) => queue, never someone else
                     $target = $defaults->first();
-                } elseif ($mode === 'round_robin') {
-                    $target = $this->nextRoundRobin();
                 }
 
                 $locked = Order::query()->lockForUpdate()->find($order->id);
@@ -189,26 +187,6 @@ class OrderAssignmentService
         } catch (\Throwable $e) {
             Log::warning('Automatic order assignment failed; order left unassigned.', ['order_id' => $order->id, 'error' => $e->getMessage()]);
         }
-    }
-
-    /** Must run inside a transaction: the single state row is locked so concurrent orders get distinct turns. */
-    private function nextRoundRobin(): ?User
-    {
-        $eligible = $this->eligibleUsers();
-        if ($eligible->isEmpty()) {
-            return null;
-        }
-
-        $state = DB::table('assignment_state')->lockForUpdate()->first();
-        if (! $state) {
-            DB::table('assignment_state')->insert(['last_assigned_user_id' => null, 'updated_at' => now()]);
-            $state = DB::table('assignment_state')->lockForUpdate()->first();
-        }
-
-        $next = $eligible->first(fn (User $u) => $u->id > (int) $state->last_assigned_user_id) ?? $eligible->first();
-        DB::table('assignment_state')->where('id', $state->id)->update(['last_assigned_user_id' => $next->id, 'updated_at' => now()]);
-
-        return $next;
     }
 
     /**

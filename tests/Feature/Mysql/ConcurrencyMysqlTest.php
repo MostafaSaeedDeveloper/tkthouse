@@ -39,7 +39,8 @@ class ConcurrencyMysqlTest extends TestCase
             $this->agents[] = $u->id;
         }
         SystemSettings::set('order_assignment_enabled', true);
-        SystemSettings::set('order_assignment_mode', 'round_robin');
+        SystemSettings::set('order_assignment_mode', 'default_assignee');
+        SystemSettings::set('order_default_assignee_ids', [$this->agents[0]]);
         SystemSettings::set('payment_routing_enabled', true);
         \App\Support\SystemSettings::set('default_payment_account_id', null);
         app(\App\Settings\SettingsService::class)->flush();
@@ -66,7 +67,7 @@ class ConcurrencyMysqlTest extends TestCase
         return $out;
     }
 
-    public function test_parallel_checkouts_get_balanced_agents_and_each_order_is_assigned_once(): void
+    public function test_parallel_checkouts_all_go_to_the_default_assignee_and_each_order_is_assigned_once(): void
     {
         $out = $this->spawn(array_map(fn ($i) => ['place', (string) $i], range(1, 12)));
 
@@ -76,23 +77,21 @@ class ConcurrencyMysqlTest extends TestCase
         $this->assertSame(12, Order::count());
         $this->assertSame(12, OrderAssignment::count(), 'exactly one assignment row per order');
         $perAgent = Order::query()->selectRaw('assigned_user_id, COUNT(*) c')->groupBy('assigned_user_id')->pluck('c', 'assigned_user_id')->all();
-        $this->assertEqualsCanonicalizing([4, 4, 4], array_values($perAgent), 'round robin stays perfectly balanced under concurrency');
+        $this->assertSame([$this->agents[0] => 12], array_map('intval', $perAgent), 'every order goes to the default assignee under concurrency');
         $this->assertSame(12, CheckoutRouting::whereNotNull('consumed_order_id')->count());
         $this->assertSame(12, CheckoutRouting::distinct('consumed_order_id')->count('consumed_order_id'));
     }
 
-    public function test_provisional_reservations_never_move_the_final_pointer_under_parallel_load(): void
+    public function test_parallel_reservations_all_name_the_default_assignee(): void
     {
         $out = $this->spawn(array_map(fn ($i) => ['reserve', (string) $i], range(1, 9)));
 
         foreach ($out as $line) {
             $this->assertMatchesRegularExpression('/^\d+\|\w{40}$/', $line, $line);
         }
-        $this->assertNull(DB::table('assignment_state')->value('last_assigned_user_id'));
         $this->assertSame(0, Order::count());
-        // concurrent sessions were spread over the three agents (held agents are skipped)
         $perAgent = collect($out)->map(fn ($l) => (int) explode('|', $l)[0])->countBy()->all();
-        $this->assertCount(3, $perAgent);
+        $this->assertSame([$this->agents[0] => 9], $perAgent);
     }
 
     public function test_one_reservation_can_feed_exactly_one_order_when_many_race(): void
