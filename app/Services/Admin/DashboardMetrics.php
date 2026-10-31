@@ -328,13 +328,20 @@ class DashboardMetrics
         return $this->orders()->with(['customer', 'items.event'])->latest()->limit($limit)->get();
     }
 
-    /** Real check-in numbers (tickets of the scoped upcoming/selected events), or null when there is nothing to show. */
-    public function scans(): ?array
+    /**
+     * Check-in numbers for the dashboard period: the tickets issued from paid orders (same rule as "Tickets sold": captured, counted in
+     * statistics, within the user's order scope, paid date in the period with the created date as the fallback), of the scoped
+     * upcoming/selected events. Null when there is nothing to show.
+     */
+    public function scans(?Carbon $start = null, ?Carbon $end = null): ?array
     {
-        $q = Ticket::query()->where('status', '!=', 'canceled');
-        if ($this->user && \App\Orders\OrderAccess::scoped($this->user)) {
-            $q->whereHas('order', fn ($o) => $o->assignedScope($this->user));
-        }
+        $q = Ticket::query()->where('status', '!=', 'canceled')
+            ->whereHas('order', function ($o) use ($start, $end) {
+                $o->captured()->includedInStatistics()->assignedScope($this->user)
+                    ->when($start && $end, fn ($q) => $q->where(function ($w) use ($start, $end) {
+                        $w->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
+                    }));
+            });
         if ($this->event) {
             $q->where('event_id', $this->event->id);
         } elseif ($ids = ($this->managedEventIds ?: $this->workEventIds)) {

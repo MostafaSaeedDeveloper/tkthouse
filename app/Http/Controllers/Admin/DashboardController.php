@@ -214,7 +214,7 @@ class DashboardController extends Controller
         $series = $metrics->series($metricsStart, $metricsEnd);
         $revenue = $metrics->revenue($metricsStart, $metricsEnd);
         $upcoming = $metrics->upcomingEvents();
-        $scans = $metrics->scans();
+        $scans = $metrics->scans($metricsStart, $metricsEnd);
         $ticketTypeSales = $metrics->ticketTypeSales($metricsStart, $metricsEnd);
         $rangeKey = $selectedRange;
         $ranges = DashboardMetrics::RANGES;

@@ -228,7 +228,7 @@
         </x-admin.card>
 
         @if($scans)
-            <x-admin.card title="Ticket check-ins" subtitle="Upcoming events">
+            <x-admin.card title="Ticket check-ins" :subtitle="'Upcoming events · '.$rangeLabel">
                 <div class="a-ring" style="--p: {{ $scans['percent'] }}"><div><b>{{ $scans['percent'] }}%</b><span>Checked in</span></div></div>
                 <div class="a-scan-stats">
                     <div><span class="a-muted">Checked in</span><b>{{ number_format($scans['checked_in']) }}</b></div>
