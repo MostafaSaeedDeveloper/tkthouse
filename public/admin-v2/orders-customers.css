@@ -226,3 +226,6 @@
 .a-reft .a-table__actions { gap: 4px; flex-wrap: nowrap; }
 .a-reft .a-table__main, .a-reft td.a-num, .a-reft th.a-num { white-space: nowrap; }
 .a-reft .a-table__sub { white-space: normal; }
+
+/* Assigned To: every agent on its own line, never cut off */
+.a-ord-agents { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
