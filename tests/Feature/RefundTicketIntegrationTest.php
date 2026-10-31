@@ -279,13 +279,8 @@ class RefundTicketIntegrationTest extends TestCase
         $res->assertStatus(409)->assertJson(['ok' => false, 'admit' => false, 'code' => 'refunded']);
         $this->assertStringContainsString('REFUNDED / CANCELED', $res->json('message'));
         $this->assertStringContainsString('Refund confirmed — venue relocation', $res->json('message'));
-        $html = $res->json('html');
-        $this->assertStringContainsString('REFUNDED / CANCELED', $html);
-        $this->assertStringContainsString('Refund confirmed — venue relocation', $html);
-        $this->assertStringContainsString($ticket->fresh()->canceled_at->format('d M Y'), $html);
-        $this->assertStringNotContainsString('Check In', $html);
         foreach (['secret internal note', $r->internal_reference, 'EXT-', '123.00', '246.00', 'fawaterak'] as $leak) {
-            $this->assertStringNotContainsStringIgnoringCase($leak, $html.$res->json('message'), "scanner output must not expose: $leak");
+            $this->assertStringNotContainsStringIgnoringCase($leak, $res->getContent(), "scanner output must not expose: $leak");
         }
 
         $fresh = $ticket->fresh();
@@ -295,10 +290,12 @@ class RefundTicketIntegrationTest extends TestCase
 
         // a status change posted straight to the server (old page, forged form) is refused too
         $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $ticket), ['status' => 'checked_in'])->assertRedirect()->assertSessionHas('error');
-        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $ticket), ['status' => 'not_checked_in'])->assertRedirect();
+        $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.checkin'), ['code' => $ticket->ticket_number])->assertStatus(409)->assertJson(['ok' => false, 'code' => 'refunded']);
+        // re-opening a ticket is not a gate-scanner power at all (and an admin cannot re-open a refunded one either)
+        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $ticket), ['status' => 'not_checked_in'])->assertForbidden();
         $fresh = $ticket->fresh();
         $this->assertSame(['canceled', null], [$fresh->status, $fresh->checked_in_at]);
-        $this->assertSame(2, ScanLog::where('ticket_id', $ticket->id)->where('action', 'status_update_rejected_refunded')->count());
+        $this->assertSame(2, ScanLog::where('ticket_id', $ticket->id)->where('action', 'checkin_rejected_refunded')->count());
         $this->assertSame(0, ScanLog::where('ticket_id', $ticket->id)->where('action', 'status_update')->count());
 
         // a freshly loaded page (new session) shows the banner server-side as well
@@ -320,28 +317,27 @@ class RefundTicketIntegrationTest extends TestCase
         $scanner = $this->scanner();
 
         $ok = $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.lookup'), ['code' => $valid->ticket_number]);
-        $ok->assertOk()->assertJson(['ok' => true]);
-        $this->assertStringNotContainsString('REFUNDED', $ok->json('html'));
+        $ok->assertOk()->assertJson(['ok' => true, 'admit' => false, 'code' => 'ready']);
         $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $valid), ['status' => 'checked_in'])->assertRedirect();
         $this->assertSame('checked_in', $valid->fresh()->status);
 
         // ordinary administrative cancellation is NOT shown as a refund
-        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $adminCanceled), ['status' => 'canceled'])->assertRedirect();
+        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $adminCanceled), ['status' => 'canceled'])->assertForbidden(); // not a scanner power
+        $this->actingAs($this->user(['tickets.update', 'scanner.access']))->post(route('admin.tickets.scanner.status', $adminCanceled), ['status' => 'canceled'])->assertRedirect();
         $res = $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.lookup'), ['code' => $adminCanceled->ticket_number]);
-        $res->assertOk();
-        $this->assertStringNotContainsString('REFUNDED', $res->json('html'));
-        $this->assertStringContainsString('Canceled', $res->json('html'));
+        $res->assertStatus(409)->assertJson(['code' => 'canceled']);
+        $this->assertStringNotContainsString('REFUNDED', $res->getContent());
 
         // invalid code
         $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.lookup'), ['code' => '999999999999'])->assertStatus(404)->assertJson(['ok' => false]);
 
-        // a ticket of another event is "not found" for a scanner limited to one event, never a refund message
+        // a ticket of another event is refused as WRONG EVENT for a scanner limited to one event, never a refund message
         $eventA = $this->makeEvent(['name' => 'Alpha Night']);
         $eventB = $this->makeEvent(['name' => 'Beta Night']);
         $tb = Ticket::create(['name' => 'Beta Night - GA', 'price' => 10, 'status' => 'not_checked_in', 'ticket_number' => '5550001112', 'qr_payload' => '5550001112', 'event_id' => $eventB->id]);
         $limited = $this->scanner();
         $limited->managedEvents()->attach($eventA->id);
-        $this->actingAs($limited->fresh())->postJson(route('admin.tickets.scanner.lookup'), ['code' => $tb->ticket_number])->assertStatus(404);
+        $this->actingAs($limited->fresh())->postJson(route('admin.tickets.scanner.lookup'), ['code' => $tb->ticket_number])->assertStatus(409)->assertJson(['code' => 'wrong_event']);
     }
 
     /* ------------------------------------------------------------ 10-12: duplicates, webhooks, over-refund */

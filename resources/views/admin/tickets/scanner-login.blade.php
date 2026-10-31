@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanner Login — TKT House</title>
   @include('partials.favicon')
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:        #080808;
@@ -31,7 +29,7 @@
       height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       overflow-x: hidden;
       /* overflow-y controlled by JS below */
     }
@@ -110,7 +108,7 @@
     .left-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
     .big-label {
-      font-family: 'Inter', sans-serif; font-weight: 800;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800;
       font-size: clamp(64px, 7vw, 96px);
       line-height: .95;
       letter-spacing: 2px;
@@ -224,7 +222,7 @@
       background: var(--accent);
     }
     .form-title {
-      font-family: 'Inter', sans-serif; font-weight: 800;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800;
       font-size: 42px; letter-spacing: 2px;
       line-height: 1;
     }
@@ -295,7 +293,7 @@
       background: var(--accent);
       color: #080808;
       border: none; cursor: pointer;
-      font-family: 'Inter', sans-serif; font-weight: 800;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800;
       font-size: 20px;
       letter-spacing: 3px;
       padding: 16px;
@@ -466,7 +464,7 @@
     <!-- ── Left branding panel ── -->
     <div class="panel-left">
       <div class="brand">
-        <img src="https://tkthouse.com/images/logo-light.png" alt="TKT House" class="brand-logo">
+        <img src="{{ asset('images/logo-light.png') }}" alt="TKT House" class="brand-logo">
       </div>
 
       <div class="left-content">
@@ -498,7 +496,7 @@
     <div class="panel-right">
       <div class="form-card">
         <div class="form-header">
-          <img src="https://tkthouse.com/images/logo-light.png" alt="TKT House" class="form-logo">
+          <img src="{{ asset('images/logo-light.png') }}" alt="TKT House" class="form-logo">
           <div class="form-eyebrow">Gate Access</div>
           <div class="form-title">Scanner Login</div>
           <div class="form-subtitle">Gate team only — authenticate to launch QR scanner</div>

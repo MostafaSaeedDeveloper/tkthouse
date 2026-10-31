@@ -9,6 +9,8 @@ use App\Models\IssuedTicket;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ScanLog;
+use App\Services\Scanner\CheckInService;
+use Illuminate\Support\Facades\DB;
 use App\Services\UltramsgWhatsappService;
 use App\Support\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -286,145 +288,157 @@ class TicketController extends Controller
     {
         $this->ensureScannerAccess();
 
+        $user = $request->user();
+        $context = $this->scannerContext($user);
+
         $payload = trim((string) $request->input('code'));
         if ($payload === '') {
-            return view('admin.tickets.scanner');
+            return view('admin.tickets.scanner', $context);
         }
 
-        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents?->pluck('name')->all() ?? []);
+        // Legacy deep link (?code=…): read-only look at one ticket, same rules as the JSON lookup.
+        $found = app(CheckInService::class)->lookup($user, $payload, $request, null);
+        $ticket = in_array($found['code'], ['not_found', 'event_not_allowed'], true) ? null : Ticket::query()->where('ticket_number', $found['ticket']['number'] ?? '')->first();
 
-        if (! $ticket) {
-            return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found.']);
-        }
-
-        if ($ticket->isRefundCanceled()) {
-            $this->logRefundRejection($request, $ticket, $payload, 'lookup_rejected_refunded');
-
-            return $this->refundRejectionResponse($request, $ticket, $payload);
-        }
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'ok' => true,
-                'message' => 'Ticket found.',
-                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
-            ]);
-        }
-
-        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
+        return view('admin.tickets.scanner', $context + ['lastCode' => $payload, 'initialResult' => $found, 'ticket' => $ticket]);
     }
 
+    /** Read-only. Never changes a ticket. Used for manual search and to re-verify after an uncertain outcome. */
     public function scannerLookup(Request $request)
     {
         $this->ensureScannerAccess();
 
-        $payload = trim((string) $request->input('code'));
-        $request->validate([
+        $data = $request->validate([
             'code' => ['required', 'string', 'max:1000'],
+            'event_id' => ['nullable', 'integer'],
         ]);
 
-        $ticketNumber = $this->extractTicketNumber($payload);
-        $ticket = $this->findScannedTicket($payload, $request->user()?->managedEvents?->pluck('name')->all() ?? []);
-
-        if (! $ticket) {
-            ScanLog::create([
-                'ticket_number' => $ticketNumber,
-                'action' => 'lookup_failed',
-                'payload' => $payload,
-                'scanned_by_user_id' => auth()->id(),
-                'scanner_name' => auth()->user()?->name,
-                'ip_address' => $request->ip(),
-                'user_agent' => (string) $request->userAgent(),
-                'scanned_at' => now(),
-            ]);
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Ticket not found. Please scan again or type the correct ticket number.',
-                    'html' => view('admin.tickets.partials.scanner-result', ['ticket' => null])->render(),
-                ], 404);
-            }
-
-            return view('admin.tickets.scanner', ['lastCode' => $payload, 'errorMessage' => 'Ticket not found. Please scan again or type the correct ticket number.']);
-        }
-
-        // Server-side rule, independent of any label on the page: a refunded ticket is never admitted, in any session.
-        if ($ticket->isRefundCanceled()) {
-            $this->logRefundRejection($request, $ticket, $payload, 'lookup_rejected_refunded');
-
-            return $this->refundRejectionResponse($request, $ticket, $payload);
-        }
-
-        ScanLog::create([
-            'ticket_id' => $ticket->id,
-            'event_id' => $ticket->event_id,
-            'event_name' => $ticket->eventLabel(),
-            'ticket_number' => $ticket->ticket_number,
-            'action' => 'lookup_success',
-            'previous_status' => $ticket->status,
-            'new_status' => $ticket->status,
-            'payload' => $payload,
-            'scanned_by_user_id' => auth()->id(),
-            'scanner_name' => auth()->user()?->name,
-            'ip_address' => $request->ip(),
-            'user_agent' => (string) $request->userAgent(),
-            'scanned_at' => now(),
-        ]);
+        $found = app(CheckInService::class)->lookup($request->user(), trim($data['code']), $request, isset($data['event_id']) ? (int) $data['event_id'] : null);
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'ok' => true,
-                'message' => 'Ticket found.',
-                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
-            ]);
+            $http = match ($found['result']) {
+                CheckInService::NOT_FOUND => 404,
+                CheckInService::REJECTED, CheckInService::REVIEW => 409,
+                default => 200, // ready / already checked in: information only
+            };
+
+            // A lookup never admits anyone: `admit` is always false here; only /scanner/check-in can approve entry.
+            return response()->json($found + ['ok' => $http === 200, 'admit' => false], $http);
         }
 
-        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
+        return redirect()->route('admin.tickets.scanner', ['code' => trim($data['code'])]);
+    }
+
+    /**
+     * Atomic admission. One request = one decision, taken by the server inside a transaction with a row lock.
+     * The response says "approved" only after the database row was changed by this very request.
+     */
+    public function scannerCheckIn(Request $request)
+    {
+        $this->ensureScannerAccess();
+
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:1000'],
+            'event_id' => ['nullable', 'integer'],
+        ]);
+
+        try {
+            $outcome = app(CheckInService::class)->checkIn($request->user(), trim($data['code']), isset($data['event_id']) ? (int) $data['event_id'] : null, $request);
+        } catch (\Throwable $e) {
+            report($e);
+
+            // Unknown outcome — the client must NOT treat this as approved nor retry blindly; it re-verifies instead.
+            return response()->json(['ok' => false, 'result' => 'error', 'code' => 'server_error', 'message' => 'Server error — result unknown. Verify the ticket before deciding.', 'ticket' => null], 500);
+        }
+
+        $status = match ($outcome['result']) {
+            CheckInService::NOT_FOUND => 404,
+            CheckInService::APPROVED => 200,
+            default => 409,
+        };
+
+        return response()->json($outcome + ['ok' => $outcome['result'] === CheckInService::APPROVED], $status);
+    }
+
+    /** Cheap keep-alive: proves the session is still valid and hands back a fresh CSRF token. */
+    public function scannerPing(Request $request)
+    {
+        return response()->json(['ok' => true, 'csrf' => csrf_token(), 'time' => now()->toIso8601String()])->header('Cache-Control', 'no-store');
     }
 
     public function scannerStatus(Request $request, Ticket $ticket)
     {
-        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
-
         $this->ensureScannerAccess();
 
         $data = $request->validate([
             'status' => ['required', 'in:not_checked_in,checked_in,canceled'],
         ]);
 
-        if ($ticket->isRefundCanceled()) {
-            // No status can be set on a refunded ticket: not check-in, not "not checked in". The attempt is recorded.
+        // Admission always goes through the atomic service (event scope, refund/cancel, order state, exactly-once).
+        if ($data['status'] === 'checked_in') {
+            $outcome = app(CheckInService::class)->checkIn($request->user(), (string) $ticket->ticket_number, null, $request);
+            $ok = $outcome['result'] === CheckInService::APPROVED;
+
+            if ($request->expectsJson()) {
+                return response()->json($outcome + ['ok' => $ok], $ok ? 200 : 409);
+            }
+
+            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with($ok ? 'success' : 'error', $ok ? 'ENTRY APPROVED — checked in.' : $outcome['message']);
+        }
+
+        // Cancelling or re-opening a ticket is an administrative power, never a gate-scanner one.
+        $user = $request->user();
+        abort_if($user->hasRole('scanner') && $user->roles->count() === 1, 403, 'Scanner staff can only check tickets in.');
+        abort_unless($user->can('tickets.update'), 403);
+        $this->abortIfTicketOutsideManagedEvent($request, $ticket);
+
+        $previousStatus = null;
+        $refusedRefund = false;
+        DB::transaction(function () use ($ticket, $data, $request, &$previousStatus, &$refusedRefund) {
+            $locked = Ticket::query()->whereKey($ticket->id)->lockForUpdate()->firstOrFail();
+            if ($locked->isRefundCanceled()) {
+                $refusedRefund = true;
+
+                return;
+            }
+            $previousStatus = $locked->status;
+            $locked->update([
+                'status' => $data['status'],
+                'checked_in_at' => null,
+                'canceled_at' => $data['status'] === 'canceled' ? now() : null,
+            ]);
+            ScanLog::create([
+                'ticket_id' => $locked->id, 'event_id' => $locked->event_id, 'event_name' => $locked->eventLabel(), 'ticket_number' => $locked->ticket_number,
+                'action' => 'status_update', 'previous_status' => $previousStatus, 'new_status' => $data['status'], 'payload' => $locked->ticket_number,
+                'scanned_by_user_id' => auth()->id(), 'scanner_name' => auth()->user()?->name, 'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(), 'scanned_at' => now(),
+            ]);
+        });
+
+        if ($refusedRefund) {
+            $ticket->refresh();
             $this->logRefundRejection($request, $ticket, (string) $ticket->ticket_number, 'status_update_rejected_refunded');
 
             return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('error', 'REFUNDED / CANCELED — '.$ticket->refundCancellationText().'. Entry is not allowed.');
         }
 
-        $previousStatus = $ticket->status;
-
-        $ticket->update([
-            'status' => $data['status'],
-            'checked_in_at' => $data['status'] === 'checked_in' ? now() : null,
-            'canceled_at' => $data['status'] === 'canceled' ? now() : null,
-        ]);
-
-        ScanLog::create([
-            'ticket_id' => $ticket->id,
-            'event_id' => $ticket->event_id,
-            'event_name' => $ticket->eventLabel(),
-            'ticket_number' => $ticket->ticket_number,
-            'action' => 'status_update',
-            'previous_status' => $previousStatus,
-            'new_status' => $data['status'],
-            'payload' => $ticket->ticket_number,
-            'scanned_by_user_id' => auth()->id(),
-            'scanner_name' => auth()->user()?->name,
-            'ip_address' => $request->ip(),
-            'user_agent' => (string) $request->userAgent(),
-            'scanned_at' => now(),
-        ]);
-
         return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('success', 'Ticket status updated successfully.');
+    }
+
+    /** What the scanner screen needs: who is working, which event(s) they may scan, and how many they have admitted today. */
+    private function scannerContext($user): array
+    {
+        $assigned = $user->managedEvents()->get(['events.id', 'events.name', 'events.event_date']);
+        $events = $assigned->isNotEmpty()
+            ? $assigned
+            : Event::query()->whereNull('archived_at')->orderByDesc('event_date')->limit(30)->get(['id', 'name', 'event_date']);
+
+        return [
+            'scannerEvents' => $events->map(fn ($e) => ['id' => $e->id, 'name' => $e->name])->values(),
+            'scannerRestricted' => $assigned->isNotEmpty(),
+            'scannerCheckins' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'status_update')->where('new_status', 'checked_in')->where('scanned_at', '>=', now()->startOfDay())->count(),
+            'canUndo' => ! ($user->hasRole('scanner') && $user->roles->count() === 1) && $user->can('tickets.update'),
+        ];
     }
 
 
@@ -446,23 +460,6 @@ class TicketController extends Controller
             'user_agent' => (string) $request->userAgent(),
             'scanned_at' => now(),
         ]);
-    }
-
-    private function refundRejectionResponse(Request $request, Ticket $ticket, string $payload)
-    {
-        $message = 'REFUNDED / CANCELED — '.$ticket->refundCancellationText().'. Entry is not allowed.';
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'ok' => false,
-                'admit' => false,
-                'code' => 'refunded',
-                'message' => $message,
-                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket])->render(),
-            ], 409);
-        }
-
-        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload, 'errorMessage' => $message]);
     }
 
     private function applyManagedEventScopeToTicketsQuery(Builder $query, array $eventNames): void
@@ -513,33 +510,6 @@ class TicketController extends Controller
         } while (Ticket::query()->where('ticket_number', $ticketNumber)->exists());
 
         return $ticketNumber;
-    }
-
-    private function extractTicketNumber(string $payload): string
-    {
-        if (preg_match('/\d{8,}/', $payload, $matches) === 1) {
-            return $matches[0];
-        }
-
-        return $payload;
-    }
-
-    /** @param array<string> $managedEventNames events this scanner is limited to (empty = all); a ticket of another event is simply "not found" */
-    private function findScannedTicket(string $payload, array $managedEventNames): ?Ticket
-    {
-        $ticketNumber = $this->extractTicketNumber($payload);
-
-        $ticketQuery = Ticket::query()
-            ->with('order')
-            ->where(function (Builder $query) use ($payload, $ticketNumber) {
-                $query->where('ticket_number', $ticketNumber)
-                    ->orWhere('qr_payload', $payload)
-                    ->orWhere('ticket_number', $payload);
-            });
-
-        $this->applyManagedEventScopeToTicketsQuery($ticketQuery, $managedEventNames);
-
-        return $ticketQuery->first();
     }
 
     private function qrDataUri(Ticket $ticket): string

@@ -1,0 +1,179 @@
+{
+    "baseline_sequential_single_scanner": {
+        "latency_ms": {
+            "n": 150,
+            "p50": 46.6,
+            "p95": 64.5,
+            "p99": 72,
+            "max": 77.6
+        }
+    },
+    "same_ticket_K2": {
+        "rounds": 60,
+        "rounds_with_exactly_one_approval": 60,
+        "approvals": 60,
+        "duplicates": 60,
+        "latency_ms": {
+            "n": 120,
+            "p50": 47.6,
+            "p95": 67.5,
+            "p99": 107.7,
+            "max": 108.3
+        }
+    },
+    "same_ticket_K5": {
+        "rounds": 60,
+        "rounds_with_exactly_one_approval": 60,
+        "approvals": 60,
+        "duplicates": 240,
+        "latency_ms": {
+            "n": 300,
+            "p50": 52.6,
+            "p95": 109,
+            "p99": 183.8,
+            "max": 286.5
+        }
+    },
+    "same_ticket_K10": {
+        "rounds": 60,
+        "rounds_with_exactly_one_approval": 60,
+        "approvals": 60,
+        "duplicates": 540,
+        "latency_ms": {
+            "n": 600,
+            "p50": 100.4,
+            "p95": 185,
+            "p99": 286.8,
+            "max": 443
+        }
+    },
+    "same_ticket_K20": {
+        "rounds": 60,
+        "rounds_with_exactly_one_approval": 60,
+        "approvals": 60,
+        "duplicates": 1140,
+        "latency_ms": {
+            "n": 1200,
+            "p50": 165.4,
+            "p95": 305.9,
+            "p99": 540.2,
+            "max": 1070.8
+        }
+    },
+    "distinct_tickets_K5": {
+        "tickets": 200,
+        "approved": 200,
+        "wall_s": 4.42,
+        "checkins_per_sec": 45.2,
+        "latency_ms": {
+            "n": 200,
+            "p50": 56.9,
+            "p95": 156.3,
+            "p99": 258.7,
+            "max": 282.4
+        }
+    },
+    "distinct_tickets_K10": {
+        "tickets": 400,
+        "approved": 400,
+        "wall_s": 6.82,
+        "checkins_per_sec": 58.6,
+        "latency_ms": {
+            "n": 400,
+            "p50": 87.8,
+            "p95": 189,
+            "p99": 328.7,
+            "max": 379.8
+        }
+    },
+    "distinct_tickets_K20": {
+        "tickets": 800,
+        "approved": 800,
+        "wall_s": 12.48,
+        "checkins_per_sec": 64.1,
+        "latency_ms": {
+            "n": 800,
+            "p50": 156.9,
+            "p95": 285.7,
+            "p99": 416,
+            "max": 578.3
+        }
+    },
+    "rapid_repeat_same_scanner_20x": {
+        "approved": 1,
+        "duplicate": 19,
+        "latency_ms": {
+            "n": 20,
+            "p50": 175.2,
+            "p95": 266.9,
+            "p99": 293.6,
+            "max": 293.6
+        }
+    },
+    "mixed_cases": {
+        "requests": 300,
+        "wrong_verdicts": 0,
+        "latency_ms": {
+            "n": 300,
+            "p50": 170.5,
+            "p95": 453.3,
+            "p99": 758.4,
+            "max": 887.3
+        }
+    },
+    "direct_request_restrictions": "verified",
+    "slow_db_row_lock_1.5s": {
+        "request_waited": true,
+        "verdict": "approved",
+        "ms": 1561
+    },
+    "lock_wait_timeout": {
+        "http": 500,
+        "verdict": "server_error",
+        "ticket_still_not_checked_in": true
+    },
+    "client_timeout_after_server_work": {
+        "aborted_requests": 60,
+        "server_had_committed": 24,
+        "server_had_not": 36,
+        "after_recheck_all_checked_in_exactly_once": true
+    },
+    "invariants": {
+        "tickets_with_more_than_one_success_log": 0,
+        "checked_in_without_log": 0,
+        "total_checked_in": 1953,
+        "tickets_generated": 4660
+    },
+    "overall_http_latency_ms": {
+        "n": 3920,
+        "p50": 122.7,
+        "p95": 272.5,
+        "p99": 456.4,
+        "max": 1070.8
+    },
+    "env": {
+        "cpus": 4,
+        "php_server_workers": 32,
+        "db": "MariaDB 10.11.14-MariaDB-0ubuntu0.24.04.1",
+        "note": "client, PHP server workers and MariaDB share this one machine; php -S boots the framework on every request"
+    },
+    "queries_per_request": {
+        "approved": 8,
+        "duplicate": 8,
+        "refunded": 6,
+        "not_found": 5
+    },
+    "http_status_code_tally": {
+        "0/none": 60,
+        "200/approved": 1868,
+        "404/not_found": 40,
+        "409/already_checked_in": 2099,
+        "409/canceled": 40,
+        "409/event_not_allowed": 2,
+        "409/order_not_paid": 40,
+        "409/refunded": 80,
+        "409/wrong_event": 41,
+        "500/server_error": 1
+    },
+    "assertion_failures": []
+}

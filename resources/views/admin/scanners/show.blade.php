@@ -17,6 +17,8 @@
     <div class="a-grid a-grid--3">
         <x-admin.kpi label="Total Scans" :value="number_format($stats['total_scans'])" icon="fa-qrcode" />
         <x-admin.kpi label="Check-ins" :value="number_format($stats['checkins'])" icon="fa-circle-check" />
+ <x-admin.kpi label="Duplicate Attempts" :value="number_format($stats['duplicates'])" icon="fa-clone" />
+        <x-admin.kpi label="Rejected" :value="number_format($stats['rejected'])" icon="fa-ban" />
         <x-admin.kpi label="Login Count" :value="number_format($stats['logins'])" icon="fa-right-to-bracket" />
     </div>
 </div>
