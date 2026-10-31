@@ -128,6 +128,33 @@
 </div>
 @endif
 
+@if($ticketTypeSales->isNotEmpty())
+<div style="margin-bottom:20px">
+    <x-admin.card title="Tickets sold by type" subtitle="Events on sale · paid orders">
+        @foreach($ticketTypeSales as $row)
+            <div style="{{ $loop->first ? '' : 'margin-top:18px;padding-top:18px;border-top:1px solid var(--a-border, #eee)' }}">
+                <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px">
+                    <b class="a-trunc">{{ $row['event']->name }}</b>
+                    <span class="a-muted a-text-sm">{{ number_format($row['total']) }} tickets · {{ $moneyShort($row['revenue']) }}</span>
+                </div>
+                @if($row['types']->isEmpty())
+                    <span class="a-muted a-text-sm">No tickets sold yet.</span>
+                @else
+                    <x-admin.table compact caption="Tickets sold by type for {{ $row['event']->name }}">
+                        <thead><tr><th>Ticket type</th><th class="a-num">Sold</th><th class="a-num">Revenue</th></tr></thead>
+                        <tbody>
+                        @foreach($row['types'] as $t)
+                            <tr><td>{{ $t['name'] }}</td><td class="a-num">{{ number_format($t['sold']) }}</td><td class="a-num">{{ $moneyShort($t['revenue']) }}</td></tr>
+                        @endforeach
+                        </tbody>
+                    </x-admin.table>
+                @endif
+            </div>
+        @endforeach
+    </x-admin.card>
+</div>
+@endif
+
 <div class="a-dash__grid">
     <div class="a-dash__col">
         <div class="a-dash__charts">

@@ -272,6 +272,52 @@ class DashboardMetrics
         return $events->each(fn (Event $e) => $e->setAttribute('tickets_sold', (int) ($sold[$e->id] ?? 0)));
     }
 
+    /**
+     * Tickets sold per ticket type for the events on sale (status active), all time, from paid orders only.
+     * Same scope as every other figure: statistics-excluded orders never count and an order-scoped user only sees the sales of
+     * their own orders (and the events they work in). The type comes from order_items.event_ticket_id when present; older rows
+     * fall back to the text after "Event - " in the stored ticket name.
+     *
+     * @return Collection<int, array{event: Event, total: int, revenue: float, types: Collection<int, array{name: string, sold: int, revenue: float}>}>
+     */
+    public function ticketTypeSales(): Collection
+    {
+        $events = Event::query()->where('status', 'active')
+            ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))
+            ->orderBy('event_date')->orderBy('name')->get();
+
+        if ($events->isEmpty()) {
+            return collect();
+        }
+
+        $typeNames = \App\Models\EventTicket::query()->whereIn('event_id', $events->pluck('id'))->pluck('name', 'id');
+
+        $rows = OrderItem::query()
+            ->selectRaw('event_id, event_ticket_id, ticket_name, SUM(quantity) as qty, SUM(line_total) as revenue')
+            ->whereIn('event_id', $events->pluck('id'))
+            ->whereHas('order', fn ($o) => $o->captured()->includedInStatistics()->assignedScope($this->user))
+            ->groupBy('event_id', 'event_ticket_id', 'ticket_name')
+            ->get()
+            ->groupBy('event_id');
+
+        return $events->map(function (Event $event) use ($rows, $typeNames) {
+            $types = ($rows[$event->id] ?? collect())
+                ->groupBy(function ($row) use ($typeNames, $event) {
+                    if ($row->event_ticket_id && isset($typeNames[$row->event_ticket_id])) {
+                        return $typeNames[$row->event_ticket_id];
+                    }
+                    $name = (string) $row->ticket_name;
+                    $prefix = $event->name.' - ';
+
+                    return str_starts_with($name, $prefix) ? substr($name, strlen($prefix)) : (str_contains($name, ' - ') ? trim(substr(strstr($name, ' - '), 3)) : $name);
+                })
+                ->map(fn ($group, $name) => ['name' => (string) $name, 'sold' => (int) $group->sum('qty'), 'revenue' => (float) $group->sum('revenue')])
+                ->sortByDesc('sold')->values();
+
+            return ['event' => $event, 'total' => (int) $types->sum('sold'), 'revenue' => (float) $types->sum('revenue'), 'types' => $types];
+        })->values();
+    }
+
     public function recentOrders(int $limit = 6): Collection
     {
         return $this->orders()->with(['customer', 'items.event'])->latest()->limit($limit)->get();
