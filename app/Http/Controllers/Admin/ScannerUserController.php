@@ -61,6 +61,9 @@ class ScannerUserController extends Controller
             'failed_lookups' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'lookup_failed')->count(),
             'checkins' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'status_update')->where('new_status', 'checked_in')->count(),
             'logins' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'scanner_login')->count(),
+            // Gate outcomes: later attempts on an already-used ticket and refused tickets are logged apart from the original check-in.
+            'duplicates' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where('action', 'checkin_duplicate')->count(),
+            'rejected' => ScanLog::query()->where('scanned_by_user_id', $user->id)->where(fn ($q) => $q->where('action', 'like', 'checkin_rejected_%')->orWhere('action', 'like', '%_rejected_refunded'))->count(),
         ];
 
         return view('admin/scanners/show', compact('user', 'scanLogs', 'stats'));

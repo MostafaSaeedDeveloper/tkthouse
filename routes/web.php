@@ -47,7 +47,7 @@ Route::match(['GET','POST'], '/payments/paymob/callback', [PaymentController::cl
 Route::get('/t/{ticketNumber}', [FrontTicketController::class, 'shortDownload'])
     ->name('front.tickets.short-download');
 Route::get('/tickets/public/{ticketNumber}/download', [FrontTicketController::class, 'publicDownloadByNumber'])->name('front.tickets.public-download');
-Route::post('/payments/fawaterak/webhook_json', \App\Http\Controllers\FawaterakWebhookController::class)->middleware('throttle:240,1')->name('front.fawaterak.webhook');
+Route::post('/payments/fawaterak/webhook_json', \App\Http\Controllers\FawaterakWebhookController::class)->middleware('throttle:600,1')->name('front.fawaterak.webhook');
 Route::get('/payments/fawaterak/callback/{order}/{token}', [PaymentController::class, 'fawaterakCallback'])->name('front.fawaterak.callback');
 
 Route::middleware('guest')->group(function () {
@@ -163,6 +163,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::get('scanner', [TicketController::class, 'scanner'])->middleware('permission:scanner.access')->name('tickets.scanner');
     Route::post('scanner', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.ajax');
     Route::post('scanner/lookup', [TicketController::class, 'scannerLookup'])->middleware('permission:scanner.access')->name('tickets.scanner.lookup');
+    Route::post('scanner/check-in', [TicketController::class, 'scannerCheckIn'])->middleware(['permission:scanner.access', 'throttle:600,1'])->name('tickets.scanner.checkin');
+    Route::get('scanner/ping', [TicketController::class, 'scannerPing'])->middleware('permission:scanner.access')->name('tickets.scanner.ping');
     Route::post('scanner/{ticket}/status', [TicketController::class, 'scannerStatus'])->middleware('permission:scanner.access')->name('tickets.scanner.status');
 
     Route::get('scanners', [ScannerUserController::class, 'index'])->middleware('permission:scanners.view')->name('scanners.index');
