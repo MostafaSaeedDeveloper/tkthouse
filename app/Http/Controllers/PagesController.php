@@ -36,7 +36,7 @@ class PagesController extends Controller
         };
 
         $upcomingEvents = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
+            ->where('status', 'active')
             ->tap($applyHomeSearch)
             ->orderBy('event_date')
             ->orderBy('event_time')
@@ -44,7 +44,7 @@ class PagesController extends Controller
             ->get();
 
         $featuredEvents = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
+            ->where('status', 'active')
             ->orderBy('event_date')
             ->orderBy('event_time')
             ->take(3)
@@ -118,7 +118,7 @@ class PagesController extends Controller
         };
 
         $events = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
+            ->where('status', 'active')
             ->when($when !== 'previous', $applySearch)
             ->when($when === 'previous', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderBy('event_date')

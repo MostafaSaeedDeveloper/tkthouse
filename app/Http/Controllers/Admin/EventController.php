@@ -208,7 +208,7 @@ class EventController extends Controller
             'map_embed' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
             'house_rules' => ['nullable', 'string'],
-            'status' => ['required', $event?->isArchived() ? 'in:archived' : 'in:active,inactive,draft,sold_out,ended'],
+            'status' => ['required', $event?->isArchived() ? 'in:archived' : 'in:active,inactive,draft,sold_out'],
             'requires_booking_approval' => ['required', 'boolean'],
             'cover_image' => $coverRule,
             'event_banner' => $coverRule,

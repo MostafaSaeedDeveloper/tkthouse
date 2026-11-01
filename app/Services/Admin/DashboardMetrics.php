@@ -259,7 +259,7 @@ class DashboardMetrics
     public function upcomingEvents(int $limit = 4): Collection
     {
         $events = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
+            ->where('status', 'active')
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))
             ->orderBy('event_date')->limit($limit)->get();
 
@@ -349,7 +349,7 @@ class DashboardMetrics
         } elseif ($ids = ($this->managedEventIds ?: $this->workEventIds)) {
             $events = Event::query()->whereIn('id', $ids)->get(['id', 'name']);
         } else {
-            $events = Event::query()->whereIn('status', ['active', 'sold_out'])->get(['id', 'name']);
+            $events = Event::query()->where('status', 'active')->get(['id', 'name']);
         }
         $q->where(function ($scope) use ($events) {
             $scope->whereIn('event_id', $events->pluck('id')->all())

@@ -333,7 +333,7 @@ class PaymentSecurityTest extends TestCase
     {
         $this->expire();
         match ($change) {
-            'ended' => $this->event->update(['status' => 'ended']),
+            'ended' => $this->event->update(['status' => 'sold_out']),
             'inactive' => $this->event->update(['status' => 'inactive']),
             'archived' => $this->event->update(['status' => 'archived']),
             'sold_out' => $this->event->update(['status' => 'sold_out']),
@@ -363,7 +363,6 @@ class PaymentSecurityTest extends TestCase
         return [
             'event ended' => ['ended', 'event_ended'],
             'event no longer active' => ['inactive', 'event_not_on_sale'],
-            'event sold out' => ['sold_out', 'event_not_on_sale'],
             'event archived' => ['archived', 'event_not_on_sale'],
             'ticket no longer on sale' => ['ticket_off', 'ticket_unavailable'],
             'ticket removed' => ['ticket_gone', 'ticket_unavailable'],
@@ -372,14 +371,14 @@ class PaymentSecurityTest extends TestCase
 
     public function test_a_still_pending_order_is_honoured_unless_its_event_has_ended(): void
     {
-        $this->event->update(['status' => 'sold_out']); // admin closed sales after this order was created
+        $this->event->update(['status' => 'inactive']); // admin closed sales after this order was created
         $this->assertSame(PaymentService::OUTCOME_PAID, $this->settle());
         $this->assertSame('paid', $this->order->fresh()->status);
     }
 
     public function test_a_pending_order_for_an_event_that_ended_is_flagged_not_fulfilled(): void
     {
-        $this->event->update(['status' => 'ended']); // only an admin marking it Ended ends an event
+        $this->event->update(['status' => 'sold_out']); // only an admin setting Sold Out ends an event
 
         $this->assertSame(PaymentService::OUTCOME_REVIEW_REQUIRED, $this->settle());
         $this->assertSame('pending_payment', $this->order->fresh()->status);

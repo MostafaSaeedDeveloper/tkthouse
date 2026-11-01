@@ -44,8 +44,8 @@ class Event extends Model
 
     public const ARCHIVED = 'archived';
 
-    /** Set by hand in the admin (Status = Ended). An event never ends because of the calendar. */
-    public const ENDED = 'ended';
+    /** Setting an event to Sold Out by hand is how it is ended: it moves to Previous events at once. The calendar never decides. */
+    public const ENDED = 'sold_out';
 
     /** Name for admin dropdowns: archived events stay selectable (historical filters/reports) but are marked. */
     public function filterLabel(): string
@@ -53,7 +53,6 @@ class Event extends Model
         return $this->name.match ($this->status) {
             self::ARCHIVED => ' (Archived)',
             'inactive' => ' (Inactive)',
-            self::ENDED => ' (Ended)',
             default => '',
         };
     }

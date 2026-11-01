@@ -198,7 +198,7 @@ class FrontendV2Test extends TestCase
 
     public function test_finished_event_page_has_no_purchase_controls(): void
     {
-        $event = $this->makeEvent(['event_date' => now()->subDays(2)->toDateString(), 'status' => 'ended']);
+        $event = $this->makeEvent(['event_date' => now()->subDays(2)->toDateString(), 'status' => 'sold_out']);
         $this->makeTicket($event);
 
         $this->get(route('front.events.show', $event))
