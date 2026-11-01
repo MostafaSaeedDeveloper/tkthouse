@@ -194,7 +194,7 @@ class CustomerPortalTest extends TestCase
     {
         $me = $this->customer();
         $future = $this->paid($me, 2);
-        $past = $this->paid($me, 1, $this->makeEvent(['name' => 'Old Night', 'event_date' => now()->subDays(5)->toDateString()]));
+        $past = $this->paid($me, 1, $this->makeEvent(['name' => 'Old Night', 'event_date' => now()->subDays(5)->toDateString(), 'status' => 'ended']));
         $unpaid = $this->makePendingOrder($me, $this->makeEvent(['name' => 'Unpaid Night']), 1);
         $theirs = $this->paid($this->customer(), 1, $this->makeEvent(['name' => 'Their Night']));
         $unclaimed = $this->paid($me, 1, $this->makeEvent(['name' => 'Unclaimed Night']));

@@ -440,7 +440,7 @@ class PaymentService
             if (! $event) {
                 return 'event_missing';
             }
-            if ($event->event_date && $event->event_date->lt(now()->startOfDay())) {
+            if ($event->hasEnded()) {
                 return 'event_ended';
             }
             if ($strict && $event->status !== 'active') {

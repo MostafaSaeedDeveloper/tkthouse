@@ -6,7 +6,7 @@
 
 @section('content')
 @php
-    $isPreviousEvent = $event->event_date->lt(now()->startOfDay());
+    $isPreviousEvent = $event->hasEnded();
     $isEventSoldOut = $event->status === 'sold_out';
     $isBookingClosed = $isPreviousEvent || $isEventSoldOut;
     $multiDay = $event->end_date && $event->end_date->ne($event->event_date);

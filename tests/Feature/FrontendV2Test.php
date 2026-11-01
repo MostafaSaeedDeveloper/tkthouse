@@ -185,9 +185,20 @@ class FrontendV2Test extends TestCase
             ->assertSee('https://example.com/photo.jpg', false);
     }
 
+    public function test_a_past_dated_event_is_not_ended_until_an_admin_marks_it_ended(): void
+    {
+        $event = $this->makeEvent(['event_date' => now()->subDays(2)->toDateString()]); // status stays active
+        $this->makeTicket($event);
+
+        $this->get(route('front.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('This event has ended.')
+            ->assertSee('id="checkoutBtn"', false);
+    }
+
     public function test_finished_event_page_has_no_purchase_controls(): void
     {
-        $event = $this->makeEvent(['event_date' => now()->subDays(2)->toDateString()]);
+        $event = $this->makeEvent(['event_date' => now()->subDays(2)->toDateString(), 'status' => 'ended']);
         $this->makeTicket($event);
 
         $this->get(route('front.events.show', $event))

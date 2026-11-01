@@ -333,7 +333,7 @@ class PaymentSecurityTest extends TestCase
     {
         $this->expire();
         match ($change) {
-            'ended' => $this->event->update(['event_date' => now()->subDay()->toDateString()]),
+            'ended' => $this->event->update(['status' => 'ended']),
             'inactive' => $this->event->update(['status' => 'inactive']),
             'archived' => $this->event->update(['status' => 'archived']),
             'sold_out' => $this->event->update(['status' => 'sold_out']),
@@ -379,7 +379,7 @@ class PaymentSecurityTest extends TestCase
 
     public function test_a_pending_order_for_an_event_that_ended_is_flagged_not_fulfilled(): void
     {
-        $this->event->update(['event_date' => now()->subDay()->toDateString()]);
+        $this->event->update(['status' => 'ended']); // only an admin marking it Ended ends an event
 
         $this->assertSame(PaymentService::OUTCOME_REVIEW_REQUIRED, $this->settle());
         $this->assertSame('pending_payment', $this->order->fresh()->status);

@@ -44,14 +44,23 @@ class Event extends Model
 
     public const ARCHIVED = 'archived';
 
+    /** Set by hand in the admin (Status = Ended). An event never ends because of the calendar. */
+    public const ENDED = 'ended';
+
     /** Name for admin dropdowns: archived events stay selectable (historical filters/reports) but are marked. */
     public function filterLabel(): string
     {
         return $this->name.match ($this->status) {
             self::ARCHIVED => ' (Archived)',
             'inactive' => ' (Inactive)',
+            self::ENDED => ' (Ended)',
             default => '',
         };
+    }
+
+    public function hasEnded(): bool
+    {
+        return $this->status === self::ENDED;
     }
 
     public function isArchived(): bool

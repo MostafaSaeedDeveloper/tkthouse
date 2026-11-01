@@ -181,13 +181,13 @@ class CustomerDashboardController extends Controller
 
         $query = IssuedTicket::query()->ownedByCustomer($user)->with(['order', 'dashboardTicket', 'orderItem.event']);
 
-        $today = now()->startOfDay()->toDateString();
-        $endOfEvent = fn ($e) => $e->whereRaw('COALESCE(end_date, event_date) >= ?', [$today]);
+        // "Past" = events an admin marked as Ended; nothing is decided by the date.
+        $endOfEvent = fn ($e) => $e->where('status', '!=', \App\Models\Event::ENDED);
         if ($when === 'upcoming') {
             $query->whereHas('orderItem.event', $endOfEvent);
         } elseif ($when === 'past') {
-            $query->where(function ($q) use ($today) {
-                $q->whereHas('orderItem.event', fn ($e) => $e->whereRaw('COALESCE(end_date, event_date) < ?', [$today]))
+            $query->where(function ($q) {
+                $q->whereHas('orderItem.event', fn ($e) => $e->where('status', \App\Models\Event::ENDED))
                     ->orWhereDoesntHave('orderItem.event');
             });
         }

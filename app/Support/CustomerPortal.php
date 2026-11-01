@@ -66,11 +66,8 @@ class CustomerPortal
 
     public static function eventEnded(?Event $event): bool
     {
-        if (! $event || ! $event->event_date) {
-            return false;
-        }
-
-        return ($event->end_date ?? $event->event_date)->lt(now()->startOfDay());
+        // Only an admin marking the event as Ended ends it; the date never does.
+        return $event?->hasEnded() ?? false;
     }
 
     /** Ticket badge from the real check-in status plus whether the event is over. */

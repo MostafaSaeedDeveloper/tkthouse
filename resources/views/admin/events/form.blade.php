@@ -78,6 +78,7 @@
             <option value="inactive" @selected(old('status', $event->status ?? '') === 'inactive')>Inactive</option>
             <option value="draft" @selected(old('status', $event->status ?? '') === 'draft')>Draft</option>
             <option value="sold_out" @selected(old('status', $event->status ?? '') === 'sold_out')>Sold Out</option>
+            <option value="ended" @selected(old('status', $event->status ?? '') === 'ended')>Ended (set manually when the event is over)</option>
             @if(isset($event) && $event->isArchived())<option value="archived" selected>Archived (use Restore to change)</option>@endif
         </select>
     </x-admin.field>

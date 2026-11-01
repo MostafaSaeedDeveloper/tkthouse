@@ -120,8 +120,6 @@ final class EventLifecycle
         }
         if ($event->event_date === null) {
             $issues[] = 'The event has no date.';
-        } elseif ($event->event_date->lt(now()->startOfDay()) && ($event->end_date === null || $event->end_date->lt(now()->startOfDay()))) {
-            $issues[] = 'The event date has already passed.';
         }
         $sellable = EventTicket::query()->where('event_id', $event->id)->where('status', 'active')->where('price', '>=', 0)->count();
         if ($sellable === 0) {

@@ -260,7 +260,6 @@ class DashboardMetrics
     {
         $events = Event::query()
             ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '>=', now()->toDateString())
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))
             ->orderBy('event_date')->limit($limit)->get();
 
@@ -350,7 +349,7 @@ class DashboardMetrics
         } elseif ($ids = ($this->managedEventIds ?: $this->workEventIds)) {
             $events = Event::query()->whereIn('id', $ids)->get(['id', 'name']);
         } else {
-            $events = Event::query()->whereDate('event_date', '>=', now()->toDateString())->get(['id', 'name']);
+            $events = Event::query()->whereIn('status', ['active', 'sold_out'])->get(['id', 'name']);
         }
         $q->where(function ($scope) use ($events) {
             $scope->whereIn('event_id', $events->pluck('id')->all())
