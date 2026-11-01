@@ -115,6 +115,19 @@ class Event extends Model
         return $this->hasMany(EventTicket::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /**
+     * True when every sellable ticket type is sold out (at least one, none still active). Display only: the event's own status is not
+     * touched, so an Active event stays Active and bookable while its badge reads "Sold out".
+     */
+    public function allTicketsSoldOut(): bool
+    {
+        $statuses = $this->relationLoaded('tickets')
+            ? $this->tickets->pluck('status')
+            : $this->tickets()->reorder()->pluck('status');
+
+        return $statuses->contains('sold_out') && ! $statuses->contains('active');
+    }
+
     public function fees()
     {
         return $this->hasMany(EventFee::class);

@@ -64,7 +64,7 @@
                     <div class="tkt-event-hero__badges">
                         @if($isPreviousEvent)
                             <x-tkt.badge variant="glass">Event ended</x-tkt.badge>
-                        @elseif($isEventSoldOut)
+                        @elseif($isEventSoldOut || $event->allTicketsSoldOut())
                             <x-tkt.badge variant="danger">Sold out</x-tkt.badge>
                         @else
                             <x-tkt.badge variant="primary" :dot="true">Tickets on sale</x-tkt.badge>
