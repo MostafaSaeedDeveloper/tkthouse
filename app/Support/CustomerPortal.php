@@ -66,11 +66,8 @@ class CustomerPortal
 
     public static function eventEnded(?Event $event): bool
     {
-        if (! $event || ! $event->event_date) {
-            return false;
-        }
-
-        return ($event->end_date ?? $event->event_date)->lt(now()->startOfDay());
+        // Only an admin marking the event as Ended ends it; the date never does.
+        return $event?->hasEnded() ?? false;
     }
 
     /** Ticket badge from the real check-in status plus whether the event is over. */
@@ -86,9 +83,9 @@ class CustomerPortal
         };
     }
 
-    /** The QR is shown only while the ticket can still be scanned. */
+    /** The QR stays visible after the event has ended; it is hidden only for tickets that are canceled or already scanned. */
     public static function qrVisible(IssuedTicket $ticket, ?Event $event): bool
     {
-        return self::ticketBadge($ticket, $event)[0] === 'Valid';
+        return ! in_array(self::ticketBadge($ticket, $event)[0], ['Canceled', 'Checked in'], true);
     }
 }

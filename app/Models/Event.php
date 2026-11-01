@@ -44,6 +44,9 @@ class Event extends Model
 
     public const ARCHIVED = 'archived';
 
+    /** Setting an event to Sold Out by hand is how it is ended: it moves to Previous events at once. The calendar never decides. */
+    public const ENDED = 'sold_out';
+
     /** Name for admin dropdowns: archived events stay selectable (historical filters/reports) but are marked. */
     public function filterLabel(): string
     {
@@ -52,6 +55,11 @@ class Event extends Model
             'inactive' => ' (Inactive)',
             default => '',
         };
+    }
+
+    public function hasEnded(): bool
+    {
+        return $this->status === self::ENDED;
     }
 
     public function isArchived(): bool
@@ -105,6 +113,19 @@ class Event extends Model
     public function tickets()
     {
         return $this->hasMany(EventTicket::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * True when every sellable ticket type is sold out (at least one, none still active). Display only: the event's own status is not
+     * touched, so an Active event stays Active and bookable while its badge reads "Sold out".
+     */
+    public function allTicketsSoldOut(): bool
+    {
+        $statuses = $this->relationLoaded('tickets')
+            ? $this->tickets->pluck('status')
+            : $this->tickets()->reorder()->pluck('status');
+
+        return $statuses->contains('sold_out') && ! $statuses->contains('active');
     }
 
     public function fees()

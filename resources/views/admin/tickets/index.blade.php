@@ -8,6 +8,9 @@
     @can('scanner.access')
         <a href="{{ route('admin.tickets.scanner') }}" class="a-btn a-btn--outline"><i class="fa fa-qrcode"></i> QR Scanner</a>
     @endcan
+    @if(\App\Orders\OrderAccess::isSuper(auth()->user()))
+        <a href="{{ route('admin.tickets.trash') }}" class="a-btn a-btn--outline"><i class="fa fa-trash-can"></i> Deleted Tickets <x-admin.badge variant="dark">{{ \App\Models\Ticket::onlyTrashed()->count() }}</x-admin.badge></a>
+    @endif
     @can('tickets.create')
         <a href="{{ route('admin.tickets.create') }}" class="a-btn a-btn--primary"><i class="fa fa-plus"></i> Create Ticket</a>
     @endcan
@@ -56,7 +59,7 @@
                                 <a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.edit', $ticket) }}" aria-label="Edit ticket {{ $ticket->ticket_number }}" title="Edit"><i class="fa fa-pen"></i></a>
                             @endcan
                             @can('tickets.delete')
-                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
+                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete ticket {{ $ticket->ticket_number }}? It moves to Deleted Tickets and can be restored." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <button class="a-btn a-btn--danger a-btn--sm" type="submit" aria-label="Delete ticket {{ $ticket->ticket_number }}" title="Delete"><i class="fa fa-trash"></i></button>

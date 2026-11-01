@@ -115,6 +115,7 @@ class TicketIssuanceService
                     [
                         'order_id' => $order->id,
                         'order_item_id' => $item->id,
+                        'event_id' => $item->event_id,
                         'name' => $item->ticket_name,
                         'price' => $item->ticket_price,
                         'description' => 'Issued from order #'.$order->order_number,

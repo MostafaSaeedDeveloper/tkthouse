@@ -14,12 +14,10 @@ use Illuminate\Validation\ValidationException;
  */
 class CheckoutSelection
 {
-    /** Same rule the event page applies: an active event that has not started yet. */
+    /** Same rule the event page applies: an active event (it stays bookable until an admin changes its status, whatever the date). */
     public function isEventBookable(Event $event): bool
     {
-        return $event->status === 'active'
-            && $event->event_date !== null
-            && ! $event->event_date->lt(now()->startOfDay());
+        return $event->status === 'active';
     }
 
     public function maxAllowedQuantity(EventTicket $ticket): int

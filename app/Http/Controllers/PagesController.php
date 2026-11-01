@@ -36,8 +36,7 @@ class PagesController extends Controller
         };
 
         $upcomingEvents = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '>=', now()->toDateString())
+            ->where('status', 'active')
             ->tap($applyHomeSearch)
             ->orderBy('event_date')
             ->orderBy('event_time')
@@ -45,16 +44,14 @@ class PagesController extends Controller
             ->get();
 
         $featuredEvents = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '>=', now()->toDateString())
+            ->where('status', 'active')
             ->orderBy('event_date')
             ->orderBy('event_time')
             ->take(3)
             ->get();
 
         $previousEvents = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '<', now()->toDateString())
+            ->where('status', Event::ENDED)
             ->tap($applyHomeSearch)
             ->orderByDesc('event_date')
             ->orderByDesc('event_time')
@@ -121,8 +118,7 @@ class PagesController extends Controller
         };
 
         $events = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '>=', now()->toDateString())
+            ->where('status', 'active')
             ->when($when !== 'previous', $applySearch)
             ->when($when === 'previous', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderBy('event_date')
@@ -131,8 +127,7 @@ class PagesController extends Controller
             ->withQueryString();
 
         $previousEvents = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '<', now()->toDateString())
+            ->where('status', Event::ENDED)
             ->when($when !== 'upcoming', $applySearch)
             ->when($when === 'upcoming', fn ($query) => $query->whereRaw('1 = 0'))
             ->orderByDesc('event_date')

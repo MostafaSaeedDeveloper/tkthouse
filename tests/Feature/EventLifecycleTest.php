@@ -333,13 +333,11 @@ class EventLifecycleTest extends TestCase
         [$event, $ticket] = $this->eventWithSale(false);
         $this->lifecycle()->archive($event, $this->admin);
         $ticket->update(['status' => 'hidden']);          // nothing left to sell
-        $event->forceFill(['event_date' => now()->subDays(3)])->save();
 
         $this->actingAs($this->admin)->post(route('admin.events.restore', $event))->assertRedirect()->assertSessionHas('warning');
 
         $this->assertSame('draft', $event->fresh()->status, 'not public until someone fixes it');
         $this->assertStringContainsString('no active ticket type', session('warning'));
-        $this->assertStringContainsString('already passed', session('warning'));
         $this->assertSame(0, Event::whereIn('status', ['active', 'sold_out'])->count(), 'nothing public');
     }
 

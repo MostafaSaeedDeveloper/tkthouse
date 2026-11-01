@@ -1,6 +1,6 @@
 @props(['event', 'past' => false])
 @php
-    $isSoldOut = $event->status === 'sold_out';
+    $isSoldOut = $event->status === 'sold_out' || (! $past && $event->allTicketsSoldOut());
     $multiDay = $event->end_date && $event->end_date->ne($event->event_date);
     $time = $event->event_time ? \Carbon\Carbon::parse($event->event_time)->format('g:i A') : null;
     $cover = $event->cover_image_url ?: $event->event_banner_url;

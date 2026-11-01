@@ -6,7 +6,7 @@
 
 @section('content')
 @php
-    $isPreviousEvent = $event->event_date->lt(now()->startOfDay());
+    $isPreviousEvent = $event->hasEnded();
     $isEventSoldOut = $event->status === 'sold_out';
     $isBookingClosed = $isPreviousEvent || $isEventSoldOut;
     $multiDay = $event->end_date && $event->end_date->ne($event->event_date);
@@ -64,7 +64,7 @@
                     <div class="tkt-event-hero__badges">
                         @if($isPreviousEvent)
                             <x-tkt.badge variant="glass">Event ended</x-tkt.badge>
-                        @elseif($isEventSoldOut)
+                        @elseif($isEventSoldOut || $event->allTicketsSoldOut())
                             <x-tkt.badge variant="danger">Sold out</x-tkt.badge>
                         @else
                             <x-tkt.badge variant="primary" :dot="true">Tickets on sale</x-tkt.badge>

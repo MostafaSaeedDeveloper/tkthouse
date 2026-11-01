@@ -52,7 +52,7 @@
                         <div class="a-table__actions">
                             @can('tickets.view')<a class="a-btn a-btn--outline a-btn--sm" href="{{ route('admin.tickets.show', $ticket) }}" aria-label="View ticket {{ $ticket->ticket_number }}" title="View"><i class="fa fa-eye"></i></a>@endcan
                             @can('tickets.delete')
-                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete guest ticket {{ $ticket->ticket_number }}? This cannot be undone." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
+                                <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" data-a-confirm="Delete guest ticket {{ $ticket->ticket_number }}? It moves to Deleted Tickets and can be restored." data-a-confirm-title="Delete ticket" data-a-confirm-ok="Delete">
                                     @csrf
                                     @method('DELETE')
                                     <input type="hidden" name="redirect_to" value="guest-list">

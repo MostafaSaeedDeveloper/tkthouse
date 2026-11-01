@@ -259,8 +259,7 @@ class DashboardMetrics
     public function upcomingEvents(int $limit = 4): Collection
     {
         $events = Event::query()
-            ->whereIn('status', ['active', 'sold_out'])
-            ->whereDate('event_date', '>=', now()->toDateString())
+            ->where('status', 'active')
             ->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids))
             ->orderBy('event_date')->limit($limit)->get();
 
@@ -328,20 +327,42 @@ class DashboardMetrics
         return $this->orders()->with(['customer', 'items.event'])->latest()->limit($limit)->get();
     }
 
-    /** Real check-in numbers (tickets of the scoped upcoming/selected events), or null when there is nothing to show. */
-    public function scans(): ?array
+    /**
+     * Check-in numbers for the dashboard period: the tickets issued from paid orders (same rule as "Tickets sold": captured, counted in
+     * statistics, within the user's order scope, paid date in the period with the created date as the fallback), of the scoped
+     * upcoming/selected events, plus all the guest-list tickets of those events (invitations are not sales, so the period does not apply to them). Null when there is nothing to show.
+     */
+    public function scans(?Carbon $start = null, ?Carbon $end = null): ?array
     {
-        $q = Ticket::query()->where('status', '!=', 'canceled');
-        if ($this->user && \App\Orders\OrderAccess::scoped($this->user)) {
-            $q->whereHas('order', fn ($o) => $o->assignedScope($this->user));
-        }
+        $q = Ticket::query()->where('status', '!=', 'canceled')
+            ->where(function ($any) use ($start, $end) {
+                $any->whereHas('order', function ($o) use ($start, $end) {
+                    $o->captured()->includedInStatistics()->assignedScope($this->user)
+                        ->when($start && $end, fn ($q) => $q->where(function ($w) use ($start, $end) {
+                            $w->whereBetween('paid_at', [$start, $end])->orWhere(fn ($f) => $f->whereNull('paid_at')->whereBetween('created_at', [$start, $end]));
+                        }));
+                })->orWhere(fn ($guest) => $guest->where('source', 'guest_list')->guestListVisibleTo($this->user)); // invitations are not sales: no period filter
+            });
+
         if ($this->event) {
-            $q->where('event_id', $this->event->id);
+            $events = collect([$this->event]);
         } elseif ($ids = ($this->managedEventIds ?: $this->workEventIds)) {
-            $q->whereIn('event_id', $ids);
+            $events = Event::query()->whereIn('id', $ids)->get(['id', 'name']);
         } else {
-            $q->whereIn('event_id', Event::query()->whereDate('event_date', '>=', now()->toDateString())->pluck('id'));
+            $events = Event::query()->where('status', 'active')->get(['id', 'name']);
         }
+        $q->where(function ($scope) use ($events) {
+            $scope->whereIn('event_id', $events->pluck('id')->all())
+                // guest tickets whose event could not be matched by id when they were added fall back to the "Event - Type" name
+                ->orWhere(function ($legacy) use ($events) {
+                    $legacy->where('source', 'guest_list')->whereNull('event_id')->where(function ($names) use ($events) {
+                        foreach ($events->pluck('name') as $name) {
+                            $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], (string) $name);
+                            $names->orWhereRaw("name LIKE ? ESCAPE '!'", [$escaped.' - %']);
+                        }
+                    });
+                });
+        });
 
         $total = (clone $q)->count();
         if ($total === 0) {
