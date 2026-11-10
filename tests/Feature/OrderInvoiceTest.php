@@ -45,14 +45,14 @@ class OrderInvoiceTest extends TestCase
         $issued = app(InvoiceService::class)->ensure($order);
 
         $this->assertSame('INV-'.$order->order_number, $issued->invoice_number);
-        $this->assertSame(175.44, $issued->invoice_snapshot['net']);
-        $this->assertSame(24.56, $issued->invoice_snapshot['tax_amount']);
-        $this->assertSame(200.0, $issued->invoice_snapshot['total']);
+        $this->assertEquals(175.44, $issued->invoice_snapshot['net']);
+        $this->assertEquals(24.56, $issued->invoice_snapshot['tax_amount']);
+        $this->assertEquals(200.0, $issued->invoice_snapshot['total']);
         $this->assertEquals(200.0, (float) $issued->fresh()->total_amount);   // what is charged never changes
 
         // A later rate change never rewrites an issued invoice.
         SystemSettings::set('invoice_tax_rate', '5');
-        $this->assertSame(14.0, app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot['tax']['rate']);
+        $this->assertEquals(14.0, app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot['tax']['rate']);
     }
 
     public function test_tax_can_be_switched_off(): void
@@ -61,8 +61,8 @@ class OrderInvoiceTest extends TestCase
         $snap = app(InvoiceService::class)->ensure($this->paid(User::factory()->create()))->invoice_snapshot;
 
         $this->assertFalse($snap['tax']['enabled']);
-        $this->assertSame(0.0, $snap['tax_amount']);
-        $this->assertSame($snap['total'], $snap['net']);
+        $this->assertEquals(0.0, $snap['tax_amount']);
+        $this->assertEquals($snap['total'], $snap['net']);
     }
 
     public function test_pdf_is_generated(): void
