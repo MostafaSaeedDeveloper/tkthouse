@@ -116,12 +116,18 @@
                 @if((float) $order->discount_amount > 0)<div class="is-good"><dt>Discount @if($order->promo_code)<small>{{ $order->promo_code }}</small>@endif</dt><dd>−{{ $money($order->discount_amount) }}</dd></div>@endif
                 @if($feesAndOther > 0)<div><dt>Booking fees</dt><dd>{{ $money($feesAndOther) }}</dd></div>@endif
                 <div class="is-total"><dt>Total</dt><dd>{{ $money($order->total_amount) }}</dd></div>
+                @if($order->invoice_snapshot && !empty($order->invoice_snapshot['tax']['enabled']))
+                    <div><dt>Includes {{ $order->invoice_snapshot['tax']['label'] }} {{ rtrim(rtrim(number_format((float) $order->invoice_snapshot['tax']['rate'], 2), '0'), '.') }}%</dt><dd>{{ $money($order->invoice_snapshot['tax_amount']) }}</dd></div>
+                @endif
             </dl>
             <dl class="tkt-pbreak tkt-pbreak--meta">
                 <div><dt>Status</dt><dd><x-tkt.badge :variant="$payVariant">{{ $payLabel }}</x-tkt.badge></dd></div>
                 @if($paymentMethodLabel)<div><dt>Method</dt><dd>{{ $paymentMethodLabel }}</dd></div>@endif
                 @if($order->paid_at)<div><dt>Paid on</dt><dd>{{ $order->paid_at->format('d M Y, g:i A') }}</dd></div>@endif
             </dl>
+            @if(app(\App\Services\Invoices\InvoiceService::class)->isInvoiceable($order))
+                <a class="tkt-btn tkt-btn--outline" style="margin-top:14px;width:100%;text-align:center" href="{{ route('front.account.orders.invoice', $order->order_number) }}">Download invoice (PDF)</a>
+            @endif
         </section>
 
         <section class="tkt-card tkt-pcard">

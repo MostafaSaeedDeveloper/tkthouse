@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Services\UltramsgWhatsappService;
 use App\Mail\HolderTicketsIssuedMail;
-use App\Mail\OrderInvoicePaidMail;
 use App\Mail\OrderTicketsIssuedMail;
 use App\Models\IssuedTicket;
 use App\Models\Order;
@@ -172,14 +171,10 @@ class TicketIssuanceService
         }
 
         if (filled($order->customer?->email)) {
+            // One completed-order e-mail: the invoice (summary + PDF) and the tickets together.
             $this->deliverOnce($order, 'order_tickets_issued', fn () => $this->sendMailWithRetry(
                 fn () => Mail::to($order->customer->email)->send(new OrderTicketsIssuedMail($order)),
                 ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_tickets_issued']
-            ));
-
-            $this->deliverOnce($order, 'order_invoice_paid', fn () => $this->sendMailWithRetry(
-                fn () => Mail::to($order->customer->email)->send(new OrderInvoicePaidMail($order)),
-                ['order_id' => $order->id, 'recipient' => $order->customer->email, 'mail_type' => 'order_invoice_paid']
             ));
         }
 

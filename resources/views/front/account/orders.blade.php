@@ -63,6 +63,9 @@
                     </div>
                     <div class="tkt-order-card__action">
                         <a class="tkt-btn tkt-btn--outline" href="{{ route('front.account.orders.show', $order->order_number) }}">View details<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                        @if(in_array($order->status, ['paid', 'refunded', 'partially_refunded'], true) && $order->paid_at)
+                            <a class="tkt-btn tkt-btn--ghost" href="{{ route('front.account.orders.invoice', $order->order_number) }}">Invoice (PDF)<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                        @endif
                     </div>
                 </li>
             @endforeach
