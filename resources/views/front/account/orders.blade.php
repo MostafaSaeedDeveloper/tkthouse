@@ -63,6 +63,9 @@
                     </div>
                     <div class="tkt-order-card__action">
                         <a class="tkt-btn tkt-btn--outline" href="{{ route('front.account.orders.show', $order->order_number) }}">View details<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                        @if($order->status === 'paid' || ($order->status !== 'pending_payment' && \App\Services\Invoices\Invoice::isAvailableFor($order)))
+                            <a class="tkt-btn tkt-btn--ghost" href="{{ route('front.account.orders.invoice', $order->order_number) }}">Invoice<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                        @endif
                     </div>
                 </li>
             @endforeach

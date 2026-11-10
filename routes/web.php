@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/account/email/confirm', [CustomerDashboardController::class, 'confirmEmailChange'])->middleware('throttle:10,1,account-email-confirm')->name('front.account.email.confirm');
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');
     Route::get('/account/orders/{orderNumber}', [CustomerDashboardController::class, 'showOrder'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.account.orders.show');
+    Route::get('/account/orders/{orderNumber}/invoice', [CustomerDashboardController::class, 'invoice'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:30,1,account-invoice')->name('front.account.orders.invoice');
     Route::get('/account/tickets', [CustomerDashboardController::class, 'tickets'])->name('front.account.tickets');
     Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');
@@ -181,6 +182,8 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::delete('orders/{order}', [OrderController::class, 'destroy'])->middleware('permission:orders.delete')->name('orders.destroy');
     Route::post('orders/{order}/restore', [OrderController::class, 'restore'])->middleware('permission:orders.restore')->name('orders.restore');
     Route::get('orders/{order}', [OrderController::class, 'show'])->middleware('permission:orders.view')->name('orders.show');
+    Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->middleware('permission:orders.view')->name('orders.invoice');
+    Route::post('orders/{order}/invoice/resend', [OrderController::class, 'resendInvoice'])->middleware(['permission:orders.update', 'throttle:10,1,invoice-resend'])->name('orders.invoice.resend');
     Route::get('orders/{order}/edit', [OrderController::class, 'edit'])->middleware('permission:orders.update')->name('orders.edit');
     Route::put('orders/{order}', [OrderController::class, 'update'])->middleware('permission:orders.update')->name('orders.update');
     Route::post('orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware('permission:update_status')->name('orders.status.update');

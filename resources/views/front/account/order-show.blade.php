@@ -122,6 +122,16 @@
                 @if($paymentMethodLabel)<div><dt>Method</dt><dd>{{ $paymentMethodLabel }}</dd></div>@endif
                 @if($order->paid_at)<div><dt>Paid on</dt><dd>{{ $order->paid_at->format('d M Y, g:i A') }}</dd></div>@endif
             </dl>
+            @if(\App\Services\Invoices\Invoice::isAvailableFor($order))
+                @php $invoiceRefunded = round($order->refunds()->where('status', \App\Models\PaymentRefund::SUCCEEDED)->sum('amount_minor') / 100, 2); @endphp
+                @if($invoiceRefunded > 0)
+                    <p class="tkt-text-muted tkt-text-sm" style="margin-top:12px">{{ $invoiceRefunded + 0.009 >= (float) $order->total_amount ? 'This order was fully refunded' : 'Partially refunded' }}: {{ $money($invoiceRefunded) }}. Your invoice stays available as proof of the original payment.</p>
+                @endif
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+                    <a class="tkt-btn tkt-btn--primary tkt-btn--sm" href="{{ route('front.account.orders.invoice', $order->order_number) }}">Download invoice</a>
+                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.account.orders.invoice', ['orderNumber' => $order->order_number, 'inline' => 1]) }}" target="_blank" rel="noopener">View</a>
+                </div>
+            @endif
         </section>
 
         <section class="tkt-card tkt-pcard">

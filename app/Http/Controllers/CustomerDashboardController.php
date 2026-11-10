@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Services\Auth\EmailChangeService;
 use App\Services\Checkout\CheckoutIdentity;
+use App\Services\Invoices\Invoice;
 use App\Services\PendingPaymentExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -169,6 +170,20 @@ class CustomerDashboardController extends Controller
             'user' => $request->user(),
             'order' => $order,
             'paymentMethodLabel' => $method ? trim((string) ($method->checkout_label ?: $method->name)) : null,
+        ]);
+    }
+
+    /** The signed-in owner's payment invoice (PDF). Somebody else's order simply does not exist. */
+    public function invoice(Request $request, string $orderNumber)
+    {
+        $order = Order::query()->ownedByCustomer($request->user())->where('order_number', $orderNumber)->firstOrFail();
+        abort_unless(Invoice::isAvailableFor($order), 404);
+
+        $invoice = Invoice::make($order);
+
+        return response($invoice->pdf(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($request->boolean('inline') ? 'inline' : 'attachment').'; filename="'.$invoice->filename().'"',
         ]);
     }
 

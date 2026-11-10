@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OrderApprovedMail;
+use App\Mail\OrderInvoicePaidMail;
 use App\Mail\OrderNoteToCustomerMail;
 use App\Mail\OrderRejectedMail;
 use App\Mail\OrderStatusChangedMail;
@@ -14,6 +15,7 @@ use App\Models\PaymentMethod;
 use App\Models\PromoCode;
 use App\Models\User;
 use App\Services\PendingPaymentExpiryService;
+use App\Services\Invoices\Invoice;
 use App\Services\TicketIssuanceService;
 use App\Support\SystemSettings;
 use Illuminate\Database\Eloquent\Builder;
@@ -1092,6 +1094,50 @@ class OrderController extends Controller
         $query->whereHas('items', function (Builder $itemsQuery) use ($ids) {
             $itemsQuery->whereIn('event_id', $ids);
         });
+    }
+
+    /** View (?inline=1) or download the payment invoice. Same visibility rules as the order page itself. */
+    public function invoice(Request $request, Order $order)
+    {
+        $this->abortIfOrderNotAccessible($request, $order, false);
+        abort_unless(Invoice::isAvailableFor($order), 404);
+
+        $invoice = Invoice::make($order);
+
+        return response($invoice->pdf(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($request->boolean('inline') ? 'inline' : 'attachment').'; filename="'.$invoice->filename().'"',
+        ]);
+    }
+
+    /** Sends the invoice e-mail (with the PDF) to the customer again. Always allowed for a paid order; never touches the order. */
+    public function resendInvoice(Request $request, Order $order)
+    {
+        $this->abortIfOrderNotAccessible($request, $order);
+        abort_unless(Invoice::isAvailableFor($order), 404);
+
+        $email = (string) $order->customer?->email;
+        if ($email === '') {
+            return back()->with('error', 'This order has no customer email to send the invoice to.');
+        }
+
+        try {
+            Mail::to($email)->send(new OrderInvoicePaidMail($order));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'The invoice could not be sent. Please try again in a moment.');
+        }
+
+        // Counts as the order's invoice delivery, so the automatic retry job will not send a second copy afterwards.
+        $delivered = Activity::query()->where('subject_type', Order::class)->where('subject_id', $order->id)
+            ->where('log_name', 'order_delivery')->where('description', 'Delivery sent: order_invoice_paid')->exists();
+        if (! $delivered) {
+            activity('order_delivery')->performedOn($order)->log('Delivery sent: order_invoice_paid');
+        }
+        activity('orders')->performedOn($order)->causedBy($request->user())->log('Invoice resent to customer');
+
+        return back()->with('success', 'Invoice sent to '.$email.'.');
     }
 
     private function abortIfOrderNotAccessible(Request $request, Order $order, bool $manage = true): void

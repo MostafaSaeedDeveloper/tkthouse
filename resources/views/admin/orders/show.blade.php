@@ -41,6 +41,20 @@
   @can('update_status')
     <button type="button" class="a-btn a-btn--outline" id="openStatusModalBtn"><i class="fa fa-refresh"></i> Change Status</button>
   @endcan
+  {{-- Payment invoice: available for every paid order (and stays available after a refund: it is the proof of the original payment). --}}
+  @if(\App\Services\Invoices\Invoice::isAvailableFor($order))
+    @can('orders.view')
+      <a href="{{ route('admin.orders.invoice', ['order' => $order, 'inline' => 1]) }}" target="_blank" rel="noopener" class="a-btn a-btn--outline"><i class="fa fa-file-invoice"></i> View Invoice</a>
+      <a href="{{ route('admin.orders.invoice', $order) }}" class="a-btn a-btn--outline"><i class="fa fa-download"></i> Download Invoice</a>
+    @endcan
+    @can('orders.update')
+      @if(filled($order->customer?->email))
+        <form method="POST" action="{{ route('admin.orders.invoice.resend', $order) }}" data-a-confirm="Send the invoice (PDF) again to {{ $order->customer->email }}?" data-a-confirm-title="Resend invoice" data-a-confirm-ok="Send">@csrf
+          <button class="a-btn a-btn--outline" type="submit"><i class="fa fa-paper-plane"></i> Resend Invoice</button>
+        </form>
+      @endif
+    @endcan
+  @endif
   {{-- Refund straight from the order header (no need to open a payment first). Shown only to staff who may create refunds on this order. --}}
   @canany(['payments.refunds.create', 'payments.refunds.view'])
     @php $headerPaid = $paymentAttempts->where('status', 'paid'); @endphp
@@ -77,6 +91,8 @@
         @if($latestAttempt)
           <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->displayStatus()" kind="payment" /></dd></div>
         @endif
+        @php $confirmedRefunded = round($order->refunds()->where('status', \App\Models\PaymentRefund::SUCCEEDED)->sum('amount_minor') / 100, 2); @endphp
+        @if($confirmedRefunded > 0)<div><dt>Refunded</dt><dd>{{ $confirmedRefunded + 0.009 >= (float) $order->total_amount ? 'Fully' : 'Partially' }} · {{ number_format($confirmedRefunded, 2) }} EGP of {{ number_format((float) $order->total_amount, 2) }} EGP <span class="a-muted">(the invoice still shows the original payment)</span></dd></div>@endif
         @if($order->paid_at)<div><dt>Paid at</dt><dd>{{ $order->paid_at->format('d M Y, H:i') }}</dd></div>@endif
         @if($order->requires_approval)<div><dt>Booking approval</dt><dd>{{ $order->approved_at ? 'Approved '.$order->approved_at->format('d M Y, H:i') : 'Required' }}</dd></div>@endif
         @if($order->status === 'pending_payment' && $order->paymentDeadlineAt())<div><dt>Payment deadline</dt><dd>{{ $order->paymentDeadlineAt()->format('d M Y, H:i') }}</dd></div>@endif
