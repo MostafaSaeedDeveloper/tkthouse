@@ -20,14 +20,14 @@
   .meta td { padding: 0 14px 12px 0; width: 25%; }
   .box { border: 1px solid #e4e4ea; padding: 12px 14px; }
   .box-y { border-left: 4px solid #f5b800; background: #fffaf0; }
-  .stamp { position: absolute; right: 52px; top: 118px; border: 4px solid #f5b800; color: #0e0e13; background: #fff; padding: 4px 22px; font-size: 30px; font-weight: bold; letter-spacing: 6px; transform: rotate(-12deg); }
+  .stamp { position: absolute; right: 48px; top: 72px; border: 4px solid #f5b800; color: #0e0e13; background: #fff; padding: 4px 22px; font-size: 30px; font-weight: bold; letter-spacing: 6px; transform: rotate(-12deg); }
   .items { margin-top: 20px; }
   .items th { background: #0e0e13; color: #f5b800; font-size: 8.5px; letter-spacing: 1px; text-transform: uppercase; padding: 9px 10px; text-align: left; }
   .items td { padding: 10px; border-bottom: 1px solid #ececf0; }
   .r { text-align: right !important; }
   .c { text-align: center !important; }
-  .sum { width: 270px; margin-left: auto; margin-top: 14px; }
-  .sum td { padding: 5px 10px; font-size: 10.5px; }
+  .sum { width: 330px; margin-left: auto; margin-top: 14px; }
+  .sum td { padding: 5px 10px; font-size: 10.5px; white-space: nowrap; }
   .sum .good td { color: #1a8f4c; }
   .sum .tot td { background: #f5b800; color: #0e0e13; font-size: 13px; font-weight: bold; padding: 10px; }
   .sum .net td { border-top: 1px solid #0e0e13; font-weight: bold; padding-top: 8px; }
@@ -59,7 +59,7 @@
       </tr>
       <tr>
         <td><div class="label">Payment date</div><div class="val">{{ $i->paidAt ? $i->paidAt->format('d M Y') : '—' }}</div>@if($i->paidAt)<div class="muted">{{ $i->paidAt->format('H:i') }}</div>@endif</td>
-        <td><div class="label">Payment method</div><div class="val">{{ $i->paymentMethod }}</div></td>
+        <td><div class="label">Payment method</div><div class="val">{{ \App\Support\ArabicPdfText::shape($i->paymentMethod) }}</div></td>
       </tr>
       @if($i->paymentReference)
       <tr><td colspan="2"><div class="label">Payment reference</div><div class="val">{{ $i->paymentReference }}</div></td></tr>
@@ -70,7 +70,7 @@
       <td style="width:49%;">
         <div class="box">
           <div class="label">Billed to</div>
-          <div class="val">{{ $i->customerName }}</div>
+          <div class="val">{{ \App\Support\ArabicPdfText::shape($i->customerName) }}</div>
           <div class="muted">{{ $i->customerEmail }}</div>
           @if($i->customerPhone)<div class="muted">{{ $i->customerPhone }}</div>@endif
         </div>
@@ -79,9 +79,9 @@
       <td style="width:49%;">
         <div class="box box-y">
           <div class="label">Event</div>
-          <div class="val">{{ $i->event['name'] }}</div>
+          <div class="val">{{ \App\Support\ArabicPdfText::shape($i->event['name']) }}</div>
           <div class="muted">{{ collect([$i->event['date'], $i->event['time']])->filter()->implode(' · ') }}</div>
-          @if($i->event['location'])<div class="muted">{{ $i->event['location'] }}</div>@endif
+          @if($i->event['location'])<div class="muted">{{ \App\Support\ArabicPdfText::shape($i->event['location']) }}</div>@endif
         </div>
       </td>
     </tr></table>
@@ -93,7 +93,7 @@
       <tbody>
         @foreach($i->lines as $line)
           <tr>
-            <td><b>{{ $line['name'] }}</b></td>
+            <td><b>{{ \App\Support\ArabicPdfText::shape($line['name']) }}</b></td>
             <td class="c">{{ $line['qty'] }}</td>
             <td class="r">{{ $i->money($line['price']) }}</td>
             <td class="r">{{ $i->money($line['total']) }}</td>
@@ -105,10 +105,10 @@
     <table class="sum">
       <tr><td>Tickets subtotal ({{ $i->ticketCount }})</td><td class="r">{{ $i->money($i->subtotal) }}</td></tr>
       @if($i->discount > 0)
-        <tr class="good"><td>Discount @if($i->promoCode)({{ $i->promoCode }})@endif</td><td class="r">− {{ $i->money($i->discount) }}</td></tr>
+        <tr class="good"><td>Discount @if($i->promoCode)({{ \App\Support\ArabicPdfText::shape($i->promoCode) }})@endif</td><td class="r">− {{ $i->money($i->discount) }}</td></tr>
       @endif
       @foreach($i->fees as $fee)
-        <tr><td>{{ $fee['name'] }}@if($fee['detail']) <span class="muted">({{ $fee['detail'] }})</span>@endif</td><td class="r">{{ $i->money($fee['amount']) }}</td></tr>
+        <tr><td>{{ \App\Support\ArabicPdfText::shape($fee['name']) }}@if($fee['detail']) <span class="muted">({{ $fee['detail'] }})</span>@endif</td><td class="r">{{ $i->money($fee['amount']) }}</td></tr>
       @endforeach
       @if(abs($i->adjustment) >= 0.01)
         <tr><td>Adjustment</td><td class="r">{{ $i->adjustment < 0 ? '− ' : '' }}{{ $i->money(abs($i->adjustment)) }}</td></tr>

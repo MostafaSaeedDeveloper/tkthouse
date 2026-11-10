@@ -41,12 +41,46 @@ class PaymentInvoiceTest extends TestCase
         return $order->fresh();
     }
 
+    /** A real mail transport that always fails, like an SMTP outage: the order must survive it. */
+    private function breakMail(): void
+    {
+        $this->resetMail();
+        Mail::extend('boom', fn () => new class extends \Symfony\Component\Mailer\Transport\AbstractTransport {
+            protected function doSend(\Symfony\Component\Mailer\SentMessage $message): void
+            {
+                throw new \RuntimeException('smtp down');
+            }
+
+            public function __toString(): string
+            {
+                return 'boom';
+            }
+        });
+        config(['mail.mailers.boom' => ['transport' => 'boom'], 'mail.default' => 'boom']);
+    }
+
+    private function fixMail(): void
+    {
+        $this->resetMail();
+        config(['mail.default' => 'array']);
+        Mail::fake();
+    }
+
+    private function resetMail(): void
+    {
+        app()->forgetInstance('mail.manager');
+        app()->forgetInstance('mailer');
+        Mail::clearResolvedInstance('mail.manager');
+        Mail::clearResolvedInstance('mailer');
+        Mail::clearResolvedInstance('mail');
+    }
+
     private function refund(Order $order, int $minor, string $status = PaymentRefund::SUCCEEDED): PaymentRefund
     {
         return PaymentRefund::create([
             'internal_reference' => 'REF-'.uniqid(), 'order_id' => $order->id, 'provider' => 'fake', 'mode' => 'api', 'type' => 'partial',
             'status' => $status, 'currency' => 'EGP', 'amount_minor' => $minor, 'captured_minor' => (int) round($order->total_amount * 100),
-            'idempotency_key' => uniqid(), 'completed_at' => now(),
+            'idempotency_key' => uniqid(), 'reason' => 'test', 'completed_at' => now(),
         ]);
     }
 
@@ -82,7 +116,7 @@ class PaymentInvoiceTest extends TestCase
 
     public function test_legacy_order_without_subtotal_or_paid_at_still_renders_a_valid_pdf(): void
     {
-        $order = $this->order(User::factory()->create(), ['subtotal_amount' => null, 'total_amount' => 200, 'paid_at' => null]);
+        $order = $this->order(User::factory()->create(), ['subtotal_amount' => 0, 'total_amount' => 200, 'paid_at' => null]);
         $i = Invoice::make($order);
 
         $this->assertSame(200.0, $i->subtotal);
@@ -171,6 +205,7 @@ class PaymentInvoiceTest extends TestCase
             Permission::findOrCreate($p, 'web');
         }
         $admin->givePermissionTo('orders.view');
+        Mail::fake();   // marking the order paid already issued tickets and sent the automatic invoice mail
 
         $this->actingAs($admin)->get(route('admin.orders.invoice', ['order' => $order, 'inline' => 1]))->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
@@ -180,5 +215,83 @@ class PaymentInvoiceTest extends TestCase
         $admin->givePermissionTo('orders.update');
         $this->actingAs($admin)->post(route('admin.orders.invoice.resend', $order))->assertSessionHas('success');
         Mail::assertSent(OrderInvoicePaidMail::class, 1);
+    }
+
+    public function test_mail_failure_keeps_payment_and_tickets_and_the_retry_job_delivers_the_invoice_once(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->makePendingOrder($user, $this->event, 2, 100);
+
+        $this->breakMail();
+        $order->forceFill(['status' => 'paid', 'paid_at' => now()->subMinutes(10)])->save();   // observer issues tickets; every mail fails
+
+        $order = $order->fresh();
+        $this->assertSame('paid', $order->status);
+        $this->assertSame(2, $order->issuedTickets()->count());
+        $this->assertNotNull($order->tickets_generated_at);
+        $this->assertFalse(app(TicketIssuanceService::class)->isComplete($order));
+
+        $this->fixMail();   // the mail server is back
+        $this->artisan('orders:retry-ticket-issuance')->assertSuccessful();
+        Mail::assertSent(OrderInvoicePaidMail::class, 1);
+
+        $this->artisan('orders:retry-ticket-issuance')->assertSuccessful();
+        Mail::assertSent(OrderInvoicePaidMail::class, 1);   // never a duplicate
+        $this->assertSame(2, $order->fresh()->issuedTickets()->count());
+        $this->assertSame('paid', $order->fresh()->status);
+    }
+
+    public function test_resend_after_a_failed_automatic_send_counts_as_delivered_so_no_duplicate_follows(): void
+    {
+        $user = User::factory()->create();
+        $order = $this->makePendingOrder($user, $this->event, 1, 100);
+        $this->breakMail();
+        $order->forceFill(['status' => 'paid', 'paid_at' => now()->subMinutes(10)])->save();
+
+        $this->fixMail();
+        Permission::findOrCreate('orders.update', 'web');
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('orders.update');
+        $this->actingAs($admin)->post(route('admin.orders.invoice.resend', $order))->assertSessionHas('success');
+        Mail::assertSent(OrderInvoicePaidMail::class, 1);
+
+        app(TicketIssuanceService::class)->issueIfPaid($order->fresh());   // the retry job's path
+        Mail::assertSent(OrderInvoicePaidMail::class, 1);
+    }
+
+    public function test_arabic_text_is_joined_and_in_visual_order_for_the_pdf(): void
+    {
+        $this->assertSame('Sara Ahmed', \App\Support\ArabicPdfText::shape('Sara Ahmed'));
+        $this->assertSame(mb_chr(0xFEAA).mb_chr(0xFEF4).mb_chr(0xFECC).mb_chr(0xFEB3), \App\Support\ArabicPdfText::shape('سعيد'));
+        $this->assertSame(mb_chr(0xFEFB), \App\Support\ArabicPdfText::shape('لا'));
+    }
+
+    public function test_pages_show_invoice_actions_only_for_paid_orders(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $paid = $this->order($owner);
+        $pending = $this->makePendingOrder($owner, $this->event);
+
+        $this->actingAs($owner)->get(route('front.account.orders.show', $paid->order_number))->assertOk()
+            ->assertSee('Download invoice')->assertSee(route('front.account.orders.invoice', $paid->order_number), false);
+        $this->actingAs($owner)->get(route('front.account.orders.show', $pending->order_number))->assertOk()->assertDontSee('Download invoice');
+        $this->actingAs($owner)->get(route('front.account.orders'))->assertOk()
+            ->assertSee(route('front.account.orders.invoice', $paid->order_number), false)
+            ->assertDontSee(route('front.account.orders.invoice', $pending->order_number), false);
+
+        $admin = User::factory()->create();
+        foreach (['orders.view', 'orders.update'] as $perm) {
+            Permission::findOrCreate($perm, 'web');
+            $admin->givePermissionTo($perm);
+        }
+        $this->actingAs($admin)->get(route('admin.orders.show', $paid))->assertOk()
+            ->assertSee('Resend Invoice')->assertSee('Download Invoice')->assertSee('View Invoice');
+        $this->actingAs($admin)->get(route('admin.orders.show', $pending))->assertOk()->assertDontSee('Resend Invoice');
+
+        $this->refund($paid, 5000);
+        $paid->forceFill(['status' => 'partially_refunded'])->save();
+        $this->actingAs($owner)->get(route('front.account.orders.show', $paid->order_number))->assertOk()
+            ->assertSee('Download invoice')->assertSee('Partially refunded');
+        $this->actingAs($admin)->get(route('admin.orders.show', $paid))->assertOk()->assertSee('Partially');
     }
 }
