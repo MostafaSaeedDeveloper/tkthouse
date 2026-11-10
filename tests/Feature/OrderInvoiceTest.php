@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Mail\OrderTicketsIssuedMail;
 use App\Models\Event;
+use App\Models\EventFee;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\Invoices\InvoiceService;
 use App\Services\TicketIssuanceService;
-use App\Support\SystemSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -37,32 +37,56 @@ class OrderInvoiceTest extends TestCase
         return $order->fresh();
     }
 
-    public function test_tax_is_broken_out_of_the_inclusive_total_and_snapshotted(): void
+    public function test_invoice_itemises_the_events_own_fees_and_taxes(): void
     {
-        SystemSettings::set('invoice_tax_rate', '14');
-        $order = $this->paid(User::factory()->create(), 100, 2);   // total 200 incl. 14%
+        EventFee::create(['event_id' => $this->event->id, 'name' => 'VAT', 'fee_type' => 'percentage', 'value' => 14]);
+        EventFee::create(['event_id' => $this->event->id, 'name' => 'Service fee', 'fee_type' => 'fixed', 'value' => 10]);
 
-        $issued = app(InvoiceService::class)->ensure($order);
+        $order = $this->paid(User::factory()->create(), 100, 2);   // subtotal 200
+        $order->forceFill(['fees_breakdown' => [
+            ['name' => 'VAT', 'fee_type' => 'percentage', 'value' => 14, 'amount' => 28],
+            ['name' => 'Service fee', 'fee_type' => 'fixed', 'value' => 10, 'amount' => 10],
+        ], 'total_amount' => 238])->save();
 
-        $this->assertSame('INV-'.$order->order_number, $issued->invoice_number);
-        $this->assertEquals(175.44, $issued->invoice_snapshot['net']);
-        $this->assertEquals(24.56, $issued->invoice_snapshot['tax_amount']);
-        $this->assertEquals(200.0, $issued->invoice_snapshot['total']);
-        $this->assertEquals(200.0, (float) $issued->fresh()->total_amount);   // what is charged never changes
+        $snap = app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot;
 
-        // A later rate change never rewrites an issued invoice.
-        SystemSettings::set('invoice_tax_rate', '5');
-        $this->assertEquals(14.0, app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot['tax']['rate']);
+        $this->assertSame(['VAT', 'Service fee'], array_column($snap['fees'], 'name'));
+        $this->assertEquals(38.0, $snap['fees_total']);
+        $this->assertEquals(238.0, $snap['total']);
+        $this->assertEquals(238.0, (float) $order->fresh()->total_amount);   // nothing is recalculated or re-charged
+
+        // Changing the event's fees later never rewrites an issued invoice.
+        $this->event->fees()->delete();
+        $this->assertSame(['VAT', 'Service fee'], array_column(app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot['fees'], 'name'));
     }
 
-    public function test_tax_can_be_switched_off(): void
+    public function test_older_orders_without_a_breakdown_are_rebuilt_from_the_event_fees(): void
     {
-        SystemSettings::set('invoice_tax_enabled', false);
-        $snap = app(InvoiceService::class)->ensure($this->paid(User::factory()->create()))->invoice_snapshot;
+        EventFee::create(['event_id' => $this->event->id, 'name' => 'VAT', 'fee_type' => 'percentage', 'value' => 14]);
+        $order = $this->paid(User::factory()->create(), 100, 2);
+        $order->forceFill(['total_amount' => 228])->save();   // 200 + 14%
 
-        $this->assertFalse($snap['tax']['enabled']);
-        $this->assertEquals(0.0, $snap['tax_amount']);
-        $this->assertEquals($snap['total'], $snap['net']);
+        $fees = app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot['fees'];
+
+        $this->assertSame('VAT', $fees[0]['name']);
+        $this->assertEquals(28.0, $fees[0]['amount']);
+    }
+
+    public function test_when_the_fees_cannot_be_reproduced_a_single_line_is_shown(): void
+    {
+        $order = $this->paid(User::factory()->create(), 100, 2);
+        $order->forceFill(['total_amount' => 215])->save();   // 15 of fees nobody can explain any more
+
+        $fees = app(InvoiceService::class)->ensure($order->fresh())->invoice_snapshot['fees'];
+
+        $this->assertCount(1, $fees);
+        $this->assertSame('Fees & taxes', $fees[0]['name']);
+        $this->assertEquals(15.0, $fees[0]['amount']);
+    }
+
+    public function test_no_fees_means_no_fee_lines(): void
+    {
+        $this->assertSame([], app(InvoiceService::class)->ensure($this->paid(User::factory()->create()))->invoice_snapshot['fees']);
     }
 
     public function test_pdf_is_generated(): void
@@ -74,13 +98,15 @@ class OrderInvoiceTest extends TestCase
 
     public function test_completed_order_email_is_the_invoice_with_both_pdfs(): void
     {
+        EventFee::create(['event_id' => $this->event->id, 'name' => 'VAT', 'fee_type' => 'percentage', 'value' => 14]);
         $order = $this->paid(User::factory()->create());
+        $order->forceFill(['total_amount' => 228])->save();
         app(TicketIssuanceService::class)->issueIfPaid($order);
 
         Mail::assertSent(OrderTicketsIssuedMail::class, function (OrderTicketsIssuedMail $mail) {
             $mail->assertSeeInHtml('INV-'.$mail->order->order_number);
-            $mail->assertSeeInHtml('VAT 14%');
-            $names = collect($mail->attachments())->map(fn ($a) => $a->as)->all();
+            $mail->assertSeeInHtml('VAT (14%)');
+                        $names = collect($mail->attachments())->map(fn ($a) => $a->as)->all();
             $this->assertContains('invoice-'.$mail->order->order_number.'.pdf', $names);
             $this->assertContains('tickets-'.$mail->order->order_number.'.pdf', $names);
 

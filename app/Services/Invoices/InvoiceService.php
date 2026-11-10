@@ -4,14 +4,15 @@ namespace App\Services\Invoices;
 
 use App\Models\Order;
 use App\Models\PaymentMethod;
+use App\Services\Checkout\CheckoutPricing;
 use App\Support\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Paid-order invoices. The invoice is a snapshot written once (number, date, seller, tax figures) the first time it is
- * needed, so changing the tax rate or company details later never rewrites an invoice a customer already received.
- * Prices are tax-inclusive: the tax is broken out of the order total and the amount charged is never touched.
+ * Paid-order invoices. The invoice is a snapshot written once (number, date, seller, fee lines) the first time it is
+ * needed, so later changes to the event or settings never rewrite an invoice a customer already received.
+ * Taxes and fees are not invented here: they are the event's own fees, as charged at checkout.
  */
 class InvoiceService
 {
@@ -69,37 +70,59 @@ class InvoiceService
         $total = round((float) $order->total_amount, 2);
         $subtotal = round((float) $order->subtotal_amount, 2);
         $discount = round((float) $order->discount_amount, 2);
-        $fees = round($total - ($subtotal - $discount), 2);
-
-        $taxEnabled = (bool) SystemSettings::get('invoice_tax_enabled', true);
-        $rate = $taxEnabled ? round(max(0.0, (float) SystemSettings::get('invoice_tax_rate', 14)), 2) : 0.0;
-        $taxEnabled = $taxEnabled && $rate > 0;
-
-        $net = $taxEnabled ? round($total / (1 + $rate / 100), 2) : $total;
-        $tax = $taxEnabled ? round($total - $net, 2) : 0.0;
+        $feesTotal = max(0.0, round($total - ($subtotal - $discount), 2));
 
         $method = PaymentMethod::query()->where('code', (string) $order->payment_method)->first();
 
         return [
             'currency' => 'EGP',
             'seller' => [
-                'name' => (string) (SystemSettings::get('invoice_company_name') ?: SystemSettings::get('site_name', 'TKT House')),
-                'tax_number' => SystemSettings::get('invoice_tax_number'),
-                'address' => SystemSettings::get('invoice_company_address') ?: SystemSettings::get('contact_address'),
-            ],
-            'tax' => [
-                'enabled' => $taxEnabled,
-                'label' => (string) SystemSettings::get('invoice_tax_label', 'VAT'),
-                'rate' => $rate,
+                'name' => (string) SystemSettings::get('site_name', 'TKT House'),
+                'address' => SystemSettings::get('contact_address'),
             ],
             'subtotal' => $subtotal,
             'discount' => $discount,
             'promo_code' => $order->promo_code,
-            'fees' => $fees > 0 ? $fees : 0.0,
-            'net' => $net,
-            'tax_amount' => $tax,
+            // The event's own fees / taxes, itemised by the names the organiser gave them.
+            'fees' => $this->feeLines($order, $subtotal, $feesTotal),
+            'fees_total' => $feesTotal,
             'total' => $total,
             'payment_method' => $method ? trim((string) ($method->checkout_label ?: $method->name)) : (string) $order->payment_method,
         ];
+    }
+
+    /**
+     * Fee lines as charged: the breakdown stored at checkout when there is one. Older orders only stored the total,
+     * so their lines are rebuilt from the event's fees, but only if that reproduces exactly what was charged;
+     * otherwise a single "Fees & taxes" line keeps the invoice truthful.
+     *
+     * @return list<array{name: string, fee_type: string, value: float, amount: float}>
+     */
+    private function feeLines(Order $order, float $subtotal, float $feesTotal): array
+    {
+        if ($feesTotal <= 0) {
+            return [];
+        }
+
+        $stored = collect($order->fees_breakdown ?? []);
+        if ($stored->isNotEmpty() && abs($stored->sum('amount') - $feesTotal) < 0.01) {
+            return $stored->map(fn (array $f) => $this->line($f['name'], $f['fee_type'], $f['value'], $f['amount']))->all();
+        }
+
+        $event = $order->items()->with('event.fees')->get()->pluck('event')->filter()->first();
+        if ($event) {
+            $rebuilt = app(CheckoutPricing::class)->fees($event, $subtotal);
+            if ($rebuilt && abs(array_sum(array_column($rebuilt, 'amount')) - $feesTotal) < 0.01) {
+                return array_map(fn (array $f) => $this->line($f['name'], $f['fee_type'], $f['value'], $f['amount']), $rebuilt);
+            }
+        }
+
+        return [$this->line('Fees & taxes', 'fixed', $feesTotal, $feesTotal)];
+    }
+
+    /** @return array{name: string, fee_type: string, value: float, amount: float} */
+    private function line(string $name, string $type, mixed $value, mixed $amount): array
+    {
+        return ['name' => $name, 'fee_type' => $type, 'value' => (float) $value, 'amount' => round((float) $amount, 2)];
     }
 }

@@ -117,6 +117,7 @@ class OrderPlacementService
                     'promo_code' => $quote->promo?->code,
                     'discount_amount' => $quote->discount,
                     'subtotal_amount' => $quote->subtotal,
+                    'fees_breakdown' => $quote->fees,
                     'order_number' => $this->orderNumber(),
                     'status' => $requiresApproval ? 'pending_approval' : 'pending_payment',
                     'requires_approval' => $requiresApproval,

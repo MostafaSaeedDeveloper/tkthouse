@@ -61,18 +61,6 @@ final class Registry
                 'help' => 'Used when the mode is "Default assignee". Several agents can be chosen, but they must all have the same payment methods.',
                 'rules' => ['nullable', 'array', 'max:20', self::eachPositiveInt(...)]],
 
-            // ---- Invoices & tax (printed on the paid-order invoice PDF; prices are tax-inclusive, so the tax is shown inside the total and never changes what is charged)
-            'invoice_tax_enabled' => ['group' => 'orders', 'type' => 'bool', 'label' => 'Show tax on invoices', 'default' => true,
-                'help' => 'Prices are treated as tax-inclusive: the invoice breaks the tax out of the total. It never changes what the customer pays. Invoices already issued keep the figures they were issued with.', 'rules' => ['boolean']],
-            'invoice_tax_rate' => ['group' => 'orders', 'type' => 'string', 'label' => 'Tax rate (%)', 'default' => '14',
-                'help' => 'For example 14 for Egyptian VAT.', 'rules' => ['required', 'numeric', 'min:0', 'max:100']],
-            'invoice_tax_label' => ['group' => 'orders', 'type' => 'string', 'label' => 'Tax name', 'default' => 'VAT', 'rules' => ['required', 'string', 'max:30']],
-            'invoice_company_name' => ['group' => 'orders', 'type' => 'string', 'label' => 'Seller legal name', 'default' => null,
-                'help' => 'Printed on invoices. Falls back to the website name.', 'rules' => ['nullable', 'string', 'max:190']],
-            'invoice_tax_number' => ['group' => 'orders', 'type' => 'string', 'label' => 'Tax registration number', 'default' => null, 'rules' => ['nullable', 'string', 'max:60']],
-            'invoice_company_address' => ['group' => 'orders', 'type' => 'text', 'label' => 'Seller address', 'default' => null,
-                'help' => 'Printed on invoices. Falls back to the address in General settings.', 'rules' => ['nullable', 'string', 'max:500']],
-
             // ---- Payment routing (all off / empty by default => today's payment behaviour is unchanged)
             'payment_routing_enabled' => ['group' => 'payments', 'type' => 'bool', 'label' => 'Show each agent\'s payment methods', 'default' => false,
                 'help' => 'When on, a customer paying an order sees only the payment methods allowed for the agent the order is assigned to (set per user). Everyone still pays into the same merchant account; agents with no selection show every active method. Off = every method for everyone.', 'rules' => ['boolean']],

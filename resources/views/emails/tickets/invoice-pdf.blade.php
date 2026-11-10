@@ -1,7 +1,6 @@
 @php
     $money = fn ($n) => number_format((float) $n, 2).' '.($invoice['currency'] ?? 'EGP');
     $seller = $invoice['seller'] ?? [];
-    $tax = $invoice['tax'] ?? ['enabled' => false];
     $customer = $order->customer;
 @endphp
 <!doctype html>
@@ -35,10 +34,9 @@
                 <div class="logo"><img src="{{ public_path('images/logo-light.png') }}" alt="{{ $seller['name'] ?? 'TKT House' }}"></div>
                 <p style="margin:10px 0 0;"><strong>{{ $seller['name'] ?? 'TKT House' }}</strong></p>
                 @if(!empty($seller['address']))<p class="muted" style="margin:2px 0;">{{ $seller['address'] }}</p>@endif
-                @if(!empty($seller['tax_number']))<p class="muted" style="margin:2px 0;">Tax registration no.: {{ $seller['tax_number'] }}</p>@endif
             </td>
             <td class="r">
-                <h1>{{ !empty($tax['enabled']) ? 'Tax Invoice' : 'Invoice' }}</h1>
+                <h1>Invoice</h1>
                 <table class="meta" style="width:auto; margin-left:auto;">
                     <tr><td class="muted">Invoice no.</td><td class="r"><strong>{{ $order->invoice_number }}</strong></td></tr>
                     <tr><td class="muted">Invoice date</td><td class="r">{{ $order->invoice_issued_at?->format('d M Y') }}</td></tr>
@@ -81,19 +79,11 @@
         @if(($invoice['discount'] ?? 0) > 0)
             <tr><td>Discount @if(!empty($invoice['promo_code']))({{ $invoice['promo_code'] }})@endif</td><td class="r">-{{ $money($invoice['discount']) }}</td></tr>
         @endif
-        @if(($invoice['fees'] ?? 0) > 0)
-            <tr><td>Booking fees</td><td class="r">{{ $money($invoice['fees']) }}</td></tr>
-        @endif
-        @if(!empty($tax['enabled']))
-            <tr><td>Net amount (excl. {{ $tax['label'] }})</td><td class="r">{{ $money($invoice['net']) }}</td></tr>
-            <tr><td>{{ $tax['label'] }} {{ rtrim(rtrim(number_format((float) $tax['rate'], 2), '0'), '.') }}%</td><td class="r">{{ $money($invoice['tax_amount']) }}</td></tr>
-        @endif
+        @foreach($invoice['fees'] ?? [] as $fee)
+            <tr><td>{{ $fee['name'] }}@if($fee['fee_type'] === 'percentage') ({{ rtrim(rtrim(number_format($fee['value'], 2), '0'), '.') }}%)@endif</td><td class="r">{{ $money($fee['amount']) }}</td></tr>
+        @endforeach
         <tr class="grand"><td>Total paid</td><td class="r">{{ $money($invoice['total']) }}</td></tr>
     </table>
-
-    @if(!empty($tax['enabled']))
-        <p class="muted" style="margin-top:10px; font-size:10px;">All prices include {{ $tax['label'] }}.</p>
-    @endif
 
     <p class="foot">Thank you for your purchase. This invoice was generated automatically and is valid without a signature.</p>
 </body>

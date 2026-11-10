@@ -39,22 +39,12 @@
           <span class="einfo-val">-{{ $money($invoice['discount']) }}</span>
         </div>
       @endif
-      @if(($invoice['fees'] ?? 0) > 0)
+      @foreach($invoice['fees'] ?? [] as $fee)
         <div class="einfo-row">
-          <span class="einfo-label">Booking fees</span>
-          <span class="einfo-val">{{ $money($invoice['fees']) }}</span>
+          <span class="einfo-label">{{ $fee['name'] }}@if($fee['fee_type'] === 'percentage') ({{ rtrim(rtrim(number_format($fee['value'], 2), '0'), '.') }}%)@endif</span>
+          <span class="einfo-val">{{ $money($fee['amount']) }}</span>
         </div>
-      @endif
-      @if(!empty($invoice['tax']['enabled']))
-        <div class="einfo-row">
-          <span class="einfo-label">Net amount</span>
-          <span class="einfo-val">{{ $money($invoice['net']) }}</span>
-        </div>
-        <div class="einfo-row">
-          <span class="einfo-label">{{ $invoice['tax']['label'] }} {{ rtrim(rtrim(number_format((float) $invoice['tax']['rate'], 2), '0'), '.') }}%</span>
-          <span class="einfo-val">{{ $money($invoice['tax_amount']) }}</span>
-        </div>
-      @endif
+      @endforeach
       <div class="einfo-row">
         <span class="einfo-label">Total Paid</span>
         <span class="einfo-val" style="color:#fff;font-weight:700;">{{ $money($invoice['total']) }}</span>
