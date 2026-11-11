@@ -41,6 +41,11 @@
                     $count = (int) $order->items->sum('quantity');
                     [$orderLabel, $orderVariant] = \App\Support\CustomerPortal::orderBadge($order->status);
                     [$payLabel, $payVariant] = \App\Support\CustomerPortal::paymentBadge($order);
+                    // Paid orders link straight to their tickets: the ticket itself when there is one, else the tickets section of the order.
+                    $ticketCount = $order->status === 'paid' ? $order->issuedTickets->count() : 0;
+                    $ticketsUrl = $ticketCount === 1
+                        ? route('front.tickets.show', $order->issuedTickets->first())
+                        : route('front.account.orders.show', $order->order_number).'#order-tickets';
                 @endphp
                 <li class="tkt-order-card">
                     <a class="tkt-order-card__media tkt-media {{ $image ? '' : 'is-empty' }}" href="{{ route('front.account.orders.show', $order->order_number) }}" tabindex="-1" aria-hidden="true">
@@ -64,6 +69,11 @@
                     <div class="tkt-order-card__action">
                         <a class="tkt-btn tkt-btn--dark tkt-btn--sm" href="{{ route('front.account.orders.show', $order->order_number) }}">View details<span class="tkt-sr-only"> for order {{ $order->order_number }}</span>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+                        @if($ticketCount > 0)
+                            <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $ticketsUrl }}">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M13 5v14" stroke-dasharray="2 3"/></svg>
+                                {{ $ticketCount === 1 ? 'My ticket' : 'My tickets' }}<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                        @endif
                         @if(in_array($order->status, ['paid', 'refunded', 'partially_refunded'], true) && $order->paid_at)
                             <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.account.orders.invoice', $order->order_number) }}">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>

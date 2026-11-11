@@ -71,7 +71,7 @@
         </section>
 
         {{-- Tickets --}}
-        <section class="tkt-card tkt-pcard">
+        <section class="tkt-card tkt-pcard" id="order-tickets">
             <h2 class="tkt-pcard__h">Tickets &amp; attendees <span class="tkt-text-muted" style="font-weight:600">({{ $count }})</span></h2>
             @if($order->status === 'paid' && $order->issuedTickets->isNotEmpty())
                 <ul class="tkt-pticket-list">

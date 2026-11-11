@@ -138,4 +138,22 @@ class OrderInvoiceTest extends TestCase
         $this->actingAs($me)->get(route('front.account.orders.invoice', $unpaid->order_number))->assertNotFound();
         $this->actingAs($me)->get(route('front.account.orders.show', $unpaid->order_number))->assertDontSee('Download invoice');
     }
+
+    public function test_paid_orders_link_to_their_tickets_from_the_orders_list(): void
+    {
+        $me = User::factory()->create(['email_verified_at' => now()]);
+        $one = $this->paid($me, 100, 1);
+        $two = $this->paid($me, 100, 2);
+        app(TicketIssuanceService::class)->issueIfPaid($one);
+        app(TicketIssuanceService::class)->issueIfPaid($two);
+        $unpaid = $this->makePendingOrder($me, $this->event, 1);
+
+        $page = $this->actingAs($me)->get(route('front.account.orders'))->assertOk();
+        $single = $one->fresh()->issuedTickets->first();
+
+        $page->assertSee(route('front.tickets.show', $single), false)->assertSee('My ticket')                          // one ticket: straight to it
+            ->assertSee(route('front.account.orders.show', $two->order_number).'#order-tickets', false)->assertSee('My tickets');   // several: the order's tickets section
+        $this->assertStringNotContainsString(route('front.account.orders.show', $unpaid->order_number).'#order-tickets', $page->getContent());
+        $this->actingAs($me)->get(route('front.account.orders.show', $two->order_number))->assertSee('id="order-tickets"', false);
+    }
 }
