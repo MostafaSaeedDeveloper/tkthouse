@@ -7,6 +7,12 @@
 <x-admin.filters :action="route('admin.reports.agents')" :reset="route('admin.reports.agents')">
     <div class="a-field"><label class="form-label" for="ag-from">From</label><input id="ag-from" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
     <div class="a-field"><label class="form-label" for="ag-to">To</label><input id="ag-to" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
+    <div class="a-field"><label class="form-label" for="ag-event">Event</label>
+        <select id="ag-event" name="event_id" class="form-select">
+            <option value="">Active events</option>
+            <option value="all" @selected($eventChoice === 'all')>All events</option>
+            @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($eventChoice === (string) $e->id)>{{ $e->filterLabel() }}</option>@endforeach
+        </select></div>
 </x-admin.filters>
 
 @unless($seesTeam)
@@ -88,7 +94,7 @@
 @if($seesTeam)
 <div class="a-grid a-grid--2" style="margin-top:20px">
     <x-admin.card title="Unassigned queue"><p><strong>{{ $data['unassigned']['orders'] }}</strong> order(s) created in this period have no assignee ({{ $data['unassigned']['pending'] }} still pending).
-        <a href="{{ route('admin.orders.index', ['assignee' => 'unassigned']) }}">View them</a></p></x-admin.card>
+        <a href="{{ route('admin.orders.index', ['assignee' => 'unassigned', 'event_id' => 'all']) }}">View them</a></p></x-admin.card>
     <x-admin.card title="Unattributed sales"><p><strong>{{ $data['unattributed']['orders'] }}</strong> order(s), {{ $money($data['unattributed']['amount']) }} EGP paid in this period without an attributed agent (paid before assignment was enabled, or never assigned). They are never guessed onto anyone.</p></x-admin.card>
 </div>
 @endif

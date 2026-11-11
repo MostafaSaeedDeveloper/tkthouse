@@ -14,19 +14,11 @@
     all you need to do now is complete the payment below before the link expires.
   </p>
 
-  <div class="einfo">
-    <div class="einfo-row">
-      <span class="einfo-label">Order</span>
-      <span class="einfo-val gold">#{{ $order->order_number }}</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Amount Due</span>
-      <span class="einfo-val" style="color:#fff;font-weight:700;">{{ number_format($order->total_amount, 2) }} EGP</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Status</span>
-      <span class="einfo-val green">✓ Approved</span>
-    </div>
+  @include('emails.partials.info-table', ['rows' => [
+    ['label' => 'Order', 'value' => '#'.$order->order_number, 'tone' => 'gold'],
+    ['label' => 'Amount Due', 'value' => number_format($order->total_amount, 2).' EGP', 'tone' => 'white'],
+    ['label' => 'Status', 'value' => '✓ Approved', 'tone' => 'green'],
+  ]])
   </div>
 
   <div class="ecta-wrap">

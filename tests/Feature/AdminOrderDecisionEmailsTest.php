@@ -53,12 +53,8 @@ class AdminOrderDecisionEmailsTest extends TestCase
                 && str_contains($mail->paymentLink, $order->payment_link_token);
         });
 
-        Mail::assertSent(OrderStatusChangedMail::class, function (OrderStatusChangedMail $mail) use ($customer, $order) {
-            return $mail->hasTo($customer->email)
-                && $mail->order->is($order)
-                && $mail->oldStatus === 'pending_approval'
-                && $mail->newStatus === 'pending_payment';
-        });
+        // The approval e-mail is the only one: no extra "order status changed" e-mail.
+        Mail::assertNotSent(OrderStatusChangedMail::class);
     }
 
     public function test_reject_sends_rejection_email_to_customer(): void

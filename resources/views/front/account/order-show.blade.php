@@ -71,7 +71,7 @@
         </section>
 
         {{-- Tickets --}}
-        <section class="tkt-card tkt-pcard">
+        <section class="tkt-card tkt-pcard" id="order-tickets">
             <h2 class="tkt-pcard__h">Tickets &amp; attendees <span class="tkt-text-muted" style="font-weight:600">({{ $count }})</span></h2>
             @if($order->status === 'paid' && $order->issuedTickets->isNotEmpty())
                 <ul class="tkt-pticket-list">
@@ -114,7 +114,14 @@
             <dl class="tkt-pbreak">
                 <div><dt>Subtotal</dt><dd>{{ $money($order->subtotal_amount) }}</dd></div>
                 @if((float) $order->discount_amount > 0)<div class="is-good"><dt>Discount @if($order->promo_code)<small>{{ $order->promo_code }}</small>@endif</dt><dd>−{{ $money($order->discount_amount) }}</dd></div>@endif
-                @if($feesAndOther > 0)<div><dt>Booking fees</dt><dd>{{ $money($feesAndOther) }}</dd></div>@endif
+                @if($feesAndOther > 0)
+                    @php $feeLines = collect($order->fees_breakdown ?? []); @endphp
+                    @if($feeLines->isNotEmpty() && abs($feeLines->sum('amount') - $feesAndOther) < 0.01)
+                        @foreach($feeLines as $fee)<div><dt>{{ $fee['name'] }}@if(($fee['fee_type'] ?? '') === 'percentage') <small>{{ rtrim(rtrim(number_format((float) $fee['value'], 2), '0'), '.') }}%</small>@endif</dt><dd>{{ $money($fee['amount']) }}</dd></div>@endforeach
+                    @else
+                        <div><dt>Fees &amp; taxes</dt><dd>{{ $money($feesAndOther) }}</dd></div>
+                    @endif
+                @endif
                 <div class="is-total"><dt>Total</dt><dd>{{ $money($order->total_amount) }}</dd></div>
             </dl>
             <dl class="tkt-pbreak tkt-pbreak--meta">
@@ -122,6 +129,11 @@
                 @if($paymentMethodLabel)<div><dt>Method</dt><dd>{{ $paymentMethodLabel }}</dd></div>@endif
                 @if($order->paid_at)<div><dt>Paid on</dt><dd>{{ $order->paid_at->format('d M Y, g:i A') }}</dd></div>@endif
             </dl>
+            @if(app(\App\Services\Invoices\InvoiceService::class)->isInvoiceable($order))
+                <a class="tkt-btn tkt-btn--outline tkt-btn--block" style="margin-top:14px" href="{{ route('front.account.orders.invoice', $order->order_number) }}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                    Download invoice (PDF)</a>
+            @endif
         </section>
 
         <section class="tkt-card tkt-pcard">

@@ -61,7 +61,7 @@
 </div>
 @endif
 
-@include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o'])
+@include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o', 'eventScope' => true])
 
 @php $canBulk = $canAssign || auth()->user()->can('orders.update') || auth()->user()->can('orders.delete'); @endphp
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">

@@ -59,6 +59,22 @@ class DashboardController extends Controller
             ? $eventOptions->firstWhere('id', $selectedEventId)
             : null;
 
+        // Like the Orders list: the dashboard opens on the Active events; "All events" or one event steps back (event_id=all | <id>).
+        // The active events simply become the event scope of every figure below. With no active event nothing is narrowed.
+        $eventChoiceAll = (string) $request->input('event_id', '') === 'all';
+        $eventScopeIsDefault = false;
+        if (! $selectedEvent && ! $eventChoiceAll) {
+            $activeIds = Event::query()->where('status', 'active')->pluck('id')->all();
+            // Never wider than what this user may already reach: managed events, or (agents) the events they work in.
+            $reach = $userManagedEventIds ?: ($scoped ? $workEventIds : []);
+            $narrowed = $reach ? array_values(array_intersect($reach, $activeIds)) : $activeIds;
+            if ($narrowed) {
+                $userManagedEventIds = $narrowed;
+                $eventScopeIsDefault = true;
+            }
+        }
+        $scopeEventIds = $eventScopeIsDefault ? $userManagedEventIds : [];
+
         $ordersQuery = Order::query()->includedInStatistics()->assignedScope($user);
         $customersQuery = Customer::query()->when($scoped, fn ($q) => $q->whereHas('orders', fn ($o) => $o->assignedScope($user)));
 
@@ -245,6 +261,9 @@ class DashboardController extends Controller
             'eventOptions',
             'selectedEvent',
             'selectedEventId',
+            'eventScopeIsDefault',
+            'eventChoiceAll',
+            'scopeEventIds',
             'startAt',
             'endAt'
         ));

@@ -58,22 +58,26 @@
 .tkt-order-card:hover { border-color: var(--tkt-line-strong); }
 .tkt-order-card__media { display: block; width: 112px; height: 112px; border-radius: var(--tkt-radius-sm); overflow: hidden; background: var(--tkt-surface); }
 .tkt-order-card__body { min-width: 0; display: grid; gap: 8px; align-content: start; }
-.tkt-order-card__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tkt-order-card__top { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
 .tkt-order-card__ref { font-size: var(--tkt-fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tkt-muted); }
 .tkt-order-card__badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .tkt-order-card__title { font-size: var(--tkt-fs-lg); font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .tkt-order-card__meta { display: flex; gap: 8px 22px; flex-wrap: wrap; margin: 0; font-size: var(--tkt-fs-sm); }
 .tkt-order-card__meta dt { font-size: var(--tkt-fs-xs); color: var(--tkt-muted); font-weight: 600; }
 .tkt-order-card__meta dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tkt-order-card__action { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.tkt-order-card__action { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.tkt-order-card__action .tkt-btn { flex: 1 1 120px; }
+.tkt-order-card__action .tkt-btn--dark { flex-basis: 100%; }
 @media (min-width: 768px) {
     .tkt-order-card { grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; }
-    .tkt-order-card__action { grid-column: auto; }
+    /* desktop/tablet: the actions stack in one tidy column of equal-width buttons */
+    .tkt-order-card__action { grid-column: auto; flex-direction: column; flex-wrap: nowrap; min-width: 150px; }
+    .tkt-order-card__action .tkt-btn, .tkt-order-card__action .tkt-btn--dark { flex: 0 0 auto; }
 }
 @media (max-width: 479px) {
     .tkt-order-card { grid-template-columns: 84px minmax(0, 1fr); gap: 12px; }
     .tkt-order-card__media { width: 84px; height: 84px; }
-    .tkt-order-card__action .tkt-btn { width: 100%; }
+    .tkt-order-card__action .tkt-btn { padding: 0 10px; gap: 6px; }
 }
 
 /* order details */

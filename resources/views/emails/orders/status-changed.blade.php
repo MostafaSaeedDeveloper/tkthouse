@@ -28,15 +28,10 @@
     Your order <strong>#{{ $order->order_number }}</strong> status was updated.
   </p>
 
-  <div class="einfo">
-    <div class="einfo-row">
-      <span class="einfo-label">Order</span>
-      <span class="einfo-val gold">#{{ $order->order_number }}</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Current Status</span>
-      <span class="einfo-val" style="color:#41d394;font-weight:700;">{{ $toLabel }}</span>
-    </div>
+  @include('emails.partials.info-table', ['rows' => [
+    ['label' => 'Order', 'value' => '#'.$order->order_number, 'tone' => 'gold'],
+    ['label' => 'Current Status', 'value' => (string) $toLabel, 'color' => '#41d394'],
+  ]])
   </div>
 
   <p class="ep ep-sm">

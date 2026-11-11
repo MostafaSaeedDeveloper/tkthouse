@@ -1,4 +1,4 @@
-{{-- Search + advanced filters shared by Orders and Deleted Orders. Expects: $action, $reset, $statusOptions, $paymentMethods, $events, $canFilterByEvent, $perPageOptions. --}}
+{{-- Search + advanced filters shared by Orders and Deleted Orders. Expects: $action, $reset, $statusOptions, $paymentMethods, $events, $canFilterByEvent, $perPageOptions. $eventScope (Orders list only): the Event filter is offered to everyone and opens on the Active events. --}}
 @php
     $advancedKeys = ['reference', 'customer', 'status', 'payment_method', 'event_id', 'date_from', 'date_to', 'assignee'];
     $advancedActive = collect($advancedKeys)->filter(fn ($key) => filled(request($key)))->count();
@@ -28,10 +28,15 @@
             <input type="text" id="{{ $idp }}Ref" name="reference" value="{{ request('reference') }}" class="form-control" placeholder="e.g. 1234567890"></div>
         <div class="a-field"><label class="form-label" for="{{ $idp }}Cust">Customer</label>
             <input type="text" id="{{ $idp }}Cust" name="customer" value="{{ request('customer') }}" class="form-control" placeholder="Name, email or phone"></div>
-        @if($canFilterByEvent)
+        @if($canFilterByEvent || !empty($eventScope))
         <div class="a-field"><label class="form-label" for="{{ $idp }}Event">Event</label>
             <select name="event_id" id="{{ $idp }}Event" class="form-select">
-                <option value="">All events</option>
+                @if(!empty($eventScope))
+                    <option value="">Active events</option>
+                    <option value="all" @selected(request('event_id') === 'all')>All events</option>
+                @else
+                    <option value="">All events</option>
+                @endif
                 @foreach($events as $event)
                     <option value="{{ $event->id }}" @selected((string) request('event_id') === (string) $event->id)>{{ $event->filterLabel() }}</option>
                 @endforeach

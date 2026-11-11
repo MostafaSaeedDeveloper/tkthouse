@@ -257,7 +257,8 @@ class OrderAssignmentTest extends TestCase
         }
         $ev = $this->makeEvent();
         $this->actingAs($a)->get(route('admin.events.dashboard', $ev))->assertForbidden();
-        $this->actingAs($this->manager())->get(route('admin.dashboard'))->assertOk()->assertSee('1,099 EGP');
+        // The dashboard opens on the Active events; these fixture orders have no event, so the manager steps back to All events.
+        $this->actingAs($this->manager())->get(route('admin.dashboard', ['event_id' => 'all']))->assertOk()->assertSee('1,099 EGP');
     }
 
     public function test_the_ordinary_dashboard_only_shows_the_events_the_agent_works_in(): void

@@ -14,15 +14,10 @@
     <strong>#{{ $order->order_number }}</strong>.
   </p>
 
-  <div class="einfo">
-    <div class="einfo-row">
-      <span class="einfo-label">Order</span>
-      <span class="einfo-val gold">#{{ $order->order_number }}</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Current Status</span>
-      <span class="einfo-val">{{ ucwords(str_replace('_', ' ', (string) $order->status)) }}</span>
-    </div>
+  @include('emails.partials.info-table', ['rows' => [
+    ['label' => 'Order', 'value' => '#'.$order->order_number, 'tone' => 'gold'],
+    ['label' => 'Current Status', 'value' => ucwords(str_replace('_', ' ', (string) $order->status))],
+  ]])
   </div>
 
   <div class="ealert gold">

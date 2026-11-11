@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\PaymentMethod;
 use App\Services\Auth\EmailChangeService;
 use App\Services\Checkout\CheckoutIdentity;
+use App\Services\Invoices\InvoiceService;
 use App\Services\PendingPaymentExpiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -169,6 +170,22 @@ class CustomerDashboardController extends Controller
             'user' => $request->user(),
             'order' => $order,
             'paymentMethodLabel' => $method ? trim((string) ($method->checkout_label ?: $method->name)) : null,
+        ]);
+    }
+
+    /** Invoice PDF of a paid order. Same ownership rule as the order page: somebody else's order simply does not exist. */
+    public function invoice(Request $request, string $orderNumber, InvoiceService $invoices)
+    {
+        $order = Order::query()->ownedByCustomer($request->user())->where('order_number', $orderNumber)
+            ->with(['customer', 'items'])
+            ->firstOrFail();
+
+        abort_unless($invoices->isInvoiceable($order), 404);
+
+        return response($invoices->pdf($order), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$invoices->filename($order).'"',
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 

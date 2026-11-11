@@ -28,15 +28,6 @@ a { color: #f5b800; }
 .ep strong, .ep b { color: #fff; font-weight: 600; }
 .ep-sm { font-size: 12px; color: #5e5e78; line-height: 1.6; }
 
-.einfo { background: #15151e; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; margin: 20px 0; overflow: hidden; }
-.einfo-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; gap: 12px; }
-.einfo-row:last-child { border-bottom: none; }
-.einfo-label { color: #505068; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; flex-shrink: 0; }
-.einfo-val   { color: #dddde8; font-weight: 500; text-align: right; }
-.einfo-val.gold  { color: #f5b800; font-weight: 700; }
-.einfo-val.green { color: #22c55e; }
-.einfo-val.red   { color: #e8445a; }
-
 .ecta-wrap { text-align: center; margin: 26px 0 10px; }
 .ecta      { display: inline-block; background: #f5b800; color: #000 !important; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 38px; border-radius: 9px; letter-spacing: 0.2px; }
 .ecta-sub  { text-align: center; font-size: 12px; color: #505068; margin-top: 8px; }
@@ -56,9 +47,8 @@ a { color: #f5b800; }
 .eticket:last-child { margin-bottom: 0; }
 .eticket-num  { font-size: 12px; font-weight: 700; color: #f5b800; margin-bottom: 3px; }
 .eticket-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 6px; }
-.eticket-meta { font-size: 12px; color: #505068; margin-bottom: 10px; line-height: 1.5; }
-.eticket-links { display: flex; gap: 8px; flex-wrap: wrap; }
-.eticket-links a { font-size: 12px; font-weight: 600; color: #f5b800 !important; text-decoration: none; padding: 6px 14px; border-radius: 7px; border: 1px solid rgba(245,184,0,0.25); background: rgba(245,184,0,0.07); }
+.eticket-meta { font-size: 12px; color: #8a8aa3; margin-bottom: 10px; line-height: 1.5; }
+.eticket-links a { display: inline-block; margin: 0 8px 8px 0; font-size: 12px; font-weight: 600; color: #f5b800 !important; text-decoration: none; padding: 6px 14px; border-radius: 7px; border: 1px solid rgba(245,184,0,0.25); background: rgba(245,184,0,0.07); }
 
 .efooter   { background: #09090c; border-top: 1px solid rgba(255,255,255,0.06); padding: 22px 32px; text-align: center; }
 .efooter p { font-size: 12px; color: #34344a; line-height: 1.7; }
@@ -67,10 +57,7 @@ a { color: #f5b800; }
 @media (max-width: 600px) {
   .ew { border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
   .ebody, .ehero, .eh, .efooter { padding-left: 20px !important; padding-right: 20px !important; }
-  .einfo-row { flex-direction: column; align-items: flex-start; gap: 3px; }
-  .einfo-val { text-align: left !important; }
   .eticket-links a { font-size: 11px; padding: 5px 10px; }
 }
 [dir=rtl] .ep { text-align: right; }
-[dir=rtl] .einfo-val { text-align: left; }
 </style>

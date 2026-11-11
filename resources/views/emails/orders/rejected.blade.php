@@ -15,19 +15,11 @@
     for this event.
   </p>
 
-  <div class="einfo">
-    <div class="einfo-row">
-      <span class="einfo-label">Order</span>
-      <span class="einfo-val gold">#{{ $order->order_number }}</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Current Status</span>
-      <span class="einfo-val red">✕ &nbsp;Rejected</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Reason</span>
-      <span class="einfo-val">Booking request not approved for this event</span>
-    </div>
+  @include('emails.partials.info-table', ['rows' => [
+    ['label' => 'Order', 'value' => '#'.$order->order_number, 'tone' => 'gold'],
+    ['label' => 'Current Status', 'value' => '✕ Rejected', 'tone' => 'red'],
+    ['label' => 'Reason', 'value' => 'Booking request not approved for this event'],
+  ]])
   </div>
 
   <div class="ealert red">

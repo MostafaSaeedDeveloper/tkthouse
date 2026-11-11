@@ -12,6 +12,9 @@ use Illuminate\Support\Collection;
 
 class ReportController extends Controller
 {
+    /** Value of the `event` query parameter that steps back from the Active-events default to every event. */
+    public const ALL_EVENTS = '__all__';
+
     public function event(Request $request, Event $event)
     {
         $managedEvents = $request->user()?->managedEvents ?? collect();
@@ -70,20 +73,40 @@ class ReportController extends Controller
             ->sort()
             ->values();
 
-        $selectedEvent = $forcedEvent?->name ?? trim((string) $request->input('event', ''));
+        // Like Orders and the Dashboard: reports open on the Active events; event=__all__ or one event name steps back.
+        $eventChoiceAll = trim((string) $request->input('event', '')) === self::ALL_EVENTS;
+        $selectedEvent = $forcedEvent?->name ?? ($eventChoiceAll ? '' : trim((string) $request->input('event', '')));
 
         if ($forcedEvent === null && $selectedEvent !== '' && ! $eventOptions->contains($selectedEvent)) {
             $selectedEvent = '';
         }
 
-        $filteredItems = $selectedEvent === ''
-            ? $normalizedItems
-            : $normalizedItems->where('event_name', $selectedEvent)->values();
+        $activeEventNames = collect();
+        if ($forcedEvent === null && $selectedEvent === '' && ! $eventChoiceAll) {
+            $activeEventNames = Event::query()->where('status', 'active')->orderBy('name')->pluck('name');
+        }
+        $eventScopeIsDefault = $activeEventNames->isNotEmpty();
+
+        // Ticket names read "Event - Type": match a ticket to one of the scoped events by that prefix (or the bare name).
+        $nameScope = function ($query, Collection $names) {
+            $query->where(function ($q) use ($names) {
+                foreach ($names as $name) {
+                    $q->orWhere('name', 'like', $name.' - %')->orWhere('name', $name);
+                }
+            });
+        };
+
+        $filteredItems = $selectedEvent !== ''
+            ? $normalizedItems->where('event_name', $selectedEvent)->values()
+            : ($eventScopeIsDefault ? $normalizedItems->whereIn('event_name', $activeEventNames->all())->values() : $normalizedItems);
 
 
         $guestTicketsQuery = Ticket::query()->where('source', 'guest_list');
         if ($startAt && $endAt) {
             $guestTicketsQuery->whereBetween('created_at', [$startAt, $endAt]);
+        }
+        if ($eventScopeIsDefault) {
+            $nameScope($guestTicketsQuery, $activeEventNames);
         }
         if ($selectedEvent !== '') {
             $guestTicketsQuery->where(function ($query) use ($selectedEvent) {
@@ -120,6 +143,10 @@ class ReportController extends Controller
 
         if ($startAt && $endAt) {
             $paidCheckedInTicketsQuery->whereBetween('checked_in_at', [$startAt, $endAt]);
+        }
+
+        if ($eventScopeIsDefault) {
+            $nameScope($paidCheckedInTicketsQuery, $activeEventNames);
         }
 
         if ($selectedEvent !== '') {
@@ -162,6 +189,9 @@ class ReportController extends Controller
             'rangeLabel' => $rangeLabel,
             'selectedEvent' => $selectedEvent,
             'eventOptions' => $eventOptions,
+            'eventScopeIsDefault' => $eventScopeIsDefault,
+            'activeEventNames' => $activeEventNames,
+            'eventChoiceAll' => $eventChoiceAll,
             'startAt' => $startAt,
             'endAt' => $endAt,
             'forcedEvent' => $forcedEvent,

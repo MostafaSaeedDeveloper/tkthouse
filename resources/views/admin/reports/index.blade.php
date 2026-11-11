@@ -14,12 +14,13 @@
 <x-admin.card title="Period" subtitle="Pick a range or enter custom dates.">
     <div class="a-m-range a-chips">
         @foreach($rangeOptions as $key => $label)
-            <a href="{{ $forcedEvent ? route('admin.events.report', ['event' => $forcedEvent, 'range' => $key]) : route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: null]) }}"
+            <a href="{{ $forcedEvent ? route('admin.events.report', ['event' => $forcedEvent, 'range' => $key]) : route('admin.reports.index', ['range' => $key, 'event' => $selectedEvent ?: ($eventChoiceAll ? \App\Http\Controllers\Admin\ReportController::ALL_EVENTS : null)]) }}"
                class="a-chip {{ $selectedRange === $key ? 'is-active' : '' }}" @if($selectedRange === $key) aria-current="true" @endif>{{ $label }}</a>
         @endforeach
     </div>
     <form method="GET" action="{{ $forcedEvent ? route('admin.events.report', $forcedEvent) : route('admin.reports.index') }}" class="a-m-range-form">
         <input type="hidden" name="range" value="custom">
+        @if($selectedEvent !== '' && !$forcedEvent)<input type="hidden" name="event" value="{{ $selectedEvent }}">@elseif($eventChoiceAll)<input type="hidden" name="event" value="{{ \App\Http\Controllers\Admin\ReportController::ALL_EVENTS }}">@endif
         <div class="a-field"><label class="form-label" for="rep-from">From</label>
             <input type="text" id="rep-from" name="from" class="form-control js-flatpickr" value="{{ optional($startAt)->format('Y-m-d') }}" data-date-format="Y-m-d" data-alt-input="true" data-alt-format="m/d/Y" placeholder="From date"></div>
         <div class="a-field"><label class="form-label" for="rep-to">To</label>
@@ -28,8 +29,21 @@
     </form>
 </x-admin.card>
 
+@unless($forcedEvent)
+<form method="GET" action="{{ route('admin.reports.index') }}" class="a-m-range-form" style="margin:0 0 14px">
+    <input type="hidden" name="range" value="{{ $selectedRange }}">
+    @if($selectedRange === 'custom')<input type="hidden" name="from" value="{{ optional($startAt)->format('Y-m-d') }}"><input type="hidden" name="to" value="{{ optional($endAt)->format('Y-m-d') }}">@endif
+    <div class="a-field"><label class="form-label" for="rep-event">Event</label>
+        <select class="form-select" id="rep-event" name="event" onchange="this.form.submit()" style="min-width:220px;max-width:320px">
+            <option value="">Active events</option>
+            <option value="{{ \App\Http\Controllers\Admin\ReportController::ALL_EVENTS }}" @selected($eventChoiceAll)>All events</option>
+            @foreach($eventOptions as $name)<option value="{{ $name }}" @selected($selectedEvent === $name)>{{ $name }}</option>@endforeach
+        </select></div>
+</form>
+@endunless
+
 <p class="a-muted" style="margin:0 0 18px">
-    Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : 'all events' }}</strong> within <strong>{{ $rangeLabel }}</strong>.
+    Showing <strong>{{ $selectedEvent !== '' ? $selectedEvent : ($eventScopeIsDefault ? 'active events ('.$activeEventNames->implode(', ').')' : 'all events') }}</strong> within <strong>{{ $rangeLabel }}</strong>.
 </p>
 
 <section class="a-m-section" aria-labelledby="rep-paid">
