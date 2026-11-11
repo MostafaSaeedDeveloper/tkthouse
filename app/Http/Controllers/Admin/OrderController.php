@@ -949,7 +949,9 @@ class OrderController extends Controller
                 $query->includedInStatistics(); // same exclusion the dashboard applies, so the card number and this list agree
             }
             if ($request->filled('refund_event_id')) {
-                $query->whereHas('items', fn ($i) => $i->where('event_id', $request->integer('refund_event_id')));
+                // One id, or a comma-separated list (the dashboard's Active-events scope).
+                $refundEventIds = array_values(array_filter(array_map('intval', explode(',', (string) $request->input('refund_event_id')))));
+                $query->whereHas('items', fn ($i) => $i->whereIn('event_id', $refundEventIds ?: [0]));
             }
         }
 

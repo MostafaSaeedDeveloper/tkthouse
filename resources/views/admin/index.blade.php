@@ -9,7 +9,7 @@
         if ($pct === null) return null;
         return ($pct >= 0 ? '▲ ' : '▼ ').abs($pct).'% vs previous period';
     };
-    $rangeParams = array_filter(['event_id' => $selectedEvent?->id]);
+    $rangeParams = array_filter(['event_id' => $selectedEvent?->id ?? ($eventChoiceAll ? 'all' : null)]);
 @endphp
 
 @push('styles')
@@ -92,7 +92,7 @@
         </div>
         <form class="a-custom {{ $rangeKey === 'custom' ? 'is-open' : '' }}" id="aCustomRange" method="GET" action="{{ route('admin.dashboard') }}">
             <input type="hidden" name="range" value="custom">
-            @if($selectedEvent)<input type="hidden" name="event_id" value="{{ $selectedEvent->id }}">@endif
+            @if($selectedEvent)<input type="hidden" name="event_id" value="{{ $selectedEvent->id }}">@elseif($eventChoiceAll)<input type="hidden" name="event_id" value="all">@endif
             <label class="a-sr-only" for="aFrom">From</label><input type="date" id="aFrom" name="from" value="{{ $from }}" required>
             <label class="a-sr-only" for="aTo">To</label><input type="date" id="aTo" name="to" value="{{ $to }}" required>
             <button class="a-btn a-btn--dark a-btn--sm" type="submit">Apply</button>
@@ -103,7 +103,8 @@
                 @if($rangeKey === 'custom')<input type="hidden" name="from" value="{{ $from }}"><input type="hidden" name="to" value="{{ $to }}">@endif
                 <label class="a-sr-only" for="aEvent">Event</label>
                 <select class="form-select" id="aEvent" name="event_id" onchange="this.form.submit()" style="min-width:200px;max-width:260px">
-                    <option value="">All events</option>
+                    <option value="">Active events</option>
+                    <option value="all" @selected($eventChoiceAll)>All events</option>
                     @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($selectedEvent?->id === $e->id)>{{ $e->filterLabel() }}</option>@endforeach
                 </select>
             </form>
@@ -123,7 +124,7 @@
 
 @php
     // The KPI link carries the dashboard's own scope (period by refund completion date, event, statistics exclusion) so the list shows exactly what the card counted.
-    $refundParams = ['refunded' => 1, 'stats' => 1, 'refunded_from' => $from, 'refunded_to' => $to] + ($selectedEvent ? ['refund_event_id' => $selectedEvent->id] : []);
+    $refundParams = ['refunded' => 1, 'stats' => 1, 'refunded_from' => $from, 'refunded_to' => $to] + ($selectedEvent ? ['refund_event_id' => $selectedEvent->id] : ($eventScopeIsDefault ? ['refund_event_id' => implode(',', $scopeEventIds)] : []));
     $refundHref = auth()->user()->can('orders.view') && auth()->user()->can('payments.refunds.view') ? route('admin.orders.index', $refundParams) : null;
     $refundPending = $kpis['refunds_pending_count'] > 0 ? number_format($kpis['refunds_pending_count']).' pending request(s) · '.$moneyShort($kpis['refunds_pending_amount']).' (not refunded yet)' : null;
 @endphp

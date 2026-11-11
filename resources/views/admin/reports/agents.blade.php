@@ -7,6 +7,12 @@
 <x-admin.filters :action="route('admin.reports.agents')" :reset="route('admin.reports.agents')">
     <div class="a-field"><label class="form-label" for="ag-from">From</label><input id="ag-from" type="date" name="from" class="form-control" value="{{ $from->toDateString() }}"></div>
     <div class="a-field"><label class="form-label" for="ag-to">To</label><input id="ag-to" type="date" name="to" class="form-control" value="{{ $to->toDateString() }}"></div>
+    <div class="a-field"><label class="form-label" for="ag-event">Event</label>
+        <select id="ag-event" name="event_id" class="form-select">
+            <option value="">Active events</option>
+            <option value="all" @selected($eventChoice === 'all')>All events</option>
+            @foreach($eventOptions as $e)<option value="{{ $e->id }}" @selected($eventChoice === (string) $e->id)>{{ $e->filterLabel() }}</option>@endforeach
+        </select></div>
 </x-admin.filters>
 
 @unless($seesTeam)

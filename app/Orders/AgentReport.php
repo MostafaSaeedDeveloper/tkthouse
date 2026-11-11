@@ -24,9 +24,11 @@ class AgentReport
     public const CANCELED = ['canceled', 'rejected'];
 
     /** @return array{rows: Collection, unassigned: array, unattributed: array, totals: array} */
-    public function build(User $viewer, CarbonInterface $from, CarbonInterface $to): array
+    public function build(User $viewer, CarbonInterface $from, CarbonInterface $to, ?array $eventIds = null): array
     {
-        $visible = fn () => Order::query()->visibleTo($viewer);
+        // $eventIds limits every figure to orders that have an item of those events (null = all events).
+        $visible = fn () => Order::query()->visibleTo($viewer)
+            ->when($eventIds, fn ($q) => $q->whereHas('items', fn ($i) => $i->whereIn('event_id', $eventIds)));
 
         $workflow = $visible()->whereNotNull('assigned_user_id')->whereBetween('created_at', [$from, $to])
             ->select('assigned_user_id', 'status', DB::raw('COUNT(*) as c'))->groupBy('assigned_user_id', 'status')->get();
@@ -102,10 +104,11 @@ class AgentReport
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function forEvents(User $viewer, CarbonInterface $from, CarbonInterface $to): Collection
+    public function forEvents(User $viewer, CarbonInterface $from, CarbonInterface $to, ?array $eventIds = null): Collection
     {
         $items = fn () => OrderItem::query()->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->whereNull('orders.deleted_at')
+            ->when($eventIds, fn ($q) => $q->whereIn('order_items.event_id', $eventIds))
             ->whereIn('orders.id', Order::query()->visibleTo($viewer)->select('orders.id'));
 
         $workflow = $items()->whereBetween('orders.created_at', [$from, $to])
@@ -139,9 +142,9 @@ class AgentReport
     }
 
     /** The viewer's own row (zeros when they have none yet). */
-    public function mine(User $viewer, CarbonInterface $from, CarbonInterface $to): array
+    public function mine(User $viewer, CarbonInterface $from, CarbonInterface $to, ?array $eventIds = null): array
     {
-        $data = $this->build($viewer, $from, $to);
+        $data = $this->build($viewer, $from, $to, $eventIds);
         $row = $data['rows']->firstWhere('user_id', $viewer->id) ?? [
             'user_id' => $viewer->id, 'name' => $viewer->name, 'assigned' => 0, 'pending' => 0, 'paid' => 0, 'canceled' => 0, 'win_rate' => null,
             'sold_orders' => 0, 'collected' => 0.0, 'refunded' => 0.0, 'net' => 0.0, 'tickets' => 0, 'methods' => [], 'accounts' => [],
