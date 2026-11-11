@@ -568,7 +568,7 @@ class OrderController extends Controller
         Mail::to($order->customer->email)
             ->send(new OrderApprovedMail($order, $paymentLink));
 
-        $this->sendOrderStatusChangedMail($order, $oldStatus, (string) $order->status);
+        // No separate "order status changed" e-mail here: the approval e-mail (with the payment link) is the one the customer gets.
     }
 
     public function reject(Request $request, Order $order)
