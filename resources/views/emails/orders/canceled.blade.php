@@ -14,19 +14,11 @@
     As a result, the order has been automatically canceled.
   </p>
 
-  <div class="einfo">
-    <div class="einfo-row">
-      <span class="einfo-label">Order</span>
-      <span class="einfo-val gold">#{{ $order->order_number }}</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Current Status</span>
-      <span class="einfo-val red">✕ &nbsp;Canceled</span>
-    </div>
-    <div class="einfo-row">
-      <span class="einfo-label">Reason</span>
-      <span class="einfo-val">Payment deadline expired</span>
-    </div>
+  @include('emails.partials.info-table', ['rows' => [
+    ['label' => 'Order', 'value' => '#'.$order->order_number, 'tone' => 'gold'],
+    ['label' => 'Current Status', 'value' => '✕ Canceled', 'tone' => 'red'],
+    ['label' => 'Reason', 'value' => 'Payment deadline expired'],
+  ]])
   </div>
 
   <div class="ealert red">
