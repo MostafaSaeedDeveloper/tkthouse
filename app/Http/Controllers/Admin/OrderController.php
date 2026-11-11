@@ -74,9 +74,11 @@ class OrderController extends Controller
         // Summary + quick-filter counts follow every active filter except the status itself, within the same permission scope.
         $summaryQuery = clone $ordersQuery;
         $this->applyOrderFilters($summaryQuery, $request, $canFilterByEvent, withStatus: false);
+        $this->applyDefaultEventScope($summaryQuery, $request);
         $summary = $this->buildSummary($summaryQuery);
 
         $this->applyOrderFilters($ordersQuery, $request, $canFilterByEvent);
+        $this->applyDefaultEventScope($ordersQuery, $request);
 
         // Refund view (dashboard KPI target): ONLY orders with a confirmed refund, with the figures the operations team reconciles against.
         $refundMode = $request->boolean('refunded');
@@ -114,9 +116,14 @@ class OrderController extends Controller
         $paymentMethods = $this->activePaymentMethods();
         $paymentMethodLabels = $this->paymentMethodLabels();
 
+        // Everyone who can open Orders can step back to an older event; without the all-orders permission the list is
+        // limited to events that have orders they are allowed to see (an agent never learns about other events).
         $events = $canFilterByEvent
             ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
-            : collect();
+            : Event::query()->whereIn('id', \App\Models\OrderItem::query()->select('event_id')->whereIn('order_id', tap(Order::query()->visibleTo($request->user()), fn ($q) => $this->applyManagedEventsScope($q, $managedEvents))->select('orders.id')))
+                ->orderBy('name')->get(['id', 'name', 'status']);
+        $eventScopeIsDefault = $this->usesDefaultEventScope($request);
+        $activeEventNames = $eventScopeIsDefault ? Event::query()->where('status', 'active')->orderBy('name')->pluck('name') : collect();
 
         $canExport = $this->isSuperAdmin($request->user());
         $statusOptions = self::ORDER_STATUS_OPTIONS;
@@ -130,7 +137,7 @@ class OrderController extends Controller
 
         $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals'));
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals', 'eventScopeIsDefault', 'activeEventNames'));
     }
 
     public function deleted(Request $request)
@@ -867,6 +874,41 @@ class OrderController extends Controller
      * The single place where list filters are interpreted (index, trash, export and the summary share it).
      * `withStatus: false` leaves out status/group so the summary can count every status under the other filters.
      */
+    /**
+     * The Orders list opens on the orders of the Active events only. The Event filter steps back: "All events" or one
+     * specific event (an id is handled by applyOrderFilters). Looking something up by reference / customer / search, and
+     * the refund view, are not narrowed: an order of an older event must still be findable. With no active event at all
+     * nothing is narrowed either, so the list is never empty by construction.
+     */
+    private function usesDefaultEventScope(Request $request): bool
+    {
+        if ($request->boolean('refunded')) {
+            return false;
+        }
+
+        $choice = (string) $request->input('event_id', '');
+        if ($choice === 'all' || ctype_digit($choice)) {
+            return false;
+        }
+
+        foreach (['reference', 'customer', 'search'] as $lookup) {
+            if ($request->filled($lookup)) {
+                return false;
+            }
+        }
+
+        return Event::query()->where('status', 'active')->exists();
+    }
+
+    private function applyDefaultEventScope(Builder $query, Request $request): void
+    {
+        if (! $this->usesDefaultEventScope($request)) {
+            return;
+        }
+
+        $query->whereHas('items', fn ($items) => $items->whereIn('event_id', Event::query()->where('status', 'active')->select('id')));
+    }
+
     private function applyOrderFilters(Builder $query, Request $request, bool $canFilterByEvent, bool $withStatus = true): void
     {
         // Assignee filter (only meaningful while Order Assignment is on; visibleTo() already limits what a user can reach).
@@ -915,7 +957,7 @@ class OrderController extends Controller
             $query->where('payment_method', (string) $request->input('payment_method'));
         }
 
-        if ($canFilterByEvent && $request->filled('event_id')) {
+        if (ctype_digit((string) $request->input('event_id', ''))) {
             $query->whereHas('items', function ($itemsQuery) use ($request) {
                 $itemsQuery->where('event_id', $request->integer('event_id'));
             });

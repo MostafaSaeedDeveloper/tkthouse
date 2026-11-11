@@ -88,7 +88,7 @@
 @if($seesTeam)
 <div class="a-grid a-grid--2" style="margin-top:20px">
     <x-admin.card title="Unassigned queue"><p><strong>{{ $data['unassigned']['orders'] }}</strong> order(s) created in this period have no assignee ({{ $data['unassigned']['pending'] }} still pending).
-        <a href="{{ route('admin.orders.index', ['assignee' => 'unassigned']) }}">View them</a></p></x-admin.card>
+        <a href="{{ route('admin.orders.index', ['assignee' => 'unassigned', 'event_id' => 'all']) }}">View them</a></p></x-admin.card>
     <x-admin.card title="Unattributed sales"><p><strong>{{ $data['unattributed']['orders'] }}</strong> order(s), {{ $money($data['unattributed']['amount']) }} EGP paid in this period without an attributed agent (paid before assignment was enabled, or never assigned). They are never guessed onto anyone.</p></x-admin.card>
 </div>
 @endif

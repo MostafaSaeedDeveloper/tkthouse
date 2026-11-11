@@ -42,6 +42,9 @@
         <div><dt>Canceled</dt><dd>{{ number_format($summary['canceled']) }}</dd><small>Canceled or rejected</small></div>
     </dl>
     <p class="a-ord-summary__scope"><i class="fa fa-calendar" aria-hidden="true"></i> {{ $rangeLabel }} <span aria-hidden="true">·</span> follows your search and filters</p>
+    @if($eventScopeIsDefault)
+        <p class="a-ord-summary__scope" data-event-scope><i class="fa fa-ticket" aria-hidden="true"></i> Showing the active {{ \Illuminate\Support\Str::plural('event', $activeEventNames->count()) }}: {{ $activeEventNames->implode(', ') }} <span aria-hidden="true">·</span> use <strong>Filters ▸ Event</strong> to see older orders</p>
+    @endif
 </section>
 
 <nav class="a-ord-quick" aria-label="Quick status filters">
@@ -61,7 +64,7 @@
 </div>
 @endif
 
-@include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o'])
+@include('admin.orders.partials.filters', ['action' => route('admin.orders.index'), 'reset' => route('admin.orders.index'), 'idp' => 'o', 'eventScope' => true])
 
 @php $canBulk = $canAssign || auth()->user()->can('orders.update') || auth()->user()->can('orders.delete'); @endphp
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
