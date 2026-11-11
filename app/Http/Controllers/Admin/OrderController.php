@@ -122,8 +122,6 @@ class OrderController extends Controller
             ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : Event::query()->whereIn('id', \App\Models\OrderItem::query()->select('event_id')->whereIn('order_id', tap(Order::query()->visibleTo($request->user()), fn ($q) => $this->applyManagedEventsScope($q, $managedEvents))->select('orders.id')))
                 ->orderBy('name')->get(['id', 'name', 'status']);
-        $eventScopeIsDefault = $this->usesDefaultEventScope($request);
-        $activeEventNames = $eventScopeIsDefault ? Event::query()->where('status', 'active')->orderBy('name')->pluck('name') : collect();
 
         $canExport = $this->isSuperAdmin($request->user());
         $statusOptions = self::ORDER_STATUS_OPTIONS;
@@ -137,7 +135,7 @@ class OrderController extends Controller
 
         $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals', 'eventScopeIsDefault', 'activeEventNames'));
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals'));
     }
 
     public function deleted(Request $request)

@@ -73,7 +73,7 @@ class AdminOrdersEventScopeTest extends TestCase
         $this->order('1002', $this->old);
         $this->order('1003', $this->archivedOne);
 
-        $res = $this->get(route('admin.orders.index'))->assertOk()->assertSee('data-event-scope', false)->assertSee('Current Night');
+        $res = $this->get(route('admin.orders.index'))->assertOk()->assertDontSee('data-event-scope', false);
 
         $this->assertSame(['1001'], collect($res->viewData('orders')->items())->pluck('order_number')->all());
         $this->assertSame(1, $res->viewData('summary')['all']);
@@ -90,7 +90,6 @@ class AdminOrdersEventScopeTest extends TestCase
         $this->assertSame(['1002'], $this->listed(['event_id' => $this->old->id])->all());
         $this->assertSame(['1001'], $this->listed(['event_id' => $this->current->id])->all());
 
-        $this->get(route('admin.orders.index', ['event_id' => 'all']))->assertDontSee('data-event-scope', false);
     }
 
     public function test_the_event_filter_is_offered_with_active_events_as_the_default_option(): void
