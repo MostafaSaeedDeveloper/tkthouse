@@ -119,7 +119,7 @@ class OrderInvoiceTest extends TestCase
         $me = User::factory()->create(['email_verified_at' => now()]);
         $order = $this->paid($me);
 
-        $this->actingAs($me)->get(route('front.account.orders', ['status' => 'paid']))->assertOk()->assertSee('Invoice (PDF)');
+        $this->actingAs($me)->get(route('front.account.orders', ['status' => 'paid']))->assertOk()->assertSee(route('front.account.orders.invoice', $order->order_number), false);
         $this->actingAs($me)->get(route('front.account.orders.show', $order->order_number))->assertOk()->assertSee('Download invoice (PDF)');
 
         $res = $this->actingAs($me)->get(route('front.account.orders.invoice', $order->order_number));
