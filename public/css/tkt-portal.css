@@ -65,15 +65,16 @@
 .tkt-order-card__meta { display: flex; gap: 8px 22px; flex-wrap: wrap; margin: 0; font-size: var(--tkt-fs-sm); }
 .tkt-order-card__meta dt { font-size: var(--tkt-fs-xs); color: var(--tkt-muted); font-weight: 600; }
 .tkt-order-card__meta dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tkt-order-card__action { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.tkt-order-card__action { grid-column: 1 / -1; display: flex; gap: 8px; }
+.tkt-order-card__action .tkt-btn { flex: 1; }
 @media (min-width: 768px) {
     .tkt-order-card { grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; }
-    .tkt-order-card__action { grid-column: auto; }
+    /* desktop/tablet: the actions stack in one tidy column of equal-width buttons */
+    .tkt-order-card__action { grid-column: auto; flex-direction: column; min-width: 150px; }
 }
 @media (max-width: 479px) {
     .tkt-order-card { grid-template-columns: 84px minmax(0, 1fr); gap: 12px; }
     .tkt-order-card__media { width: 84px; height: 84px; }
-    .tkt-order-card__action .tkt-btn { width: 100%; }
 }
 
 /* order details */

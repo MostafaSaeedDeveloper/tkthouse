@@ -62,9 +62,12 @@
                         </dl>
                     </div>
                     <div class="tkt-order-card__action">
-                        <a class="tkt-btn tkt-btn--outline" href="{{ route('front.account.orders.show', $order->order_number) }}">View details<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                        <a class="tkt-btn tkt-btn--dark tkt-btn--sm" href="{{ route('front.account.orders.show', $order->order_number) }}">View details<span class="tkt-sr-only"> for order {{ $order->order_number }}</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
                         @if(in_array($order->status, ['paid', 'refunded', 'partially_refunded'], true) && $order->paid_at)
-                            <a class="tkt-btn tkt-btn--ghost" href="{{ route('front.account.orders.invoice', $order->order_number) }}">Invoice (PDF)<span class="tkt-sr-only"> for order {{ $order->order_number }}</span></a>
+                            <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.account.orders.invoice', $order->order_number) }}">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                                Invoice<span class="tkt-sr-only"> (PDF) for order {{ $order->order_number }}</span></a>
                         @endif
                     </div>
                 </li>

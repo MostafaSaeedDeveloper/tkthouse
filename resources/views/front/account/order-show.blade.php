@@ -130,7 +130,9 @@
                 @if($order->paid_at)<div><dt>Paid on</dt><dd>{{ $order->paid_at->format('d M Y, g:i A') }}</dd></div>@endif
             </dl>
             @if(app(\App\Services\Invoices\InvoiceService::class)->isInvoiceable($order))
-                <a class="tkt-btn tkt-btn--outline" style="margin-top:14px;width:100%;text-align:center" href="{{ route('front.account.orders.invoice', $order->order_number) }}">Download invoice (PDF)</a>
+                <a class="tkt-btn tkt-btn--outline tkt-btn--block" style="margin-top:14px" href="{{ route('front.account.orders.invoice', $order->order_number) }}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                    Download invoice (PDF)</a>
             @endif
         </section>
 
