@@ -190,7 +190,7 @@
                         <option value="female" @selected(($ticket['gender'] ?? '') === 'female')>Female only</option>
                     </select>
                 </div>
-                <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg><span>Drag to reorder</span></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+                <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
         @endforeach
     </div>
@@ -332,7 +332,7 @@
                 <option value="female">Female only</option>
             </select>
         </div>
-        <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg><span>Drag to reorder</span></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+        <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
 
@@ -551,7 +551,11 @@
                     let h = el.querySelector(':scope > .a-ev-row__title');
                     if (!h) { h = document.createElement('div'); h.className = 'a-ev-row__title a-ev-span-6'; el.prepend(h); }
                     const sold = Number(el.dataset.sold || 0);
-                    h.textContent = word + ' ' + (i + 1) + (sold ? ' · ' + sold + ' sold' : '');
+                    let t = h.querySelector(':scope > .a-ev-row__label');
+                    if (!t) { t = document.createElement('span'); t.className = 'a-ev-row__label'; h.prepend(t); }
+                    t.textContent = word + ' ' + (i + 1) + (sold ? ' · ' + sold + ' sold' : '');
+                    const grip = el.querySelector('.a-ev-handle'); // ticket rows: the drag handle sits beside the title
+                    if (grip && grip.parentElement !== h) h.appendChild(grip);
                 });
                 let empty = container.parentElement.querySelector('.a-ev-empty');
                 if (!rows.length && !empty) {
