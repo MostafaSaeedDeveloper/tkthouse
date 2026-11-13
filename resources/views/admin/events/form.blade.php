@@ -173,7 +173,7 @@
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control form-control-color w-100" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-label">Label</label><input class="form-control" id="tickets-{{ $index }}-label" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
-                <div class="a-field a-ev-span-3"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
+                <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
                 <div class="a-field">
                     <span class="form-label">Couple ticket</span>
                     <div class="form-check">
@@ -189,7 +189,6 @@
                         <option value="male" @selected(($ticket['gender'] ?? '') === 'male')>Male only</option>
                         <option value="female" @selected(($ticket['gender'] ?? '') === 'female')>Female only</option>
                     </select>
-                    <span class="a-hint">Fixed gender: the buyer isn't asked for it.</span>
                 </div>
                 <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
@@ -315,7 +314,7 @@
         <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control form-control-color w-100" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
         <div class="a-field"><label class="form-label" for="__ID__-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-label">Label</label><input class="form-control" id="__ID__-label" name="__NAME__[label]"></div>
-        <div class="a-field a-ev-span-3"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
+        <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
         <div class="a-field">
             <span class="form-label">Couple ticket</span>
             <div class="form-check">
@@ -331,7 +330,6 @@
                 <option value="male">Male only</option>
                 <option value="female">Female only</option>
             </select>
-            <span class="a-hint">Fixed gender: the buyer isn't asked for it.</span>
         </div>
         <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
