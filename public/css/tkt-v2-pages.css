@@ -413,3 +413,6 @@ body.tkt-has-bottombar { padding-bottom: 84px; }
     .tkt-wz .tkt-form-grid { row-gap: 12px; }
     .tkt-wz .tkt-attendee__head { margin-bottom: 8px; }
 }
+
+/* Ticket label (e.g. "Wave 1") — highlighted above the ticket name on the event page */
+.tkt-ticket__label { margin-bottom: 6px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 0 0 2px var(--tkt-primary-soft, rgba(0,0,0,.08)); }

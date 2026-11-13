@@ -91,6 +91,7 @@ class CheckoutSelection
                     'ticket_name' => $ticket->name,
                     'ticket_price' => (float) $ticket->price,
                     'is_couple' => (bool) $ticket->is_couple,
+                    'gender' => $ticket->gender,
                     'event_name' => $event->name,
                 ];
             }

@@ -157,6 +157,8 @@ final class EventTicketSync
             'label' => $row['label'] ?? null,
             'description' => $row['description'] ?? null,
             'is_couple' => $isCouple,
+            // A couple pass is for one man and one woman, so a fixed gender only makes sense on a single-person ticket.
+            'gender' => $isCouple || ! in_array($row['gender'] ?? null, ['male', 'female'], true) ? null : $row['gender'],
             'max_per_order' => $isCouple ? 2 : max(1, (int) ($row['max_per_order'] ?? 10)),
         ];
     }

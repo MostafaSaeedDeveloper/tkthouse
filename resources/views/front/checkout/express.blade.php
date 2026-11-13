@@ -153,15 +153,24 @@
                                         <input class="tkt-input {{ $errors->has("attendees.$i.phone") ? 'is-invalid' : '' }}" id="att_{{ $i }}_phone" name="attendees[{{ $i }}][phone]" type="tel" inputmode="tel" value="{{ $attendeeValue($i, 'phone') }}" autocomplete="off" placeholder="100 000 0000" required data-phone-intl data-att-phone>
                                         @error("attendees.$i.phone")<div class="tkt-field__error">{{ $message }}</div>@enderror
                                     </div>
-                                    <div class="tkt-field">
-                                        <span class="tkt-label" id="att_{{ $i }}_gender_l">Gender</span>
-                                        <div class="tkt-gender {{ $errors->has("attendees.$i.gender") ? 'is-invalid' : '' }}" role="radiogroup" aria-labelledby="att_{{ $i }}_gender_l">
-                                            @foreach(['male' => 'Male', 'female' => 'Female'] as $val => $label)
-                                                <label><input type="radio" name="attendees[{{ $i }}][gender]" value="{{ $val }}" required @checked($attendeeValue($i, 'gender') === $val)><span>{{ $label }}</span></label>
-                                            @endforeach
+                                    @if(in_array($group['gender'] ?? null, ['male', 'female'], true))
+                                        {{-- Gender is fixed by the ticket type: shown, not asked (the server sets it again from the ticket) --}}
+                                        <div class="tkt-field">
+                                            <span class="tkt-label">Gender</span>
+                                            <div><x-tkt.badge>{{ ucfirst($group['gender']) }}</x-tkt.badge></div>
+                                            <input type="hidden" name="attendees[{{ $i }}][gender]" value="{{ $group['gender'] }}">
                                         </div>
-                                        @error("attendees.$i.gender")<div class="tkt-field__error">{{ $message }}</div>@enderror
-                                    </div>
+                                    @else
+                                        <div class="tkt-field">
+                                            <span class="tkt-label" id="att_{{ $i }}_gender_l">Gender</span>
+                                            <div class="tkt-gender {{ $errors->has("attendees.$i.gender") ? 'is-invalid' : '' }}" role="radiogroup" aria-labelledby="att_{{ $i }}_gender_l">
+                                                @foreach(['male' => 'Male', 'female' => 'Female'] as $val => $label)
+                                                    <label><input type="radio" name="attendees[{{ $i }}][gender]" value="{{ $val }}" required @checked($attendeeValue($i, 'gender') === $val)><span>{{ $label }}</span></label>
+                                                @endforeach
+                                            </div>
+                                            @error("attendees.$i.gender")<div class="tkt-field__error">{{ $message }}</div>@enderror
+                                        </div>
+                                    @endif
                                     <div class="tkt-field">
                                         <label class="tkt-label" for="att_{{ $i }}_social">Instagram / social profile</label>
                                         <input class="tkt-input {{ $errors->has("attendees.$i.social_profile") ? 'is-invalid' : '' }}" id="att_{{ $i }}_social" name="attendees[{{ $i }}][social_profile]" type="text" value="{{ $attendeeValue($i, 'social_profile') }}" placeholder="@username" autocomplete="off" required>

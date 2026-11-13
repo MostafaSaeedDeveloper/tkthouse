@@ -21,6 +21,7 @@
         'description' => $ticket->description,
         'max_per_order' => $ticket->max_per_order,
         'is_couple' => (bool) $ticket->is_couple,
+        'gender' => $ticket->gender,
     ])->toArray() : [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10, 'is_couple' => false]]);
 
     if (empty($ticketRows)) {
@@ -181,6 +182,15 @@
                         <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
                     </div>
                 </div>
+                <div class="a-field">
+                    <label class="form-label" for="tickets-{{ $index }}-gender">Gender</label>
+                    <select class="form-select ticket-gender" id="tickets-{{ $index }}-gender" name="tickets[{{ $index }}][gender]" @disabled((bool) ($ticket['is_couple'] ?? false))>
+                        <option value="">Buyer chooses</option>
+                        <option value="male" @selected(($ticket['gender'] ?? '') === 'male')>Male only</option>
+                        <option value="female" @selected(($ticket['gender'] ?? '') === 'female')>Female only</option>
+                    </select>
+                    <span class="a-hint">Fixed gender: the buyer isn't asked for it.</span>
+                </div>
                 <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
         @endforeach
@@ -314,6 +324,15 @@
                 <label class="form-check-label" for="__ID__">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
             </div>
         </div>
+        <div class="a-field">
+            <label class="form-label" for="__ID__-gender">Gender</label>
+            <select class="form-select ticket-gender" id="__ID__-gender" name="__NAME__[gender]">
+                <option value="">Buyer chooses</option>
+                <option value="male">Male only</option>
+                <option value="female">Female only</option>
+            </select>
+            <span class="a-hint">Fixed gender: the buyer isn't asked for it.</span>
+        </div>
         <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
@@ -343,6 +362,19 @@
             container.insertAdjacentHTML('beforeend', html);
             container.dataset.nextIndex = String(nextIndex + 1);
         };
+
+        // A couple pass is one man + one woman, so a fixed gender doesn't apply: lock the select while "Couples only" is ticked.
+        document.addEventListener('change', (event) => {
+            const box = event.target.closest('input[type="checkbox"][name$="[is_couple]"]');
+            const select = box?.closest('.ticket-row')?.querySelector('.ticket-gender');
+            if (!select) {
+                return;
+            }
+            select.disabled = box.checked;
+            if (box.checked) {
+                select.value = '';
+            }
+        });
 
         document.getElementById('add-ticket-row')?.addEventListener('click', () => {
             addRow('ticket-rows', 'ticket-row-template', 'tickets');
