@@ -89,3 +89,11 @@
 .a-ev-empty { padding: 14px; border: 1px dashed var(--a-line); border-radius: var(--a-radius-sm); text-align: center; margin: 0; }
 .a-ev-actionbar { position: sticky; bottom: 0; z-index: 6; background: var(--a-surface); border-top: 1px solid var(--a-line); padding: 12px 0; margin-top: 16px; }
 .a-ev-row > .a-ev-row__title { grid-column: 1 / -1; }
+
+/* ---- ticket types: drag handle + add button under the last row ---- */
+.a-ev-row__tools .a-ev-handle { display: inline-flex; align-items: center; gap: 8px; margin-right: auto; padding: 6px 10px; border-radius: 8px; color: var(--a-muted); font-size: 12px; font-weight: 600; cursor: grab; user-select: none; }
+.a-ev-row__tools .a-ev-handle:hover { background: var(--a-line); color: var(--a-ink); }
+.a-ev-row__tools .a-ev-handle:active { cursor: grabbing; }
+.a-ev-row.is-dragging { opacity: .45; border-style: dashed; }
+.a-ev-add-bottom { display: flex; justify-content: center; margin-top: 12px; }
+@media (max-width: 767px) { .a-ev-handle span { display: none; } }

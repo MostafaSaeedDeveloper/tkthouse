@@ -190,10 +190,11 @@
                         <option value="female" @selected(($ticket['gender'] ?? '') === 'female')>Female only</option>
                     </select>
                 </div>
-                <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+                <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg><span>Drag to reorder</span></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
         @endforeach
     </div>
+    <div class="a-ev-add-bottom"><button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-ticket-row-bottom"><i class="fa fa-plus"></i> Add Ticket Type</button></div>
     <div id="removed-tickets"></div>
 </div>
 
@@ -331,7 +332,7 @@
                 <option value="female">Female only</option>
             </select>
         </div>
-        <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+        <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg><span>Drag to reorder</span></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
 
@@ -374,8 +375,16 @@
             }
         });
 
-        document.getElementById('add-ticket-row')?.addEventListener('click', () => {
-            addRow('ticket-rows', 'ticket-row-template', 'tickets');
+        // Both buttons (top and the one under the last ticket) append a ticket at the end; the new one is scrolled to and focused
+        ['add-ticket-row', 'add-ticket-row-bottom'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('click', () => {
+                addRow('ticket-rows', 'ticket-row-template', 'tickets');
+                renumber();
+                const rows = document.querySelectorAll('#ticket-rows .ticket-row');
+                const last = rows[rows.length - 1];
+                last?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                last?.querySelector('input[name$="[name]"]')?.focus({ preventScroll: true });
+            });
         });
 
         document.getElementById('add-fee-row')?.addEventListener('click', () => {
@@ -564,6 +573,39 @@
             dir < 0 ? sib.before(row) : sib.after(row);
             renumber();
         });
+        // Drag & drop reordering: a row only becomes draggable while its handle is held, so text fields keep selecting text normally
+        (() => {
+            const box = document.getElementById('ticket-rows');
+            if (!box) return;
+            let dragging = null;
+            box.addEventListener('mousedown', (e) => {
+                const row = e.target.closest('.a-ev-handle') && e.target.closest('.ticket-row');
+                if (row) row.draggable = true;
+            });
+            box.addEventListener('dragstart', (e) => {
+                const row = e.target.closest?.('.ticket-row');
+                if (!row || !row.draggable) return;
+                dragging = row;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', '');
+                setTimeout(() => row.classList.add('is-dragging'), 0);
+            });
+            box.addEventListener('dragover', (e) => {
+                if (!dragging) return;
+                e.preventDefault();
+                const others = [...box.querySelectorAll('.ticket-row:not(.is-dragging)')];
+                const next = others.find((r) => { const b = r.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
+                next ? box.insertBefore(dragging, next) : box.appendChild(dragging);
+            });
+            box.addEventListener('drop', (e) => e.preventDefault());
+            box.addEventListener('dragend', () => {
+                if (!dragging) return;
+                dragging.classList.remove('is-dragging');
+                dragging.draggable = false;
+                dragging = null;
+                renumber();
+            });
+        })();
         document.querySelector('#ticket-rows')?.closest('form')?.addEventListener('submit', () => {
             document.querySelectorAll('#ticket-rows .ticket-row').forEach((row, i) => {
                 const field = row.querySelector('input[name^="tickets["]'); const m = field && field.name.match(/^tickets\[(\d+)\]/);
