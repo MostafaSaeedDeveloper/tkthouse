@@ -416,3 +416,7 @@ body.tkt-has-bottombar { padding-bottom: 84px; }
 
 /* Ticket label (e.g. "Wave 1") — highlighted above the ticket name on the event page */
 .tkt-ticket__label { margin-bottom: 6px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 0 0 2px var(--tkt-primary-soft, rgba(0,0,0,.08)); }
+
+/* Gender decided by the ticket type: a locked, input-sized field instead of the male/female choice */
+.tkt-gender-fixed { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--tkt-line-strong); border-radius: var(--tkt-radius-sm); background: #f5f5f4; color: var(--tkt-ink); font-size: var(--tkt-fs-base); font-weight: 600; line-height: 1.4; }
+.tkt-gender-fixed svg { opacity: .55; flex: none; }
