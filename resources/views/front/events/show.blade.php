@@ -280,6 +280,7 @@
                                      data-index="{{ $i }}"
                                      data-disabled="0">
                                     <div class="tkt-ticket__info">
+                                        @if(filled($ticket->label))<x-tkt.badge variant="primary" class="tkt-ticket__label">{{ $ticket->label }}</x-tkt.badge>@endif
                                         <div class="tkt-ticket__name">{{ $ticket->name }}</div>
                                         @if($ticket->description)<div class="tkt-ticket__desc">{{ $ticket->description }}</div>@endif
                                     </div>
@@ -290,6 +291,7 @@
                                             <x-tkt.badge variant="warning">Couples only · 2 tickets</x-tkt.badge>
                                         @else
                                             <span>Max {{ $maxQuantity }} per order</span>
+                                            @if(in_array($ticket->gender, ['male', 'female'], true))<x-tkt.badge>{{ ucfirst($ticket->gender) }} only</x-tkt.badge>@endif
                                         @endif
                                     </div>
                                     <div class="tkt-stepper" role="group" aria-label="Quantity for {{ $ticket->name }}">

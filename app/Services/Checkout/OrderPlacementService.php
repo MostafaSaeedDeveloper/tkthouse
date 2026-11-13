@@ -84,7 +84,7 @@ class OrderPlacementService
                     'holder_name' => trim((string) $attendee['name']),
                     'holder_email' => trim((string) $attendee['email']),
                     'holder_phone' => trim((string) $attendee['phone']),
-                    'holder_gender' => (string) $attendee['gender'],
+                    'holder_gender' => in_array($unit['gender'] ?? null, ['male', 'female'], true) ? $unit['gender'] : (string) $attendee['gender'],
                     'holder_social_profile' => trim((string) ($attendee['social_profile'] ?? '')) ?: null,
                 ]);
             }
