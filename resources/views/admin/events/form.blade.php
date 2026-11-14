@@ -223,7 +223,7 @@
     <div class="a-ev-section-head">
         <div>
             <h3>Lineup Artists</h3>
-            <p class="a-ev-block__desc">Performers shown on the event page, ordered by the Order field.</p>
+            <p class="a-ev-block__desc">Performers shown on the event page. Drag the handle beside each artist to reorder.</p>
         </div>
         <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-lineup-row"><i class="fa fa-plus"></i> Add Artist</button>
     </div>
@@ -241,18 +241,15 @@
                         <input class="form-control" id="lineups-{{ $index }}-instagram" name="lineups[{{ $index }}][instagram]" value="{{ ltrim($lineup['instagram'] ?? '', '@') }}" placeholder="username">
                     </div>
                 </div>
-                <div class="a-field a-ev-span-2">
+                <div class="a-field a-ev-span-3">
                     <label class="form-label" for="lineups-{{ $index }}-time">Performance Time</label>
                     <input class="form-control" id="lineups-{{ $index }}-time" name="lineups[{{ $index }}][performance_time]" value="{{ $lineup['performance_time'] ?? '' }}" placeholder="e.g. 10:00 PM">
                 </div>
-                <div class="a-field a-ev-span-2">
+                <div class="a-field a-ev-span-3">
                     <label class="form-label" for="lineups-{{ $index }}-date">Performance Date</label>
                     <input type="text" class="form-control js-flatpickr" id="lineups-{{ $index }}-date" name="lineups[{{ $index }}][performance_date]" value="{{ $lineup['performance_date'] ?? '' }}" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
                 </div>
-                <div class="a-field">
-                    <label class="form-label" for="lineups-{{ $index }}-order">Order</label>
-                    <input type="number" min="0" class="form-control" id="lineups-{{ $index }}-order" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
-                </div>
+                <input type="hidden" class="lineup-order" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
                 <div class="a-field a-ev-span-6">
                     <label class="form-label" for="lineup-image-{{ $index }}">Artist Image</label>
                     <input type="hidden" name="lineups[{{ $index }}][existing_image]" value="{{ $lineup['image'] ?? '' }}">
@@ -264,11 +261,13 @@
                     @endif
                 </div>
                 <div class="a-ev-row__tools a-ev-span-6">
+                    <span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span>
                     <button type="button" class="a-btn a-btn--danger a-btn--sm remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
                 </div>
             </div>
         @endforeach
     </div>
+    <div class="a-ev-add-bottom"><button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-lineup-row-bottom"><i class="fa fa-plus"></i> Add Artist</button></div>
 </div>
 
 <template id="lineup-row-template">
@@ -284,24 +283,22 @@
                 <input class="form-control" id="lineup-__LINEUPINDEX__-instagram" name="__LINEUPNAME__[instagram]" placeholder="username">
             </div>
         </div>
-        <div class="a-field a-ev-span-2">
+        <div class="a-field a-ev-span-3">
             <label class="form-label" for="lineup-__LINEUPINDEX__-time">Performance Time</label>
             <input class="form-control" id="lineup-__LINEUPINDEX__-time" name="__LINEUPNAME__[performance_time]" placeholder="e.g. 10:00 PM">
         </div>
-        <div class="a-field a-ev-span-2">
+        <div class="a-field a-ev-span-3">
             <label class="form-label" for="lineup-__LINEUPINDEX__-date">Performance Date</label>
             <input type="text" class="form-control js-flatpickr" id="lineup-__LINEUPINDEX__-date" name="__LINEUPNAME__[performance_date]" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
         </div>
-        <div class="a-field">
-            <label class="form-label" for="lineup-__LINEUPINDEX__-order">Order</label>
-            <input type="number" min="0" class="form-control" id="lineup-__LINEUPINDEX__-order" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
-        </div>
+        <input type="hidden" class="lineup-order" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
         <div class="a-field a-ev-span-6">
             <label class="form-label" for="lineup-image-__LINEUPINDEX__">Artist Image</label>
             <input type="file" class="form-control lineup-image-input" id="lineup-image-__LINEUPINDEX__" name="lineup_images[__LINEUPINDEX__]" accept="image/*" data-preview-id="lineup-preview-__LINEUPINDEX__">
             <img id="lineup-preview-__LINEUPINDEX__" src="" alt="" class="a-ev-lineup-img d-none">
         </div>
         <div class="a-ev-row__tools a-ev-span-6">
+            <span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span>
             <button type="button" class="a-btn a-btn--danger a-btn--sm remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
         </div>
     </div>
@@ -411,7 +408,7 @@
             renumber();
         });
 
-        document.getElementById('add-lineup-row')?.addEventListener('click', () => {
+        ['add-lineup-row', 'add-lineup-row-bottom'].forEach((id) => document.getElementById(id)?.addEventListener('click', () => {
             const container = document.getElementById('lineup-rows');
             const template = document.getElementById('lineup-row-template');
             if (!container || !template) return;
@@ -424,7 +421,11 @@
             container.dataset.nextIndex = String(nextIndex + 1);
             initEventDatePicker(); // the new row's date field gets the same picker
             renumber();
-        });
+            const rows = container.querySelectorAll('.lineup-row');
+            const last = rows[rows.length - 1];
+            last?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            last?.querySelector('input[name$="[artist_name]"]')?.focus({ preventScroll: true });
+        }));
 
         document.addEventListener('click', (event) => {
             const btn = event.target.closest('.remove-lineup-row');
@@ -578,16 +579,16 @@
             renumber();
         });
         // Drag & drop reordering: a row only becomes draggable while its handle is held, so text fields keep selecting text normally
-        (() => {
-            const box = document.getElementById('ticket-rows');
+        [['ticket-rows', '.ticket-row'], ['lineup-rows', '.lineup-row']].forEach(([boxId, rowSel]) => {
+            const box = document.getElementById(boxId);
             if (!box) return;
             let dragging = null;
             box.addEventListener('mousedown', (e) => {
-                const row = e.target.closest('.a-ev-handle') && e.target.closest('.ticket-row');
+                const row = e.target.closest('.a-ev-handle') && e.target.closest(rowSel);
                 if (row) row.draggable = true;
             });
             box.addEventListener('dragstart', (e) => {
-                const row = e.target.closest?.('.ticket-row');
+                const row = e.target.closest?.(rowSel);
                 if (!row || !row.draggable) return;
                 dragging = row;
                 e.dataTransfer.effectAllowed = 'move';
@@ -597,7 +598,7 @@
             box.addEventListener('dragover', (e) => {
                 if (!dragging) return;
                 e.preventDefault();
-                const others = [...box.querySelectorAll('.ticket-row:not(.is-dragging)')];
+                const others = [...box.querySelectorAll(rowSel + ':not(.is-dragging)')];
                 const next = others.find((r) => { const b = r.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
                 next ? box.insertBefore(dragging, next) : box.appendChild(dragging);
             });
@@ -609,7 +610,14 @@
                 dragging = null;
                 renumber();
             });
-        })();
+        });
+        // Artists are saved in the order they appear on the page
+        document.getElementById('lineup-rows')?.closest('form')?.addEventListener('submit', () => {
+            document.querySelectorAll('#lineup-rows .lineup-row').forEach((row, i) => {
+                const order = row.querySelector('input.lineup-order');
+                if (order) order.value = i;
+            });
+        });
         document.querySelector('#ticket-rows')?.closest('form')?.addEventListener('submit', () => {
             document.querySelectorAll('#ticket-rows .ticket-row').forEach((row, i) => {
                 const field = row.querySelector('input[name^="tickets["]'); const m = field && field.name.match(/^tickets\[(\d+)\]/);
