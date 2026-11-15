@@ -5,6 +5,7 @@
 @php
     [$label, $variant] = \App\Support\CustomerPortal::ticketBadge($ticket, $event);
     $qr = \App\Support\CustomerPortal::qrVisible($ticket, $event);
+    $qrShown = \App\Support\CustomerPortal::qrAutoShown($ticket, $event);
     $image = $event?->cover_image_url ?: $event?->event_banner_url;
 @endphp
 
@@ -21,10 +22,11 @@
         @if($event?->location)<p class="tkt-gate__where">{{ $event->location }}</p>@endif
     </div>
 
-    <div class="tkt-gate__qr">
+    <div class="tkt-gate__qr" data-qr-scope>
         @if($qr)
-            <img src="{{ $ticket->qrUrl() }}" alt="QR code for ticket {{ $ticket->ticket_number }}. Show it at the entrance.">
+            @include('front.account.partials.qr', ['ticket' => $ticket, 'shown' => $qrShown, 'large' => true])
             <p>Show this code at the entrance</p>
+            <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--sm" data-qr-toggle aria-pressed="false">Show QR</button>
         @else
             <div class="tkt-gate__qr-off">
                 <b>{{ $label }}</b>
@@ -40,8 +42,9 @@
         <div><dt>Order</dt><dd><a class="tkt-link" href="{{ route('front.account.orders.show', $ticket->order->order_number) }}">{{ $ticket->order->order_number }}</a></dd></div>
     </dl>
 
-    <div class="tkt-gate__actions">
-        <a class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block" href="{{ route('front.tickets.download', $ticket) }}">Download PDF</a>
-    </div>
 </article>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/tkt-qr.js') }}?v={{ filemtime(public_path('js/tkt-qr.js')) }}" defer></script>
+@endpush

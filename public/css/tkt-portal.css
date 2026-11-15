@@ -133,3 +133,15 @@
 .tkt-gate__meta dt { color: var(--tkt-muted); font-weight: 600; }
 .tkt-gate__meta dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; min-width: 0; }
 .tkt-gate__actions { padding: 0 20px 20px; }
+
+/* ---- Ticket QR: hidden until revealed ---- */
+.tkt-qrbox { position: relative; width: 100%; height: 100%; background: #fff; }
+.tkt-qrbox img { width: 100%; height: 100%; display: block; }
+.tkt-qrbox.is-hidden img { display: none; }
+.tkt-qrbox__mask { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; text-align: center; background: var(--tkt-surface); color: var(--tkt-muted); font-weight: 800; font-size: var(--tkt-fs-sm); letter-spacing: .04em; }
+.tkt-qrbox.is-hidden .tkt-qrbox__mask { display: flex; }
+.tkt-qrbox--lg { width: min(100%, 320px); aspect-ratio: 1; height: auto; margin: 0 auto; }
+.tkt-tgroup__side { display: grid; gap: 4px; justify-items: end; }
+.tkt-tgroup__all { font-size: var(--tkt-fs-sm); color: var(--tkt-muted); }
+.tkt-linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--tkt-link, inherit); text-decoration: underline; cursor: pointer; }
+.tkt-gate__qr .tkt-btn { margin-top: 12px; }

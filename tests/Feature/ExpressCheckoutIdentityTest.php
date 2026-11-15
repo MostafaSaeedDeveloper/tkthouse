@@ -269,7 +269,6 @@ class ExpressCheckoutIdentityTest extends TestCase
         $this->get(route('front.account.orders'))->assertOk()->assertDontSee($order->order_number);
         $this->get(route('front.account.tickets'))->assertOk()->assertDontSee($ticket->ticket_number);
         $this->get(route('front.tickets.show', $ticket))->assertForbidden();
-        $this->get(route('front.tickets.download', $ticket))->assertForbidden();
         $this->get(route('front.checkout.confirmation', $order->order_number))->assertNotFound();
         $this->assertTrue((bool) $order->fresh()->owner_unverified);                    // stays unclaimed
     }

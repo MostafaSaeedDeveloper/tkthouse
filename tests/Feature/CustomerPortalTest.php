@@ -228,6 +228,23 @@ class CustomerPortalTest extends TestCase
         $this->actingAs($me)->get(route('front.tickets.show', $tickets[2]))->assertOk()->assertSee('was canceled')->assertDontSee('api.qrserver.com', false);
     }
 
+    public function test_the_qr_is_hidden_until_the_event_is_close_or_the_customer_reveals_it(): void
+    {
+        $me = $this->customer();
+        $order = $this->paid($me, 1);
+        $ticket = IssuedTicket::where('order_id', $order->id)->firstOrFail();
+        $event = $ticket->orderItem->event;
+
+        $event->update(['event_date' => now()->addDays(30)->toDateString(), 'end_date' => null]);
+        $far = $this->actingAs($me)->get(route('front.account.tickets', ['when' => 'all']))->assertOk()->assertSee('Show QR')->getContent();
+        $this->assertDoesNotMatchRegularExpression('/<img[^>]+data-qr-img\s+src=/', $far);       // no QR image loaded yet
+        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('Show QR');
+
+        $event->update(['event_date' => now()->toDateString()]);
+        $near = $this->actingAs($me)->get(route('front.account.tickets', ['when' => 'all']))->getContent();
+        $this->assertMatchesRegularExpression('/<img[^>]+data-qr-img\s+src=/', $near);           // event day: shown right away
+    }
+
     /* ------------------------------------------------------------ Ticket details + PDF */
 
     public function test_ticket_pages_and_pdf_follow_the_ownership_rules(): void
@@ -241,14 +258,11 @@ class CustomerPortalTest extends TestCase
 
         $this->get(route('front.tickets.show', $ticket))->assertRedirect();
         $this->actingAs($stranger)->get(route('front.tickets.show', $ticket))->assertForbidden();
-        $this->actingAs($stranger)->get(route('front.tickets.download', $ticket))->assertForbidden();
         $this->actingAs($me)->get(route('front.tickets.show', $unclaimed))->assertForbidden();
-        $this->actingAs($me)->get(route('front.tickets.download', $unclaimed))->assertForbidden();
 
         $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()
-            ->assertSee('Holder 1')->assertSee('#'.$ticket->ticket_number)->assertSee('Download PDF')->assertSee('Pay Night');
-        $pdf = $this->actingAs($me)->get(route('front.tickets.download', $ticket))->assertOk();
-        $this->assertStringContainsString('pdf', (string) $pdf->headers->get('content-type'));
+            ->assertSee('Holder 1')->assertSee('#'.$ticket->ticket_number)->assertDontSee('Download PDF')->assertSee('Pay Night');
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('front.tickets.download'));
     }
 
     public function test_a_verified_holder_can_open_a_gifted_ticket_but_an_unverified_address_cannot(): void
@@ -438,7 +452,5 @@ class CustomerPortalTest extends TestCase
         $ticket = IssuedTicket::where('order_id', $order->id)->firstOrFail();
         $this->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('Show this code at the entrance');
 
-        $pdf = $this->get(route('front.tickets.download', $ticket))->assertOk();
-        $this->assertStringContainsString('pdf', (string) $pdf->headers->get('content-type'));
     }
 }

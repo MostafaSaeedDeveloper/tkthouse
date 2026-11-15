@@ -99,7 +99,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
-    Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
 });
 
 Auth::routes(['register' => false]);

@@ -192,8 +192,8 @@ class ExpressCheckoutTest extends TestCase
 
         $page = $this->get(route('front.checkout.confirmation', $order->order_number))->assertOk()
             ->assertSee("You're in!", false)->assertSee('We created a TKT House account')->assertSee('nour@example.test')
-            ->assertSee('Download PDF')->assertDontSee('View my tickets');
-        $this->assertStringContainsString('signature=', $page->getContent());   // short-lived signed PDF links, not account pages
+            ->assertDontSee('Download PDF')->assertDontSee('View my tickets');
+        $this->assertStringNotContainsString('signature=', $page->getContent());   // no PDF links any more
 
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertSame(2, IssuedTicket::where('order_id', $order->id)->count());

@@ -16,12 +16,12 @@
       <p class="eticket-name">{{ $ticket->ticket_name }}</p>
       <p class="eticket-meta">Holder: {{ $ticket->holder_name }} · {{ $ticket->holder_email }}</p>
       <div class="eticket-links">
-        <a href="{{ route('front.tickets.show', $ticket) }}">View ticket</a>
+        <a href="{{ route('front.tickets.show', $ticket) }}" style="display:inline-block;background:#f5b800;color:#111;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;">View ticket</a>
       </div>
     </div>
   @endforeach
 
   <div class="ealert blue">
-    A PDF attachment containing only your tickets is included with this email.
+    Tap “View ticket” and sign in with this email to see your ticket and its QR code.
   </div>
 @endsection

@@ -88,4 +88,20 @@ class CustomerPortal
     {
         return ! in_array(self::ticketBadge($ticket, $event)[0], ['Canceled', 'Checked in'], true);
     }
+
+    /**
+     * Whether the QR is shown right away. Before that window it stays hidden behind a "Show QR" button, so it is not on screen
+     * (or in a screenshot) weeks ahead: from the day before the event starts until the event's last day.
+     */
+    public static function qrAutoShown(IssuedTicket $ticket, ?Event $event): bool
+    {
+        if (! self::qrVisible($ticket, $event) || ! $event?->event_date) {
+            return false;
+        }
+
+        $today = now()->startOfDay();
+        $last = ($event->end_date ?? $event->event_date)->copy()->startOfDay();
+
+        return $today->gte($event->event_date->copy()->startOfDay()->subDay()) && $today->lte($last);
+    }
 }

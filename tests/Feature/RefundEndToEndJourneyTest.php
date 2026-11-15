@@ -442,8 +442,6 @@ class RefundEndToEndJourneyTest extends TestCase
 
         // the remaining tickets are still reachable and downloadable; the refunded one is not
         $this->actingAs($customer)->get(route('front.tickets.show', $issued($t[1])))->assertOk();
-        $this->actingAs($customer)->get(route('front.tickets.download', $issued($t[1])))->assertOk();
-        $this->actingAs($customer)->get(route('front.tickets.download', $issued($t[0])))->assertStatus(410);
         $this->assertTrue(\App\Models\IssuedTicket::ownedByCustomer($customer)->whereKey($issued($t[2])->id)->exists());
         $signed = \Illuminate\Support\Facades\URL::temporarySignedRoute('front.tickets.public-download', now()->addDay(), ['ticketNumber' => $t[0]->ticket_number]);
         $this->get($signed)->assertStatus(410);

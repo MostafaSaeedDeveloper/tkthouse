@@ -26,14 +26,22 @@
                 $event = $first->orderItem?->event;
                 $image = $event?->cover_image_url ?: $event?->event_banner_url;
             @endphp
-            <article class="tkt-tgroup" aria-label="Order {{ $order->order_number }}">
+            <article class="tkt-tgroup" aria-label="Order {{ $order->order_number }}" data-qr-group>
                 <header class="tkt-tgroup__head">
                     <div class="tkt-media tkt-tgroup__img {{ $image ? '' : 'is-empty' }}">@if($image)<img class="tkt-img" src="{{ $image }}" alt="" loading="lazy">@endif</div>
                     <div class="tkt-tgroup__title">
                         <h2>{{ $event?->name ?? 'Event' }}</h2>
                         <p>@if($event){{ $event->formatted_date_range }}@if($event->location) · {{ $event->location }}@endif @endif</p>
                     </div>
-                    <a class="tkt-link" href="{{ route('front.account.orders.show', $order->order_number) }}">Order {{ $order->order_number }}</a>
+                    <div class="tkt-tgroup__side">
+                        <a class="tkt-link" href="{{ route('front.account.orders.show', $order->order_number) }}">Order {{ $order->order_number }}</a>
+                        @if($group['tickets']->count() > 1)
+                            <span class="tkt-tgroup__all">
+                                <button type="button" class="tkt-linkbtn" data-qr-all="show">Show all QR</button> ·
+                                <button type="button" class="tkt-linkbtn" data-qr-all="hide">Hide all</button>
+                            </span>
+                        @endif
+                    </div>
                 </header>
                 <ul class="tkt-tgroup__list">
                     @foreach($group['tickets'] as $ticket)
@@ -41,10 +49,10 @@
                             [$label, $variant] = \App\Support\CustomerPortal::ticketBadge($ticket, $event);
                             $qr = \App\Support\CustomerPortal::qrVisible($ticket, $event);
                         @endphp
-                        <li class="tkt-tcard">
+                        <li class="tkt-tcard" data-qr-scope>
                             @if($qr)
                                 <a class="tkt-tcard__qr" href="{{ route('front.tickets.show', $ticket) }}" aria-label="Open ticket {{ $ticket->ticket_number }}">
-                                    <img src="{{ $ticket->qrUrl() }}" alt="QR code for ticket {{ $ticket->ticket_number }}" width="96" height="96" loading="lazy">
+                                    @include('front.account.partials.qr', ['ticket' => $ticket, 'shown' => \App\Support\CustomerPortal::qrAutoShown($ticket, $event)])
                                 </a>
                             @else
                                 <span class="tkt-tcard__qr is-off" aria-hidden="true">QR</span>
@@ -57,7 +65,7 @@
                             </div>
                             <div class="tkt-tcard__actions">
                                 <a class="tkt-btn tkt-btn--primary tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View ticket</a>
-                                <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.download', $ticket) }}">Download PDF</a>
+                                @if($qr)<button type="button" class="tkt-btn tkt-btn--outline tkt-btn--sm" data-qr-toggle aria-pressed="false">Show QR</button>@endif
                             </div>
                         </li>
                     @endforeach
@@ -67,3 +75,7 @@
     @endif
 </section>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/tkt-qr.js') }}?v={{ filemtime(public_path('js/tkt-qr.js')) }}" defer></script>
+@endpush

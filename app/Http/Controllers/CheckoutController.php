@@ -413,18 +413,9 @@ class CheckoutController extends Controller
 
         $isOwnerSignedIn = $request->user() && (int) $request->user()->id === (int) $order->user_id && ! $order->owner_unverified;
 
-        // Signed-in owners use their account pages; a browser that only holds the order gets short-lived signed PDF links.
-        $downloads = [];
-        if (! $isOwnerSignedIn) {
-            foreach ($tickets as $ticket) {
-                $downloads[$ticket->id] = URL::temporarySignedRoute('front.tickets.public-download', now()->addHour(), ['ticketNumber' => $ticket->ticket_number]);
-            }
-        }
-
         return view('front.checkout.confirmation', [
             'order' => $order, 'state' => $state, 'event' => $event, 'tickets' => $tickets, 'attempt' => $latest, 'step' => 3,
             'isOwnerSignedIn' => $isOwnerSignedIn,
-            'downloads' => $downloads,
             'newAccount' => in_array($order->id, (array) session(self::NEW_ACCOUNT_ORDERS, []), true),
             'accountEmail' => $order->user?->email,
             'accountEmailMasked' => $order->user ? GuestOrderAccess::mask($order->user->email) : null,

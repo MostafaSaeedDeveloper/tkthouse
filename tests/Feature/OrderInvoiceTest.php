@@ -108,7 +108,8 @@ class OrderInvoiceTest extends TestCase
             $mail->assertSeeInHtml('VAT (14%)');
                         $names = collect($mail->attachments())->map(fn ($a) => $a->as)->all();
             $this->assertContains('invoice-'.$mail->order->order_number.'.pdf', $names);
-            $this->assertContains('tickets-'.$mail->order->order_number.'.pdf', $names);
+            $this->assertNotContains('tickets-'.$mail->order->order_number.'.pdf', $names);   // tickets are viewed online, not attached
+            $mail->assertSeeInHtml('View ticket');
 
             return true;
         });

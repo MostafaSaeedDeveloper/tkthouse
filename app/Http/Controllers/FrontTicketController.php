@@ -21,19 +21,6 @@ class FrontTicketController extends Controller
         return view('front.tickets.show', ['ticket' => $ticket, 'event' => $ticket->orderItem?->event]);
     }
 
-    public function download(Request $request, IssuedTicket $ticket)
-    {
-        $this->authorizeTicket($request, $ticket);
-        abort_if($ticket->dashboardTicket?->isRefundCanceled(), 410, 'This ticket was canceled after a refund.');
-
-        $event = $this->resolveEvent($ticket->ticket_name ?? '');
-        $qrDataUri = $ticket->qrUrl();
-
-        $pdf = Pdf::loadView('front.tickets.pdf', compact('ticket', 'event', 'qrDataUri'));
-
-        return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
-    }
-
     public function shortDownload(string $ticketNumber)
     {
         $signedUrl = URL::temporarySignedRoute(

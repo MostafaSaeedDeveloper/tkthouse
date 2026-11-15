@@ -57,7 +57,7 @@
     </table>
   @endif
 
-  <p class="ep">You can view or download each ticket from the links below.</p>
+  <p class="ep">Open each ticket from the links below. Your tickets and their QR codes are also in your TKT House account under My Tickets.</p>
 
   @foreach($order->issuedTickets as $ticket)
     <div class="eticket">
@@ -65,14 +65,13 @@
       <p class="eticket-name">{{ $ticket->ticket_name }}</p>
       <p class="eticket-meta">Holder: {{ $ticket->holder_name }} · {{ $ticket->holder_email }}</p>
       <div class="eticket-links">
-        <a href="{{ route('front.tickets.show', $ticket) }}">View</a>
-        <a href="{{ route('front.tickets.download', $ticket) }}">PDF</a>
+        <a href="{{ route('front.tickets.show', $ticket) }}" style="display:inline-block;background:#f5b800;color:#111;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;">View ticket</a>
       </div>
     </div>
   @endforeach
 
   <div class="ealert green">
-    Attached: your invoice (PDF) and a PDF containing all issued tickets.
+    Attached: your invoice (PDF).
     You can also download the invoice any time from your TKT House account under My Orders.
   </div>
 @endsection

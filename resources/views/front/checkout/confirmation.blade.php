@@ -72,9 +72,6 @@
                             <div class="tkt-tkt__actions">
                                 @if($isOwnerSignedIn)
                                     <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View</a>
-                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.download', $ticket) }}">PDF</a>
-                                @elseif(isset($downloads[$ticket->id]))
-                                    <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ $downloads[$ticket->id] }}">Download PDF</a>
                                 @endif
                             </div>
                         </div>
