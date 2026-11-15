@@ -227,6 +227,7 @@ class EventController extends Controller
             'tickets.*.description' => ['nullable', 'string'],
             'tickets.*.max_per_order' => ['nullable', 'integer', 'min:1', 'max:100'],
             'tickets.*.is_couple' => ['nullable', 'boolean'],
+            'tickets.*.gender' => ['nullable', 'in:male,female'],
             'fees' => ['nullable', 'array'],
             'fees.*.name' => ['required_with:fees', 'string', 'max:255'],
             'fees.*.fee_type' => ['required_with:fees', 'in:percentage,fixed'],

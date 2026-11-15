@@ -21,6 +21,7 @@
         'description' => $ticket->description,
         'max_per_order' => $ticket->max_per_order,
         'is_couple' => (bool) $ticket->is_couple,
+        'gender' => $ticket->gender,
     ])->toArray() : [['status' => 'active', 'color' => '#0d6efd', 'max_per_order' => 10, 'is_couple' => false]]);
 
     if (empty($ticketRows)) {
@@ -172,7 +173,7 @@
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control form-control-color w-100" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-label">Label</label><input class="form-control" id="tickets-{{ $index }}-label" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
-                <div class="a-field a-ev-span-3"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
+                <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
                 <div class="a-field">
                     <span class="form-label">Couple ticket</span>
                     <div class="form-check">
@@ -181,10 +182,19 @@
                         <label class="form-check-label" for="ticket-couple-{{ $index }}">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
                     </div>
                 </div>
-                <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+                <div class="a-field">
+                    <label class="form-label" for="tickets-{{ $index }}-gender">Gender</label>
+                    <select class="form-select ticket-gender" id="tickets-{{ $index }}-gender" name="tickets[{{ $index }}][gender]" @disabled((bool) ($ticket['is_couple'] ?? false))>
+                        <option value="">Buyer chooses</option>
+                        <option value="male" @selected(($ticket['gender'] ?? '') === 'male')>Male only</option>
+                        <option value="female" @selected(($ticket['gender'] ?? '') === 'female')>Female only</option>
+                    </select>
+                </div>
+                <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
             </div>
         @endforeach
     </div>
+    <div class="a-ev-add-bottom"><button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-ticket-row-bottom"><i class="fa fa-plus"></i> Add Ticket Type</button></div>
     <div id="removed-tickets"></div>
 </div>
 
@@ -213,7 +223,7 @@
     <div class="a-ev-section-head">
         <div>
             <h3>Lineup Artists</h3>
-            <p class="a-ev-block__desc">Performers shown on the event page, ordered by the Order field.</p>
+            <p class="a-ev-block__desc">Performers shown on the event page. Drag the handle beside each artist to reorder.</p>
         </div>
         <button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-lineup-row"><i class="fa fa-plus"></i> Add Artist</button>
     </div>
@@ -231,18 +241,15 @@
                         <input class="form-control" id="lineups-{{ $index }}-instagram" name="lineups[{{ $index }}][instagram]" value="{{ ltrim($lineup['instagram'] ?? '', '@') }}" placeholder="username">
                     </div>
                 </div>
-                <div class="a-field a-ev-span-2">
+                <div class="a-field a-ev-span-3">
                     <label class="form-label" for="lineups-{{ $index }}-time">Performance Time</label>
                     <input class="form-control" id="lineups-{{ $index }}-time" name="lineups[{{ $index }}][performance_time]" value="{{ $lineup['performance_time'] ?? '' }}" placeholder="e.g. 10:00 PM">
                 </div>
-                <div class="a-field a-ev-span-2">
+                <div class="a-field a-ev-span-3">
                     <label class="form-label" for="lineups-{{ $index }}-date">Performance Date</label>
                     <input type="text" class="form-control js-flatpickr" id="lineups-{{ $index }}-date" name="lineups[{{ $index }}][performance_date]" value="{{ $lineup['performance_date'] ?? '' }}" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
                 </div>
-                <div class="a-field">
-                    <label class="form-label" for="lineups-{{ $index }}-order">Order</label>
-                    <input type="number" min="0" class="form-control" id="lineups-{{ $index }}-order" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
-                </div>
+                <input type="hidden" class="lineup-order" name="lineups[{{ $index }}][sort_order]" value="{{ $lineup['sort_order'] ?? $index }}">
                 <div class="a-field a-ev-span-6">
                     <label class="form-label" for="lineup-image-{{ $index }}">Artist Image</label>
                     <input type="hidden" name="lineups[{{ $index }}][existing_image]" value="{{ $lineup['image'] ?? '' }}">
@@ -254,11 +261,13 @@
                     @endif
                 </div>
                 <div class="a-ev-row__tools a-ev-span-6">
+                    <span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span>
                     <button type="button" class="a-btn a-btn--danger a-btn--sm remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
                 </div>
             </div>
         @endforeach
     </div>
+    <div class="a-ev-add-bottom"><button type="button" class="a-btn a-btn--outline a-btn--sm" id="add-lineup-row-bottom"><i class="fa fa-plus"></i> Add Artist</button></div>
 </div>
 
 <template id="lineup-row-template">
@@ -274,24 +283,22 @@
                 <input class="form-control" id="lineup-__LINEUPINDEX__-instagram" name="__LINEUPNAME__[instagram]" placeholder="username">
             </div>
         </div>
-        <div class="a-field a-ev-span-2">
+        <div class="a-field a-ev-span-3">
             <label class="form-label" for="lineup-__LINEUPINDEX__-time">Performance Time</label>
             <input class="form-control" id="lineup-__LINEUPINDEX__-time" name="__LINEUPNAME__[performance_time]" placeholder="e.g. 10:00 PM">
         </div>
-        <div class="a-field a-ev-span-2">
+        <div class="a-field a-ev-span-3">
             <label class="form-label" for="lineup-__LINEUPINDEX__-date">Performance Date</label>
             <input type="text" class="form-control js-flatpickr" id="lineup-__LINEUPINDEX__-date" name="__LINEUPNAME__[performance_date]" data-date-format="Y-m-d" placeholder="YYYY-MM-DD">
         </div>
-        <div class="a-field">
-            <label class="form-label" for="lineup-__LINEUPINDEX__-order">Order</label>
-            <input type="number" min="0" class="form-control" id="lineup-__LINEUPINDEX__-order" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
-        </div>
+        <input type="hidden" class="lineup-order" name="__LINEUPNAME__[sort_order]" value="__LINEUPINDEX__">
         <div class="a-field a-ev-span-6">
             <label class="form-label" for="lineup-image-__LINEUPINDEX__">Artist Image</label>
             <input type="file" class="form-control lineup-image-input" id="lineup-image-__LINEUPINDEX__" name="lineup_images[__LINEUPINDEX__]" accept="image/*" data-preview-id="lineup-preview-__LINEUPINDEX__">
             <img id="lineup-preview-__LINEUPINDEX__" src="" alt="" class="a-ev-lineup-img d-none">
         </div>
         <div class="a-ev-row__tools a-ev-span-6">
+            <span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span>
             <button type="button" class="a-btn a-btn--danger a-btn--sm remove-lineup-row"><i class="fa fa-trash"></i> Remove</button>
         </div>
     </div>
@@ -305,7 +312,7 @@
         <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control form-control-color w-100" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
         <div class="a-field"><label class="form-label" for="__ID__-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-label">Label</label><input class="form-control" id="__ID__-label" name="__NAME__[label]"></div>
-        <div class="a-field a-ev-span-3"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
+        <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
         <div class="a-field">
             <span class="form-label">Couple ticket</span>
             <div class="form-check">
@@ -314,7 +321,15 @@
                 <label class="form-check-label" for="__ID__">Couples only <span class="a-hint">(sold as 2, max 2 per order)</span></label>
             </div>
         </div>
-        <div class="a-ev-row__tools a-ev-span-6"><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
+        <div class="a-field">
+            <label class="form-label" for="__ID__-gender">Gender</label>
+            <select class="form-select ticket-gender" id="__ID__-gender" name="__NAME__[gender]">
+                <option value="">Buyer chooses</option>
+                <option value="male">Male only</option>
+                <option value="female">Female only</option>
+            </select>
+        </div>
+        <div class="a-ev-row__tools a-ev-span-6"><span class="a-ev-handle" title="Drag to reorder" aria-label="Drag to reorder" role="img"><svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="3" r="1.6"/><circle cx="10.5" cy="3" r="1.6"/><circle cx="3.5" cy="9" r="1.6"/><circle cx="10.5" cy="9" r="1.6"/><circle cx="3.5" cy="15" r="1.6"/><circle cx="10.5" cy="15" r="1.6"/></svg></span><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="-1" aria-label="Move ticket type up"><i class="fa fa-arrow-up"></i></button><button type="button" class="a-btn a-btn--ghost a-btn--sm move-row" data-dir="1" aria-label="Move ticket type down"><i class="fa fa-arrow-down"></i></button><button type="button" class="a-btn a-btn--danger a-btn--sm remove-row" aria-label="Remove ticket type"><i class="fa fa-trash"></i> Remove</button></div>
     </div>
 </template>
 
@@ -344,8 +359,29 @@
             container.dataset.nextIndex = String(nextIndex + 1);
         };
 
-        document.getElementById('add-ticket-row')?.addEventListener('click', () => {
-            addRow('ticket-rows', 'ticket-row-template', 'tickets');
+        // A couple pass is one man + one woman, so a fixed gender doesn't apply: lock the select while "Couples only" is ticked.
+        document.addEventListener('change', (event) => {
+            const box = event.target.closest('input[type="checkbox"][name$="[is_couple]"]');
+            const select = box?.closest('.ticket-row')?.querySelector('.ticket-gender');
+            if (!select) {
+                return;
+            }
+            select.disabled = box.checked;
+            if (box.checked) {
+                select.value = '';
+            }
+        });
+
+        // Both buttons (top and the one under the last ticket) append a ticket at the end; the new one is scrolled to and focused
+        ['add-ticket-row', 'add-ticket-row-bottom'].forEach((id) => {
+            document.getElementById(id)?.addEventListener('click', () => {
+                addRow('ticket-rows', 'ticket-row-template', 'tickets');
+                renumber();
+                const rows = document.querySelectorAll('#ticket-rows .ticket-row');
+                const last = rows[rows.length - 1];
+                last?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                last?.querySelector('input[name$="[name]"]')?.focus({ preventScroll: true });
+            });
         });
 
         document.getElementById('add-fee-row')?.addEventListener('click', () => {
@@ -372,7 +408,7 @@
             renumber();
         });
 
-        document.getElementById('add-lineup-row')?.addEventListener('click', () => {
+        ['add-lineup-row', 'add-lineup-row-bottom'].forEach((id) => document.getElementById(id)?.addEventListener('click', () => {
             const container = document.getElementById('lineup-rows');
             const template = document.getElementById('lineup-row-template');
             if (!container || !template) return;
@@ -385,7 +421,11 @@
             container.dataset.nextIndex = String(nextIndex + 1);
             initEventDatePicker(); // the new row's date field gets the same picker
             renumber();
-        });
+            const rows = container.querySelectorAll('.lineup-row');
+            const last = rows[rows.length - 1];
+            last?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            last?.querySelector('input[name$="[artist_name]"]')?.focus({ preventScroll: true });
+        }));
 
         document.addEventListener('click', (event) => {
             const btn = event.target.closest('.remove-lineup-row');
@@ -512,7 +552,11 @@
                     let h = el.querySelector(':scope > .a-ev-row__title');
                     if (!h) { h = document.createElement('div'); h.className = 'a-ev-row__title a-ev-span-6'; el.prepend(h); }
                     const sold = Number(el.dataset.sold || 0);
-                    h.textContent = word + ' ' + (i + 1) + (sold ? ' · ' + sold + ' sold' : '');
+                    let t = h.querySelector(':scope > .a-ev-row__label');
+                    if (!t) { t = document.createElement('span'); t.className = 'a-ev-row__label'; h.prepend(t); }
+                    t.textContent = word + ' ' + (i + 1) + (sold ? ' · ' + sold + ' sold' : '');
+                    const grip = el.querySelector('.a-ev-handle'); // ticket rows: the drag handle sits beside the title
+                    if (grip && grip.parentElement !== h) h.appendChild(grip);
                 });
                 let empty = container.parentElement.querySelector('.a-ev-empty');
                 if (!rows.length && !empty) {
@@ -533,6 +577,46 @@
             if (!sib) return;
             dir < 0 ? sib.before(row) : sib.after(row);
             renumber();
+        });
+        // Drag & drop reordering: a row only becomes draggable while its handle is held, so text fields keep selecting text normally
+        [['ticket-rows', '.ticket-row'], ['lineup-rows', '.lineup-row']].forEach(([boxId, rowSel]) => {
+            const box = document.getElementById(boxId);
+            if (!box) return;
+            let dragging = null;
+            box.addEventListener('mousedown', (e) => {
+                const row = e.target.closest('.a-ev-handle') && e.target.closest(rowSel);
+                if (row) row.draggable = true;
+            });
+            box.addEventListener('dragstart', (e) => {
+                const row = e.target.closest?.(rowSel);
+                if (!row || !row.draggable) return;
+                dragging = row;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', '');
+                setTimeout(() => row.classList.add('is-dragging'), 0);
+            });
+            box.addEventListener('dragover', (e) => {
+                if (!dragging) return;
+                e.preventDefault();
+                const others = [...box.querySelectorAll(rowSel + ':not(.is-dragging)')];
+                const next = others.find((r) => { const b = r.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
+                next ? box.insertBefore(dragging, next) : box.appendChild(dragging);
+            });
+            box.addEventListener('drop', (e) => e.preventDefault());
+            box.addEventListener('dragend', () => {
+                if (!dragging) return;
+                dragging.classList.remove('is-dragging');
+                dragging.draggable = false;
+                dragging = null;
+                renumber();
+            });
+        });
+        // Artists are saved in the order they appear on the page
+        document.getElementById('lineup-rows')?.closest('form')?.addEventListener('submit', () => {
+            document.querySelectorAll('#lineup-rows .lineup-row').forEach((row, i) => {
+                const order = row.querySelector('input.lineup-order');
+                if (order) order.value = i;
+            });
         });
         document.querySelector('#ticket-rows')?.closest('form')?.addEventListener('submit', () => {
             document.querySelectorAll('#ticket-rows .ticket-row').forEach((row, i) => {

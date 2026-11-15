@@ -222,7 +222,7 @@ class CheckoutController extends Controller
                 $errors = $e->errors();
             }
             try {
-                $attendees = $this->validateAttendees((array) $request->input('attendees', []), $units->count());
+                $attendees = $this->validateAttendees((array) $request->input('attendees', []), $units->count(), $units->pluck('gender')->all());
             } catch (ValidationException $e) {
                 $errors = array_merge($errors, $e->errors());
             }
@@ -796,7 +796,7 @@ class CheckoutController extends Controller
         $index = 0;
         foreach ($units as $unit) {
             $key = (int) $unit['ticket_id'];
-            $groups[$key] ??= ['name' => (string) $unit['ticket_name'], 'price' => (float) $unit['ticket_price'], 'is_couple' => (bool) ($unit['is_couple'] ?? false), 'indexes' => []];
+            $groups[$key] ??= ['name' => (string) $unit['ticket_name'], 'price' => (float) $unit['ticket_price'], 'is_couple' => (bool) ($unit['is_couple'] ?? false), 'gender' => $unit['gender'] ?? null, 'indexes' => []];
             $groups[$key]['indexes'][] = $index++;
         }
 
@@ -887,7 +887,7 @@ class CheckoutController extends Controller
      *
      * @return array<int, array<string, string>>
      */
-    private function validateAttendees(array $attendees, int $count): array
+    private function validateAttendees(array $attendees, int $count, array $fixedGenders = []): array
     {
         $attendees = array_values($attendees);
 
@@ -903,7 +903,8 @@ class CheckoutController extends Controller
                 'name' => trim((string) ($attendee['name'] ?? '')),
                 'phone' => trim((string) ($attendee['phone'] ?? '')),
                 'email' => trim((string) ($attendee['email'] ?? '')),
-                'gender' => trim((string) ($attendee['gender'] ?? '')),
+                // A ticket with a fixed gender decides it: whatever the form posted is ignored.
+                'gender' => in_array($fixedGenders[$index] ?? null, ['male', 'female'], true) ? $fixedGenders[$index] : trim((string) ($attendee['gender'] ?? '')),
                 'social_profile' => trim((string) ($attendee['social_profile'] ?? '')),
             ];
 
