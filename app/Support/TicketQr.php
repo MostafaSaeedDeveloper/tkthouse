@@ -47,4 +47,31 @@ class TicketQr
     {
         return 'data:image/svg+xml;base64,'.base64_encode(self::svg($payload, $size));
     }
+
+    /**
+     * Decorative stand-in shown while a ticket's QR is locked. It is generated from a fixed seed and never from the ticket, its
+     * payload or its token, and it is not a decodable QR (the data area is pseudo-random), so nothing about the real code can be
+     * read or reconstructed from it. The same markup is served to every ticket.
+     */
+    public static function placeholderSvg(): string
+    {
+        $n = 25;
+        $seed = 20240607;
+        $rects = '';
+        $inFinder = static fn (int $x, int $y): bool => ($x < 8 && $y < 8) || ($x >= $n - 8 && $y < 8) || ($x < 8 && $y >= $n - 8);
+        for ($y = 0; $y < $n; $y++) {
+            for ($x = 0; $x < $n; $x++) {
+                $seed = ($seed * 1103515245 + 12345) & 0x7fffffff;
+                if (! $inFinder($x, $y) && (($seed >> 16) & 3) < 2) {
+                    $rects .= '<rect x="'.$x.'" y="'.$y.'" width="1" height="1"/>';
+                }
+            }
+        }
+        $finder = '';
+        foreach ([[0, 0], [$n - 7, 0], [0, $n - 7]] as [$fx, $fy]) {
+            $finder .= '<path fill-rule="evenodd" d="M'.$fx.' '.$fy.'h7v7h-7zM'.($fx + 1).' '.($fy + 1).'v5h5v-5z"/><rect x="'.($fx + 2).'" y="'.($fy + 2).'" width="3" height="3"/>';
+        }
+
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 '.($n + 2).' '.($n + 2).'" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><g fill="currentColor">'.$finder.$rects.'</g></svg>';
+    }
 }

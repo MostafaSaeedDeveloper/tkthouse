@@ -83,7 +83,8 @@ class CustomerPortal
         $dash = $ticket->dashboardTicket;
         $orderStatus = (string) ($ticket->order?->status ?? 'paid');
         $refunded = ($dash?->isRefundCanceled() ?? false) || in_array($orderStatus, ['refunded'], true);
-        $dead = $refunded || ($dash?->status === 'canceled') || in_array($orderStatus, ['canceled', 'cancelled'], true);
+        // No dashboard ticket row (deleted by staff) = the ticket no longer exists.
+        $dead = $refunded || $dash === null || ($dash->status === 'canceled') || in_array($orderStatus, ['canceled', 'cancelled'], true);
 
         return match (true) {
             $dead => ['state' => 'canceled', 'refunded' => $refunded, 'reveals_at' => null],

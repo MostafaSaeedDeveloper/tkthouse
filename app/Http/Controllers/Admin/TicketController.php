@@ -213,17 +213,18 @@ class TicketController extends Controller
         ]);
 
         $ticket->loadMissing('order');
-        $issuedTicket = IssuedTicket::query()
-            ->where('ticket_number', $ticket->ticket_number)
-            ->first();
 
-        // Online tickets are digital: the e-mail links to the customer's account and carries no PDF (so no QR, whatever its visibility).
-        // Guest-list tickets have no account page, so they keep their PDF.
-        $pdf = null;
-        if (! $issuedTicket) {
-            $qrDataUri = $this->qrDataUri($ticket);
-            $event = $this->resolveEvent($ticket->name ?? '');
-            $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri', 'event'))->output();
+        // Every ticket is digital: the e-mail links to the ticket page (no PDF, no QR). Guest-list tickets are brought online here if they were
+        // issued before digital tickets, and the address they are sent to becomes the holder's verified identity for opening them.
+        $issuer = app(\App\Services\Tickets\GuestTicketIssuer::class);
+        if ($ticket->isGuestList() && blank($ticket->holder_email)) {
+            $ticket->update(['holder_email' => $data['email']]);
+            activity('tickets')->performedOn($ticket)->causedBy($request->user())->log('Holder e-mail set by sending the digital ticket');
+        }
+        $issuedTicket = IssuedTicket::query()->where('ticket_number', $ticket->ticket_number)->first()
+            ?? ($ticket->isGuestList() ? $issuer->ensure($ticket) : null);
+        if ($issuedTicket && $issuedTicket->isGuestList()) {
+            $issuer->syncHolder($ticket);
         }
 
         $showUrl = $issuedTicket
@@ -234,7 +235,6 @@ class TicketController extends Controller
             ticket: $ticket,
             showUrl: $showUrl,
             recipientEmail: $data['email'],
-            pdfBinary: $pdf,
         ));
 
         return back()->with('success', 'Ticket sent by email successfully.');
@@ -482,6 +482,12 @@ class TicketController extends Controller
 
                 return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number, 'source' => 'manual'])->with('error', 'CANCELED — this ticket is no longer valid. Entry is not allowed.');
             }
+
+            if ($denial = $this->gatesClosedDenial($ticket)) {
+                $this->logRefundRejection($request, $ticket, (string) $ticket->ticket_number, 'status_update_rejected_'.$denial[0]);
+
+                return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number, 'source' => 'manual'])->with('error', $denial[1]);
+            }
         }
 
         $previousStatus = $ticket->status;
@@ -554,11 +560,12 @@ class TicketController extends Controller
      * Server-side entry rules that never depend on what the customer's page shows. Returns [code, message] when the ticket must not be
      * admitted, null when it may be. $source: "camera" (a QR was scanned) or "manual" (staff typed the number).
      *
-     *  - canceled tickets and tickets of refunded / canceled orders never get in;
-     *  - a new-style ticket is only recognised from its own QR token (its bare number is not a credential when "scanned"), and that QR
-     *    only works while the event shows QR codes (reveal time reached or shown by an admin) — a QR copied out of an old page, a
-     *    screenshot, or guessed numbers do not open the gate early;
-     *  - tickets issued before digital tickets keep working with their old QR (the bare ticket number).
+     *  1. canceled tickets and tickets of refunded / canceled orders never get in (a used ticket is stopped at check-in, see scannerStatus);
+     *  2. a new-style ticket is only recognised from its own QR token: a scanned bare ticket number is not a credential for it;
+     *  3. Entry Availability: while the event's gates are closed nobody is admitted, old or new ticket, QR or typed number.
+     *     (Default is "always open", so nothing is blocked until an admin turns it on. QR *visibility* is a separate customer-facing setting.)
+     *
+     * Tickets issued before digital tickets keep their old QR (the bare number) and are only affected by rules 1 and 3.
      *
      * @return array{0: string, 1: string}|null
      */
@@ -570,14 +577,27 @@ class TicketController extends Controller
             return ['canceled', 'CANCELED — this ticket is no longer valid. Entry is not allowed.'];
         }
 
-        if ($ticket->hasTokenQr() && $source !== 'manual') {
-            if (strcasecmp(trim($payload), (string) $ticket->qr_payload) !== 0) {
-                return ['invalid_qr', 'INVALID QR — scan the QR code shown on the customer\'s digital ticket.'];
-            }
+        if ($ticket->hasTokenQr() && $source !== 'manual' && strcasecmp(trim($payload), (string) $ticket->qr_payload) !== 0) {
+            return ['invalid_qr', 'INVALID QR — scan the QR code shown on the customer\'s digital ticket.'];
+        }
 
-            if ($ticket->event && ! $ticket->event->qrIsVisible()) {
-                return ['qr_not_active', 'QR NOT ACTIVE YET — this event has not opened QR entry. Entry is not allowed.'];
-            }
+        if ($denial = $this->gatesClosedDenial($ticket)) {
+            return $denial;
+        }
+
+        return null;
+    }
+
+    /** @return array{0: string, 1: string}|null */
+    private function gatesClosedDenial(Ticket $ticket): ?array
+    {
+        $ticket->loadMissing('event');
+        $event = $ticket->event;
+
+        if ($event && ! $event->entryIsOpen()) {
+            $at = $event->entry_override === null ? $event->entryOpensAt() : null;
+
+            return ['gates_closed', 'GATES NOT OPEN — entry '.($at ? 'opens '.$at->format('D j M, g:i A') : 'has not been opened by the event team').'. Entry is not allowed.'];
         }
 
         return null;

@@ -32,7 +32,10 @@
     </x-admin.card>
 </form>
 
-@can('events.update')
+@can('events.qr-visibility.manage')
 <div style="margin-top:18px">@include('admin.events._qr-visibility')</div>
+@endcan
+@can('events.entry.manage')
+<div style="margin-top:18px">@include('admin.events._entry-availability')</div>
 @endcan
 @endsection

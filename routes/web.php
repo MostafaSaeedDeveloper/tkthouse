@@ -142,8 +142,10 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor('destroy', 'permission:permissions.delete');
 
     Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->middleware('permission:events.create')->name('events.duplicate');
-    Route::post('events/{event}/qr-visibility', [EventController::class, 'qrVisibility'])->middleware('permission:events.update')->name('events.qr-visibility');
-    Route::post('events/{event}/qr-override', [EventController::class, 'qrOverride'])->middleware('permission:events.update')->name('events.qr-override');
+    Route::post('events/{event}/qr-visibility', [EventController::class, 'qrVisibility'])->middleware('permission:events.qr-visibility.manage')->name('events.qr-visibility');
+    Route::post('events/{event}/qr-override', [EventController::class, 'qrOverride'])->middleware('permission:events.qr-visibility.manage')->name('events.qr-override');
+    Route::post('events/{event}/entry-availability', [EventController::class, 'entryAvailability'])->middleware('permission:events.entry.manage')->name('events.entry-availability');
+    Route::post('events/{event}/entry-override', [EventController::class, 'entryOverride'])->middleware('permission:events.entry.manage')->name('events.entry-override');
     Route::post('events/{event}/archive', [EventController::class, 'archive'])->middleware('permission:events.archive')->name('events.archive');
     Route::post('events/{event}/restore', [EventController::class, 'restore'])->middleware('permission:events.restore')->name('events.restore');
     Route::resource('events', EventController::class)

@@ -270,7 +270,7 @@ class GuestListController extends Controller
             'holder_phone' => $phone,
             'holder_gender' => $gender,
             'ticket_number' => $ticketNumber,
-            'qr_payload' => $ticketNumber,
+            'qr_payload' => \App\Support\TicketQr::newToken(), // unguessable; the number is only a label
             'issued_at' => now(),
             'created_by_user_id' => auth()->id(),
         ]);
@@ -286,26 +286,18 @@ class GuestListController extends Controller
         return 'Guest '.trim($withoutPrefix);
     }
 
+    /** Guest tickets are digital: the holder gets a "View ticket" link (no PDF); the QR is on their ticket page. */
     private function sendTicketEmailIfProvided(Ticket $ticket): void
     {
+        $issued = app(\App\Services\Tickets\GuestTicketIssuer::class)->ensure($ticket);
+
         if (! filled($ticket->holder_email)) {
             return;
         }
 
-        $pdf = Pdf::loadView('admin.tickets.pdf', [
-            'ticket' => $ticket,
-            'qrDataUri' => $this->qrDataUri($ticket),
-            'event' => Event::query()->where('name', $ticket->eventLabel())->first(),
-        ])->output();
-
-        Mail::to($ticket->holder_email)->send(new GuestInvitationMail(
-            ticket: $ticket,
-            pdfBinary: $pdf,
-        ));
+        Mail::to($ticket->holder_email)->send(new GuestInvitationMail(ticket: $ticket, showUrl: route('front.tickets.show', $issued)));
     }
 
-
-    /** Drawn locally: no ticket data is sent to a third-party QR service. */
     private function qrDataUri(Ticket $ticket): string
     {
         return \App\Support\TicketQr::dataUri($ticket->qrContent());

@@ -222,9 +222,9 @@ class CustomerPortalTest extends TestCase
         $this->assertStringNotContainsString('<svg viewBox="0 0 300', $list);
         $this->assertStringNotContainsString('qrserver', $list);
 
-        $this->actingAs($me)->get(route('front.tickets.show', $tickets[0]))->assertOk()->assertSee('Show this code at the entrance')->assertSee('dt__qr-box', false)->assertDontSee('qrserver', false);
-        $this->actingAs($me)->get(route('front.tickets.show', $tickets[1]))->assertOk()->assertSee('already been scanned')->assertDontSee('dt__qr-box', false);
-        $this->actingAs($me)->get(route('front.tickets.show', $tickets[2]))->assertOk()->assertSee('was canceled')->assertDontSee('dt__qr-box', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $tickets[0]))->assertOk()->assertSee('Show this code at the entrance')->assertSee('class="dt__qr-box"', false)->assertDontSee('qrserver', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $tickets[1]))->assertOk()->assertSee('already been scanned')->assertDontSee('class="dt__qr-box"', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $tickets[2]))->assertOk()->assertSee('was canceled')->assertDontSee('class="dt__qr-box"', false);
     }
 
     /* ------------------------------------------------------------ Ticket details + PDF */

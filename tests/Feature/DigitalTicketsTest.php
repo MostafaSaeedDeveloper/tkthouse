@@ -158,7 +158,7 @@ class DigitalTicketsTest extends TestCase
         $me = $this->customer();
         $ticket = $this->first($this->paid($me));
 
-        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('dt__qr-box', false)->assertDontSee('QR Code Locked');
+        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('class="dt__qr-box"', false)->assertDontSee('QR Code Locked');
     }
 
     public function test_a_hidden_qr_is_locked_and_nothing_about_it_reaches_the_browser(): void
@@ -170,7 +170,7 @@ class DigitalTicketsTest extends TestCase
 
         $html = $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()
             ->assertSee('QR Code Locked')->assertSee('Your QR code will be available closer to the event.')->assertSee('confirmed and valid')
-            ->assertSee('Pay Night')->assertSee('Holder 1')->assertDontSee('dt__qr-box', false)->getContent();
+            ->assertSee('Pay Night')->assertSee('Holder 1')->assertDontSee('class="dt__qr-box"', false)->getContent();
         $this->assertStringNotContainsString($token, $html);
         $this->assertStringNotContainsString('<svg viewBox="0 0 320', $html);
 
@@ -179,13 +179,30 @@ class DigitalTicketsTest extends TestCase
         $this->actingAs($me)->get(route('front.tickets.download', $ticket))->assertRedirect(route('front.tickets.show', $ticket)); // no PDF around it either
     }
 
+    public function test_the_locked_placeholder_is_a_fixed_decorative_picture_never_derived_from_the_ticket(): void
+    {
+        $me = $this->customer();
+        $order = $this->paid($me, 2);
+        [$a, $b] = IssuedTicket::where('order_id', $order->id)->orderBy('id')->get()->all();
+        $this->setMode('manual');
+
+        $pa = $this->actingAs($me)->get(route('front.tickets.show', $a))->assertOk()->assertSee('QR LOCKED')->assertSee('dt__ph', false)->getContent();
+        $pb = $this->actingAs($me)->get(route('front.tickets.show', $b))->assertOk()->getContent();
+        $grab = fn (string $h) => preg_match('/<div class="dt__ph".*?<\/svg>/s', $h, $m) ? $m[0] : null;
+        $this->assertNotNull($grab($pa));
+        $this->assertSame($grab($pa), $grab($pb), 'identical for every ticket');
+        $this->assertNotSame(TicketQr::svg($this->dash($a)->qr_payload), TicketQr::placeholderSvg());
+        $this->assertStringNotContainsString($this->dash($a)->qr_payload, $pa);
+        $this->assertSame(TicketQr::placeholderSvg(), TicketQr::placeholderSvg(), 'deterministic');
+    }
+
     public function test_scheduled_reveal_shows_a_countdown_then_the_qr_at_the_time(): void
     {
         $me = $this->customer();
         $ticket = $this->first($this->paid($me));
         $this->setMode('scheduled', 24 * 60);   // event in 5 days at 21:00 → reveal 4 days from now at 21:00
 
-        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('QR Code Locked')->assertSee('data-countdown', false)
+        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('QR Code Locked')->assertSee('data-countdown', false)->assertSee('Opens ')
             ->assertSee($this->event->qrRevealsAt()->format('D, j M Y · g:i A'));
         $this->actingAs($me)->getJson(route('front.tickets.qr', $ticket))->assertJson(['state' => 'locked'])->assertJsonPath('reveals_at', fn ($v) => $v !== null);
 
@@ -193,7 +210,7 @@ class DigitalTicketsTest extends TestCase
         $this->actingAs($me)->getJson(route('front.tickets.qr', $ticket))->assertJson(['state' => 'locked', 'svg' => null]);
 
         $this->travelTo($this->event->fresh()->qrRevealsAt()->addMinute());
-        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('dt__qr-box', false)->assertDontSee('QR Code Locked');
+        $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('class="dt__qr-box"', false)->assertDontSee('QR Code Locked');
         $this->actingAs($me)->getJson(route('front.tickets.qr', $ticket))->assertJson(['state' => 'visible'])->assertJsonPath('svg', fn ($v) => str_contains((string) $v, '<svg'));
     }
 
@@ -203,7 +220,7 @@ class DigitalTicketsTest extends TestCase
         $ticket = $this->first($this->paid($me));
         $payloadBefore = $this->dash($ticket)->qr_payload;
         $this->setMode('scheduled', 60 * 24);
-        $admin = $this->staff(['events.update']);
+        $admin = $this->staff(['events.qr-visibility.manage']);
 
         $this->actingAs($admin)->post(route('admin.events.qr-override', $this->event), ['override' => 'show'])->assertRedirect();
         $this->actingAs($me)->getJson(route('front.tickets.qr', $ticket))->assertJson(['state' => 'visible']);
@@ -218,7 +235,7 @@ class DigitalTicketsTest extends TestCase
 
     public function test_status_labels_and_who_changed_what_are_recorded(): void
     {
-        $admin = $this->staff(['events.update']);
+        $admin = $this->staff(['events.qr-visibility.manage']);
         $this->assertSame('visible', $this->event->qrStatus()['state']);
 
         $this->actingAs($admin)->post(route('admin.events.qr-visibility', $this->event), ['qr_visibility_mode' => 'scheduled', 'qr_reveal_amount' => 12, 'qr_reveal_unit' => 'hours'])->assertRedirect();
@@ -233,17 +250,18 @@ class DigitalTicketsTest extends TestCase
 
         $this->assertSame(2, Activity::where('subject_type', Event::class)->where('subject_id', $e->id)->where('description', 'like', 'Ticket QR%')->where('causer_id', $admin->id)->count());
 
+        $admin->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('events.update', 'web'));
         $this->actingAs($admin)->get(route('admin.events.edit', $e))->assertOk()->assertSee('Ticket QR Visibility')->assertSee('Manually overridden')->assertSee($admin->name);
     }
 
     public function test_invalid_visibility_settings_are_rejected_and_the_permission_is_required(): void
     {
-        $admin = $this->staff(['events.update']);
+        $admin = $this->staff(['events.qr-visibility.manage']);
         $this->actingAs($admin)->post(route('admin.events.qr-visibility', $this->event), ['qr_visibility_mode' => 'scheduled', 'qr_reveal_amount' => 0, 'qr_reveal_unit' => 'hours'])->assertSessionHasErrors('qr_reveal_amount');
         $this->actingAs($admin)->post(route('admin.events.qr-visibility', $this->event), ['qr_visibility_mode' => 'sometimes'])->assertSessionHasErrors('qr_visibility_mode');
         $this->assertSame('immediate', $this->event->fresh()->qr_visibility_mode);
 
-        $viewer = $this->staff(['events.view']);
+        $viewer = $this->staff(['events.update', 'events.entry.manage']);   // editing events or managing entry does not grant QR visibility control
         $this->actingAs($viewer)->post(route('admin.events.qr-override', $this->event), ['override' => 'hide'])->assertForbidden();
         $this->assertNull($this->event->fresh()->qr_override);
     }
@@ -269,7 +287,7 @@ class DigitalTicketsTest extends TestCase
         $page('canceled')->assertSee('Canceled Night')->assertSee('Refunded Night')->assertSee('Refunded')->assertDontSee('Pay Night');
 
         $refunded = $this->first($refundedOrder);
-        $this->actingAs($me)->get(route('front.tickets.show', $refunded))->assertOk()->assertSee('This ticket was refunded')->assertDontSee('dt__qr-box', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $refunded))->assertOk()->assertSee('This ticket was refunded')->assertDontSee('class="dt__qr-box"', false);
         $this->actingAs($me)->getJson(route('front.tickets.qr', $refunded))->assertJson(['state' => 'canceled', 'svg' => null]);
     }
 
@@ -372,28 +390,81 @@ class DigitalTicketsTest extends TestCase
         $this->assertSame('checked_in', $dash->fresh()->status);
     }
 
-    public function test_the_scanner_refuses_a_qr_before_the_event_reveals_it_and_accepts_it_after(): void
+    public function test_qr_visibility_and_entry_availability_are_independent(): void
     {
         $scanner = $this->staff(['scanner.access']);
-        $dash = $this->dash($this->first($this->paid($this->customer())));
+        $me = $this->customer();
+        $ticket = $this->first($this->paid($me));
+        $dash = $this->dash($ticket);
+
+        // The customer sees the QR 24h ahead...
         $this->setMode('scheduled', 60 * 24);
+        $this->event->forceFill(['entry_mode' => 'scheduled', 'entry_opens_minutes_before' => 60])->save();   // ...but the gates open 1h before the start
+        $this->travelTo($this->event->fresh()->qrRevealsAt()->addHour());
+        $this->actingAs($me)->getJson(route('front.tickets.qr', $ticket))->assertJson(['state' => 'visible']);
+        $this->lookup($scanner, $dash->qr_payload, 'camera')->assertStatus(409)->assertJson(['ok' => false, 'admit' => false, 'code' => 'gates_closed']);
+        $this->assertSame(1, ScanLog::where('ticket_id', $dash->id)->where('action', 'lookup_rejected_gates_closed')->count());
+        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $dash), ['status' => 'checked_in'])->assertSessionHas('error', fn ($m) => str_contains($m, 'GATES NOT OPEN'));
+        $this->assertSame('not_checked_in', $dash->fresh()->status);
 
-        $this->lookup($scanner, $dash->qr_payload, 'camera')->assertStatus(409)->assertJson(['ok' => false, 'admit' => false, 'code' => 'qr_not_active']);
-        $this->assertSame(1, ScanLog::where('ticket_id', $dash->id)->where('action', 'lookup_rejected_qr_not_active')->count());
-
-        $this->travelTo($this->event->fresh()->qrRevealsAt()->addMinute());
+        // Gates open at 20:00 (start 21:00 minus 1h).
+        $this->travelTo($this->event->fresh()->entryOpensAt()->addMinute());
         $this->lookup($scanner, $dash->qr_payload, 'camera')->assertOk()->assertJson(['ok' => true]);
+        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $dash), ['status' => 'checked_in'])->assertSessionHas('success');
     }
 
-    public function test_an_admin_hiding_the_qr_closes_qr_entry_and_showing_it_opens_it(): void
+    public function test_an_open_gate_does_not_depend_on_the_qr_being_visible(): void
     {
         $scanner = $this->staff(['scanner.access']);
         $dash = $this->dash($this->first($this->paid($this->customer())));
+        $this->setMode('manual');   // customers cannot see the QR, gates are always open: the scanner still works
 
-        $this->setMode('immediate', null, 'hide');
-        $this->lookup($scanner, $dash->qr_payload, 'camera')->assertStatus(409)->assertJson(['code' => 'qr_not_active']);
-        $this->setMode('manual', null, 'show');
         $this->lookup($scanner, $dash->qr_payload, 'camera')->assertOk();
+    }
+
+    public function test_gates_closed_stops_every_ticket_including_legacy_and_typed_numbers_until_an_admin_opens_them(): void
+    {
+        $scanner = $this->staff(['scanner.access']);
+        $admin = $this->staff(['events.entry.manage']);
+        $new = $this->dash($this->first($this->paid($this->customer())));
+        $old = $this->dash($this->first($this->paid($this->customer())));
+        $old->update(['qr_payload' => $old->ticket_number]);
+        $this->event->forceFill(['entry_mode' => 'manual'])->save();
+
+        $this->lookup($scanner, $new->qr_payload, 'camera')->assertStatus(409)->assertJson(['code' => 'gates_closed']);
+        $this->lookup($scanner, $old->ticket_number, 'camera')->assertStatus(409)->assertJson(['code' => 'gates_closed']);
+        $this->lookup($scanner, $new->ticket_number, 'manual')->assertStatus(409)->assertJson(['code' => 'gates_closed']);
+
+        $this->actingAs($admin)->post(route('admin.events.entry-override', $this->event), ['override' => 'open'])->assertRedirect();
+        $this->lookup($scanner, $new->qr_payload, 'camera')->assertOk();
+        $this->lookup($scanner, $old->ticket_number, 'camera')->assertOk();
+
+        $this->actingAs($admin)->post(route('admin.events.entry-override', $this->event), ['override' => 'close']);
+        $this->lookup($scanner, $old->ticket_number, 'camera')->assertStatus(409);
+        $this->actingAs($admin)->post(route('admin.events.entry-override', $this->event), ['override' => 'auto']);
+        $this->assertSame('closed', $this->event->fresh()->entryStatus()['state']);
+    }
+
+    public function test_entry_settings_need_their_own_permission_validate_and_are_recorded(): void
+    {
+        $admin = $this->staff(['events.entry.manage']);
+        $this->actingAs($admin)->post(route('admin.events.entry-availability', $this->event), ['entry_mode' => 'scheduled', 'entry_opens_amount' => 90, 'entry_opens_unit' => 'minutes'])->assertRedirect();
+        $e = $this->event->fresh();
+        $this->assertSame(['scheduled', 90, $admin->id], [$e->entry_mode, $e->entry_opens_minutes_before, $e->entry_changed_by]);
+        $this->assertNotNull($e->entry_changed_at);
+        $this->assertSame('scheduled', $e->entryStatus()['state']);
+
+        $this->actingAs($admin)->post(route('admin.events.entry-availability', $e), ['entry_mode' => 'scheduled', 'entry_opens_amount' => 0, 'entry_opens_unit' => 'hours'])->assertSessionHasErrors('entry_opens_amount');
+        $this->actingAs($admin)->post(route('admin.events.entry-override', $e), ['override' => 'open']);
+        $this->assertSame('overridden', $e->fresh()->entryStatus()['state']);
+        $this->assertSame(2, Activity::where('subject_type', Event::class)->where('subject_id', $e->id)->where('description', 'like', 'Entry %')->where('causer_id', $admin->id)->count());
+        $admin->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('events.update', 'web'));
+        $this->actingAs($admin)->get(route('admin.events.edit', $e))->assertOk()->assertSee('Entry Availability')->assertSee('Manually overridden')->assertDontSee('Ticket QR Visibility');
+
+        $qrOnly = $this->staff(['events.qr-visibility.manage', 'events.update']);
+        $this->actingAs($qrOnly)->post(route('admin.events.entry-override', $e), ['override' => 'close'])->assertForbidden();
+        $this->actingAs($qrOnly)->post(route('admin.events.entry-availability', $e), ['entry_mode' => 'manual'])->assertForbidden();
+        $this->assertSame('open', $e->fresh()->entry_override);
     }
 
     public function test_a_scanned_bare_ticket_number_is_not_a_credential_for_a_new_ticket_but_typing_it_works_for_staff(): void
@@ -410,9 +481,12 @@ class DigitalTicketsTest extends TestCase
         $scanner = $this->staff(['scanner.access']);
         $dash = $this->dash($this->first($this->paid($this->customer())));
         $dash->update(['qr_payload' => $dash->ticket_number]);   // how every ticket looked before
-        $this->setMode('manual');                                  // even on an event that hides new QR codes: the old PDFs are already out there
+        $this->setMode('manual', null, 'hide');                    // hiding QR codes never stops an old QR: the PDFs are already out there
 
         $this->lookup($scanner, $dash->ticket_number, 'camera')->assertOk()->assertJson(['ok' => true]);
+        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $dash), ['status' => 'checked_in'])->assertSessionHas('success');
+        $this->lookup($scanner, $dash->ticket_number, 'camera')->assertOk();   // a used ticket is still looked up (shown as checked in)...
+        $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $dash), ['status' => 'checked_in'])->assertSessionHas('error', fn ($m) => str_contains($m, 'ALREADY CHECKED IN'));   // ...but never admitted twice
     }
 
     public function test_canceled_and_refunded_tickets_never_get_in(): void

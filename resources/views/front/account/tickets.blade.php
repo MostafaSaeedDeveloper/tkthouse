@@ -35,10 +35,10 @@
             @foreach($groups as $group)
                 @php
                     $order = $group['order'];
-                    $event = $group['tickets']->first()->orderItem?->event;
+                    $event = $group['tickets']->first()->event();
                     $image = $event?->cover_image_url ?: $event?->event_banner_url;
                 @endphp
-                <article class="tkt-tgroup" aria-label="Order {{ $order->order_number }}">
+                <article class="tkt-tgroup" aria-label="{{ $order ? 'Order '.$order->order_number : 'Guest list invitation' }}">
                     <header class="tkt-tgroup__head">
                         <div class="tkt-media tkt-tgroup__img {{ $image ? '' : 'is-empty' }}">@if($image)<img class="tkt-img" src="{{ $image }}" alt="" loading="lazy">@endif</div>
                         <div class="tkt-tgroup__title">
@@ -70,7 +70,7 @@
                                         @if($qr['state'] === 'locked')
                                             <small>QR unlocks {{ $qr['reveals_at'] ? $qr['reveals_at']->format('D j M · g:i A') : 'closer to the event' }}</small>
                                         @else
-                                            <small>Order {{ $order->order_number }}</small>
+                                            <small>{{ $order ? 'Order '.$order->order_number : 'Guest invitation' }}</small>
                                         @endif
                                     </span>
                                     <span class="tkt-tcard__end"><x-tkt.badge :variant="$variant">{{ $label }}</x-tkt.badge></span>

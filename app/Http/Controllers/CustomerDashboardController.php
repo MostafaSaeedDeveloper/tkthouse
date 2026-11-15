@@ -200,13 +200,13 @@ class CustomerDashboardController extends Controller
         $requested = (string) $request->query('when', '');
         $when = in_array($requested, [...$groupsKeys, 'all'], true) ? $requested : ($orderNumber !== '' ? 'all' : 'upcoming');
 
-        $query = IssuedTicket::query()->ownedByCustomer($user)->with(['order', 'dashboardTicket', 'orderItem.event']);
+        $query = IssuedTicket::query()->ownedByCustomer($user)->with(['order', 'dashboardTicket.event', 'orderItem.event']);
         if ($orderNumber !== '') {
             $query->whereHas('order', fn ($o) => $o->where('order_number', $orderNumber));
         }
 
         $tickets = $query->orderByDesc('id')->get();
-        $byGroup = $tickets->groupBy(fn (IssuedTicket $t) => \App\Support\CustomerPortal::ticketGroup($t, $t->orderItem?->event));
+        $byGroup = $tickets->groupBy(fn (IssuedTicket $t) => \App\Support\CustomerPortal::ticketGroup($t, $t->event()));
         $counts = collect($groupsKeys)->mapWithKeys(fn ($k) => [$k => $byGroup->get($k, collect())->count()])->all();
 
         // "Upcoming" first, then the rest, each list grouped per order so tickets bought together stay together.

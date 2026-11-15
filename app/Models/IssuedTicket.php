@@ -57,6 +57,11 @@ class IssuedTicket extends Model
             // Refunded / canceled orders stay listed so the customer sees the true status; their tickets never get a QR (see CustomerPortal::qrState).
             $outer->whereHas('order', fn ($order) => $order->whereIn('status', self::PORTAL_ORDER_STATUSES)->ownedByCustomer($user));
 
+            // Guest-list tickets have no order: their holder (a verified e-mail) is the only way in.
+            if ($user->email_verified_at) {
+                $outer->orWhere(fn ($guest) => $guest->whereNull('order_id')->whereRaw('LOWER(holder_email) = ?', [mb_strtolower((string) $user->email)]));
+            }
+
             // A gifted ticket: its holder proved the mailbox with a code, which is all that is needed to open *that* ticket,
             // even when the buyer paid as a guest and never signed in.
             if ($user->email_verified_at) {
@@ -72,6 +77,17 @@ class IssuedTicket extends Model
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    /** The event of this ticket: through its order item, or (guest-list tickets) through the dashboard ticket. */
+    public function event(): ?Event
+    {
+        return $this->orderItem?->event ?? $this->dashboardTicket?->event;
+    }
+
+    public function isGuestList(): bool
+    {
+        return $this->order_id === null;
     }
 
     /** "Event - VIP" → "VIP" (the whole name when it has no event prefix). */

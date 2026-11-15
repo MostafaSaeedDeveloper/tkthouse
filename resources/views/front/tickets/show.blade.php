@@ -13,7 +13,7 @@
 @endphp
 
 @section('portal')
-<a class="tkt-portal__back" href="{{ route('front.account.tickets', ['order' => $siblings->count() > 1 ? $ticket->order->order_number : null, 'when' => $siblings->count() > 1 ? 'all' : null]) }}">
+<a class="tkt-portal__back" href="{{ route('front.account.tickets', ['order' => $siblings->count() > 1 && $ticket->order ? $ticket->order->order_number : null, 'when' => $siblings->count() > 1 ? 'all' : null]) }}">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> {{ $siblings->count() > 1 ? 'All tickets of this order' : 'My tickets' }}
 </a>
 
@@ -56,7 +56,15 @@
             <p class="dt__qr-tip">Tip: raise your screen brightness for faster scanning.</p>
         @elseif($state === 'locked')
             <div class="dt__lock">
-                <span class="dt__lock-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                {{-- Decorative placeholder: the same fixed picture for every ticket, never derived from the real QR. --}}
+                <div class="dt__ph" aria-hidden="true">
+                    {!! \App\Support\TicketQr::placeholderSvg() !!}
+                    <div class="dt__ph-veil">
+                        <span class="dt__ph-lock"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                        <b>QR LOCKED</b>
+                        @if($revealsAt)<small>Opens {{ $revealsAt->format('D j M · g:i A') }}</small>@endif
+                    </div>
+                </div>
                 <h3>QR Code Locked</h3>
                 <p>Your QR code will be available closer to the event.</p>
                 @if($revealsAt)
@@ -75,8 +83,10 @@
     <dl class="dt__meta">
         <div><dt>Attendee</dt><dd>{{ $ticket->holder_name ?: '—' }}</dd></div>
         <div><dt>Ticket type</dt><dd>{{ $ticket->ticketTypeLabel() }}</dd></div>
-        <div><dt>Order</dt><dd>
-            @if(\App\Models\Order::query()->ownedByCustomer(auth()->user())->whereKey($ticket->order_id)->exists())
+        <div><dt>{{ $ticket->order ? 'Order' : 'Type' }}</dt><dd>
+            @if(! $ticket->order)
+                Guest invitation
+            @elseif(\App\Models\Order::query()->ownedByCustomer(auth()->user())->whereKey($ticket->order_id)->exists())
                 <a class="tkt-link" href="{{ route('front.account.orders.show', $ticket->order->order_number) }}">#{{ $ticket->order->order_number }}</a>
             @else
                 #{{ $ticket->order->order_number }}
@@ -96,10 +106,31 @@
     if (state === 'canceled' || state === 'used') return;
     var url = root.getAttribute('data-qr-url');
 
+    // Locked -> visible: the real QR takes the placeholder's place, same size, with a short fade (no reload, no layout jump).
+    function reveal(svg) {
+        var panel = root.querySelector('.dt__qr'), ph = root.querySelector('.dt__ph');
+        if (!panel || !ph) { window.location.reload(); return; }
+        var box = document.createElement('div');
+        box.className = 'dt__qr-box is-in'; box.setAttribute('role', 'img'); box.setAttribute('aria-label', 'Ticket QR code. Show it at the entrance.');
+        box.innerHTML = svg;
+        ph.classList.add('is-out');
+        setTimeout(function () {
+            panel.innerHTML = '';
+            panel.appendChild(box);
+            var cap = document.createElement('p'); cap.className = 'dt__qr-cap'; cap.textContent = 'Show this code at the entrance'; panel.appendChild(cap);
+            var tip = document.createElement('p'); tip.className = 'dt__qr-tip'; tip.textContent = 'Tip: raise your screen brightness for faster scanning.'; panel.appendChild(tip);
+            root.classList.remove('dt--locked'); root.classList.add('dt--visible'); root.setAttribute('data-ticket-state', 'visible'); state = 'visible';
+            clearInterval(window.__dtTimer);
+        }, 350);
+    }
+
     function check() {
         fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', cache: 'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (d) { if (d && d.state !== state) { window.location.reload(); } })
+            .then(function (d) {
+                if (!d || d.state === state) return;
+                if (state === 'locked' && d.state === 'visible' && d.svg) { reveal(d.svg); } else { window.location.reload(); }
+            })
             .catch(function () {});
     }
 
@@ -115,7 +146,7 @@
             box.innerHTML = (d > 0 ? cells(d, 'days') : '') + cells(h, 'hrs') + cells(m, 'min') + (d === 0 ? cells(sec, 'sec') : '');
             if (left === 0) { clearInterval(timer); check(); }
         };
-        var timer = setInterval(tick, 1000); tick();
+        var timer = window.__dtTimer = setInterval(tick, 1000); tick();
     }
 
     // Admin changes (show / hide) reach an open page within a minute, and straight away when the tab comes back.

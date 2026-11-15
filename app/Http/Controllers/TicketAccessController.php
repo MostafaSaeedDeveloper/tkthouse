@@ -60,7 +60,7 @@ class TicketAccessController extends Controller
     {
         $ticket = IssuedTicket::query()
             ->whereRaw('LOWER(holder_email) = ?', [$email])
-            ->whereHas('order', fn ($o) => $o->whereIn('status', IssuedTicket::PORTAL_ORDER_STATUSES))
+            ->where(fn ($q) => $q->whereNull('order_id')->orWhereHas('order', fn ($o) => $o->whereIn('status', IssuedTicket::PORTAL_ORDER_STATUSES)))
             ->latest('id')->first();
 
         if (! $ticket) {

@@ -41,7 +41,7 @@
 @endphp
 
 <nav class="a-ev-jump" aria-label="Jump to section">
-    <a href="#ev-basic">Basics</a><a href="#ev-sale">Availability</a><a href="#ev-media">Media</a><a href="#ev-content">Content</a><a href="#ev-tickets">Tickets</a><a href="#ev-fees">Fees</a><a href="#ev-lineup">Lineup</a>@if(isset($event))<a href="#ev-qr">Ticket QR</a>@endif
+    <a href="#ev-basic">Basics</a><a href="#ev-sale">Availability</a><a href="#ev-media">Media</a><a href="#ev-content">Content</a><a href="#ev-tickets">Tickets</a><a href="#ev-fees">Fees</a><a href="#ev-lineup">Lineup</a>@if(isset($event))<a href="#ev-qr">Ticket QR</a><a href="#ev-entry">Entry</a>@endif
 </nav>
 
 <x-admin.form-section id="ev-basic" title="Basic information" description="Name, schedule and where the event takes place." :cols="2">

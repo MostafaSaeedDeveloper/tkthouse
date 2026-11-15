@@ -1,8 +1,11 @@
-# Digital tickets & QR visibility
+# Digital tickets, QR visibility & entry availability
 
-- Booking e-mails carry **no ticket PDF** and no QR; only the payment invoice PDF stays attached. The button "VIEW YOUR TICKETS" opens the ticket(s) in the customer's account (`/tickets/{uuid}` for one ticket, `/account/tickets?order=…` for several).
-- Signed-out visitors (buyers, guest buyers, gifted holders) land on `/tickets/access`: e-mail + 6-digit code, then they are returned to the ticket. A holder with no account gets a passwordless one, only once the code proves the mailbox.
-- Per event (Edit Event → *Ticket QR Visibility*): Show Immediately (default), Scheduled Reveal (N minutes/hours/days before start), Manual Control; Show QR / Hide QR works over any mode. Who/when is stored and activity-logged. Logic: `Event::qrIsVisible()`.
-- QR content for new tickets is an unguessable token (`TKT-` + 24 letters) stored in `tickets.qr_payload`; old tickets keep the bare ticket number and still scan. QR images are drawn locally (bacon/bacon-qr-code), never by a third party.
-- Hidden QR is never sent to the browser. The scanner enforces the same rules server-side (canceled/refunded refused, QR refused while hidden, a scanned bare number is not a credential for new tickets, atomic single check-in).
-- Ticket PDFs: none for new tickets; links for old tickets still work (and respect visibility). Admin-issued guest-list tickets keep their PDF.
+- **No ticket PDFs.** Booking e-mails, holder e-mails, WhatsApp and guest-list invitations carry a "View your ticket(s)" link, never a PDF or QR. The payment invoice PDF is unchanged.
+- **Access.** Signed-out visitors (buyers, guest buyers, gifted holders, guest-list invitees) land on `/tickets/access`: e-mail + 6-digit code, then they return to their ticket. People only ever see tickets of their own orders or issued to their *verified* address.
+- **Guest-list tickets are digital** (issued tickets without an order, `GuestTicketIssuer`). Older guest tickets come online the first time they are sent; their QR already in circulation keeps working.
+- **QR Visibility** (Edit Event → *Ticket QR Visibility*, permission `events.qr-visibility.manage`): Show Immediately (default) / Scheduled Reveal / Manual, plus Show QR / Hide QR override. Controls only what customers see. Locked tickets show a decorative placeholder (fixed picture, never the real code) and a countdown; the real QR replaces it in place when allowed.
+- **Entry Availability** (Edit Event → *Entry Availability*, permission `events.entry.manage`): Always open (default) / Scheduled (N before start) / Manual, plus Open gates / Close gates override. The scanner refuses everyone while the gates are closed (old and new tickets, scanned or typed). Independent of QR visibility.
+- Both settings record who changed them and when (activity log + "Last changed by"). Migration `2026_12_22_000002` grants the two permissions to every role that already had `events.update`, and to super admins.
+- **QR content.** New tickets: unguessable token (`TKT-` + 24 letters) in `tickets.qr_payload`, drawn locally. Old tickets: bare ticket number. A scanned bare number is not a credential for a new ticket (typing it is allowed for staff).
+- **Scanner rules** (server-side): canceled / refunded (incl. partial) never admitted; used tickets never twice (atomic); gates closed → refused; forged QR refused.
+- QA report: `docs/digital-tickets-qa-report.md` (screenshots in `docs/screenshots/digital-tickets/`).

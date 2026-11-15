@@ -9,7 +9,7 @@
         ->where('description', 'like', 'Ticket QR%')->latest('id')->limit(5)->with('causer')->get();
     $stateLabel = ['visible' => ['Visible', 'success'], 'hidden' => ['Hidden', 'default'], 'scheduled' => ['Scheduled', 'warning'], 'overridden' => ['Manually overridden', 'info']][$qrs['state']];
 @endphp
-<x-admin.card id="ev-qr" title="Ticket QR Visibility" subtitle="Control when customers see the QR code on their digital tickets. Tickets stay confirmed and valid either way; the QR is never e-mailed.">
+<x-admin.card id="ev-qr" title="Ticket QR Visibility" subtitle="Controls only when customers SEE their QR code. It does not open or close the gates (see Entry Availability). Tickets stay confirmed and valid either way; the QR is never e-mailed.">
     <div class="a-qr-status" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
         <x-admin.badge :variant="$stateLabel[1]" :dot="true">{{ $stateLabel[0] }}</x-admin.badge>
         <strong>QR codes are {{ $qrs['visible'] ? 'visible' : 'hidden' }} to ticket holders right now.</strong>
@@ -19,7 +19,7 @@
 
     <div class="a-qr-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
         @foreach([['show', 'Show QR', 'fa-eye', 'a-btn--primary'], ['hide', 'Hide QR', 'fa-eye-slash', 'a-btn--outline']] as [$val, $text, $icon, $cls])
-            <form method="POST" action="{{ route('admin.events.qr-override', $event) }}" data-a-confirm="{{ $val === 'show' ? 'Show the QR code on ALL tickets of this event now?' : 'Hide the QR code from ALL tickets of this event now? Holders will see QR Code Locked, and the gate will not accept new-style QR codes until it is shown again.' }}" data-a-confirm-title="{{ $text }}" data-a-confirm-ok="{{ $text }}">
+            <form method="POST" action="{{ route('admin.events.qr-override', $event) }}" data-a-confirm="{{ $val === 'show' ? 'Show the QR code on ALL tickets of this event now?' : 'Hide the QR code from ALL tickets of this event now? Holders will see QR Code Locked until it is shown again. (Who may enter is controlled separately under Entry Availability.)' }}" data-a-confirm-title="{{ $text }}" data-a-confirm-ok="{{ $text }}">
                 @csrf<input type="hidden" name="override" value="{{ $val }}">
                 <button type="submit" class="a-btn {{ $cls }}" @disabled($qrs['override'] === $val)><i class="fa {{ $icon }}"></i> {{ $text }}</button>
             </form>

@@ -18,12 +18,14 @@ class FrontTicketController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
 
-        $ticket->load(['order', 'dashboardTicket', 'orderItem.event']);
-        $event = $ticket->orderItem?->event;
+        $ticket->load(['order', 'dashboardTicket.event', 'orderItem.event']);
+        $event = $ticket->event();
         $qr = CustomerPortal::qrState($ticket, $event);
 
         // Tickets of the same order the visitor may open: lets them page through "Ticket 2 of 4".
-        $siblings = IssuedTicket::query()->ownedByCustomer($request->user())->where('order_id', $ticket->order_id)->orderBy('id')->get(['id', 'uuid', 'holder_name', 'ticket_name']);
+        $siblings = $ticket->order_id === null
+            ? collect([$ticket])
+            : IssuedTicket::query()->ownedByCustomer($request->user())->where('order_id', $ticket->order_id)->orderBy('id')->get(['id', 'uuid', 'holder_name', 'ticket_name']);
 
         return response()->view('front.tickets.show', [
             'ticket' => $ticket,
@@ -43,8 +45,8 @@ class FrontTicketController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
 
-        $ticket->load(['order', 'dashboardTicket', 'orderItem.event']);
-        $qr = CustomerPortal::qrState($ticket, $ticket->orderItem?->event);
+        $ticket->load(['order', 'dashboardTicket.event', 'orderItem.event']);
+        $qr = CustomerPortal::qrState($ticket, $ticket->event());
 
         return response()->json([
             'state' => $qr['state'],
@@ -62,10 +64,10 @@ class FrontTicketController extends Controller
     public function download(Request $request, IssuedTicket $ticket)
     {
         $this->authorizeTicket($request, $ticket);
-        $ticket->load(['order', 'dashboardTicket', 'orderItem.event']);
+        $ticket->load(['order', 'dashboardTicket.event', 'orderItem.event']);
         abort_if($ticket->dashboardTicket?->isRefundCanceled(), 410, 'This ticket was canceled after a refund.');
 
-        if ($ticket->dashboardTicket?->hasTokenQr() || ! CustomerPortal::qrVisible($ticket, $ticket->orderItem?->event)) {
+        if ($ticket->dashboardTicket?->hasTokenQr() || ! CustomerPortal::qrVisible($ticket, $ticket->event())) {
             return redirect()->route('front.tickets.show', $ticket);
         }
 
@@ -101,8 +103,8 @@ class FrontTicketController extends Controller
         abort_if($ticket->hasTokenQr(), 404);
 
         // A hidden QR stays hidden here too, for tickets issued before digital tickets.
-        $issued = IssuedTicket::query()->with(['order', 'dashboardTicket', 'orderItem.event'])->where('ticket_number', $ticketNumber)->first();
-        abort_if($issued && ! CustomerPortal::qrVisible($issued, $issued->orderItem?->event), 403, 'This ticket\'s QR code is not available yet.');
+        $issued = IssuedTicket::query()->with(['order', 'dashboardTicket.event', 'orderItem.event'])->where('ticket_number', $ticketNumber)->first();
+        abort_if($issued && ! CustomerPortal::qrVisible($issued, $issued->event()), 403, 'This ticket\'s QR code is not available yet.');
 
         $event = $this->resolveEvent($ticket->name ?? '');
         $qrDataUri = TicketQr::dataUri($ticket->qrContent());

@@ -150,6 +150,33 @@ class EventController extends Controller
         });
     }
 
+    /** Entry Availability: when the scanner admits people (separate from QR visibility). */
+    public function entryAvailability(Request $request, Event $event, \App\Services\Tickets\EntryAvailabilityService $entry)
+    {
+        $data = $request->validate([
+            'entry_mode' => ['required', 'in:'.implode(',', Event::ENTRY_MODES)],
+            'entry_opens_amount' => ['nullable', 'numeric', 'min:0'],
+            'entry_opens_unit' => ['nullable', 'in:minutes,hours,days'],
+        ]);
+
+        $entry->configure($event, $request->user(), $data['entry_mode'], isset($data['entry_opens_amount']) ? (float) $data['entry_opens_amount'] : null, $data['entry_opens_unit'] ?? 'hours');
+
+        return redirect()->to(route('admin.events.edit', $event).'#ev-entry')->with('success', 'Entry availability saved.');
+    }
+
+    public function entryOverride(Request $request, Event $event, \App\Services\Tickets\EntryAvailabilityService $entry)
+    {
+        $data = $request->validate(['override' => ['required', 'in:open,close,auto']]);
+
+        $entry->override($event, $request->user(), $data['override'] === 'auto' ? null : $data['override']);
+
+        return redirect()->to(route('admin.events.edit', $event).'#ev-entry')->with('success', match ($data['override']) {
+            'open' => 'Gates are open: the scanner now admits tickets of this event.',
+            'close' => 'Gates are closed: the scanner will not admit anyone.',
+            default => 'Back to the automatic rule.',
+        });
+    }
+
     public function destroy(Event $event)
     {
         try {

@@ -40,7 +40,58 @@ class Event extends Model
             'requires_booking_approval' => 'boolean',
             'archived_at' => 'datetime',
             'qr_visibility_changed_at' => 'datetime',
+            'entry_changed_at' => 'datetime',
         ];
+    }
+
+    /* ------------------------------------------------------------ entry availability (the scanner), separate from QR visibility */
+
+    public const ENTRY_ALWAYS = 'always';
+    public const ENTRY_SCHEDULED = 'scheduled';
+    public const ENTRY_MANUAL = 'manual';
+    public const ENTRY_MODES = [self::ENTRY_ALWAYS, self::ENTRY_SCHEDULED, self::ENTRY_MANUAL];
+
+    /** When a scheduled gate opens (N minutes before the event starts); null for the other modes. */
+    public function entryOpensAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->entry_mode !== self::ENTRY_SCHEDULED || ! $this->entry_opens_minutes_before) {
+            return null;
+        }
+
+        return $this->startsAt()?->subMinutes((int) $this->entry_opens_minutes_before);
+    }
+
+    /** Whether the scanner may admit tickets of this event right now. An admin override (open | close) wins over the mode. Default: always open. */
+    public function entryIsOpen(?\Illuminate\Support\Carbon $now = null): bool
+    {
+        $now ??= now();
+
+        if ($this->entry_override === 'open') {
+            return true;
+        }
+        if ($this->entry_override === 'close') {
+            return false;
+        }
+
+        return match ($this->entry_mode) {
+            self::ENTRY_SCHEDULED => ($at = $this->entryOpensAt()) === null ? false : $now->greaterThanOrEqualTo($at),
+            self::ENTRY_MANUAL => false,
+            default => true,
+        };
+    }
+
+    /** @return array{open: bool, state: string, opens_at: ?\Illuminate\Support\Carbon, override: ?string} state: open | closed | scheduled | overridden */
+    public function entryStatus(?\Illuminate\Support\Carbon $now = null): array
+    {
+        $open = $this->entryIsOpen($now);
+        $at = $this->entry_override === null ? $this->entryOpensAt() : null;
+
+        return ['open' => $open, 'override' => $this->entry_override, 'opens_at' => $at, 'state' => match (true) {
+            $this->entry_override !== null => 'overridden',
+            ! $open && $at !== null => 'scheduled',
+            $open => 'open',
+            default => 'closed',
+        }];
     }
 
     /* ------------------------------------------------------------ ticket QR visibility */

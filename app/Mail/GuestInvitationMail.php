@@ -5,7 +5,6 @@ namespace App\Mail;
 use App\Models\Ticket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -16,7 +15,7 @@ class GuestInvitationMail extends Mailable
 
     public function __construct(
         public Ticket $ticket,
-        private string $pdfBinary
+        public string $showUrl
     ) {
     }
 
@@ -30,14 +29,8 @@ class GuestInvitationMail extends Mailable
         return new Content(view: 'emails.tickets.guest-invitation', with: [
             'guestName' => (string) ($this->ticket->holder_name ?? 'Guest'),
             'eventName' => $this->ticket->eventLabel(),
+            'showUrl' => $this->showUrl,
+            'event' => $this->ticket->event,
         ]);
-    }
-
-    public function attachments(): array
-    {
-        return [
-            Attachment::fromData(fn () => $this->pdfBinary, 'ticket-'.$this->ticket->ticket_number.'.pdf')
-                ->withMime('application/pdf'),
-        ];
     }
 }

@@ -41,7 +41,8 @@ class UltramsgWhatsappService
             : trim((string) $ticket->name);
 
         // A ticket bought online is digital: send the link to it, never a PDF (a PDF would carry the QR whatever its visibility).
-        $issued = \App\Models\IssuedTicket::query()->where('ticket_number', $ticket->ticket_number)->first();
+        $issued = \App\Models\IssuedTicket::query()->where('ticket_number', $ticket->ticket_number)->first()
+            ?? ($ticket->isGuestList() ? app(\App\Services\Tickets\GuestTicketIssuer::class)->ensure($ticket) : null);
         if ($issued) {
             $this->sendTextMessage($phone, implode("\n", [
                 '🎟️ Your ticket is ready',
