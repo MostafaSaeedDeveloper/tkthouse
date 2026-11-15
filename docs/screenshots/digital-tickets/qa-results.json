@@ -416,8 +416,8 @@
   {
     "area": "scanner",
     "name": "Duplicate check-in POST is refused (ALREADY CHECKED IN)",
-    "ok": false,
-    "detail": "ticket id 4 / undefined"
+    "ok": true,
+    "detail": "first run failed because of a script bug (AJAX header changed the redirect response); re-run separately: \"ALREADY CHECKED IN at 15 Nov 2026, 14:44. Entry is not allowed twice.\""
   },
   {
     "area": "scanner",
