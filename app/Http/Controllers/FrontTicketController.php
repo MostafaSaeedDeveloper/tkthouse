@@ -34,6 +34,8 @@ class FrontTicketController extends Controller
             // The QR image is rendered into the page only when it may be shown; otherwise nothing about it reaches the browser.
             'qrSvg' => $qr['state'] === 'visible' ? TicketQr::svg($ticket->qrPayload(), 320) : null,
             'siblings' => $siblings,
+            // Order and payment details belong to the buyer; a holder the ticket was bought for only sees their ticket.
+            'isBuyer' => $ticket->order_id !== null && \App\Models\Order::query()->ownedByCustomer($request->user())->whereKey($ticket->order_id)->exists(),
         ])->header('Cache-Control', 'private, no-store');
     }
 

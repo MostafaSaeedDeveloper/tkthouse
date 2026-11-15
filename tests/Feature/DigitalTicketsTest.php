@@ -53,6 +53,8 @@ class DigitalTicketsTest extends TestCase
         $order = $this->makePendingOrder($user, $event ?? $this->event, $people);
         $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
         app(TicketIssuanceService::class)->issueIfPaid($order->fresh());
+        // These fixtures model "I bought tickets for myself": the holder is the buyer (My Tickets lists tickets assigned to you).
+        IssuedTicket::where('order_id', $order->id)->update(['holder_email' => $user->email]);
 
         return $order->fresh();
     }

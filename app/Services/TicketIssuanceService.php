@@ -159,7 +159,16 @@ class TicketIssuanceService
             ->filter(fn (IssuedTicket $ticket) => filled($ticket->holder_email))
             ->groupBy(fn (IssuedTicket $ticket) => mb_strtolower(trim((string) $ticket->holder_email)));
 
+        $buyerEmail = mb_strtolower(trim((string) $order->customer?->email));
+
         foreach ($groupedByHolder as $holderEmail => $tickets) {
+            // The buyer is also a holder: their booking-confirmation e-mail already links to those tickets, so no second e-mail.
+            if ($buyerEmail !== '' && $holderEmail === $buyerEmail) {
+                IssuedTicket::query()->whereIn('id', $tickets->pluck('id'))->update(['sent_at' => now()]);
+
+                continue;
+            }
+
             $ok = $this->sendMailWithRetry(
                 fn () => Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail)),
                 ['order_id' => $order->id, 'recipient' => $holderEmail, 'mail_type' => 'holder_tickets_issued']

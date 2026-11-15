@@ -102,3 +102,77 @@ Ticket page, `/qr` JSON, old `/download` link, `/t/{number}` short link, signed 
 ## Residual notes
 - Tickets issued before this change keep their bare-number QR (already in PDFs/WhatsApp). They still scan and are affected only by the gate and canceled/refunded/used rules. Their old public PDF link still works but respects QR visibility.
 - Staff-only backend pages (admin ticket view / PDF download) still render the QR for authorised staff.
+
+
+---
+
+# Part 2 — Buyer vs ticket holder (multi-ticket ownership)
+
+Scenario run end to end: Ahmed (buyer, account) pays for 3 tickets — Ahmed, Mohamed, Omar, three different e-mails.
+
+## What changed
+- **Buyer** keeps the order: order page lists every ticket with its holder, e-mail, status and invitation status, **View ticket**, **Resend link**, **Edit holder**; invoice and payment details are visible only to the buyer.
+- **Holders** get their own e-mail ("View my ticket"), open it after an e-mail code (no account needed, no buyer login) and see **only their ticket**: no order number, payment, buyer or other holders; the buyer's order/invoice do not exist for them.
+- **My Tickets** = tickets assigned to you (never listed twice). Tickets you bought for others are listed under My Orders; My Tickets shows a pointer ("You also bought N tickets for other people"). The buyer's e-mail button opens the order's own list (all its tickets).
+- **E-mails:** buyer = one confirmation (+ invoice PDF only); each other holder = one private e-mail (same address on several tickets = one e-mail); a buyer who is also a holder gets no duplicate. No PDF, no QR, no order/payment data in holder e-mails.
+- **Edit holder / Resend** (buyer only): name change (free), e-mail change = *move* (max 3 per ticket): the old address loses access immediately, the new one is invited, the **QR code is not regenerated**, everything is logged (who, when, old/new). Refused for used, canceled and refunded tickets and for guest-list tickets. Resend: 3 per ticket per hour.
+- Checkout now says each attendee receives their own ticket at their e-mail.
+- Migration `2026_12_23_000001` adds `issued_tickets.holder_email_changes`.
+
+## Backend tests
+New `MultiTicketOwnershipTest` (16 tests, 182 assertions): e-mail recipients and content, same-address grouping, buyer vs holder views, isolation (links, `/qr`, order, invoice, resend/edit), two orders for one holder, guest buyer buying only for others, e-mail move (old address revoked incl. an open session, new invited, QR unchanged, audit), name-only change, move limit, used/canceled/refunded blocks, resend limit, validation, first check-in wins, partial refund, QR visibility for both, invoice PDF.
+Full suite: **742 passed, 58 failed (the same 58 as the baseline), 0 new failures.** Tests updated for the new My Tickets meaning: `CustomerPortalTest`, `DigitalTicketsTest`, `DigitalTicketsAccessTest` (fixtures now use "holder = buyer").
+
+## Browser QA (desktop + mobile emulation) — `docs/screenshots/digital-tickets/qa-multi-results.json`: 44/44 passed
+| Area | Check | Result |
+|---|---|---|
+| desktop | Buyer: order page lists all 3 holders with names + e-mails | ✅ |
+| desktop | Buyer: each ticket has View ticket, Resend link, Edit holder and an invitation status | ✅ |
+| desktop | Buyer: My Tickets shows only their own ticket (no duplicates) + pointer to the 2 bought for others | ✅ |
+| desktop | Buyer: the e-mail's order list shows all 3 tickets | ✅ |
+| desktop | Holder: his private link asks him to confirm his e-mail | ✅ |
+| desktop | Holder: after the code his own ticket opens with the QR | ✅ |
+| desktop | Holder: no order number, payment, buyer name or other holders on his ticket | ✅ |
+| desktop | Holder: another holder's ticket (by link) is forbidden | ✅ |
+| desktop | Holder: buyer's order and invoice do not exist for him | ✅ |
+| desktop | Holder: My Tickets lists only his ticket | ✅ |
+| desktop | Holder 2: Omar opens his ticket | ✅ |
+| desktop | Buyer: moving the ticket shows a clear confirmation and the new e-mail | ✅ |
+| desktop | New holder e-mail was sent an invitation; the old address was not re-mailed | ✅ |
+| desktop | Old address loses access right away (403) | ✅ |
+| desktop | New address opens the ticket after its own code; same QR (not regenerated) | ✅ |
+| desktop | Buyer: Resend link confirms | ✅ |
+| desktop | QR hidden by the event: holder and buyer both see QR LOCKED, token absent | ✅ |
+| scanner | Mohamed's ticket is found and admitted | ✅ |
+| scanner | Check-in succeeds | ✅ |
+| scanner | Second scan: already Checked In, cannot be checked in again | ✅ |
+| scanner | Holder and buyer both see the ticket as Used (no QR) | ✅ |
+| scanner | Used ticket cannot be edited or re-sent | ✅ |
+| refund | Partial refund: the refunded holder sees Refunded, no QR | ✅ |
+| refund | Partial refund: the buyer's own ticket keeps working | ✅ |
+| refund | Order page shows the refunded ticket as Refunded with no edit tools | ✅ |
+| scanner | Refunded ticket is refused at the gate | ✅ |
+| invoice | Invoice PDF still downloads for the buyer | ✅ |
+| mobile | Buyer: order page lists all 3 holders with names + e-mails | ✅ |
+| mobile | Buyer: each ticket has View ticket, Resend link, Edit holder and an invitation status | ✅ |
+| mobile | Buyer: My Tickets shows only their own ticket (no duplicates) + pointer to the 2 bought for others | ✅ |
+| mobile | Buyer: the e-mail's order list shows all 3 tickets | ✅ |
+| mobile | Holder: his private link asks him to confirm his e-mail | ✅ |
+| mobile | Holder: after the code his own ticket opens with the QR | ✅ |
+| mobile | Holder: no order number, payment, buyer name or other holders on his ticket | ✅ |
+| mobile | Holder: another holder's ticket (by link) is forbidden | ✅ |
+| mobile | Holder: buyer's order and invoice do not exist for him | ✅ |
+| mobile | Holder: My Tickets lists only his ticket | ✅ |
+| mobile | Holder 2: Omar opens his ticket | ✅ |
+| mobile | Buyer: moving the ticket shows a clear confirmation and the new e-mail | ✅ |
+| mobile | New holder e-mail was sent an invitation; the old address was not re-mailed | ✅ |
+| mobile | Old address loses access right away (403) | ✅ |
+| mobile | New address opens the ticket after its own code; same QR (not regenerated) | ✅ |
+| mobile | Buyer: Resend link confirms | ✅ |
+| mobile | QR hidden by the event: holder and buyer both see QR LOCKED, token absent | ✅ |
+
+## Remaining notes / risks
+- **A moved ticket keeps the same QR** (by requirement). Someone who already saw the QR (the previous holder) could still present a screenshot; the first successful check-in wins and then it is Used for everyone. If you want moves to invalidate previous screenshots, the QR token would have to be rotated on move; that was deliberately not done.
+- "Link sent" for a holder whose e-mail equals the buyer's means "covered by the booking-confirmation e-mail".
+- Mail delivery in QA was verified by recipient through the log mailer, not by a real inbox; content is covered by PHPUnit.
+- Not tested on physical iPhone/Android devices.

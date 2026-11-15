@@ -9,3 +9,4 @@
 - **QR content.** New tickets: unguessable token (`TKT-` + 24 letters) in `tickets.qr_payload`, drawn locally. Old tickets: bare ticket number. A scanned bare number is not a credential for a new ticket (typing it is allowed for staff).
 - **Scanner rules** (server-side): canceled / refunded (incl. partial) never admitted; used tickets never twice (atomic); gates closed → refused; forged QR refused.
 - QA report: `docs/digital-tickets-qa-report.md` (screenshots in `docs/screenshots/digital-tickets/`).
+- **Buyer vs holder.** The buyer owns the order (invoice, payment, all tickets, Edit holder / Resend link, up to 3 e-mail moves per ticket, never for used / canceled / refunded tickets, QR never regenerated). Each holder gets a private e-mail and sees only their ticket. My Tickets lists tickets assigned to you; tickets bought for others are under My Orders.

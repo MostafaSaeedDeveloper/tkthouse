@@ -100,6 +100,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');
     Route::get('/account/orders/{orderNumber}', [CustomerDashboardController::class, 'showOrder'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.account.orders.show');
     Route::get('/account/orders/{orderNumber}/invoice', [CustomerDashboardController::class, 'invoice'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:30,1,account-invoice')->name('front.account.orders.invoice');
+    Route::post('/account/orders/{orderNumber}/tickets/{ticket}/holder', [\App\Http\Controllers\TicketHolderController::class, 'update'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:20,1,ticket-holder')->name('front.account.tickets.holder.update');
+    Route::post('/account/orders/{orderNumber}/tickets/{ticket}/resend', [\App\Http\Controllers\TicketHolderController::class, 'resend'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:20,1,ticket-resend')->name('front.account.tickets.resend');
     Route::get('/account/tickets', [CustomerDashboardController::class, 'tickets'])->name('front.account.tickets');
     Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');

@@ -21,6 +21,7 @@ class IssuedTicket extends Model
         'ticket_price',
         'seat_index',
         'sent_at',
+        'holder_email_changes',
     ];
 
     protected function casts(): array

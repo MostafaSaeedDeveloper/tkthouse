@@ -161,7 +161,7 @@ class CustomerDashboardController extends Controller
         app(PendingPaymentExpiryService::class)->expireDueOrders();
 
         $order = Order::query()->ownedByCustomer($request->user())->where('order_number', $orderNumber)
-            ->with(['items.event', 'customer', 'paymentAttempts', 'issuedTickets.dashboardTicket', 'issuedTickets.orderItem.event'])
+            ->with(['items.event', 'customer', 'paymentAttempts', 'issuedTickets.dashboardTicket.event', 'issuedTickets.orderItem.event'])
             ->firstOrFail(); // somebody else's order simply does not exist
 
         $method = PaymentMethod::query()->where('code', (string) $order->payment_method)->first();
@@ -201,8 +201,17 @@ class CustomerDashboardController extends Controller
         $when = in_array($requested, [...$groupsKeys, 'all'], true) ? $requested : ($orderNumber !== '' ? 'all' : 'upcoming');
 
         $query = IssuedTicket::query()->ownedByCustomer($user)->with(['order', 'dashboardTicket.event', 'orderItem.event']);
+        $forOthers = 0;
         if ($orderNumber !== '') {
+            // The order's own list (the buyer's "View your tickets" link): every ticket of that order the account may open.
             $query->whereHas('order', fn ($o) => $o->where('order_number', $orderNumber));
+        } else {
+            // My Tickets = tickets that are *mine* (assigned to my e-mail, or bought by me with no other holder). Tickets I bought for other
+            // people live under My Orders, so nothing is listed twice and nobody's ticket is shown as mine. A ticket is a single row whoever bought it.
+            $mine = fn ($q) => $q->whereRaw('LOWER(holder_email) = ?', [mb_strtolower((string) $user->email)])
+                ->orWhere(fn ($w) => $w->where(fn ($b) => $b->whereNull('holder_email')->orWhere('holder_email', ''))->whereHas('order', fn ($o) => $o->ownedByCustomer($user)));
+            $forOthers = (clone $query)->whereNot(fn ($q) => $mine($q))->count();
+            $query->where(fn ($q) => $mine($q));
         }
 
         $tickets = $query->orderByDesc('id')->get();
@@ -222,6 +231,7 @@ class CustomerDashboardController extends Controller
             'total' => $tickets->count(),
             'when' => $when,
             'orderNumber' => $orderNumber,
+            'forOthers' => $forOthers,
         ]);
     }
 }

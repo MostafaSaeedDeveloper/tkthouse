@@ -13,7 +13,7 @@
     $first = $tickets->first();
   @endphp
   <p class="ep">Hi <strong>{{ $first?->holder_name ?: 'there' }}</strong>,</p>
-  <p class="ep">{{ $tickets->count() === 1 ? 'A ticket' : $tickets->count().' tickets' }} for order <strong>#{{ $order->order_number }}</strong> {{ $tickets->count() === 1 ? 'has' : 'have' }} been issued in your name.</p>
+  <p class="ep">{{ $tickets->count() === 1 ? 'A ticket' : $tickets->count().' tickets' }} {{ $tickets->count() === 1 ? 'has' : 'have' }} been issued in your name.</p>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#15151e;border:1px solid #26263a;border-radius:10px;border-collapse:separate;margin:18px 0 6px;">
     @if($event)
@@ -27,7 +27,7 @@
   </table>
 
   <div class="ecta-wrap" style="margin-top:28px;">
-    <a class="ecta" href="{{ $ticketsUrl }}" style="text-transform:uppercase;letter-spacing:.6px;">View your {{ $tickets->count() === 1 ? 'ticket' : 'tickets' }}</a>
+    <a class="ecta" href="{{ $ticketsUrl }}" style="text-transform:uppercase;letter-spacing:.6px;">View my {{ $tickets->count() === 1 ? 'ticket' : 'tickets' }}</a>
     <p class="ecta-sub">No account needed: confirm this email address with a one-time code and your ticket opens.</p>
   </div>
 

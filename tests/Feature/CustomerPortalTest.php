@@ -50,6 +50,8 @@ class CustomerPortalTest extends TestCase
         $order = $this->makePendingOrder($user, $event ?? $this->event, $people);
         $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
         app(TicketIssuanceService::class)->issueIfPaid($order->fresh());
+        // These fixtures model "I bought tickets for myself": the holder is the buyer (My Tickets lists tickets assigned to you).
+        IssuedTicket::where('order_id', $order->id)->update(['holder_email' => $user->email]);
 
         return $order->fresh();
     }
@@ -199,6 +201,7 @@ class CustomerPortalTest extends TestCase
         $theirs = $this->paid($this->customer(), 1, $this->makeEvent(['name' => 'Their Night']));
         $unclaimed = $this->paid($me, 1, $this->makeEvent(['name' => 'Unclaimed Night']));
         $unclaimed->forceFill(['owner_unverified' => true])->save();
+        IssuedTicket::where('order_id', $unclaimed->id)->update(['holder_email' => 'someone.else@example.test']);   // not my address: only the verified buyer / holder may see it
 
         $page = fn (string $when) => $this->actingAs($me)->get(route('front.account.tickets', ['when' => $when]))->assertOk();
 
@@ -236,6 +239,7 @@ class CustomerPortalTest extends TestCase
         $stranger = $this->customer();
         $unclaimedOrder = $this->paid($me, 1);
         $unclaimedOrder->forceFill(['owner_unverified' => true])->save();
+        IssuedTicket::where('order_id', $unclaimedOrder->id)->update(['holder_email' => 'someone.else@example.test']);
         $unclaimed = IssuedTicket::where('order_id', $unclaimedOrder->id)->firstOrFail();
 
         $this->get(route('front.tickets.show', $ticket))->assertRedirect();

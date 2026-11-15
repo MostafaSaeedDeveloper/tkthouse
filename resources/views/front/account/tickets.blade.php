@@ -24,6 +24,10 @@
         @endforeach
     </div>
 
+    @if(($forOthers ?? 0) > 0)
+        <div class="tkt-tl__filter"><span>You also bought <b>{{ $forOthers }}</b> {{ \Illuminate\Support\Str::plural('ticket', $forOthers) }} for other people. Manage them in your orders.</span><a class="tkt-link" href="{{ route('front.account.orders') }}">My orders</a></div>
+    @endif
+
     @if($sections->isEmpty())
         <x-tkt.empty-state icon="ticket" :title="$emptyTitles[$when]" :text="$total === 0 ? 'Tickets appear here once your payment is confirmed.' : 'Your other tickets are in the other tabs.'">
             @if($total > 0 && $when !== 'all')<a class="tkt-btn tkt-btn--outline" href="{{ $linkFor('all') }}">Show all tickets</a>@endif

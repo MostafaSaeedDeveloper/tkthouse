@@ -195,3 +195,19 @@ a.dt-pager__btn:hover { border-color: var(--tkt-ink); color: var(--tkt-ink); }
 @keyframes dt-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .dt__ph, .dt__qr-box.is-in { transition: none; animation: none; } }
 .dt__lock .dt__ph { margin: 0 auto 4px; }
+
+/* Order page: ticket holders */
+.tkt-hold-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.tkt-hold { padding: 16px 0; border-top: 1px solid var(--tkt-line); display: grid; gap: 12px; }
+.tkt-hold:first-child { border-top: 0; padding-top: 0; }
+.tkt-hold__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.tkt-hold__who { display: grid; gap: 2px; min-width: 0; flex: 1 1 200px; font-size: var(--tkt-fs-sm); }
+.tkt-hold__who b { font-size: var(--tkt-fs-base); overflow-wrap: anywhere; }
+.tkt-hold__who span { color: var(--tkt-ink-soft); overflow-wrap: anywhere; }
+.tkt-hold__who small { color: var(--tkt-muted); }
+.tkt-hold__badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.tkt-hold__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tkt-hold__actions form { margin: 0; }
+.tkt-hold__form { display: grid; gap: 10px; padding: 14px; border-radius: var(--tkt-radius-sm); background: var(--tkt-surface); }
+.tkt-hold__form[hidden] { display: none; }
+@media (max-width: 479px) { .tkt-hold__actions .tkt-btn { flex: 1; } }

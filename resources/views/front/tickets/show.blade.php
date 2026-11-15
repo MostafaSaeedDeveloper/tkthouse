@@ -83,15 +83,15 @@
     <dl class="dt__meta">
         <div><dt>Attendee</dt><dd>{{ $ticket->holder_name ?: '—' }}</dd></div>
         <div><dt>Ticket type</dt><dd>{{ $ticket->ticketTypeLabel() }}</dd></div>
+        @if($isBuyer || ! $ticket->order)
         <div><dt>{{ $ticket->order ? 'Order' : 'Type' }}</dt><dd>
             @if(! $ticket->order)
                 Guest invitation
-            @elseif(\App\Models\Order::query()->ownedByCustomer(auth()->user())->whereKey($ticket->order_id)->exists())
-                <a class="tkt-link" href="{{ route('front.account.orders.show', $ticket->order->order_number) }}">#{{ $ticket->order->order_number }}</a>
             @else
-                #{{ $ticket->order->order_number }}
+                <a class="tkt-link" href="{{ route('front.account.orders.show', $ticket->order->order_number) }}">#{{ $ticket->order->order_number }}</a>
             @endif
         </dd></div>
+        @endif
         <div><dt>Ticket no.</dt><dd class="dt__mono">{{ $ticket->ticket_number }}</dd></div>
         <div><dt>Status</dt><dd>{{ $label }}</dd></div>
     </dl>
