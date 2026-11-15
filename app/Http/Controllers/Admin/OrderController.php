@@ -1162,6 +1162,11 @@ class OrderController extends Controller
             return;
         }
 
+        // "Paid" has its own e-mail (Your booking is confirmed, sent when the tickets are issued): no extra status-change notice.
+        if ($newStatus === 'paid') {
+            return;
+        }
+
         if ($newStatus === 'rejected') {
             Mail::to($order->customer->email)
                 ->send(new OrderRejectedMail($order));
