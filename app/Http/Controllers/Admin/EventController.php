@@ -131,7 +131,7 @@ class EventController extends Controller
             'qr_reveal_unit' => ['nullable', 'in:minutes,hours,days'],
         ]);
 
-        $qr->configure($event, $request->user(), $data['qr_visibility_mode'], isset($data['qr_reveal_amount']) ? (float) $data['qr_reveal_amount'] : null, $data['qr_reveal_unit'] ?? 'hours');
+        $qr->configure($event, $request->user(), $data['qr_visibility_mode'], isset($data['qr_reveal_amount']) ? (float) $data['qr_reveal_amount'] : null, $data['qr_reveal_unit'] ?? 'hours', clearOverride: true);
 
         return redirect()->to(route('admin.events.edit', $event).'#ev-qr')->with('success', 'Ticket QR visibility saved.');
     }
@@ -159,7 +159,7 @@ class EventController extends Controller
             'entry_opens_unit' => ['nullable', 'in:minutes,hours,days'],
         ]);
 
-        $entry->configure($event, $request->user(), $data['entry_mode'], isset($data['entry_opens_amount']) ? (float) $data['entry_opens_amount'] : null, $data['entry_opens_unit'] ?? 'hours');
+        $entry->configure($event, $request->user(), $data['entry_mode'], isset($data['entry_opens_amount']) ? (float) $data['entry_opens_amount'] : null, $data['entry_opens_unit'] ?? 'hours', clearOverride: true);
 
         return redirect()->to(route('admin.events.edit', $event).'#ev-entry')->with('success', 'Entry availability saved.');
     }

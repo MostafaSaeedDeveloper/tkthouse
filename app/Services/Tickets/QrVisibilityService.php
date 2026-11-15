@@ -18,7 +18,7 @@ class QrVisibilityService
     private const UNIT_MINUTES = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
 
     /** Saves the mode (and, for "scheduled", how long before the event the QR is revealed). Keeps any manual override in place. */
-    public function configure(Event $event, ?User $by, string $mode, ?float $amount = null, string $unit = 'hours'): Event
+    public function configure(Event $event, ?User $by, string $mode, ?float $amount = null, string $unit = 'hours', bool $clearOverride = false): Event
     {
         if (! in_array($mode, Event::QR_MODES, true)) {
             throw ValidationException::withMessages(['qr_visibility_mode' => 'Choose when the QR code is shown.']);
@@ -38,7 +38,7 @@ class QrVisibilityService
             'qr_reveal_minutes_before' => $minutes,
             'qr_visibility_changed_by' => $by?->id,
             'qr_visibility_changed_at' => now(),
-        ])->save();
+        ] + ($clearOverride ? ['qr_override' => null] : []))->save();
 
         $this->log($event, $by, 'Ticket QR visibility settings changed', $before);
 

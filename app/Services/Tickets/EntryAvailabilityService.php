@@ -11,7 +11,7 @@ class EntryAvailabilityService
 {
     private const UNIT_MINUTES = ['minutes' => 1, 'hours' => 60, 'days' => 1440];
 
-    public function configure(Event $event, ?User $by, string $mode, ?float $amount = null, string $unit = 'hours'): Event
+    public function configure(Event $event, ?User $by, string $mode, ?float $amount = null, string $unit = 'hours', bool $clearOverride = false): Event
     {
         if (! in_array($mode, Event::ENTRY_MODES, true)) {
             throw ValidationException::withMessages(['entry_mode' => 'Choose when entry opens.']);
@@ -26,7 +26,7 @@ class EntryAvailabilityService
         }
 
         $before = $this->snapshot($event);
-        $event->forceFill(['entry_mode' => $mode, 'entry_opens_minutes_before' => $minutes, 'entry_changed_by' => $by?->id, 'entry_changed_at' => now()])->save();
+        $event->forceFill(['entry_mode' => $mode, 'entry_opens_minutes_before' => $minutes, 'entry_changed_by' => $by?->id, 'entry_changed_at' => now()] + ($clearOverride ? ['entry_override' => null] : []))->save();
         $this->log($event, $by, 'Entry availability settings changed', $before);
 
         return $event;

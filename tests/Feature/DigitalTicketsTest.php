@@ -254,6 +254,25 @@ class DigitalTicketsTest extends TestCase
         $this->actingAs($admin)->get(route('admin.events.edit', $e))->assertOk()->assertSee('Ticket QR Visibility')->assertSee('Manually overridden')->assertSee($admin->name);
     }
 
+    public function test_saving_the_automatic_rule_ends_a_manual_override_for_both_controls(): void
+    {
+        $admin = $this->staff(['events.qr-visibility.manage', 'events.entry.manage', 'events.update']);
+        $this->event->forceFill(['qr_override' => 'hide', 'entry_override' => 'close'])->save();
+
+        $page = $this->actingAs($admin)->get(route('admin.events.edit', $this->event))->assertOk();
+        $page->assertSee('data-seg-tab="manual"', false)->assertSee('Switch to automatic');   // manual is the active tab while an override is set
+        $page->assertSee('Hide QR (current)')->assertSee('Close gates (current)');
+
+        $this->actingAs($admin)->post(route('admin.events.qr-visibility', $this->event), ['qr_visibility_mode' => 'scheduled', 'qr_reveal_amount' => 24, 'qr_reveal_unit' => 'hours']);
+        $this->actingAs($admin)->post(route('admin.events.entry-availability', $this->event), ['entry_mode' => 'always']);
+
+        $e = $this->event->fresh();
+        $this->assertNull($e->qr_override);
+        $this->assertNull($e->entry_override);
+        $this->assertSame('scheduled', $e->qr_visibility_mode);
+        $this->actingAs($admin)->get(route('admin.events.edit', $e))->assertOk()->assertSee('Save QR visibility')->assertDontSee('Switch to automatic');
+    }
+
     public function test_invalid_visibility_settings_are_rejected_and_the_permission_is_required(): void
     {
         $admin = $this->staff(['events.qr-visibility.manage']);

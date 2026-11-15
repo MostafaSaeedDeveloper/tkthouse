@@ -17,34 +17,42 @@
         @if($es['override'])<span class="a-muted">Manual override: {{ $es['override'] === 'open' ? 'opened' : 'closed' }} (wins over the setting below).</span>@endif
     </div>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-        @foreach([['open', 'Open gates', 'fa-door-open', 'a-btn--primary', 'Open the gates for ALL tickets of this event now?'], ['close', 'Close gates', 'fa-door-closed', 'a-btn--outline', 'Close the gates now? The scanner will refuse every ticket of this event until you open them again.']] as [$val, $text, $icon, $cls, $ask])
-            <form method="POST" action="{{ route('admin.events.entry-override', $event) }}" data-a-confirm="{{ $ask }}" data-a-confirm-title="{{ $text }}" data-a-confirm-ok="{{ $text }}">
-                @csrf<input type="hidden" name="override" value="{{ $val }}">
-                <button type="submit" class="a-btn {{ $cls }}" @disabled($es['override'] === $val)><i class="fa {{ $icon }}"></i> {{ $text }}</button>
-            </form>
-        @endforeach
-        @if($es['override'])
-            <form method="POST" action="{{ route('admin.events.entry-override', $event) }}">@csrf<input type="hidden" name="override" value="auto"><button type="submit" class="a-btn a-btn--ghost"><i class="fa fa-rotate-left"></i> Back to automatic</button></form>
-        @endif
+    @php $manualOn = $es['override'] !== null; @endphp
+    <div class="a-seg" role="tablist" aria-label="Entry control" data-seg="entry">
+        <button type="button" class="a-btn {{ $manualOn ? 'a-btn--outline' : 'a-btn--primary' }}" role="tab" data-seg-tab="auto" aria-selected="{{ $manualOn ? 'false' : 'true' }}"><i class="fa fa-clock"></i> Automatic</button>
+        <button type="button" class="a-btn {{ $manualOn ? 'a-btn--primary' : 'a-btn--outline' }}" role="tab" data-seg-tab="manual" aria-selected="{{ $manualOn ? 'true' : 'false' }}"><i class="fa fa-hand"></i> Manual</button>
     </div>
 
-    <form method="POST" action="{{ route('admin.events.entry-availability', $event) }}" data-a-loading>
-        @csrf
-        <div class="a-form-section__head"><h3 class="a-form-section__title">When do the gates open?</h3></div>
-        <div style="display:grid;gap:10px;margin-bottom:12px">
-            <label class="a-check"><input type="radio" name="entry_mode" value="always" @checked($mode === 'always')> <span><strong>Always open</strong> — no entry restriction (the default).</span></label>
-            <label class="a-check"><input type="radio" name="entry_mode" value="scheduled" @checked($mode === 'scheduled')> <span><strong>Scheduled</strong> — the gates open a set time before the event starts.</span></label>
-            <div style="display:flex;gap:8px;align-items:center;margin-left:26px;flex-wrap:wrap">
-                <input type="number" name="entry_opens_amount" class="form-control" style="width:110px" min="1" step="1" value="{{ $amount }}" aria-label="Gates open lead time">
-                <select name="entry_opens_unit" class="form-control" style="width:130px" aria-label="Unit">@foreach(['minutes','hours','days'] as $u)<option value="{{ $u }}" @selected($unit === $u)>{{ $u }}</option>@endforeach</select>
-                <span class="a-muted">before the event starts{{ $event->startsAt() ? ' ('.$event->startsAt()->format('D j M, g:i A').')' : '' }}.</span>
+    <div data-seg-panel="auto" @if($manualOn) hidden @endif style="margin-top:16px">
+        <form method="POST" action="{{ route('admin.events.entry-availability', $event) }}" data-a-loading>
+            @csrf
+            <p class="a-muted" style="margin-bottom:10px">The gates follow this rule on their own. @if($manualOn)Saving returns the event to automatic and ends the manual choice.@endif</p>
+            <div style="display:grid;gap:10px;margin-bottom:12px">
+                <label class="a-check"><input type="radio" name="entry_mode" value="always" @checked($mode === 'always')> <span><strong>Always open</strong> — no entry restriction (the default).</span></label>
+                <label class="a-check"><input type="radio" name="entry_mode" value="scheduled" @checked($mode === 'scheduled')> <span><strong>Scheduled</strong> — the gates open a set time before the event starts.</span></label>
+                <div style="display:flex;gap:8px;align-items:center;margin-left:26px;flex-wrap:wrap">
+                    <input type="number" name="entry_opens_amount" class="form-control" style="width:110px" min="1" step="1" value="{{ $amount }}" aria-label="Gates open lead time">
+                    <select name="entry_opens_unit" class="form-control" style="width:130px" aria-label="Unit">@foreach(['minutes','hours','days'] as $u)<option value="{{ $u }}" @selected($unit === $u)>{{ $u }}</option>@endforeach</select>
+                    <span class="a-muted">before the event starts{{ $event->startsAt() ? ' ('.$event->startsAt()->format('D j M, g:i A').')' : '' }}.</span>
+                </div>
+                @error('entry_opens_amount')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+                @if($mode === 'manual')<label class="a-check"><input type="radio" name="entry_mode" value="manual" checked> <span><strong>Closed until opened</strong> (older setting) — press Open gates under Manual.</span></label>@endif
             </div>
-            @error('entry_opens_amount')<div class="a-error" role="alert">{{ $message }}</div>@enderror
-            <label class="a-check"><input type="radio" name="entry_mode" value="manual" @checked($mode === 'manual')> <span><strong>Manual</strong> — closed until you press <em>Open gates</em>.</span></label>
+            <button type="submit" class="a-btn a-btn--primary">{{ $manualOn ? 'Switch to automatic' : 'Save entry availability' }}</button>
+        </form>
+    </div>
+
+    <div data-seg-panel="manual" @if(! $manualOn) hidden @endif style="margin-top:16px">
+        <p class="a-muted" style="margin-bottom:10px">You decide now for every ticket of this event. It stays that way until you switch back to Automatic.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            @foreach([['open', 'Open gates', 'fa-door-open', 'a-btn--primary', 'Open the gates for ALL tickets of this event now?'], ['close', 'Close gates', 'fa-door-closed', 'a-btn--outline', 'Close the gates now? The scanner will refuse every ticket of this event until you open them again.']] as [$val, $text, $icon, $cls, $ask])
+                <form method="POST" action="{{ route('admin.events.entry-override', $event) }}" data-a-confirm="{{ $ask }}" data-a-confirm-title="{{ $text }}" data-a-confirm-ok="{{ $text }}">
+                    @csrf<input type="hidden" name="override" value="{{ $val }}">
+                    <button type="submit" class="a-btn {{ $cls }}" @disabled($es['override'] === $val)><i class="fa {{ $icon }}"></i> {{ $text }}{{ $es['override'] === $val ? ' (current)' : '' }}</button>
+                </form>
+            @endforeach
         </div>
-        <button type="submit" class="a-btn a-btn--primary">Save entry availability</button>
-    </form>
+    </div>
 
     <div class="a-hint" style="margin-top:18px;border-top:1px solid var(--a-border,#e5e7eb);padding-top:12px">
         @if($event->entry_changed_at)Last changed by <strong>{{ $by?->name ?? 'a former user' }}</strong> on {{ $event->entry_changed_at->format('d M Y, H:i') }}.@else Never changed (default: always open).@endif
