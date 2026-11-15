@@ -108,7 +108,7 @@
   <div class="a-tk-side">
     <x-admin.card title="QR Code">
       <div class="a-tk-qr">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ urlencode($ticket->qr_payload ?: $ticket->ticket_number) }}" alt="QR Code for {{ $ticket->ticket_number }}">
+        <img src="{{ \App\Support\TicketQr::dataUri($ticket->qrContent(), 220) }}" alt="QR Code for {{ $ticket->ticket_number }}">
         <span class="a-tk-qr__num">{{ $ticket->ticket_number ?? 'N/A' }}</span>
         <span class="a-hint">Scan at event entrance</span>
       </div>

@@ -2,14 +2,18 @@
   'title' => 'Your Ticket Is Ready — TKT House',
   'heroIcon' => '🎫',
   'heroTitle' => 'Your Ticket Is Ready',
-  'heroText' => 'Your ticket is attached as a PDF and can also be viewed from your secure ticket page.',
+  'heroText' => 'Your ticket is ready. Open it from your TKT House account.',
   'footerText' => 'This email was sent by TKT House ticketing service.',
 ])
 
 @section('content')
   <p class="ep" style="margin-bottom:16px;">Hi <strong>{{ $ticket->holder_name ?: 'Guest' }}</strong>,</p>
   <p class="ep" style="margin-bottom:20px;">
+    @if($hasPdf)
     Your ticket has been issued successfully. We attached the PDF ticket to this email for easy download and check-in.
+    @else
+    Your ticket has been issued successfully. It lives in your TKT House account as a digital ticket; your QR code appears there when the event team makes it available.
+    @endif
   </p>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#15151e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;margin:22px 0;">
@@ -43,6 +47,10 @@
   <div class="eurl" style="margin-top:14px;"><a href="{{ $showUrl }}">{{ $showUrl }}</a></div>
 
   <div class="ealert blue" style="margin-top:18px;">
-    The PDF attachment includes your ticket QR and details. Please keep it available for entry.
+    @if($hasPdf)
+      The PDF attachment includes your ticket QR and details. Please keep it available for entry.
+    @else
+      Your QR code is shown on your ticket page once the event team makes it available. We never send it by e-mail.
+    @endif
   </div>
 @endsection

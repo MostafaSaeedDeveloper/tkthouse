@@ -1,0 +1,64 @@
+@php
+    $qrs = $event->qrStatus();
+    $changedBy = $event->qr_visibility_changed_by ? \App\Models\User::query()->find($event->qr_visibility_changed_by) : null;
+    $mode = old('qr_visibility_mode', $event->qr_visibility_mode ?: 'immediate');
+    $lead = (int) $event->qr_reveal_minutes_before;
+    [$amount, $unit] = $lead > 0 && $lead % 1440 === 0 ? [$lead / 1440, 'days'] : ($lead > 0 && $lead % 60 === 0 ? [$lead / 60, 'hours'] : [$lead ?: 24, $lead > 0 ? 'minutes' : 'hours']);
+    $amount = old('qr_reveal_amount', $amount); $unit = old('qr_reveal_unit', $unit);
+    $history = \Spatie\Activitylog\Models\Activity::query()->where('subject_type', \App\Models\Event::class)->where('subject_id', $event->id)
+        ->where('description', 'like', 'Ticket QR%')->latest('id')->limit(5)->with('causer')->get();
+    $stateLabel = ['visible' => ['Visible', 'success'], 'hidden' => ['Hidden', 'default'], 'scheduled' => ['Scheduled', 'warning'], 'overridden' => ['Manually overridden', 'info']][$qrs['state']];
+@endphp
+<x-admin.card id="ev-qr" title="Ticket QR Visibility" subtitle="Control when customers see the QR code on their digital tickets. Tickets stay confirmed and valid either way; the QR is never e-mailed.">
+    <div class="a-qr-status" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <x-admin.badge :variant="$stateLabel[1]" :dot="true">{{ $stateLabel[0] }}</x-admin.badge>
+        <strong>QR codes are {{ $qrs['visible'] ? 'visible' : 'hidden' }} to ticket holders right now.</strong>
+        @if($qrs['state'] === 'scheduled' && $qrs['reveals_at'])<span class="a-muted">They appear automatically on {{ $qrs['reveals_at']->format('D j M Y, g:i A') }}.</span>@endif
+        @if($qrs['override'])<span class="a-muted">Manual override: {{ $qrs['override'] === 'show' ? 'shown' : 'hidden' }} (it wins over the setting below).</span>@endif
+    </div>
+
+    <div class="a-qr-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+        @foreach([['show', 'Show QR', 'fa-eye', 'a-btn--primary'], ['hide', 'Hide QR', 'fa-eye-slash', 'a-btn--outline']] as [$val, $text, $icon, $cls])
+            <form method="POST" action="{{ route('admin.events.qr-override', $event) }}" data-a-confirm="{{ $val === 'show' ? 'Show the QR code on ALL tickets of this event now?' : 'Hide the QR code from ALL tickets of this event now? Holders will see QR Code Locked, and the gate will not accept new-style QR codes until it is shown again.' }}" data-a-confirm-title="{{ $text }}" data-a-confirm-ok="{{ $text }}">
+                @csrf<input type="hidden" name="override" value="{{ $val }}">
+                <button type="submit" class="a-btn {{ $cls }}" @disabled($qrs['override'] === $val)><i class="fa {{ $icon }}"></i> {{ $text }}</button>
+            </form>
+        @endforeach
+        @if($qrs['override'])
+            <form method="POST" action="{{ route('admin.events.qr-override', $event) }}">@csrf<input type="hidden" name="override" value="auto"><button type="submit" class="a-btn a-btn--ghost"><i class="fa fa-rotate-left"></i> Back to automatic</button></form>
+        @endif
+    </div>
+
+    <form method="POST" action="{{ route('admin.events.qr-visibility', $event) }}" data-a-loading>
+        @csrf
+        <div class="a-form-section__head"><h3 class="a-form-section__title">When is the QR shown?</h3></div>
+        <div style="display:grid;gap:10px;margin-bottom:12px">
+            <label class="a-check"><input type="radio" name="qr_visibility_mode" value="immediate" @checked($mode === 'immediate')> <span><strong>Show Immediately</strong> — the QR appears as soon as the ticket is issued.</span></label>
+            <label class="a-check"><input type="radio" name="qr_visibility_mode" value="scheduled" @checked($mode === 'scheduled')> <span><strong>Scheduled Reveal</strong> — the QR appears automatically a set time before the event starts.</span></label>
+            <div style="display:flex;gap:8px;align-items:center;margin-left:26px;flex-wrap:wrap">
+                <input type="number" name="qr_reveal_amount" class="form-control" style="width:110px" min="1" step="1" value="{{ $amount }}" aria-label="Reveal lead time">
+                <select name="qr_reveal_unit" class="form-control" style="width:130px" aria-label="Unit">
+                    @foreach(['minutes', 'hours', 'days'] as $u)<option value="{{ $u }}" @selected($unit === $u)>{{ $u }}</option>@endforeach
+                </select>
+                <span class="a-muted">before the event starts{{ $event->startsAt() ? ' ('.$event->startsAt()->format('D j M, g:i A').')' : '' }}. Common: 24 hours, 12 hours.</span>
+            </div>
+            @error('qr_reveal_amount')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+            <label class="a-check"><input type="radio" name="qr_visibility_mode" value="manual" @checked($mode === 'manual')> <span><strong>Manual Control</strong> — hidden until you press <em>Show QR</em>.</span></label>
+        </div>
+        <p class="a-muted" style="margin-bottom:12px">Show QR / Hide QR above works with every mode and wins over it until you choose <em>Back to automatic</em>.</p>
+        <button type="submit" class="a-btn a-btn--primary">Save QR visibility</button>
+    </form>
+
+    <div class="a-hint" style="margin-top:18px;border-top:1px solid var(--a-border,#e5e7eb);padding-top:12px">
+        @if($event->qr_visibility_changed_at)
+            Last changed by <strong>{{ $changedBy?->name ?? 'a former user' }}</strong> on {{ $event->qr_visibility_changed_at->format('d M Y, H:i') }}.
+        @else
+            Never changed (default: shown immediately).
+        @endif
+        @if($history->isNotEmpty())
+            <ul style="margin:8px 0 0;padding-left:18px">
+                @foreach($history as $h)<li>{{ $h->created_at->format('d M Y, H:i') }} — {{ $h->causer?->name ?? 'System' }}: {{ $h->description }}</li>@endforeach
+            </ul>
+        @endif
+    </div>
+</x-admin.card>

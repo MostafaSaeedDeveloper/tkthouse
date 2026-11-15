@@ -70,22 +70,56 @@ class CustomerPortal
         return $event?->hasEnded() ?? false;
     }
 
-    /** Ticket badge from the real check-in status plus whether the event is over. */
-    public static function ticketBadge(IssuedTicket $ticket, ?Event $event): array
+    /**
+     * The single place that decides what a customer sees in place of a ticket's QR code.
+     *
+     *   canceled  — canceled or refunded (never a usable QR)       used — already scanned at the gate
+     *   locked    — valid, but the event's QR is not revealed yet   visible — show the code
+     *
+     * @return array{state: string, refunded: bool, reveals_at: ?\Illuminate\Support\Carbon}
+     */
+    public static function qrState(IssuedTicket $ticket, ?Event $event): array
     {
-        $status = (string) ($ticket->dashboardTicket?->status ?? 'not_checked_in');
+        $dash = $ticket->dashboardTicket;
+        $orderStatus = (string) ($ticket->order?->status ?? 'paid');
+        $refunded = ($dash?->isRefundCanceled() ?? false) || in_array($orderStatus, ['refunded'], true);
+        $dead = $refunded || ($dash?->status === 'canceled') || in_array($orderStatus, ['canceled', 'cancelled'], true);
 
         return match (true) {
-            $status === 'canceled' => ['Canceled', 'danger'],
-            $status === 'checked_in' => ['Checked in', 'default'],
+            $dead => ['state' => 'canceled', 'refunded' => $refunded, 'reveals_at' => null],
+            ($dash?->status) === 'checked_in' => ['state' => 'used', 'refunded' => false, 'reveals_at' => null],
+            $event !== null && ! $event->qrIsVisible() => ['state' => 'locked', 'refunded' => false, 'reveals_at' => $event->qr_override === null ? $event->qrRevealsAt() : null],
+            default => ['state' => 'visible', 'refunded' => false, 'reveals_at' => null],
+        };
+    }
+
+    /** Ticket badge from the real ticket / order status plus whether the event is over. */
+    public static function ticketBadge(IssuedTicket $ticket, ?Event $event): array
+    {
+        $qr = self::qrState($ticket, $event);
+
+        return match (true) {
+            $qr['state'] === 'canceled' && $qr['refunded'] => ['Refunded', 'default'],
+            $qr['state'] === 'canceled' => ['Canceled', 'danger'],
+            $qr['state'] === 'used' => ['Checked in', 'default'],
             self::eventEnded($event) => ['Event ended', 'default'],
             default => ['Valid', 'success'],
         };
     }
 
-    /** The QR stays visible after the event has ended; it is hidden only for tickets that are canceled or already scanned. */
+    /** Which My Tickets list a ticket belongs to: canceled (incl. refunded) → used → past (event ended) → upcoming. */
+    public static function ticketGroup(IssuedTicket $ticket, ?Event $event): string
+    {
+        return match (self::qrState($ticket, $event)['state']) {
+            'canceled' => 'canceled',
+            'used' => 'used',
+            default => self::eventEnded($event) || $event === null ? 'past' : 'upcoming',
+        };
+    }
+
+    /** True only when the QR itself may be rendered and sent to the browser. */
     public static function qrVisible(IssuedTicket $ticket, ?Event $event): bool
     {
-        return ! in_array(self::ticketBadge($ticket, $event)[0], ['Canceled', 'Checked in'], true);
+        return self::qrState($ticket, $event)['state'] === 'visible';
     }
 }

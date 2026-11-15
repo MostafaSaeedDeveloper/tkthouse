@@ -191,32 +191,37 @@ class CustomerDashboardController extends Controller
 
     /* ------------------------------------------------------------ tickets */
 
+    /** My Tickets: every ticket the account may open, sorted into Upcoming / Past / Used / Canceled & Refunded (see CustomerPortal::ticketGroup). */
     public function tickets(Request $request)
     {
         $user = $request->user();
-        $when = in_array($request->query('when'), ['upcoming', 'past', 'all'], true) ? (string) $request->query('when') : 'upcoming';
+        $orderNumber = trim((string) $request->query('order', ''));
+        $groupsKeys = ['upcoming', 'past', 'used', 'canceled'];
+        $requested = (string) $request->query('when', '');
+        $when = in_array($requested, [...$groupsKeys, 'all'], true) ? $requested : ($orderNumber !== '' ? 'all' : 'upcoming');
 
         $query = IssuedTicket::query()->ownedByCustomer($user)->with(['order', 'dashboardTicket', 'orderItem.event']);
-
-        // "Past" = events an admin marked as Ended; nothing is decided by the date.
-        $endOfEvent = fn ($e) => $e->where('status', '!=', \App\Models\Event::ENDED);
-        if ($when === 'upcoming') {
-            $query->whereHas('orderItem.event', $endOfEvent);
-        } elseif ($when === 'past') {
-            $query->where(function ($q) {
-                $q->whereHas('orderItem.event', fn ($e) => $e->where('status', \App\Models\Event::ENDED))
-                    ->orWhereDoesntHave('orderItem.event');
-            });
+        if ($orderNumber !== '') {
+            $query->whereHas('order', fn ($o) => $o->where('order_number', $orderNumber));
         }
 
         $tickets = $query->orderByDesc('id')->get();
-        $groups = $tickets->groupBy('order_id')->map(fn ($rows) => ['order' => $rows->first()->order, 'tickets' => $rows])->values();
+        $byGroup = $tickets->groupBy(fn (IssuedTicket $t) => \App\Support\CustomerPortal::ticketGroup($t, $t->orderItem?->event));
+        $counts = collect($groupsKeys)->mapWithKeys(fn ($k) => [$k => $byGroup->get($k, collect())->count()])->all();
+
+        // "Upcoming" first, then the rest, each list grouped per order so tickets bought together stay together.
+        $visible = $when === 'all' ? $groupsKeys : [$when];
+        $sections = collect($visible)->mapWithKeys(fn ($k) => [$k => $byGroup->get($k, collect())
+            ->groupBy('order_id')->map(fn ($rows) => ['order' => $rows->first()->order, 'tickets' => $rows->sortBy('id')->values()])->values()])
+            ->filter(fn ($groups) => $groups->isNotEmpty());
 
         return view('front.account.tickets', [
             'user' => $user,
-            'groups' => $groups,
+            'sections' => $sections,
+            'counts' => $counts,
             'total' => $tickets->count(),
             'when' => $when,
+            'orderNumber' => $orderNumber,
         ]);
     }
 }

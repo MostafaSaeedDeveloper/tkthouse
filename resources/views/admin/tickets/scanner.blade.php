@@ -502,7 +502,7 @@ html, body {
 
   {{-- Result --}}
   <div id="scanner-result-region">
-    @include('admin.tickets.partials.scanner-result', ['ticket' => $ticket ?? null])
+    @include('admin.tickets.partials.scanner-result', ['ticket' => $ticket ?? null, 'denial' => $denial ?? null])
   </div>
 
 </div>
@@ -592,7 +592,7 @@ html, body {
           'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-TOKEN': csrfToken,
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, source: fromScanner ? 'camera' : 'manual' }),
       });
 
       const data = await response.json();

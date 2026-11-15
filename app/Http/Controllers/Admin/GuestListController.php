@@ -305,21 +305,10 @@ class GuestListController extends Controller
     }
 
 
+    /** Drawn locally: no ticket data is sent to a third-party QR service. */
     private function qrDataUri(Ticket $ticket): string
     {
-        $payload = $ticket->qr_payload ?: $ticket->ticket_number;
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $payload);
-
-        try {
-            $response = Http::timeout(15)->get($url);
-            if ($response->successful()) {
-                return 'data:image/png;base64,'.base64_encode($response->body());
-            }
-        } catch (\Throwable) {
-            // Ignore and fallback to URL
-        }
-
-        return $url;
+        return \App\Support\TicketQr::dataUri($ticket->qrContent());
     }
 
     private function generateTicketNumber(): string

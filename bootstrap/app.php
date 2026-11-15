@@ -35,6 +35,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('login');
             }
 
+            // Ticket links from e-mails: an e-mail code is the quickest way in (also for guests and gifted holders).
+            if ($request->is('tickets/*') || $request->is('account/tickets')) {
+                return route('front.tickets.access', ['redirect' => $request->fullUrl()]);
+            }
+
             return route('front.customer.login', ['redirect' => $request->fullUrl()]);
         });
     })

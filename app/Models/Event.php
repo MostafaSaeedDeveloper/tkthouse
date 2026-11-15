@@ -39,7 +39,75 @@ class Event extends Model
             'end_date' => 'date',
             'requires_booking_approval' => 'boolean',
             'archived_at' => 'datetime',
+            'qr_visibility_changed_at' => 'datetime',
         ];
+    }
+
+    /* ------------------------------------------------------------ ticket QR visibility */
+
+    public const QR_IMMEDIATE = 'immediate';
+    public const QR_SCHEDULED = 'scheduled';
+    public const QR_MANUAL = 'manual';
+    public const QR_MODES = [self::QR_IMMEDIATE, self::QR_SCHEDULED, self::QR_MANUAL];
+
+    /** When the event starts (app timezone). The reveal countdown is measured from here. */
+    public function startsAt(): ?\Illuminate\Support\Carbon
+    {
+        if (! $this->event_date) {
+            return null;
+        }
+
+        $time = (string) ($this->event_time ?: '00:00:00');
+
+        return \Illuminate\Support\Carbon::parse($this->event_date->format('Y-m-d').' '.$time, config('app.timezone'));
+    }
+
+    /** The moment a scheduled reveal opens; null when the mode is not "scheduled" or no lead time is set. */
+    public function qrRevealsAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->qr_visibility_mode !== self::QR_SCHEDULED || ! $this->qr_reveal_minutes_before) {
+            return null;
+        }
+
+        return $this->startsAt()?->subMinutes((int) $this->qr_reveal_minutes_before);
+    }
+
+    /**
+     * The one server-side answer to "may customers see (and may the gate accept) this event's new-style QR codes right now?".
+     * An admin override wins over the mode; otherwise immediate = yes, scheduled = from the reveal time, manual = no.
+     */
+    public function qrIsVisible(?\Illuminate\Support\Carbon $now = null): bool
+    {
+        $now ??= now();
+
+        if ($this->qr_override === 'show') {
+            return true;
+        }
+        if ($this->qr_override === 'hide') {
+            return false;
+        }
+
+        return match ($this->qr_visibility_mode) {
+            self::QR_SCHEDULED => ($at = $this->qrRevealsAt()) === null ? false : $now->greaterThanOrEqualTo($at),
+            self::QR_MANUAL => false,
+            default => true,
+        };
+    }
+
+    /** Label for the admin: Visible / Hidden / Scheduled / Manually overridden (+ whether it is currently visible). */
+    public function qrStatus(?\Illuminate\Support\Carbon $now = null): array
+    {
+        $visible = $this->qrIsVisible($now);
+        $at = $this->qr_override === null ? $this->qrRevealsAt() : null;
+
+        $state = match (true) {
+            $this->qr_override !== null => 'overridden',
+            ! $visible && $at !== null => 'scheduled',
+            $visible => 'visible',
+            default => 'hidden',
+        };
+
+        return ['visible' => $visible, 'state' => $state, 'reveals_at' => $at, 'override' => $this->qr_override];
     }
 
     public const ARCHIVED = 'archived';

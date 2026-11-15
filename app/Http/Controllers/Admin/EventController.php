@@ -122,6 +122,34 @@ class EventController extends Controller
         return $redirect;
     }
 
+    /** Ticket QR Visibility: the mode / lead time (immediate, scheduled, manual). */
+    public function qrVisibility(Request $request, Event $event, \App\Services\Tickets\QrVisibilityService $qr)
+    {
+        $data = $request->validate([
+            'qr_visibility_mode' => ['required', 'in:'.implode(',', Event::QR_MODES)],
+            'qr_reveal_amount' => ['nullable', 'numeric', 'min:0'],
+            'qr_reveal_unit' => ['nullable', 'in:minutes,hours,days'],
+        ]);
+
+        $qr->configure($event, $request->user(), $data['qr_visibility_mode'], isset($data['qr_reveal_amount']) ? (float) $data['qr_reveal_amount'] : null, $data['qr_reveal_unit'] ?? 'hours');
+
+        return redirect()->to(route('admin.events.edit', $event).'#ev-qr')->with('success', 'Ticket QR visibility saved.');
+    }
+
+    /** Show QR / Hide QR for every ticket of the event, or go back to the automatic rule. */
+    public function qrOverride(Request $request, Event $event, \App\Services\Tickets\QrVisibilityService $qr)
+    {
+        $data = $request->validate(['override' => ['required', 'in:show,hide,auto']]);
+
+        $qr->override($event, $request->user(), $data['override'] === 'auto' ? null : $data['override']);
+
+        return redirect()->to(route('admin.events.edit', $event).'#ev-qr')->with('success', match ($data['override']) {
+            'show' => 'QR codes are now visible to ticket holders.',
+            'hide' => 'QR codes are now hidden from ticket holders.',
+            default => 'Back to the automatic rule.',
+        });
+    }
+
     public function destroy(Event $event)
     {
         try {

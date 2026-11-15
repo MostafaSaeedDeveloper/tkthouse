@@ -122,7 +122,7 @@ class TicketIssuanceService
                         'holder_name' => $item->holder_name,
                         'holder_email' => $item->holder_email,
                         'holder_phone' => $item->holder_phone,
-                        'qr_payload' => $issuedTicket->ticket_number,
+                        'qr_payload' => \App\Support\TicketQr::newToken(), // unguessable; the number is only a label
                         'issued_at' => now(),
                     ]
                 );

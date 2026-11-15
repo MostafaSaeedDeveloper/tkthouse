@@ -213,13 +213,18 @@ class TicketController extends Controller
         ]);
 
         $ticket->loadMissing('order');
-        $qrDataUri = $this->qrDataUri($ticket);
-        $event = $this->resolveEvent($ticket->name ?? '');
-
-        $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri', 'event'))->output();
         $issuedTicket = IssuedTicket::query()
             ->where('ticket_number', $ticket->ticket_number)
             ->first();
+
+        // Online tickets are digital: the e-mail links to the customer's account and carries no PDF (so no QR, whatever its visibility).
+        // Guest-list tickets have no account page, so they keep their PDF.
+        $pdf = null;
+        if (! $issuedTicket) {
+            $qrDataUri = $this->qrDataUri($ticket);
+            $event = $this->resolveEvent($ticket->name ?? '');
+            $pdf = Pdf::loadView('admin.tickets.pdf', compact('ticket', 'qrDataUri', 'event'))->output();
+        }
 
         $showUrl = $issuedTicket
             ? route('front.tickets.show', $issuedTicket)
@@ -358,6 +363,10 @@ class TicketController extends Controller
             return $this->refundRejectionResponse($request, $ticket, $payload);
         }
 
+        if ($denial = $this->entryDenial($ticket, $payload, $this->scanSource($request))) {
+            return $this->entryDenialResponse($request, $ticket, $payload, $denial[0], $denial[1]);
+        }
+
         if ($request->expectsJson()) {
             return response()->json([
                 'ok' => true,
@@ -367,6 +376,12 @@ class TicketController extends Controller
         }
 
         return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload]);
+    }
+
+    /** "camera" only when the scanner page says a QR was scanned (the strict case); typed numbers and older clients are "manual". */
+    private function scanSource(Request $request): string
+    {
+        return $request->input('source') === 'camera' ? 'camera' : 'manual';
     }
 
     public function scannerLookup(Request $request)
@@ -411,6 +426,10 @@ class TicketController extends Controller
             return $this->refundRejectionResponse($request, $ticket, $payload);
         }
 
+        if ($denial = $this->entryDenial($ticket, $payload, $this->scanSource($request))) {
+            return $this->entryDenialResponse($request, $ticket, $payload, $denial[0], $denial[1]);
+        }
+
         ScanLog::create([
             'ticket_id' => $ticket->id,
             'event_id' => $ticket->event_id,
@@ -452,7 +471,17 @@ class TicketController extends Controller
             // No status can be set on a refunded ticket: not check-in, not "not checked in". The attempt is recorded.
             $this->logRefundRejection($request, $ticket, (string) $ticket->ticket_number, 'status_update_rejected_refunded');
 
-            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('error', 'REFUNDED / CANCELED — '.$ticket->refundCancellationText().'. Entry is not allowed.');
+            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number, 'source' => 'manual'])->with('error', 'REFUNDED / CANCELED — '.$ticket->refundCancellationText().'. Entry is not allowed.');
+        }
+
+        if ($data['status'] === 'checked_in') {
+            // Whatever page the request came from: a canceled ticket, or one of a refunded / canceled order, is never checked in.
+            $ticket->loadMissing('order');
+            if ($ticket->status === 'canceled' || in_array((string) $ticket->order?->status, ['refunded', 'canceled', 'cancelled', 'rejected', 'expired'], true)) {
+                $this->logRefundRejection($request, $ticket, (string) $ticket->ticket_number, 'status_update_rejected_canceled');
+
+                return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number, 'source' => 'manual'])->with('error', 'CANCELED — this ticket is no longer valid. Entry is not allowed.');
+            }
         }
 
         $previousStatus = $ticket->status;
@@ -497,7 +526,7 @@ class TicketController extends Controller
 
             $when = $ticket->checked_in_at?->format('d M Y, H:i');
 
-            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])
+            return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number, 'source' => 'manual'])
                 ->with('error', 'ALREADY CHECKED IN'.($when ? ' at '.$when : '').'. Entry is not allowed twice.');
         }
 
@@ -517,9 +546,73 @@ class TicketController extends Controller
             'scanned_at' => now(),
         ]);
 
-        return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number])->with('success', 'Ticket status updated successfully.');
+        return redirect()->route('admin.tickets.scanner', ['code' => $ticket->ticket_number, 'source' => 'manual'])->with('success', 'Ticket status updated successfully.');
     }
 
+
+    /**
+     * Server-side entry rules that never depend on what the customer's page shows. Returns [code, message] when the ticket must not be
+     * admitted, null when it may be. $source: "camera" (a QR was scanned) or "manual" (staff typed the number).
+     *
+     *  - canceled tickets and tickets of refunded / canceled orders never get in;
+     *  - a new-style ticket is only recognised from its own QR token (its bare number is not a credential when "scanned"), and that QR
+     *    only works while the event shows QR codes (reveal time reached or shown by an admin) — a QR copied out of an old page, a
+     *    screenshot, or guessed numbers do not open the gate early;
+     *  - tickets issued before digital tickets keep working with their old QR (the bare ticket number).
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    private function entryDenial(Ticket $ticket, string $payload, string $source): ?array
+    {
+        $ticket->loadMissing('order', 'event');
+
+        if ($ticket->status === 'canceled' || in_array((string) $ticket->order?->status, ['refunded', 'canceled', 'cancelled', 'rejected', 'expired'], true)) {
+            return ['canceled', 'CANCELED — this ticket is no longer valid. Entry is not allowed.'];
+        }
+
+        if ($ticket->hasTokenQr() && $source !== 'manual') {
+            if (strcasecmp(trim($payload), (string) $ticket->qr_payload) !== 0) {
+                return ['invalid_qr', 'INVALID QR — scan the QR code shown on the customer\'s digital ticket.'];
+            }
+
+            if ($ticket->event && ! $ticket->event->qrIsVisible()) {
+                return ['qr_not_active', 'QR NOT ACTIVE YET — this event has not opened QR entry. Entry is not allowed.'];
+            }
+        }
+
+        return null;
+    }
+
+    private function entryDenialResponse(Request $request, Ticket $ticket, string $payload, string $code, string $message)
+    {
+        ScanLog::create([
+            'ticket_id' => $ticket->id,
+            'event_id' => $ticket->event_id,
+            'event_name' => $ticket->eventLabel(),
+            'ticket_number' => $ticket->ticket_number,
+            'action' => 'lookup_rejected_'.$code,
+            'previous_status' => $ticket->status,
+            'new_status' => $ticket->status,
+            'payload' => $payload,
+            'scanned_by_user_id' => auth()->id(),
+            'scanner_name' => auth()->user()?->name,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'scanned_at' => now(),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => false,
+                'admit' => false,
+                'code' => $code,
+                'message' => $message,
+                'html' => view('admin.tickets.partials.scanner-result', ['ticket' => $ticket, 'denial' => $message])->render(),
+            ], 409);
+        }
+
+        return view('admin.tickets.scanner', ['ticket' => $ticket, 'lastCode' => $payload, 'errorMessage' => $message, 'denial' => $message]);
+    }
 
     /** Audit trail of a refused scan. Uses its own action names so it never counts as a successful scan or check-in. */
     private function logRefundRejection(Request $request, Ticket $ticket, string $payload, string $action): void
@@ -652,21 +745,10 @@ class TicketController extends Controller
         return $ticketQuery->first();
     }
 
+    /** Drawn locally: no ticket data is sent to a third-party QR service. */
     private function qrDataUri(Ticket $ticket): string
     {
-        $payload = $ticket->qr_payload ?: $ticket->ticket_number;
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $payload);
-
-        try {
-            $response = Http::timeout(15)->get($url);
-            if ($response->successful()) {
-                return 'data:image/png;base64,'.base64_encode($response->body());
-            }
-        } catch (\Throwable) {
-            // Ignore and fallback to URL
-        }
-
-        return $url;
+        return \App\Support\TicketQr::dataUri($ticket->qrContent());
     }
 
     private function ensureScannerAccess(): void

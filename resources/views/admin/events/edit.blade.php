@@ -31,4 +31,8 @@
         </div>
     </x-admin.card>
 </form>
+
+@can('events.update')
+<div style="margin-top:18px">@include('admin.events._qr-visibility')</div>
+@endcan
 @endsection

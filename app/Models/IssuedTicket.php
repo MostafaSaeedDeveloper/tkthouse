@@ -54,22 +54,43 @@ class IssuedTicket extends Model
     {
         // One grouped condition, so extra constraints added by the caller (e.g. whereKey) can never be OR-ed around it.
         return $query->where(function ($outer) use ($user) {
-            $outer->whereHas('order', fn ($order) => $order->whereIn('status', ['paid', 'partially_refunded'])->ownedByCustomer($user)); // a partly refunded order keeps its valid tickets
+            // Refunded / canceled orders stay listed so the customer sees the true status; their tickets never get a QR (see CustomerPortal::qrState).
+            $outer->whereHas('order', fn ($order) => $order->whereIn('status', self::PORTAL_ORDER_STATUSES)->ownedByCustomer($user));
 
+            // A gifted ticket: its holder proved the mailbox with a code, which is all that is needed to open *that* ticket,
+            // even when the buyer paid as a guest and never signed in.
             if ($user->email_verified_at) {
                 $outer->orWhere(fn ($gift) => $gift->whereRaw('LOWER(holder_email) = ?', [mb_strtolower((string) $user->email)])
-                    ->whereHas('order', fn ($o) => $o->whereIn('status', ['paid', 'partially_refunded'])->where('owner_unverified', false)));
+                    ->whereHas('order', fn ($o) => $o->whereIn('status', self::PORTAL_ORDER_STATUSES)));
             }
         });
     }
+
+    /** Order statuses whose tickets a customer can open (valid or not). Tickets exist only for orders that were paid at some point. */
+    public const PORTAL_ORDER_STATUSES = ['paid', 'partially_refunded', 'refunded', 'canceled', 'cancelled'];
 
     public function getRouteKeyName(): string
     {
         return 'uuid';
     }
 
+    /** "Event - VIP" → "VIP" (the whole name when it has no event prefix). */
+    public function ticketTypeLabel(): string
+    {
+        $name = (string) $this->ticket_name;
+
+        return str_contains($name, ' - ') ? trim((string) substr(strstr($name, ' - '), 3)) : $name;
+    }
+
+    /** What the QR code of this ticket encodes (the dashboard ticket's payload; the bare number for tickets without one). */
+    public function qrPayload(): string
+    {
+        return (string) ($this->dashboardTicket?->qr_payload ?: $this->ticket_number);
+    }
+
+    /** Self-contained image (no third-party QR service). Only call this once \App\Support\CustomerPortal::qrState() says "visible". */
     public function qrUrl(): string
     {
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $this->ticket_number);
+        return \App\Support\TicketQr::dataUri($this->qrPayload());
     }
 }
