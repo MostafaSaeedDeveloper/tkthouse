@@ -10,35 +10,28 @@ use App\Support\CustomerPortal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The buyer's tools for the people their tickets are for: change a holder's name or e-mail, re-send the ticket link.
+ * Changing who a ticket is for. Staff only (admin ticket page): buyers cannot change holders themselves.
  *
- * Rules: only before the ticket is used; never for canceled / refunded tickets; at most MAX_EMAIL_CHANGES moves per ticket; the QR code
- * is never regenerated (a move changes who may *open* the ticket, not the ticket); the old address loses access at once because access
- * follows the holder e-mail on the ticket; the new address is invited. Every change is recorded.
+ * Rules: never for canceled / refunded tickets; the QR code is never regenerated (a move changes who may *open* the ticket, not the
+ * ticket); the old address loses access at once because access follows the holder e-mail on the ticket; the new address is invited.
+ * Every change is recorded with who made it.
  */
 class TicketHolderService
 {
     public const MAX_EMAIL_CHANGES = 3;
-    public const RESENDS_PER_HOUR = 3;
 
     /** Why this ticket's holder cannot be changed right now, or null when it can. */
     public function blockedReason(IssuedTicket $ticket): ?string
     {
         $ticket->loadMissing('order', 'dashboardTicket.event', 'orderItem.event');
 
-        if ($ticket->order_id === null) {
-            return 'Guest-list tickets are managed by the event team.';
-        }
-
         $qr = CustomerPortal::qrState($ticket, $ticket->event());
 
         return match ($qr['state']) {
-            'used' => 'This ticket was already used.',
-            'canceled' => $qr['refunded'] ? 'This ticket was refunded.' : 'This ticket was canceled.',
+            'canceled' => $qr['refunded'] ? 'This ticket was refunded and cannot be changed.' : 'This ticket was canceled and cannot be changed.',
             default => null,
         };
     }
@@ -49,7 +42,7 @@ class TicketHolderService
     }
 
     /** @return array{name_changed: bool, email_changed: bool, invited: bool} */
-    public function update(IssuedTicket $ticket, User $by, string $name, string $email): array
+    public function update(IssuedTicket $ticket, User $by, string $name, string $email, bool $admin = true): array
     {
         $name = trim($name);
         $email = mb_strtolower(trim($email));
@@ -66,9 +59,6 @@ class TicketHolderService
             $nameChanged = $name !== $oldName;
             $emailChanged = $email !== $oldEmail;
 
-            if ($emailChanged && $this->emailChangesLeft($locked) < 1) {
-                throw ValidationException::withMessages(['holder_email' => 'This ticket was already moved '.self::MAX_EMAIL_CHANGES.' times. Contact support to change it again.']);
-            }
             if (! $nameChanged && ! $emailChanged) {
                 return ['name_changed' => false, 'email_changed' => false, 'locked' => $locked];
             }
@@ -78,6 +68,7 @@ class TicketHolderService
                 $attrs += ['holder_email' => $email, 'holder_email_changes' => (int) $locked->holder_email_changes + 1, 'sent_at' => null];
             }
             $locked->forceFill($attrs)->save();
+            $locked->unsetRelation('order');
 
             // The ticket the gate scans and the purchase record stay in step. The QR payload is deliberately untouched.
             Ticket::query()->where('ticket_number', $locked->ticket_number)->update(['holder_name' => $name] + ($emailChanged ? ['holder_email' => $email] : []));
@@ -102,37 +93,15 @@ class TicketHolderService
         return ['name_changed' => $result['name_changed'], 'email_changed' => $result['email_changed'], 'invited' => $invited];
     }
 
-    /** Sends the holder their ticket link again (3 per ticket per hour). */
-    public function resend(IssuedTicket $ticket, User $by): string
-    {
-        if ($reason = $this->blockedReason($ticket)) {
-            return $reason;
-        }
-        if (blank($ticket->holder_email)) {
-            return 'This ticket has no e-mail address yet. Add one first.';
-        }
-
-        $key = 'ticket-resend:'.$ticket->id;
-        if (RateLimiter::tooManyAttempts($key, self::RESENDS_PER_HOUR)) {
-            return 'This ticket link was sent several times already. Please try again in a while.';
-        }
-        RateLimiter::hit($key, 3600);
-
-        if (! $this->sendInvite($ticket)) {
-            return 'We could not send the e-mail right now. Please try again.';
-        }
-
-        activity('tickets')->performedOn($ticket)->causedBy($by)->withProperties(['order_id' => $ticket->order_id])->log('Ticket link re-sent to the holder');
-
-        return 'ok';
-    }
-
     private function sendInvite(IssuedTicket $ticket): bool
     {
-        $ticket->loadMissing('order.customer');
+        $ticket->loadMissing('order.customer', 'dashboardTicket');
 
         try {
-            Mail::to($ticket->holder_email)->send(new HolderTicketsIssuedMail($ticket->order, collect([$ticket]), mb_strtolower((string) $ticket->holder_email)));
+            // Guest-list tickets have no order: they get the guest invitation (a link to their ticket page), online tickets the holder e-mail.
+            Mail::to($ticket->holder_email)->send($ticket->order
+                ? new HolderTicketsIssuedMail($ticket->order, collect([$ticket]), mb_strtolower((string) $ticket->holder_email))
+                : new \App\Mail\GuestInvitationMail($ticket->dashboardTicket, route('front.tickets.show', $ticket)));
             $ticket->forceFill(['sent_at' => now()])->saveQuietly();
 
             return true;

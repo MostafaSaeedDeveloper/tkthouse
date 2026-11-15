@@ -26,6 +26,8 @@ class GuestTicketIssuer
                 'ticket_name' => (string) $ticket->name,
                 'ticket_price' => 0,
                 'seat_index' => 1,
+                'event_id' => $ticket->event_id,
+                'qr_locked_at_issue' => $ticket->event ? ! $ticket->event->qrIsVisible() : false,
             ]);
     }
 

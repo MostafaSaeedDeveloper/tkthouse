@@ -35,6 +35,9 @@
 @can('events.qr-visibility.manage')
 <div style="margin-top:18px">@include('admin.events._qr-visibility')</div>
 @endcan
+@can('events.qr-notifications.manage')
+<div style="margin-top:18px">@include('admin.events._qr-release')</div>
+@endcan
 @can('events.entry.manage')
 <div style="margin-top:18px">@include('admin.events._entry-availability')</div>
 @endcan

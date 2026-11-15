@@ -22,6 +22,8 @@ class IssuedTicket extends Model
         'seat_index',
         'sent_at',
         'holder_email_changes',
+        'event_id',
+        'qr_locked_at_issue',
     ];
 
     protected function casts(): array
@@ -29,6 +31,11 @@ class IssuedTicket extends Model
         return [
             'ticket_price' => 'decimal:2',
             'sent_at' => 'datetime',
+            'qr_locked_at_issue' => 'boolean',
+            'qr_notice_eligible_at' => 'datetime',
+            'qr_notice_sent_at' => 'datetime',
+            'qr_notice_claimed_at' => 'datetime',
+            'qr_notice_skipped_at' => 'datetime',
         ];
     }
 
@@ -41,6 +48,11 @@ class IssuedTicket extends Model
     {
         return $this->belongsTo(OrderItem::class);
     }
+
+    public const NOTICE_NOT_ELIGIBLE = 'not_eligible';
+    public const NOTICE_PENDING = 'pending';
+    public const NOTICE_SENT = 'sent';
+    public const NOTICE_FAILED = 'failed';
 
     public function dashboardTicket()
     {

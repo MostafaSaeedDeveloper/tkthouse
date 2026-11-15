@@ -176,3 +176,56 @@ Full suite: **742 passed, 58 failed (the same 58 as the baseline), 0 new failure
 - "Link sent" for a holder whose e-mail equals the buyer's means "covered by the booking-confirmation e-mail".
 - Mail delivery in QA was verified by recipient through the log mailer, not by a real inbox; content is covered by PHPUnit.
 - Not tested on physical iPhone/Android devices.
+
+
+---
+
+# Part 3 — QR Release e-mails (Test / Live), holders managed by staff only
+
+> Note: `QR RELEASE.pdf` was not available in the working environment, so this was built from the written brief. If the PDF contains extra scenarios, send it and they will be checked against this implementation.
+
+## Behaviour
+- **Who is notified:** only tickets whose QR was **locked when issued** (`qr_locked_at_issue`) and later became unlocked, once. Tickets unlocked from the start (incl. bought after the QR opened) get the normal booking e-mail only. Tickets that existed before this release are never eligible (default `false`), so deploying sends nothing.
+- **Per-ticket state** (`issued_tickets.qr_notice_*`): `not_eligible` (still waiting, or unlocked from the start, or skipped) → `pending` → `sent` | `failed`. The admin summary separates *waiting for reveal* from *failed*. `sent` is final: scheduler ticks, Show/Hide/Show, re-activation never notify it again; only `failed` can be retried (admin, one button, failed only).
+- **Recipient = ticket holder e-mail.** One e-mail per recipient per event with all of *their* tickets (a QR PNG each, holder name, type), event details and VIEW YOUR TICKETS. No order, payment or other people's tickets. A buyer who bought for other people gets nothing extra for those tickets (they are in My Orders). *(Decision to confirm.)*
+- **Performance:** Show / the scheduler only mark tickets and queue `SendQrReleaseBatch`; the job handles 50 recipients per run and chains itself. Checkout, scanner and the Show action never wait on e-mail. Scheduler: `tickets:release-qr` every minute (needs the normal `schedule:run` cron and a queue worker).
+- **No duplicates / crashes:** tickets are *claimed* atomically before sending (two jobs can't mail the same ticket), a lock per recipient prevents parallel sends, and a claim left by a dead worker becomes `failed — delivery unknown` after 10 min instead of being re-sent blindly (the e-mail may already have left); an admin retries after checking. A message blocked by the staging allowlist is recorded as failed, not sent.
+- **Scanner unchanged:** an e-mailed QR is still refused if refunded / canceled / used, and before Entry Availability opens (tested).
+- **Test vs Live (per event, default TEST):**
+  - TEST: nothing reaches customers; real QR visibility keeps working for customers as before. A **sandbox** (3 sample tickets stored on the event) runs the same rule: Show/Hide/"ticket bought now"/Retry/Reset, and can send **[TEST]** e-mails (sample data, QR not valid for entry) only to an address you type. Real attendee addresses are refused (your own address is allowed). Real tickets and the real QR/gate are never touched.
+  - LIVE: activated deliberately: **preview** of tickets/recipients that would be e-mailed now, a **choice** — *Skip* the already-eligible tickets (only future unlocks are notified) or *Notify* them in the background — plus a confirmation tick. Going back to TEST pauses sending; going Live again shows the preview and asks again, so old notifications never go out suddenly.
+  - Permission `events.qr-notifications.manage` (migration grants it to roles that had `events.qr-visibility.manage`, and super admins). Changes are logged (who/when/choice/preview).
+- **Holder changes are staff-only now.** The buyer's Edit holder / Resend link were removed (routes gone). Staff change name/e-mail from the admin ticket page: the old e-mail loses access, the new one is invited, the QR is unchanged, logged; canceled/refunded tickets cannot be reassigned; online tickets must keep an e-mail. The buyer's order page says "contact support".
+
+## Tests
+New `QrReleaseNotificationsTest` (33 tests): eligibility, tickets bought after opening, old tickets, Test mode sends nothing, queued (not inline) sending, grouping, Hide/Show/Hide/Show, scheduled reveal + repeated scheduler, **1,000 tickets with 250 already notified** (750 notified once each, one e-mail per recipient, originals untouched), summary counts, failures + retry-failed-only, dead worker / live worker claims, two workers, allowlist, full & partial refunds / canceled / used, refund after queueing, per-holder content (no order/payment/others), QR PNG per ticket, scanner rules for e-mailed QRs, Go Live permission/confirmation/choice, skip / notify / hidden activation, pause & re-activate, admin UI, sandbox (never touches real data), sample e-mail safety, controller validation, buyer-bought-for-others. `MultiTicketOwnershipTest` reworked for staff-only edits.
+Full suite: **0 new failures** vs the baseline (the same 58 pre-existing failures).
+
+## Browser QA — `docs/screenshots/digital-tickets/qa-release-results.json`: 18/18 passed
+| Area | Check | Result |
+|---|---|---|
+| test | New events start in TEST MODE; summary + Go Live preview visible | ✅ |
+| test | Preview: QR hidden now, tickets wait for the reveal (nothing sent at activation) | ✅ |
+| test | Sample e-mail goes only to the test address, marked [TEST] | ✅ |
+| test | No customer received a QR e-mail | ✅ |
+| sandbox | Show QR (test): sample tickets become Sent, grouped per recipient | ✅ |
+| sandbox | Hide then Show (test): nothing is sent again | ✅ |
+| sandbox | Ticket bought after the QR opened gets no release e-mail | ✅ |
+| sandbox | Real tickets and real QR visibility are untouched by the sandbox | ✅ |
+| test | Still no real customer e-mail after all the sandbox actions | ✅ |
+| test | Real Show QR in Test mode shows the QR to customers but e-mails nobody | ✅ |
+| live | Preview shows the recipients that WOULD be e-mailed (3 tickets / 3 recipients) | ✅ |
+| live | Going Live needs the confirmation checkbox | ✅ |
+| live | Live with "Skip": no old notification is sent, tickets are shown as Skipped | ✅ |
+| live | Show QR in Live mode e-mails the newly eligible recipient ONCE with both tickets in one message | ✅ |
+| live | Skipped tickets were still not e-mailed | ✅ |
+| live | Hide / Show twice: no e-mail on Hide and no repeat on Show | ✅ |
+| live | Summary shows Sent = 2 and Failed = 0 | ✅ |
+| live | No bulk-send button anywhere | ✅ |
+
+## Remaining notes / risks
+- Production needs `php artisan schedule:run` every minute and a running `queue:work` (the app already uses the database queue and schedule); `gd` is needed for the QR images (without it the e-mail still carries the VIEW YOUR TICKETS button).
+- Delivery is at-least-once only for the "claimed but result not recorded" window: that case is surfaced as *failed – delivery unknown* rather than re-sent.
+- A moved ticket keeps the same QR (as before), and an e-mailed QR can be forwarded by its recipient; the first successful scan wins.
+- Real inbox rendering (Gmail/Outlook/Apple Mail) was not tested; the layout reuses the existing e-mail template and PNG images are embedded as CID attachments.
+- Not tested on physical devices; WhatsApp is out of scope in this phase.

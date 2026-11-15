@@ -80,7 +80,7 @@ class TicketIssuanceService
     {
         $order->unsetRelation('items');
         $order->unsetRelation('issuedTickets');
-        $order->load(['items', 'customer']);
+        $order->load(['items.event', 'customer']);
 
         if ($order->status !== 'paid') {
             return;
@@ -104,6 +104,9 @@ class TicketIssuanceService
                         'holder_phone' => $item->holder_phone,
                         'ticket_name' => $item->ticket_name,
                         'ticket_price' => $item->ticket_price,
+                        'event_id' => $item->event_id,
+                        // A ticket whose QR is hidden when it is issued is the only kind that later gets a "QR is available" e-mail.
+                        'qr_locked_at_issue' => $item->event ? ! $item->event->qrIsVisible() : false,
                     ]
                 );
 
@@ -233,31 +236,6 @@ class TicketIssuanceService
 
     private function sendMailWithRetry(callable $send, array $context = []): bool
     {
-        $maxAttempts = 3;
-
-        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-            try {
-                $send();
-
-                return true;
-            } catch (UnexpectedResponseException $exception) {
-                $isRateLimited = $exception->getCode() === 550
-                    && str_contains(mb_strtolower($exception->getMessage()), 'too many emails per second');
-
-                if (! $isRateLimited || $attempt === $maxAttempts) {
-                    Log::error('Mail send failed.', [...$context, 'attempt' => $attempt, 'error' => $exception->getMessage()]);
-
-                    return false;
-                }
-
-                usleep($attempt * 500000);
-            } catch (Throwable $exception) {
-                Log::error('Mail send failed.', [...$context, 'attempt' => $attempt, 'error' => $exception->getMessage()]);
-
-                return false;
-            }
-        }
-
-        return false;
+        return \App\Support\MailRetry::send($send, $context) === null;
     }
 }

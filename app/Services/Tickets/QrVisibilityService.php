@@ -41,6 +41,7 @@ class QrVisibilityService
         ] + ($clearOverride ? ['qr_override' => null] : []))->save();
 
         $this->log($event, $by, 'Ticket QR visibility settings changed', $before);
+        app(QrReleaseService::class)->onVisibilityChanged($event);   // marks + queues only (live mode); sends nothing here
 
         return $event;
     }
@@ -64,6 +65,7 @@ class QrVisibilityService
             'hide' => 'Ticket QR codes hidden manually',
             default => 'Ticket QR manual override cleared (automatic rule applies)',
         }, $before);
+        app(QrReleaseService::class)->onVisibilityChanged($event);   // Show queues the release e-mails (live mode); Hide queues nothing
 
         return $event;
     }

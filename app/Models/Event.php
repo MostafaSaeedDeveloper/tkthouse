@@ -41,7 +41,17 @@ class Event extends Model
             'archived_at' => 'datetime',
             'qr_visibility_changed_at' => 'datetime',
             'entry_changed_at' => 'datetime',
+            'qr_release_activated_at' => 'datetime',
+            'qr_sandbox' => 'array',
         ];
+    }
+
+    public const RELEASE_TEST = 'test';
+    public const RELEASE_LIVE = 'live';
+
+    public function qrReleaseIsLive(): bool
+    {
+        return $this->qr_release_mode === self::RELEASE_LIVE;
     }
 
     /* ------------------------------------------------------------ entry availability (the scanner), separate from QR visibility */

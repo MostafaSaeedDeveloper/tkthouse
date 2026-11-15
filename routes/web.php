@@ -100,8 +100,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/account/orders', [CustomerDashboardController::class, 'orders'])->name('front.account.orders');
     Route::get('/account/orders/{orderNumber}', [CustomerDashboardController::class, 'showOrder'])->where('orderNumber', '[A-Za-z0-9\-]+')->name('front.account.orders.show');
     Route::get('/account/orders/{orderNumber}/invoice', [CustomerDashboardController::class, 'invoice'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:30,1,account-invoice')->name('front.account.orders.invoice');
-    Route::post('/account/orders/{orderNumber}/tickets/{ticket}/holder', [\App\Http\Controllers\TicketHolderController::class, 'update'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:20,1,ticket-holder')->name('front.account.tickets.holder.update');
-    Route::post('/account/orders/{orderNumber}/tickets/{ticket}/resend', [\App\Http\Controllers\TicketHolderController::class, 'resend'])->where('orderNumber', '[A-Za-z0-9\-]+')->middleware('throttle:20,1,ticket-resend')->name('front.account.tickets.resend');
     Route::get('/account/tickets', [CustomerDashboardController::class, 'tickets'])->name('front.account.tickets');
     Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');
@@ -146,6 +144,10 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
     Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->middleware('permission:events.create')->name('events.duplicate');
     Route::post('events/{event}/qr-visibility', [EventController::class, 'qrVisibility'])->middleware('permission:events.qr-visibility.manage')->name('events.qr-visibility');
     Route::post('events/{event}/qr-override', [EventController::class, 'qrOverride'])->middleware('permission:events.qr-visibility.manage')->name('events.qr-override');
+    Route::post('events/{event}/qr-release/sandbox', [\App\Http\Controllers\Admin\QrReleaseController::class, 'sandbox'])->middleware(['permission:events.qr-notifications.manage', 'throttle:60,1'])->name('events.qr-release.sandbox');
+    Route::post('events/{event}/qr-release/activate', [\App\Http\Controllers\Admin\QrReleaseController::class, 'activate'])->middleware('permission:events.qr-notifications.manage')->name('events.qr-release.activate');
+    Route::post('events/{event}/qr-release/pause', [\App\Http\Controllers\Admin\QrReleaseController::class, 'pause'])->middleware('permission:events.qr-notifications.manage')->name('events.qr-release.pause');
+    Route::post('events/{event}/qr-release/retry', [\App\Http\Controllers\Admin\QrReleaseController::class, 'retry'])->middleware('permission:events.qr-notifications.manage')->name('events.qr-release.retry');
     Route::post('events/{event}/entry-availability', [EventController::class, 'entryAvailability'])->middleware('permission:events.entry.manage')->name('events.entry-availability');
     Route::post('events/{event}/entry-override', [EventController::class, 'entryOverride'])->middleware('permission:events.entry.manage')->name('events.entry-override');
     Route::post('events/{event}/archive', [EventController::class, 'archive'])->middleware('permission:events.archive')->name('events.archive');

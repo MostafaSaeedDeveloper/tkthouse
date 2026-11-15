@@ -75,14 +75,13 @@
             <h2 class="tkt-pcard__h">Tickets &amp; attendees <span class="tkt-text-muted" style="font-weight:600">({{ $count }})</span></h2>
             @if($order->issuedTickets->isNotEmpty() && in_array($order->status, \App\Models\IssuedTicket::PORTAL_ORDER_STATUSES, true))
                 @php $holders = app(\App\Services\Tickets\TicketHolderService::class); @endphp
-                <p class="tkt-text-muted tkt-text-sm" style="margin:-6px 0 12px">Each person receives their own ticket by e-mail and sees only their ticket. You keep the order, the invoice and these tools.</p>
+                <p class="tkt-text-muted tkt-text-sm" style="margin:-6px 0 12px">Each person receives their own ticket by e-mail and sees only their ticket. You keep the order and the invoice.</p>
                 <ul class="tkt-hold-list">
                     @foreach($order->issuedTickets->sortBy('id') as $ticket)
                         @php
                             $tEvent = $ticket->event() ?? $event;
                             [$tLabel, $tVariant] = \App\Support\CustomerPortal::ticketBadge($ticket, $tEvent);
                             $blocked = $holders->blockedReason($ticket);
-                            $left = $holders->emailChangesLeft($ticket);
                             $isMe = mb_strtolower((string) $ticket->holder_email) === mb_strtolower((string) $user->email);
                             $invite = blank($ticket->holder_email) ? ['No e-mail yet', 'warning'] : ($isMe ? ['Yours', 'default'] : ($ticket->sent_at ? ['Link sent '.$ticket->sent_at->format('j M, H:i'), 'success'] : ['Not sent yet', 'warning']));
                         @endphp
@@ -100,29 +99,12 @@
                             </div>
                             <div class="tkt-hold__actions">
                                 <a class="tkt-btn tkt-btn--primary tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View ticket</a>
-                                @if($blocked === null)
-                                    @if(! $isMe && filled($ticket->holder_email))
-                                        <form method="POST" action="{{ route('front.account.tickets.resend', [$order->order_number, $ticket->uuid]) }}">@csrf<button class="tkt-btn tkt-btn--outline tkt-btn--sm" type="submit">Resend link</button></form>
-                                    @endif
-                                    <button type="button" class="tkt-btn tkt-btn--outline tkt-btn--sm" data-hold-toggle="{{ $ticket->id }}" aria-expanded="false" aria-controls="hold-form-{{ $ticket->id }}">Edit holder</button>
-                                @else
-                                    <small class="tkt-text-muted">{{ $blocked }}</small>
-                                @endif
+                                @if($blocked !== null)<small class="tkt-text-muted">{{ $blocked }}</small>@endif
                             </div>
-                            @if($blocked === null)
-                                <form id="hold-form-{{ $ticket->id }}" class="tkt-hold__form" method="POST" action="{{ route('front.account.tickets.holder.update', [$order->order_number, $ticket->uuid]) }}" hidden>
-                                    @csrf
-                                    <div class="tkt-field"><label class="tkt-label" for="hn-{{ $ticket->id }}">Name</label><input class="tkt-input" id="hn-{{ $ticket->id }}" name="holder_name" value="{{ old('holder_name', $ticket->holder_name) }}" required maxlength="255"></div>
-                                    <div class="tkt-field"><label class="tkt-label" for="he-{{ $ticket->id }}">Email</label><input class="tkt-input" id="he-{{ $ticket->id }}" type="email" inputmode="email" name="holder_email" value="{{ old('holder_email', $ticket->holder_email) }}" required maxlength="255"></div>
-                                    <p class="tkt-text-muted tkt-text-sm">Changing the email moves the ticket: the previous address loses access right away and the new one gets the link. The QR code stays the same. {{ $left }} {{ \Illuminate\Support\Str::plural('move', $left) }} left for this ticket.</p>
-                                    <button class="tkt-btn tkt-btn--primary tkt-btn--sm" type="submit">Save</button>
-                                </form>
-                            @endif
                         </li>
                     @endforeach
                 </ul>
-                @if($errors->any())<div class="tkt-alert tkt-alert--danger" role="alert" style="margin-top:12px">{{ $errors->first() }}</div>@endif
-                <script>document.addEventListener('click',function(e){var b=e.target.closest('[data-hold-toggle]');if(!b)return;var f=document.getElementById('hold-form-'+b.getAttribute('data-hold-toggle'));if(!f)return;f.hidden=!f.hidden;b.setAttribute('aria-expanded',f.hidden?'false':'true');});</script>
+                <p class="tkt-text-muted tkt-text-sm" style="margin-top:12px">Need to change a ticket holder's name or e-mail? Contact support and we will update it for you.</p>
             @else
                 <ul class="tkt-pticket-list">
                     @foreach($order->items as $item)

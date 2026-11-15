@@ -139,7 +139,7 @@ class MultiTicketOwnershipTest extends TestCase
         $this->actingAs($this->ahmed);
 
         $this->get(route('front.account.orders.show', $order->order_number))->assertOk()
-            ->assertSee('Mohamed')->assertSee('mohamed@example.com')->assertSee('Omar')->assertSee('omar@example.com')->assertSee('Resend link')->assertSee('Edit holder')
+            ->assertSee('Mohamed')->assertSee('mohamed@example.com')->assertSee('Omar')->assertSee('omar@example.com')
             ->assertSee(route('front.tickets.show', $mohamed), false)->assertSee('Link sent');
 
         // My Tickets: just Ahmed's, never listed twice, with a pointer to the two bought for others.
@@ -173,8 +173,6 @@ class MultiTicketOwnershipTest extends TestCase
         $list = $this->get(route('front.account.tickets', ['when' => 'all']))->assertOk()->assertSee('Mohamed')->getContent();
         $this->assertStringNotContainsString('Omar', $list);
         $this->get(route('front.account.tickets', ['order' => $order->order_number, 'when' => 'all']))->assertOk()->assertDontSee('Omar')->assertDontSee('Ahmed');
-        $this->post(route('front.account.tickets.resend', [$order->order_number, $mohamed->uuid]))->assertNotFound();     // a holder cannot manage the order
-        $this->post(route('front.account.tickets.holder.update', [$order->order_number, $mohamed->uuid]), ['holder_name' => 'X', 'holder_email' => 'x@example.com'])->assertNotFound();
     }
 
     public function test_one_holder_with_tickets_from_two_orders_sees_each_once(): void
@@ -205,31 +203,54 @@ class MultiTicketOwnershipTest extends TestCase
         $this->get(route('front.account.tickets', ['when' => 'all']))->assertOk()->assertSee('bought', false);   // none is theirs
     }
 
-    /* ------------------------------------------------------------ editing holders */
+    /* ------------------------------------------------------------ holders are changed by staff only */
 
-    public function test_changing_the_e_mail_moves_the_ticket_revokes_the_old_address_invites_the_new_one_and_keeps_the_qr(): void
+    private function adminUpdate(User $admin, IssuedTicket $t, array $over = [])
     {
-        [$order, $ahmedT, $mohamed] = $this->threeTickets();
+        $d = $this->dash($t);
+
+        return $this->actingAs($admin)->put(route('admin.tickets.update', $d), $over + [
+            'status' => $d->status, 'holder_name' => $d->holder_name, 'holder_email' => $d->holder_email, 'holder_phone' => $d->holder_phone,
+        ]);
+    }
+
+    public function test_a_buyer_can_no_longer_change_or_resend_holders(): void
+    {
+        [$order, , $mohamed] = $this->threeTickets();
+        $this->actingAs($this->ahmed);
+
+        // The buyer's tools are gone: the routes do not exist and the order page offers no edit or resend.
+        $this->post('/account/orders/'.$order->order_number.'/tickets/'.$mohamed->uuid.'/holder', ['holder_name' => 'X', 'holder_email' => 'x@example.com'])->assertNotFound();
+        $this->post('/account/orders/'.$order->order_number.'/tickets/'.$mohamed->uuid.'/resend')->assertNotFound();
+        $this->assertSame('mohamed@example.com', $mohamed->fresh()->holder_email);
+
+        $this->get(route('front.account.orders.show', $order->order_number))->assertOk()
+            ->assertDontSee('Edit holder')->assertDontSee('Resend link')->assertSee('Contact support')->assertSee('mohamed@example.com')->assertSee('View ticket');
+    }
+
+    public function test_staff_changing_the_e_mail_moves_the_ticket_revokes_the_old_address_invites_the_new_one_and_keeps_the_qr(): void
+    {
+        [$order, , $mohamed] = $this->threeTickets();
         $qr = $this->dash($mohamed)->qr_payload;
-        $old = User::where('email', 'mohamed@example.com')->first() ?? $this->codeLoginAndUser('mohamed@example.com');
+        $old = $this->codeLoginAndUser('mohamed@example.com');
         $this->get(route('front.tickets.show', $mohamed))->assertOk();
         $this->post(route('front.customer.logout'));
+        $this->app['auth']->forgetGuards();
         Mail::fake();
+        $admin = $this->staff(['tickets.update']);
 
-        $this->actingAs($this->ahmed)->post(route('front.account.tickets.holder.update', [$order->order_number, $mohamed->uuid]), ['holder_name' => 'Mohamed Ali', 'holder_email' => 'New@Example.com'])
-            ->assertRedirect()->assertSessionHas('success');
+        $this->adminUpdate($admin, $mohamed, ['holder_name' => 'Mohamed Ali', 'holder_email' => 'New@Example.com'])->assertRedirect()->assertSessionHas('success');
 
         $m = $mohamed->fresh();
-        $this->assertSame(['Mohamed Ali', 'new@example.com', 1], [$m->holder_name, $m->holder_email, $m->holder_email_changes]);
+        $this->assertSame(['Mohamed Ali', 'new@example.com'], [$m->holder_name, $m->holder_email]);
         $d = $this->dash($m);
         $this->assertSame(['Mohamed Ali', 'new@example.com'], [$d->holder_name, $d->holder_email]);
         $this->assertSame($qr, $d->qr_payload, 'no new QR is created');
         Mail::assertSent(HolderTicketsIssuedMail::class, 1);
         Mail::assertSent(HolderTicketsIssuedMail::class, fn ($mail) => $mail->hasTo('new@example.com') && $mail->tickets->count() === 1);
         $this->assertNotNull($m->sent_at);
-        $this->assertSame(1, Activity::where('description', 'Ticket holder changed (e-mail moved)')->where('causer_id', $this->ahmed->id)->count());
+        $this->assertSame(1, Activity::where('description', 'Ticket holder changed (e-mail moved)')->where('causer_id', $admin->id)->count());
 
-        // The previous address lost access (even in a session that had it); the new one can get in.
         $this->actingAs($old->fresh())->get(route('front.tickets.show', $mohamed))->assertForbidden();
         $this->actingAs($old->fresh())->getJson(route('front.tickets.qr', $mohamed))->assertForbidden();
         $this->actingAs($old->fresh())->get(route('front.account.tickets', ['when' => 'all']))->assertOk()->assertDontSee('Mohamed Ali');
@@ -246,67 +267,37 @@ class MultiTicketOwnershipTest extends TestCase
         return User::where('email', $email)->firstOrFail();
     }
 
-    public function test_a_name_change_needs_no_e_mail_and_does_not_use_up_a_move(): void
+    public function test_a_staff_name_change_needs_no_e_mail(): void
     {
-        [$order, , $mohamed] = $this->threeTickets();
+        [, , $mohamed] = $this->threeTickets();
         Mail::fake();
 
-        $this->actingAs($this->ahmed)->post(route('front.account.tickets.holder.update', [$order->order_number, $mohamed->uuid]), ['holder_name' => 'Mo Ali', 'holder_email' => 'mohamed@example.com'])->assertSessionHas('success');
+        $this->adminUpdate($this->staff(['tickets.update']), $mohamed, ['holder_name' => 'Mo Ali'])->assertSessionHas('success');
 
-        $this->assertSame(['Mo Ali', 0], [$mohamed->fresh()->holder_name, (int) $mohamed->fresh()->holder_email_changes]);
+        $this->assertSame('Mo Ali', $mohamed->fresh()->holder_name);
+        $this->assertSame('Mo Ali', $this->dash($mohamed)->holder_name);
         Mail::assertNothingSent();
     }
 
-    public function test_a_ticket_can_be_moved_three_times_then_the_buyer_must_contact_support(): void
+    public function test_canceled_and_refunded_tickets_cannot_be_reassigned_even_by_staff(): void
     {
-        [$order, , $mohamed] = $this->threeTickets();
-        $this->actingAs($this->ahmed);
-        foreach (['a@example.com', 'b@example.com', 'c@example.com'] as $e) {
-            $this->post(route('front.account.tickets.holder.update', [$order->order_number, $mohamed->uuid]), ['holder_name' => 'M', 'holder_email' => $e])->assertSessionHas('success');
-        }
-        $this->post(route('front.account.tickets.holder.update', [$order->order_number, $mohamed->uuid]), ['holder_name' => 'M', 'holder_email' => 'd@example.com'])->assertSessionHasErrors('holder_email');
-        $this->assertSame('c@example.com', $mohamed->fresh()->holder_email);
-    }
-
-    public function test_used_canceled_and_refunded_tickets_cannot_be_changed_or_re_sent(): void
-    {
-        [$order, , $mohamed, $omar] = $this->threeTickets();
-        $this->dash($mohamed)->update(['status' => 'checked_in']);
+        [, , $mohamed, $omar] = $this->threeTickets();
+        $this->dash($mohamed)->update(['status' => 'canceled', 'canceled_at' => now()]);
         $this->dash($omar)->update(['status' => 'canceled', 'canceled_at' => now(), 'cancellation_source' => 'refund']);
         Mail::fake();
-        $this->actingAs($this->ahmed);
+        $admin = $this->staff(['tickets.update']);
 
         foreach ([$mohamed, $omar] as $t) {
-            $this->post(route('front.account.tickets.holder.update', [$order->order_number, $t->uuid]), ['holder_name' => 'X', 'holder_email' => 'x@example.com'])->assertSessionHasErrors('holder');
-            $this->post(route('front.account.tickets.resend', [$order->order_number, $t->uuid]))->assertSessionHas('error');
+            $this->adminUpdate($admin, $t, ['status' => 'canceled', 'holder_email' => 'x@example.com'])->assertSessionHasErrors('holder');
         }
         $this->assertSame(['mohamed@example.com', 'omar@example.com'], [$mohamed->fresh()->holder_email, $omar->fresh()->holder_email]);
         Mail::assertNothingSent();
-
-        $this->get(route('front.account.orders.show', $order->order_number))->assertOk()->assertSee('already used')->assertSee('refunded');
     }
 
-    public function test_resend_sends_the_link_again_with_a_limit_and_only_the_buyer_can_do_it(): void
+    public function test_staff_cannot_blank_the_holder_e_mail_of_an_online_ticket(): void
     {
-        [$order, , $mohamed] = $this->threeTickets();
-        Mail::fake();
-        $stranger = User::factory()->create(['email_verified_at' => now()]);
-
-        $this->actingAs($stranger)->post(route('front.account.tickets.resend', [$order->order_number, $mohamed->uuid]))->assertNotFound();
-        $this->actingAs($this->ahmed);
-        for ($i = 0; $i < 3; $i++) {
-            $this->post(route('front.account.tickets.resend', [$order->order_number, $mohamed->uuid]))->assertSessionHas('success');
-        }
-        $this->post(route('front.account.tickets.resend', [$order->order_number, $mohamed->uuid]))->assertSessionHas('error');
-        Mail::assertSent(HolderTicketsIssuedMail::class, 3);
-        Mail::assertSent(HolderTicketsIssuedMail::class, fn ($m) => $m->hasTo('mohamed@example.com'));
-        $this->assertSame(3, Activity::where('description', 'Ticket link re-sent to the holder')->count());
-    }
-
-    public function test_invalid_holder_data_is_rejected(): void
-    {
-        [$order, , $mohamed] = $this->threeTickets();
-        $this->actingAs($this->ahmed)->post(route('front.account.tickets.holder.update', [$order->order_number, $mohamed->uuid]), ['holder_name' => '', 'holder_email' => 'not-an-email'])->assertSessionHasErrors(['holder_name', 'holder_email']);
+        [, , $mohamed] = $this->threeTickets();
+        $this->adminUpdate($this->staff(['tickets.update']), $mohamed, ['holder_email' => ''])->assertSessionHasErrors('holder_email');
         $this->assertSame('mohamed@example.com', $mohamed->fresh()->holder_email);
     }
 

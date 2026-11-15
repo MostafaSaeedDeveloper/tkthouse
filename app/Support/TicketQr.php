@@ -43,6 +43,37 @@ class TicketQr
         return $writer->writeString($payload);
     }
 
+    /**
+     * PNG bytes of a QR code (e-mail clients do not show SVG). Drawn with GD from the QR matrix; null when GD is unavailable,
+     * in which case the e-mail simply carries the link to the ticket page.
+     */
+    public static function png(string $payload, int $module = 8, int $quiet = 3): ?string
+    {
+        if (! function_exists('imagecreatetruecolor')) {
+            return null;
+        }
+
+        $matrix = \BaconQrCode\Encoder\Encoder::encode($payload, \BaconQrCode\Common\ErrorCorrectionLevel::M(), 'UTF-8')->getMatrix();
+        $n = $matrix->getWidth();
+        $size = ($n + 2 * $quiet) * $module;
+        $img = imagecreatetruecolor($size, $size);
+        imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
+        $black = imagecolorallocate($img, 0, 0, 0);
+        for ($y = 0; $y < $n; $y++) {
+            for ($x = 0; $x < $n; $x++) {
+                if ($matrix->get($x, $y) === 1) {
+                    imagefilledrectangle($img, ($x + $quiet) * $module, ($y + $quiet) * $module, ($x + $quiet + 1) * $module - 1, ($y + $quiet + 1) * $module - 1, $black);
+                }
+            }
+        }
+        ob_start();
+        imagepng($img);
+        $png = (string) ob_get_clean();
+        imagedestroy($img);
+
+        return $png;
+    }
+
     public static function dataUri(string $payload, int $size = 300): string
     {
         return 'data:image/svg+xml;base64,'.base64_encode(self::svg($payload, $size));

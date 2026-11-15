@@ -133,7 +133,21 @@ class TicketController extends Controller
             return back()->withErrors(['status' => 'This ticket was canceled by a confirmed refund and cannot be reactivated.'])->withInput();
         }
 
-        $ticket->update($validated);
+        // Holder name / e-mail changes go through the holder service (online and guest-list tickets alike): the previous e-mail loses access,
+        // the new one is invited, the QR code is untouched and the change is recorded. Canceled / refunded tickets cannot be re-assigned.
+        $issued = IssuedTicket::query()->where('ticket_number', $ticket->ticket_number)->first();
+        if ($issued && (
+            trim((string) ($validated['holder_name'] ?? '')) !== trim((string) $ticket->holder_name)
+            || mb_strtolower(trim((string) ($validated['holder_email'] ?? ''))) !== mb_strtolower(trim((string) $ticket->holder_email))
+        )) {
+            if (blank($validated['holder_email'] ?? null)) {
+                return back()->withErrors(['holder_email' => 'A ticket needs a holder e-mail address.'])->withInput();
+            }
+            app(\App\Services\Tickets\TicketHolderService::class)->update($issued, $request->user(), (string) ($validated['holder_name'] ?? ''), (string) $validated['holder_email']);
+            $ticket->refresh();
+        }
+
+        $ticket->update(\Illuminate\Support\Arr::except($validated, ['holder_name', 'holder_email']) + ($issued ? [] : \Illuminate\Support\Arr::only($validated, ['holder_name', 'holder_email'])));
 
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Ticket updated successfully.');
     }
