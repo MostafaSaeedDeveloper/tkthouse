@@ -229,3 +229,6 @@ Full suite: **0 new failures** vs the baseline (the same 58 pre-existing failure
 - A moved ticket keeps the same QR (as before), and an e-mailed QR can be forwarded by its recipient; the first successful scan wins.
 - Real inbox rendering (Gmail/Outlook/Apple Mail) was not tested; the layout reuses the existing e-mail template and PNG images are embedded as CID attachments.
 - Not tested on physical devices; WhatsApp is out of scope in this phase.
+
+## Defaults ("as if nothing changed")
+Every event — new, existing (migrations default the new columns) or duplicated — starts with: QR visibility **Show Immediately** (QR visible), Entry Availability **Always open**, no manual overrides, QR release e-mails in **Test mode (nothing is sent to customers)**, empty sandbox. Tickets are only ever marked as release-eligible if the QR was hidden when they were issued, so with the defaults nobody is ever e-mailed. Tested in `test_a_new_event_behaves_exactly_as_before_until_an_admin_changes_the_settings`, `test_even_live_mode_sends_nothing_for_an_event_whose_qr_was_never_hidden` and `test_a_duplicated_event_starts_with_the_defaults_not_the_live_settings_of_the_original`.

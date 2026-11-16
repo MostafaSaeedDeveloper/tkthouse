@@ -124,6 +124,48 @@ class QrReleaseNotificationsTest extends TestCase
         return collect(app('mailer')->getSymfonyTransport()->messages())->map(fn ($m) => $m->getEnvelope()->getRecipients()[0]->getAddress());
     }
 
+    /* ------------------------------------------------------------ 0. the default is "nothing changed" */
+
+    public function test_a_new_event_behaves_exactly_as_before_until_an_admin_changes_the_settings(): void
+    {
+        Mail::fake();
+        Queue::fake();
+        $e = Event::create(['name' => 'Plain Night', 'event_date' => now()->addDays(3)->toDateString(), 'event_time' => '20:00:00', 'location' => 'Cairo', 'description' => '', 'status' => 'active', 'requires_booking_approval' => false])->fresh();
+
+        $this->assertSame(['immediate', null, 'always', null, 'test', null], [$e->qr_visibility_mode, $e->qr_override, $e->entry_mode, $e->entry_override, $e->qr_release_mode, $e->qr_sandbox]);
+        $this->assertTrue($e->qrIsVisible());      // the QR is visible, as before
+        $this->assertTrue($e->entryIsOpen());      // the gates are open, as before
+        $this->assertFalse($e->qrReleaseIsLive()); // no release e-mails
+
+        $o = $this->order([['A', 'a@example.com']], $e);
+        $t = $o->issuedTickets->first();
+        $this->assertSame([false, 'not_eligible'], [(bool) $t->qr_locked_at_issue, $t->qr_notice_status]);
+        $this->actingAs(User::find($o->user_id))->getJson(route('front.tickets.qr', $t))->assertJson(['state' => 'visible']);
+
+        Artisan::call('tickets:release-qr');
+        Queue::assertNothingPushed();
+        Mail::assertNotSent(QrReleaseMail::class);
+    }
+
+    public function test_even_live_mode_sends_nothing_for_an_event_whose_qr_was_never_hidden(): void
+    {
+        Mail::fake();
+        $e = $this->newEvent('Always Visible', ['qr_release_mode' => 'live']);   // live, but default visibility: tickets are never locked
+        $this->order([['A', 'a@example.com']], $e);
+        Artisan::call('tickets:release-qr');
+        $this->hide($e);
+        $this->show($e);
+        Mail::assertNotSent(QrReleaseMail::class);
+    }
+
+    public function test_a_duplicated_event_starts_with_the_defaults_not_the_live_settings_of_the_original(): void
+    {
+        $this->event->forceFill(['qr_override' => 'hide', 'entry_mode' => 'manual', 'qr_sandbox' => ['visible' => true, 'tickets' => [], 'log' => []]])->save();
+        $copy = app(\App\Services\Events\EventDuplicator::class)->duplicate($this->event->fresh())->fresh();
+
+        $this->assertSame(['immediate', null, 'always', 'test', null], [$copy->qr_visibility_mode, $copy->qr_override, $copy->entry_mode, $copy->qr_release_mode, $copy->qr_sandbox]);
+    }
+
     /* ------------------------------------------------------------ 1. who is eligible */
 
     public function test_a_ticket_issued_while_the_qr_is_hidden_is_marked_locked_and_one_issued_after_opening_is_not(): void

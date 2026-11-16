@@ -12,7 +12,7 @@
 <x-admin.card id="ev-release" title="QR Release e-mails" subtitle="One e-mail with the QR code(s) when a ticket's QR opens for the first time. Never on Hide, never twice for the same ticket, never to tickets bought after the QR opened.">
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
         <x-admin.badge :variant="$live ? 'success' : 'warning'" :dot="true">{{ $live ? 'LIVE' : 'TEST MODE' }}</x-admin.badge>
-        <strong>{{ $live ? 'Customers are e-mailed when their QR opens.' : 'No e-mail is sent to customers.' }}</strong>
+        <strong>{{ $live ? 'Customers are e-mailed when their QR opens.' : 'No e-mail is sent to customers (the default: nothing changes until you go Live).' }}</strong>
         @if($live && $event->qr_release_activated_at)<span class="a-muted">Live since {{ $event->qr_release_activated_at->format('d M Y, H:i') }}@if($by) by {{ $by->name }}@endif.</span>@endif
     </div>
 
