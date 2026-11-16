@@ -729,4 +729,28 @@ class OrderAssignmentTest extends TestCase
         $this->assertStringNotContainsString('id="exportPaymentSelect"', $html);
         $this->assertStringNotContainsString('Search (Order # / Customer)', $html);
     }
+
+    public function test_no_export_parameter_lets_an_agent_reach_orders_that_are_not_theirs(): void
+    {
+        $this->on();
+        $a = $this->agent();
+        $b = $this->agent();
+        $mine = $this->order($a, 'paid');
+        $theirs = $this->order($b, 'paid');
+        $queue = $this->order(null, 'paid');
+        $shared = $this->order($b, 'paid');
+
+        foreach ([['assignee' => (string) $b->id], ['assignee' => 'unassigned'], ['assignee' => 'all'], ['search' => $theirs->order_number], ['event_id' => 'all'], ['status' => 'paid'], ['refunded' => 1]] as $params) {
+            foreach (['csv', 'xlsx'] as $format) {
+                $res = $this->actingAs($a)->get(route('admin.orders.export', $params + ['format' => $format]));
+                $res->assertOk();
+                if ($format === 'csv') {
+                    $csv = $res->streamedContent();
+                    foreach ([$theirs, $queue, $shared] as $o) {
+                        $this->assertStringNotContainsString(preg_replace('/\D+/', '', $o->order_number), $csv, json_encode($params));
+                    }
+                }
+            }
+        }
+    }
 }
