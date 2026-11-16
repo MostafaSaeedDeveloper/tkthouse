@@ -74,6 +74,7 @@
         <div><dt>Placed</dt><dd>{{ $order->created_at?->format('d M Y, H:i') }}</dd></div>
         <div><dt>Order status</dt><dd><x-admin.status :status="$order->status" kind="order" /></dd></div>
         <div><dt>Payment method</dt><dd>{{ $paymentMethodLabel }}</dd></div>
+        <div><dt>Origin</dt><dd>{{ \App\Support\OrderOrigin::label($order->origin) }}</dd></div>
         @if($latestAttempt)
           <div><dt>Latest payment attempt</dt><dd><x-admin.status :status="$latestAttempt->displayStatus()" kind="payment" /></dd></div>
         @endif

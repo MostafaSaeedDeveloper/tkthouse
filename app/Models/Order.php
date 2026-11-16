@@ -41,6 +41,7 @@ class Order extends Model
         'sold_by_user_id',
         'sold_at',
         'integration_account_id',
+        'origin',
     ];
 
     protected function casts(): array

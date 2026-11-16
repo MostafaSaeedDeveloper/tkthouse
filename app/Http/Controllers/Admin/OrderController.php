@@ -286,6 +286,7 @@ class OrderController extends Controller
             'requires_approval' => ['nullable', 'boolean'],
             'exclude_from_statistics' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'max:50'],
+            'origin' => ['nullable', 'string', 'max:50'],
             'extra_fees' => ['nullable', 'numeric', 'min:0'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
@@ -322,6 +323,7 @@ class OrderController extends Controller
         $order->update([
             'status' => $validated['status'],
             'payment_method' => $validated['payment_method'],
+            'origin' => array_key_exists('origin', $validated) ? \App\Support\OrderOrigin::normalize($validated['origin']) : $order->origin,
             'paid_at' => $paidAt,
             'requires_approval' => array_key_exists('requires_approval', $validated)
                 ? (bool) $validated['requires_approval']
@@ -780,6 +782,7 @@ class OrderController extends Controller
             'total'          => 'Total Amount',
             'status'         => 'Status',
             'payment_method' => 'Payment Method',
+            'origin' => 'Origin',
             'created_at'     => 'Created At',
             'paid_at'        => 'Paid At',
         ] + (\App\Orders\OrderAccess::enabled() ? ['assigned_to' => 'Assigned To'] : []);
@@ -820,6 +823,7 @@ class OrderController extends Controller
                     'total'          => number_format((float) $order->total_amount, 2),
                     'status'         => $order->status,
                     'payment_method' => $order->payment_method,
+                    'origin'         => \App\Support\OrderOrigin::label($order->origin),
                     'created_at'     => optional($order->created_at)->format('Y-m-d H:i'),
                     'paid_at'        => optional($order->paid_at)->format('Y-m-d H:i') ?? '',
                     'assigned_to'    => collect([$order->assignedUser?->name])->merge($order->assignees->pluck('name'))->filter()->unique()->implode(', '),
@@ -955,6 +959,12 @@ class OrderController extends Controller
 
         if ($request->filled('payment_method')) {
             $query->where('payment_method', (string) $request->input('payment_method'));
+        }
+
+        if ($request->filled('origin')) {
+            $request->input('origin') === 'none'
+                ? $query->whereNull('origin')
+                : $query->where('origin', \App\Support\OrderOrigin::normalize((string) $request->input('origin')));
         }
 
         if (ctype_digit((string) $request->input('event_id', ''))) {
