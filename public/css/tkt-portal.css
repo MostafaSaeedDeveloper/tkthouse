@@ -211,3 +211,5 @@ a.dt-pager__btn:hover { border-color: var(--tkt-ink); color: var(--tkt-ink); }
 .tkt-hold__form { display: grid; gap: 10px; padding: 14px; border-radius: var(--tkt-radius-sm); background: var(--tkt-surface); }
 .tkt-hold__form[hidden] { display: none; }
 @media (max-width: 479px) { .tkt-hold__actions .tkt-btn { flex: 1; } }
+
+.dt__wallet { padding: 0 20px 22px; }

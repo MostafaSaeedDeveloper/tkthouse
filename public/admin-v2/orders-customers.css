@@ -190,7 +190,7 @@
 .a-ord-event .a-ord-item__meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 2px; }
 
 /* Order assignment */
-.a-ordt .c-assignee { width: 140px; }
+.a-ordt .c-assignee { width: 170px; }
 @media (max-width: 1100px) { .a-ordt .c-assignee { width: 112px; } }
 .a-ordt .a-ord-check { width: 18px; height: 18px; margin: 0; vertical-align: middle; accent-color: #111; cursor: pointer; }
 .a-ordt td.c-order .a-table__sub { font-size: 11px; white-space: nowrap; }
@@ -228,4 +228,5 @@
 .a-reft .a-table__sub { white-space: normal; }
 
 /* Assigned To: every agent on its own line, never cut off */
-.a-ord-agents { display: block; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
+.a-ord-agents { display: flex; flex-wrap: wrap; gap: 4px; }
+.a-ord-agent { display: inline-flex; align-items: center; max-width: 100%; padding: 2px 10px; border: 1px solid var(--a-line-strong); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 700; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }

@@ -95,6 +95,10 @@
         <div><dt>Ticket no.</dt><dd class="dt__mono">{{ $ticket->ticket_number }}</dd></div>
         <div><dt>Status</dt><dd>{{ $label }}</dd></div>
     </dl>
+
+    @if($state === 'visible' && \App\Services\Wallet\ApplePassBuilder::configured())
+        <div class="dt__wallet"><a class="tkt-btn tkt-btn--outline tkt-btn--lg tkt-btn--block" style="background:#000;border-color:#000;color:#fff" href="{{ route('front.tickets.wallet', $ticket) }}"><i class="fa fa-wallet" aria-hidden="true"></i> Add to Apple Wallet</a></div>
+    @endif
 </article>
 @endsection
 

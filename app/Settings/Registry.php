@@ -18,6 +18,7 @@ final class Registry
         'payments' => ['label' => 'Payment Routing', 'icon' => 'fa-credit-card', 'permission' => 'settings.payment-accounts.view'],
         'notifications' => ['label' => 'Notifications', 'icon' => 'fa-bell', 'permission' => 'settings.view'],
         'scripts' => ['label' => 'Tracking Codes', 'icon' => 'fa-code', 'permission' => 'settings.security.view'],
+        'wallet' => ['label' => 'Apple Wallet', 'icon' => 'fa-wallet', 'permission' => 'settings.integrations.manage'],
         'security' => ['label' => 'Security & Access', 'icon' => 'fa-shield-halved', 'permission' => 'settings.security.view'],
     ];
 
@@ -85,6 +86,14 @@ final class Registry
                 'help' => 'Inserted right after the opening <body> tag, e.g. the Google Tag Manager <noscript> iframe.', 'rules' => ['nullable', 'string', 'max:30000']],
             'custom_code_footer' => ['group' => 'scripts', 'type' => 'code', 'label' => 'Footer code (before </body>)', 'default' => null,
                 'help' => 'Inserted just before </body> on every public page, e.g. chat widgets or deferred scripts. Code runs for all visitors — only paste code from sources you trust.', 'rules' => ['nullable', 'string', 'max:30000']],
+
+            // ---- Apple Wallet (the certificate files and its password are saved encrypted by SystemSettingController, never as plain settings)
+            'wallet_apple_pass_type_id' => ['group' => 'wallet', 'type' => 'string', 'label' => 'Pass Type ID', 'default' => null,
+                'help' => 'From Apple Developer → Identifiers → Pass Type IDs, e.g. pass.com.yourcompany.tickets.', 'rules' => ['nullable', 'string', 'max:120', 'regex:/^pass\.[A-Za-z0-9.\-]+$/']],
+            'wallet_apple_team_id' => ['group' => 'wallet', 'type' => 'string', 'label' => 'Team ID', 'default' => null,
+                'help' => 'The 10-character Team ID shown in your Apple Developer membership.', 'rules' => ['nullable', 'string', 'regex:/^[A-Z0-9]{10}$/']],
+            'wallet_apple_org_name' => ['group' => 'wallet', 'type' => 'string', 'label' => 'Name shown on the pass', 'default' => null,
+                'help' => 'Shown at the top of the pass. Leave empty to use the website name.', 'rules' => ['nullable', 'string', 'max:60']],
         ];
     }
 

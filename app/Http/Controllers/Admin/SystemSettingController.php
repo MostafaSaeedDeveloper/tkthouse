@@ -95,6 +95,13 @@ class SystemSettingController extends Controller
             abort_unless($request->user()->can('settings.payment-accounts.manage'), 403);
         }
 
+        if ($section === 'wallet') {
+            $error = $this->saveWalletSecrets($request);
+            if ($error) {
+                return back()->withInput()->withErrors(['wallet_certificate' => $error]);
+            }
+        }
+
         $request->validate(collect(Registry::forGroup($section))->filter(fn ($d) => $d['type'] === 'file')->map(fn ($d) => $d['rules'])->all());
 
         $this->settings->update($input, $request->user(), $request->ip());
@@ -113,6 +120,58 @@ class SystemSettingController extends Controller
 
         return redirect()->route($section === 'general' ? 'admin.settings.edit' : 'admin.settings.section', $section === 'general' ? [] : ['section' => $section])
             ->with('success', 'Settings saved successfully.');
+    }
+
+    /** Apple Wallet certificate (.p12), its password and Apple's WWDR certificate: validated, then stored encrypted. @return ?string an error message */
+    private function saveWalletSecrets(Request $request): ?string
+    {
+        $request->validate([
+            'wallet_certificate' => ['nullable', 'file', 'max:512'],
+            'wallet_wwdr' => ['nullable', 'file', 'max:256'],
+            'wallet_certificate_password' => ['nullable', 'string', 'max:200'],
+            'wallet_remove' => ['nullable', 'boolean'],
+        ]);
+
+        $key = 'wallet_apple_secrets';
+        if ($request->boolean('wallet_remove')) {
+            \App\Models\SystemSetting::query()->where('key', $key)->delete();
+            $this->settings->flush();
+            activity('settings')->causedBy($request->user())->log('Apple Wallet certificate removed');
+
+            return null;
+        }
+
+        $current = \App\Services\Wallet\WalletSettings::secrets();
+        $p12 = $request->hasFile('wallet_certificate') ? file_get_contents($request->file('wallet_certificate')->getRealPath()) : ($current['p12'] ?? null);
+        $password = $request->filled('wallet_certificate_password') ? (string) $request->input('wallet_certificate_password') : ($request->hasFile('wallet_certificate') ? '' : ($current['password'] ?? ''));
+        $wwdr = $current['wwdr'] ?? null;
+        if ($request->hasFile('wallet_wwdr')) {
+            $raw = file_get_contents($request->file('wallet_wwdr')->getRealPath());
+            // Apple ships the WWDR certificate as .cer (DER); accept PEM too.
+            $wwdr = str_contains($raw, '-----BEGIN CERTIFICATE-----')
+                ? $raw
+                : "-----BEGIN CERTIFICATE-----\n".chunk_split(base64_encode($raw), 64, "\n")."-----END CERTIFICATE-----\n";
+            if (! openssl_x509_read($wwdr)) {
+                return 'The WWDR file is not a valid certificate.';
+            }
+        }
+
+        if ($p12 === null && $wwdr === null) {
+            return null; // nothing uploaded yet
+        }
+        if ($p12 !== null) {
+            $parsed = [];
+            if (! openssl_pkcs12_read($p12, $parsed, $password) || empty($parsed['cert']) || empty($parsed['pkey'])) {
+                return 'The Pass Type ID certificate (.p12) could not be opened. Check the file and its password.';
+            }
+        }
+
+        \App\Support\SystemSettings::set($key, \Illuminate\Support\Facades\Crypt::encryptString(json_encode([
+            'p12' => $p12 === null ? null : base64_encode($p12), 'password' => $password, 'wwdr' => $wwdr,
+        ])));
+        activity('settings')->causedBy($request->user())->log('Apple Wallet certificate updated');
+
+        return null;
     }
 
     /** One click: keep every current order viewer's access before turning assignment on. */

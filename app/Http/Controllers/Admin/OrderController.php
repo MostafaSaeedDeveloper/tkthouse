@@ -114,16 +114,23 @@ class OrderController extends Controller
         }
 
         $paymentMethods = $this->activePaymentMethods();
+        // An agent only sees the payment methods and events that appear in the orders they can see.
+        $agentScoped = \App\Orders\OrderAccess::scoped($request->user());
+        if ($agentScoped) {
+            $usedMethods = tap(Order::query()->visibleTo($request->user()), fn ($q) => $this->applyManagedEventsScope($q, $managedEvents))
+                ->whereNotNull('payment_method')->distinct()->pluck('payment_method')->all();
+            $paymentMethods = $paymentMethods->whereIn('code', $usedMethods)->values();
+        }
         $paymentMethodLabels = $this->paymentMethodLabels();
 
         // Everyone who can open Orders can step back to an older event; without the all-orders permission the list is
         // limited to events that have orders they are allowed to see (an agent never learns about other events).
-        $events = $canFilterByEvent
+        $events = ($canFilterByEvent && ! $agentScoped)
             ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : Event::query()->whereIn('id', \App\Models\OrderItem::query()->select('event_id')->whereIn('order_id', tap(Order::query()->visibleTo($request->user()), fn ($q) => $this->applyManagedEventsScope($q, $managedEvents))->select('orders.id')))
                 ->orderBy('name')->get(['id', 'name', 'status']);
 
-        $canExport = $this->isSuperAdmin($request->user());
+        $canExport = $this->canExportOrders($request->user());
         $statusOptions = self::ORDER_STATUS_OPTIONS;
         $perPageOptions = self::PER_PAGE_OPTIONS;
 
@@ -135,7 +142,7 @@ class OrderController extends Controller
 
         $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals'));
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals', 'agentScoped'));
     }
 
     public function deleted(Request $request)
@@ -286,6 +293,7 @@ class OrderController extends Controller
             'requires_approval' => ['nullable', 'boolean'],
             'exclude_from_statistics' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'max:50'],
+            'origin' => ['nullable', 'string', 'max:50'],
             'extra_fees' => ['nullable', 'numeric', 'min:0'],
             'items' => ['array'],
             'items.*.id' => ['required', 'integer'],
@@ -322,6 +330,7 @@ class OrderController extends Controller
         $order->update([
             'status' => $validated['status'],
             'payment_method' => $validated['payment_method'],
+            'origin' => array_key_exists('origin', $validated) ? \App\Support\OrderOrigin::normalize($validated['origin']) : $order->origin,
             'paid_at' => $paidAt,
             'requires_approval' => array_key_exists('requires_approval', $validated)
                 ? (bool) $validated['requires_approval']
@@ -755,13 +764,33 @@ class OrderController extends Controller
 
 
 
+    /** Super admins export everything; agents (assignment on, own-orders level) export their own orders only. */
+    private function canExportOrders(?\App\Models\User $user): bool
+    {
+        return $this->isSuperAdmin($user)
+            || (\App\Orders\OrderAccess::enabled() && \App\Orders\OrderAccess::level($user) === \App\Orders\OrderAccess::ASSIGNED);
+    }
+
     public function export(Request $request): \Symfony\Component\HttpFoundation\Response
     {
-        abort_unless($this->isSuperAdmin($request->user()), 403);
+        abort_unless($this->canExportOrders($request->user()), 403);
 
         $managedEvents = $request->user()?->managedEvents ?? collect();
         $canFilterByEvent = $request->user()?->can(self::SHOW_HIDDEN_ORDERS_PERMISSION) ?? false;
+        $canSeeAssignment = \App\Orders\OrderAccess::canSeeAssignment($request->user());
+        if (! $canSeeAssignment) {
+            // An agent must not learn who else is on an order: no assignee filter or column in their file.
+            $request->query->remove('assignee');
+            $request->request->remove('assignee');
+        }
 
+        if (\App\Orders\OrderAccess::scoped($request->user())) {
+            // Agents filter their export by status and event only.
+            $request->query->remove('search'); $request->request->remove('search');
+            $request->query->remove('payment_method'); $request->request->remove('payment_method');
+        }
+
+        // visibleTo() is the same scope the list uses: an agent only ever exports the orders they can see (their own).
         $ordersQuery = Order::query()->visibleTo($request->user())->with(['customer', 'items.event', 'assignedUser:id,name', 'assignees:users.id,users.name']);
         $this->applyManagedEventsScope($ordersQuery, $managedEvents);
 
@@ -780,9 +809,10 @@ class OrderController extends Controller
             'total'          => 'Total Amount',
             'status'         => 'Status',
             'payment_method' => 'Payment Method',
+            'origin' => 'Origin',
             'created_at'     => 'Created At',
             'paid_at'        => 'Paid At',
-        ] + (\App\Orders\OrderAccess::enabled() ? ['assigned_to' => 'Assigned To'] : []);
+        ] + ($canSeeAssignment ? ['assigned_to' => 'Assigned To'] : []);
 
         $selected = collect($request->input('columns', array_keys($availableColumns)))
             ->filter(fn ($col) => array_key_exists($col, $availableColumns))
@@ -820,6 +850,7 @@ class OrderController extends Controller
                     'total'          => number_format((float) $order->total_amount, 2),
                     'status'         => $order->status,
                     'payment_method' => $order->payment_method,
+                    'origin'         => \App\Support\OrderOrigin::label($order->origin),
                     'created_at'     => optional($order->created_at)->format('Y-m-d H:i'),
                     'paid_at'        => optional($order->paid_at)->format('Y-m-d H:i') ?? '',
                     'assigned_to'    => collect([$order->assignedUser?->name])->merge($order->assignees->pluck('name'))->filter()->unique()->implode(', '),
@@ -955,6 +986,12 @@ class OrderController extends Controller
 
         if ($request->filled('payment_method')) {
             $query->where('payment_method', (string) $request->input('payment_method'));
+        }
+
+        if ($request->filled('origin')) {
+            $request->input('origin') === 'none'
+                ? $query->whereNull('origin')
+                : $query->where('origin', \App\Support\OrderOrigin::normalize((string) $request->input('origin')));
         }
 
         if (ctype_digit((string) $request->input('event_id', ''))) {

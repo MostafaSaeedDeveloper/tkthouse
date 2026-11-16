@@ -1,6 +1,6 @@
 {{-- Search + advanced filters shared by Orders and Deleted Orders. Expects: $action, $reset, $statusOptions, $paymentMethods, $events, $canFilterByEvent, $perPageOptions. $eventScope (Orders list only): the Event filter is offered to everyone and opens on the Active events. --}}
 @php
-    $advancedKeys = ['reference', 'customer', 'status', 'payment_method', 'event_id', 'date_from', 'date_to', 'assignee'];
+    $advancedKeys = ['reference', 'customer', 'status', 'payment_method', 'origin', 'event_id', 'date_from', 'date_to', 'assignee'];
     $advancedActive = collect($advancedKeys)->filter(fn ($key) => filled(request($key)))->count();
     $anyActive = $advancedActive > 0 || filled(request('search')) || filled(request('group')) || (int) request('per_page') > 0;
     $idp = $idp ?? 'o';
@@ -64,6 +64,14 @@
                 @foreach($paymentMethods as $method)
                     <option value="{{ $method->code }}" @selected(request('payment_method') === $method->code)>{{ $method->checkout_label ?: $method->name }}</option>
                 @endforeach
+            </select></div>
+        <div class="a-field"><label class="form-label" for="{{ $idp }}Origin">Origin</label>
+            <select name="origin" id="{{ $idp }}Origin" class="form-select">
+                <option value="">All origins</option>
+                @foreach(\App\Support\OrderOrigin::OPTIONS as $value => $label)
+                    <option value="{{ $value }}" @selected(request('origin') === $value)>{{ $label }}</option>
+                @endforeach
+                <option value="none" @selected(request('origin') === 'none')>Not recorded</option>
             </select></div>
         <div class="a-field"><label class="form-label" for="{{ $idp }}From">Created from</label>
             <input type="date" id="{{ $idp }}From" name="date_from" value="{{ request('date_from') }}" class="form-control"></div>

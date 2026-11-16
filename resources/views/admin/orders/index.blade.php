@@ -67,7 +67,7 @@
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
     @if($orders->isEmpty())
         <x-admin.empty icon="fa-receipt" title="No orders found" text="No order matches the current search and filters.">
-            @if(request()->hasAny(['search','status','group','payment_method','event_id','reference','customer','date_from','date_to','refunded']))
+            @if(request()->hasAny(['search','status','group','payment_method','origin','event_id','reference','customer','date_from','date_to','refunded']))
                 <a class="a-btn a-btn--outline" href="{{ route('admin.orders.index') }}">Clear filters</a>
             @endif
         </x-admin.empty>
@@ -126,7 +126,8 @@
             <tr>
                 @if($canBulk)<td class="c-check" data-label=""><input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}"></td>@endif
                 <td data-label="Order" class="c-order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
-                    <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span></td>
+                    <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span>
+                    @if($order->origin)<span class="a-table__sub">Origin: {{ \App\Support\OrderOrigin::label($order->origin) }}</span>@endif</td>
                 <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
                 <td data-label="Event" class="c-event">
                     @if($eventNames->isEmpty())
@@ -144,7 +145,7 @@
                 </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
-                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<span class="a-table__main a-ord-agents">{{ $order->assignedUser->name }}</span>@foreach($others as $otherName)<span class="a-table__main a-ord-agents">{{ $otherName }}</span>@endforeach
+                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<div class="a-ord-agents"><span class="a-ord-agent">{{ $order->assignedUser->name }}</span>@foreach($others as $otherName)<span class="a-ord-agent">{{ $otherName }}</span>@endforeach</div>
                     @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif
                 </td>
                 @endif
@@ -284,10 +285,12 @@
 
                     <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Filters</h6>
                     <div class="row g-3 mb-4">
+                        @unless($agentScoped)
                         <div class="col-md-6">
                             <label class="form-label">Search (Order # / Customer)</label>
                             <input type="text" name="search" class="form-control" placeholder="Order # / customer name / email">
                         </div>
+                        @endunless
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select" id="exportStatusSelect">
@@ -297,6 +300,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @unless($agentScoped)
                         <div class="col-md-6">
                             <label class="form-label">Payment Method</label>
                             <select name="payment_method" class="form-select" id="exportPaymentSelect">
@@ -306,6 +310,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @endunless
                         @if($assignmentOn && $assignees->isNotEmpty())
                         <div class="col-md-6">
                             <label class="form-label">Assigned to</label>
@@ -318,7 +323,7 @@
                             </select>
                         </div>
                         @endif
-                        @if($canFilterByEvent)
+                        @if($canFilterByEvent || $events->isNotEmpty())
                         <div class="col-md-6">
                             <label class="form-label">Event</label>
                             <select name="event_id" class="form-select" id="exportEventSelect">
@@ -346,6 +351,7 @@
                                 'total'          => 'Total Amount',
                                 'status'         => 'Status',
                                 'payment_method' => 'Payment Method',
+                                'origin'         => 'Origin',
                                 'created_at'     => 'Created At',
                                 'paid_at'        => 'Paid At',
                             ] + ($assignmentOn ? ['assigned_to' => 'Assigned To'] : []);

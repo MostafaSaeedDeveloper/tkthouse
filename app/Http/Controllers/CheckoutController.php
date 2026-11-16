@@ -280,7 +280,8 @@ class CheckoutController extends Controller
                 $order = $placement->place(
                     $user, $event, $units, $buyer, $attendees,
                     $promo !== '' ? $promo : null, $methodCode, $expected, $this->affiliateUserId($request, $user),
-                    session(\App\Services\Payments\Routing\CheckoutRoutingService::SESSION_KEY)
+                    session(\App\Services\Payments\Routing\CheckoutRoutingService::SESSION_KEY),
+                    \App\Support\OrderOrigin::forCheckout($request, $this->affiliateUserId($request, $user))
                 );
             } catch (ValidationException $e) {
                 return $this->handlePlacementError($request, $e, $event);

@@ -115,6 +115,19 @@
           </select>
         </div>
         <div class="a-field" style="margin-top:14px">
+          <label class="form-label" for="editOrigin">Origin</label>
+          @php $currentOrigin = old('origin', $order->origin); @endphp
+          <select class="form-select" name="origin" id="editOrigin">
+            <option value="">Not recorded</option>
+            @foreach(\App\Support\OrderOrigin::OPTIONS as $val => $label)
+              <option value="{{ $val }}" {{ $currentOrigin === $val ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
+            @if($currentOrigin && ! isset(\App\Support\OrderOrigin::OPTIONS[$currentOrigin]))
+              <option value="{{ $currentOrigin }}" selected>{{ \App\Support\OrderOrigin::label($currentOrigin) }}</option>
+            @endif
+          </select>
+        </div>
+        <div class="a-field" style="margin-top:14px">
           <label class="form-label" for="editPromoCode">Promo Code</label>
           <select class="form-select" name="promo_code" id="editPromoCode">
             <option value="">No Promo Code</option>

@@ -81,6 +81,27 @@ class FrontTicketController extends Controller
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
 
+    /**
+     * Apple Wallet pass (.pkpass) for one of the signed-in customer's own tickets. The pass carries the QR, so it follows the same rule as the
+     * ticket page: only while the QR is visible and the ticket is still valid (hidden / canceled / refunded / used → no pass).
+     */
+    public function wallet(Request $request, IssuedTicket $ticket)
+    {
+        $this->authorizeTicket($request, $ticket);
+        abort_unless(\App\Services\Wallet\ApplePassBuilder::configured(), 404);
+
+        $ticket->load(['order', 'dashboardTicket.event', 'orderItem.event']);
+        $event = $ticket->event() ?? $this->resolveEvent($ticket->ticket_name ?? '');
+        abort_unless(CustomerPortal::qrVisible($ticket, $event), 410, 'This ticket\'s QR code is not available.');
+
+        $path = app(\App\Services\Wallet\ApplePassBuilder::class)->build($ticket, $event);
+
+        return response()->download($path, 'ticket-'.$ticket->ticket_number.'.pkpass', [
+            'Content-Type' => 'application/vnd.apple.pkpass',
+            'Cache-Control' => 'private, no-store',
+        ])->deleteFileAfterSend(true);
+    }
+
     public function shortDownload(string $ticketNumber)
     {
         $ticket = Ticket::query()->where('ticket_number', $ticketNumber)->first();

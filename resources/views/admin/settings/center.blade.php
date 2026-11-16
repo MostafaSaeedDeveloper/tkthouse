@@ -59,6 +59,34 @@
             @endforeach
         </x-admin.form-section>
 
+        @if($section === 'wallet')
+            @php
+                $walletReady = \App\Services\Wallet\ApplePassBuilder::configured();
+                $hasCert = \App\Services\Wallet\WalletSettings::secrets();
+            @endphp
+            <x-admin.form-section title="Certificates" description="Uploaded files are validated and stored encrypted. They are never shown again." cols="2">
+                <div class="a-field is-full">
+                    <x-admin.badge :variant="$walletReady ? 'success' : 'warning'">{{ $walletReady ? 'Active — customers see “Add to Apple Wallet”' : 'Not active — the button stays hidden until everything below is set' }}</x-admin.badge>
+                    @error('wallet_certificate')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+                </div>
+                <x-admin.field label="Pass Type ID certificate (.p12)" name="wallet_certificate" for="s-wallet_certificate" :hint="$hasCert['p12'] ? 'A certificate is saved. Upload a new file only to replace it.' : 'Export it from Keychain Access as .p12.'">
+                    <input id="s-wallet_certificate" type="file" class="form-control" name="wallet_certificate" accept=".p12,.pfx">
+                </x-admin.field>
+                <x-admin.field label="Certificate password" name="wallet_certificate_password" for="s-wallet_certificate_password" hint="The password you set when exporting the .p12. Leave empty to keep the saved one.">
+                    <input id="s-wallet_certificate_password" type="password" class="form-control" name="wallet_certificate_password" autocomplete="new-password">
+                </x-admin.field>
+                <x-admin.field label="Apple WWDR certificate (.cer / .pem)" name="wallet_wwdr" for="s-wallet_wwdr" :hint="$hasCert['wwdr'] ? 'A WWDR certificate is saved. Upload a new file only to replace it.' : 'Download “Worldwide Developer Relations” from apple.com/certificateauthority.'">
+                    <input id="s-wallet_wwdr" type="file" class="form-control" name="wallet_wwdr" accept=".cer,.pem,.crt">
+                </x-admin.field>
+                @if($hasCert['p12'] || $hasCert['wwdr'])
+                    <div class="a-m-switch form-check form-switch is-full" style="grid-column:1/-1">
+                        <input class="form-check-input" type="checkbox" id="s-wallet_remove" name="wallet_remove" value="1">
+                        <label class="form-check-label" for="s-wallet_remove"><strong>Remove the saved certificates</strong><span class="a-hint d-block">Turns “Add to Apple Wallet” off. Passes already in customers’ wallets keep working.</span></label>
+                    </div>
+                @endif
+            </x-admin.form-section>
+        @endif
+
         @if($section === 'payments')
             <x-admin.form-section title="Payment account status" description="Read-only overview. Manage credentials and tests in Settings → Integrations. Turning routing off never changes existing payment attempts." cols="1">
                 <x-admin.table stack compact caption="Merchant accounts">
