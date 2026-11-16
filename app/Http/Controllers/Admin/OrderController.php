@@ -114,11 +114,18 @@ class OrderController extends Controller
         }
 
         $paymentMethods = $this->activePaymentMethods();
+        // An agent only sees the payment methods and events that appear in the orders they can see.
+        $agentScoped = \App\Orders\OrderAccess::scoped($request->user());
+        if ($agentScoped) {
+            $usedMethods = tap(Order::query()->visibleTo($request->user()), fn ($q) => $this->applyManagedEventsScope($q, $managedEvents))
+                ->whereNotNull('payment_method')->distinct()->pluck('payment_method')->all();
+            $paymentMethods = $paymentMethods->whereIn('code', $usedMethods)->values();
+        }
         $paymentMethodLabels = $this->paymentMethodLabels();
 
         // Everyone who can open Orders can step back to an older event; without the all-orders permission the list is
         // limited to events that have orders they are allowed to see (an agent never learns about other events).
-        $events = $canFilterByEvent
+        $events = ($canFilterByEvent && ! $agentScoped)
             ? Event::query()->orderBy('name')->get(['id', 'name', 'status'])
             : Event::query()->whereIn('id', \App\Models\OrderItem::query()->select('event_id')->whereIn('order_id', tap(Order::query()->visibleTo($request->user()), fn ($q) => $this->applyManagedEventsScope($q, $managedEvents))->select('orders.id')))
                 ->orderBy('name')->get(['id', 'name', 'status']);
