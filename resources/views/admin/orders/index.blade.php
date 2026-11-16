@@ -145,7 +145,7 @@
                 </td>
                 @if($assignmentOn)
                 <td data-label="Assigned to" class="c-assignee">
-                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<div class="a-ord-agents"><span class="a-ord-agent a-ord-agent--primary" title="Primary agent">{{ $order->assignedUser->name }}</span>@foreach($others as $otherName)<span class="a-ord-agent">{{ $otherName }}</span>@endforeach</div>
+                    @if($order->assignedUser)@php $others = $order->assignees->where('id', '!=', $order->assigned_user_id)->pluck('name'); @endphp<div class="a-ord-agents"><span class="a-ord-agent">{{ $order->assignedUser->name }}</span>@foreach($others as $otherName)<span class="a-ord-agent">{{ $otherName }}</span>@endforeach</div>
                     @else<x-admin.badge variant="warning">Unassigned</x-admin.badge>@endif
                 </td>
                 @endif

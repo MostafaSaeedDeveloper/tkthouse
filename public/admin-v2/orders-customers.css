@@ -230,4 +230,3 @@
 /* Assigned To: every agent on its own line, never cut off */
 .a-ord-agents { display: flex; flex-wrap: wrap; gap: 4px; }
 .a-ord-agent { display: inline-flex; align-items: center; max-width: 100%; padding: 2px 10px; border: 1px solid var(--a-line-strong); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 700; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
-.a-ord-agent--primary { background: var(--a-ink); border-color: var(--a-ink); color: #fff; }
