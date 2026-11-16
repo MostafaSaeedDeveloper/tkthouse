@@ -67,7 +67,7 @@
 <x-admin.card flush class="a-ord-listcard" title="Orders" :subtitle="number_format($orders->total()).' matching'">
     @if($orders->isEmpty())
         <x-admin.empty icon="fa-receipt" title="No orders found" text="No order matches the current search and filters.">
-            @if(request()->hasAny(['search','status','group','payment_method','event_id','reference','customer','date_from','date_to','refunded']))
+            @if(request()->hasAny(['search','status','group','payment_method','origin','event_id','reference','customer','date_from','date_to','refunded']))
                 <a class="a-btn a-btn--outline" href="{{ route('admin.orders.index') }}">Clear filters</a>
             @endif
         </x-admin.empty>
@@ -126,7 +126,8 @@
             <tr>
                 @if($canBulk)<td class="c-check" data-label=""><input type="checkbox" class="a-ord-check" name="order_ids[]" value="{{ $order->id }}" form="bulkAssignForm" aria-label="Select order {{ $number }}"></td>@endif
                 <td data-label="Order" class="c-order"><a class="a-table__main" href="{{ route('admin.orders.show', $order) }}">#{{ $number }}</a>
-                    <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span></td>
+                    <span class="a-table__sub">{{ $order->created_at?->format('d-m-Y h:i A') }}</span>
+                    @if($order->origin)<span class="a-table__sub">Origin: {{ \App\Support\OrderOrigin::label($order->origin) }}</span>@endif</td>
                 <td data-label="Customer" class="c-customer"><span class="a-table__main a-ord-ellipsis" title="{{ $customerName }}">{{ $customerName }}</span><span class="a-table__sub a-ord-ellipsis" title="{{ $order->customer?->email }}">{{ $order->customer?->email }}</span></td>
                 <td data-label="Event" class="c-event">
                     @if($eventNames->isEmpty())
@@ -346,6 +347,7 @@
                                 'total'          => 'Total Amount',
                                 'status'         => 'Status',
                                 'payment_method' => 'Payment Method',
+                                'origin'         => 'Origin',
                                 'created_at'     => 'Created At',
                                 'paid_at'        => 'Paid At',
                             ] + ($assignmentOn ? ['assigned_to' => 'Assigned To'] : []);

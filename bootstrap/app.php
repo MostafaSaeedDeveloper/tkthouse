@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\StoreAffiliateReferral::class,
+            \App\Http\Middleware\CaptureOrderOrigin::class,
             \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
 

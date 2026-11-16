@@ -28,9 +28,9 @@ class OrderPlacementService
      * @param array<int, array<string, string>> $attendees one entry per unit, same order
      * @param float|null $expectedTotal total the customer saw on the review step; a different current total aborts the order
      */
-    public function place(User $user, Event $event, Collection $units, array $buyer, array $attendees, ?string $promoCode, ?string $methodCode, ?float $expectedTotal = null, ?int $affiliateUserId = null, ?string $routingToken = null): Order
+    public function place(User $user, Event $event, Collection $units, array $buyer, array $attendees, ?string $promoCode, ?string $methodCode, ?float $expectedTotal = null, ?int $affiliateUserId = null, ?string $routingToken = null, ?string $origin = null): Order
     {
-        return DB::transaction(function () use ($user, $event, $units, $buyer, $attendees, $promoCode, $methodCode, $expectedTotal, $affiliateUserId, $routingToken) {
+        return DB::transaction(function () use ($user, $event, $units, $buyer, $attendees, $promoCode, $methodCode, $expectedTotal, $affiliateUserId, $routingToken, $origin) {
             // Same lock, same order as archiving/deleting an event: they either finish first (this checkout is refused) or wait for
             // this order to commit (they then see its history). The status is read again under the lock, not trusted from the page.
             $locked = Event::query()->whereKey($event->id)->lockForUpdate()->first();
@@ -63,7 +63,7 @@ class OrderPlacementService
             $routing = app(\App\Services\Payments\Routing\CheckoutRoutingService::class);
             $decision = (! $requiresApproval && $routing->enabled()) ? $routing->consume($routingToken, $methodCode, true) : null;
 
-            $order = $this->createOrder($user, $customer, $quote, $requiresApproval, $methodCode, $promoCode, $affiliateUserId, $decision['account_id'] ?? null);
+            $order = $this->createOrder($user, $customer, $quote, $requiresApproval, $methodCode, $promoCode, $affiliateUserId, $decision['account_id'] ?? null, $origin);
             if ($decision) {
                 $routing->finalize($decision, $order); // binds the reservation, assigns the agent, advances the FINAL pointer
             } else {
@@ -105,7 +105,7 @@ class OrderPlacementService
         });
     }
 
-    private function createOrder(User $user, Customer $customer, Quote $quote, bool $requiresApproval, ?string $methodCode, ?string $promoCode, ?int $affiliateUserId, ?int $accountId = null): Order
+    private function createOrder(User $user, Customer $customer, Quote $quote, bool $requiresApproval, ?string $methodCode, ?string $promoCode, ?int $affiliateUserId, ?int $accountId = null, ?string $origin = null): Order
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {
             try {
@@ -127,6 +127,7 @@ class OrderPlacementService
                     'payment_timeout_minutes' => $requiresApproval ? null : SystemSettings::pendingPaymentTimeoutMinutes(),
                     'total_amount' => $quote->total,
                     'integration_account_id' => $accountId,
+                    'origin' => \App\Support\OrderOrigin::normalize($origin) ?? ($affiliateUserId ? 'affiliate' : \App\Support\OrderOrigin::ORGANIC),
                 ]);
             } catch (UniqueConstraintViolationException $e) {
                 // Order number collision under concurrency: draw another one.

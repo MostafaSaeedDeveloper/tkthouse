@@ -46,6 +46,7 @@
         <div><dt>Event</dt><dd>{{ $ticket->eventLabel() ?: '-' }}</dd></div>
         <div><dt>Ticket Type</dt><dd>{{ $ticket->ticketTypeLabel() ?: '-' }}</dd></div>
         <div><dt>Order #</dt><dd>@if($ticket->order)<a href="{{ route('admin.orders.show', $ticket->order) }}">{{ $ticket->order->order_number }}</a>@else - @endif</dd></div>
+        @if($ticket->order?->origin)<div><dt>Origin</dt><dd>{{ \App\Support\OrderOrigin::label($ticket->order->origin) }}</dd></div>@endif
         <div><dt>Phone</dt><dd>{{ $ticket->holder_phone ?: '-' }}</dd></div>
       </dl>
     </x-admin.card>
