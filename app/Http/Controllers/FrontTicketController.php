@@ -34,6 +34,23 @@ class FrontTicketController extends Controller
         return $pdf->download('ticket-'.$ticket->ticket_number.'.pdf');
     }
 
+    /** Apple Wallet pass (.pkpass) for one of the signed-in customer's own, still-valid tickets. */
+    public function wallet(Request $request, IssuedTicket $ticket)
+    {
+        $this->authorizeTicket($request, $ticket);
+        abort_unless(\App\Services\Wallet\ApplePassBuilder::configured(), 404);
+
+        $ticket->load(['dashboardTicket', 'orderItem.event']);
+        $event = $ticket->orderItem?->event ?? $this->resolveEvent($ticket->ticket_name ?? '');
+        abort_unless(\App\Support\CustomerPortal::qrVisible($ticket, $event), 410, 'This ticket can no longer be used.');
+
+        $path = app(\App\Services\Wallet\ApplePassBuilder::class)->build($ticket, $event);
+
+        return response()->download($path, 'ticket-'.$ticket->ticket_number.'.pkpass', [
+            'Content-Type' => 'application/vnd.apple.pkpass',
+        ])->deleteFileAfterSend(true);
+    }
+
     public function shortDownload(string $ticketNumber)
     {
         $signedUrl = URL::temporarySignedRoute(

@@ -696,4 +696,61 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($admin)->get(route('admin.orders.show', $other))->assertNotFound();
         $this->assertSame(OrderAccess::ASSIGNED, OrderAccess::level($admin));
     }
+
+    public function test_an_agent_exports_only_their_own_orders_without_assignment_details(): void
+    {
+        $this->on();
+        $a = $this->agent();
+        $mine = $this->order($a);
+        $other = $this->order();
+
+        $csv = $this->actingAs($a)->get(route('admin.orders.export', ['format' => 'csv', 'assignee' => 'unassigned']))
+            ->assertOk()->streamedContent();
+
+        $this->assertStringContainsString(preg_replace('/\D+/', '', $mine->order_number), $csv);
+        $this->assertStringNotContainsString(preg_replace('/\D+/', '', $other->order_number), $csv);
+        $this->assertStringNotContainsString('Assigned To', $csv);
+    }
+
+    public function test_assignment_off_keeps_export_for_super_admin_only(): void
+    {
+        $a = $this->agent();
+        $this->actingAs($a)->get(route('admin.orders.export'))->assertForbidden();
+    }
+
+    public function test_an_agents_export_modal_offers_status_and_event_filters_only(): void
+    {
+        $this->on();
+        \App\Models\PaymentMethod::query()->update(['is_active' => true]);
+        $a = $this->agent();
+        $this->order($a)->forceFill(['payment_method' => 'visa'])->save();
+        $html = $this->actingAs($a)->get(route('admin.orders.index'))->assertOk()->getContent();
+        $this->assertStringContainsString('id="exportStatusSelect"', $html);
+        $this->assertStringNotContainsString('id="exportPaymentSelect"', $html);
+        $this->assertStringNotContainsString('Search (Order # / Customer)', $html);
+    }
+
+    public function test_no_export_parameter_lets_an_agent_reach_orders_that_are_not_theirs(): void
+    {
+        $this->on();
+        $a = $this->agent();
+        $b = $this->agent();
+        $mine = $this->order($a, 'paid');
+        $theirs = $this->order($b, 'paid');
+        $queue = $this->order(null, 'paid');
+        $shared = $this->order($b, 'paid');
+
+        foreach ([['assignee' => (string) $b->id], ['assignee' => 'unassigned'], ['assignee' => 'all'], ['search' => $theirs->order_number], ['event_id' => 'all'], ['status' => 'paid'], ['refunded' => 1]] as $params) {
+            foreach (['csv', 'xlsx'] as $format) {
+                $res = $this->actingAs($a)->get(route('admin.orders.export', $params + ['format' => $format]));
+                $res->assertOk();
+                if ($format === 'csv') {
+                    $csv = $res->streamedContent();
+                    foreach ([$theirs, $queue, $shared] as $o) {
+                        $this->assertStringNotContainsString(preg_replace('/\D+/', '', $o->order_number), $csv, json_encode($params));
+                    }
+                }
+            }
+        }
+    }
 }
