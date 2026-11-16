@@ -696,4 +696,25 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($admin)->get(route('admin.orders.show', $other))->assertNotFound();
         $this->assertSame(OrderAccess::ASSIGNED, OrderAccess::level($admin));
     }
+
+    public function test_an_agent_exports_only_their_own_orders_without_assignment_details(): void
+    {
+        $this->on();
+        $a = $this->agent();
+        $mine = $this->order($a);
+        $other = $this->order();
+
+        $csv = $this->actingAs($a)->get(route('admin.orders.export', ['format' => 'csv', 'assignee' => 'unassigned']))
+            ->assertOk()->streamedContent();
+
+        $this->assertStringContainsString(preg_replace('/\D+/', '', $mine->order_number), $csv);
+        $this->assertStringNotContainsString(preg_replace('/\D+/', '', $other->order_number), $csv);
+        $this->assertStringNotContainsString('Assigned To', $csv);
+    }
+
+    public function test_assignment_off_keeps_export_for_super_admin_only(): void
+    {
+        $a = $this->agent();
+        $this->actingAs($a)->get(route('admin.orders.export'))->assertForbidden();
+    }
 }

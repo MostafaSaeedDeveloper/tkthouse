@@ -319,7 +319,7 @@
                             </select>
                         </div>
                         @endif
-                        @if($canFilterByEvent)
+                        @if($canFilterByEvent || $events->isNotEmpty())
                         <div class="col-md-6">
                             <label class="form-label">Event</label>
                             <select name="event_id" class="form-select" id="exportEventSelect">
