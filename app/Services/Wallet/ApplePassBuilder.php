@@ -13,12 +13,8 @@ class ApplePassBuilder
 {
     public static function configured(): bool
     {
-        $c = (array) config('wallet.apple');
-
-        return filled($c['pass_type_id'] ?? null) && filled($c['team_id'] ?? null)
-            && filled($c['certificate_path'] ?? null) && is_file((string) $c['certificate_path'])
-            && filled($c['wwdr_path'] ?? null) && is_file((string) $c['wwdr_path'])
-            && extension_loaded('zip') && extension_loaded('openssl');
+        return filled(WalletSettings::passTypeId()) && filled(WalletSettings::teamId())
+            && WalletSettings::hasCertificate() && extension_loaded('zip') && extension_loaded('openssl');
     }
 
     /** @return string path of a temporary .pkpass file (the caller deletes it after sending) */
@@ -60,12 +56,12 @@ class ApplePassBuilder
 
         $pass = [
             'formatVersion' => 1,
-            'passTypeIdentifier' => $c['pass_type_id'],
-            'teamIdentifier' => $c['team_id'],
-            'organizationName' => $c['organization_name'],
+            'passTypeIdentifier' => WalletSettings::passTypeId(),
+            'teamIdentifier' => WalletSettings::teamId(),
+            'organizationName' => WalletSettings::organizationName(),
             'serialNumber' => (string) $ticket->uuid,
             'description' => $eventName,
-            'logoText' => $c['organization_name'],
+            'logoText' => WalletSettings::organizationName(),
             'backgroundColor' => $c['background_color'],
             'foregroundColor' => $c['foreground_color'],
             'labelColor' => $c['label_color'],
@@ -122,18 +118,19 @@ class ApplePassBuilder
     /** Detached PKCS#7 signature (DER) of manifest.json, signed with the Pass Type ID certificate. */
     private function sign(string $manifest): string
     {
-        $c = (array) config('wallet.apple');
-        $p12 = file_get_contents((string) $c['certificate_path']);
+        $secrets = WalletSettings::secrets();
         $certs = [];
-        if (! openssl_pkcs12_read($p12, $certs, (string) ($c['certificate_password'] ?? ''))) {
+        if (! openssl_pkcs12_read((string) $secrets['p12'], $certs, $secrets['password'])) {
             throw new RuntimeException('The Pass Type ID certificate could not be read (wrong password?).');
         }
 
+        $wwdr = tempnam(sys_get_temp_dir(), 'pkwwdr');
+        file_put_contents($wwdr, (string) $secrets['wwdr']);
         $in = tempnam(sys_get_temp_dir(), 'pkin');
         $out = tempnam(sys_get_temp_dir(), 'pkout');
         try {
             file_put_contents($in, $manifest);
-            $ok = openssl_pkcs7_sign($in, $out, $certs['cert'], [$certs['pkey'], ''], [], PKCS7_BINARY | PKCS7_DETACHED, (string) $c['wwdr_path']);
+            $ok = openssl_pkcs7_sign($in, $out, $certs['cert'], [$certs['pkey'], ''], [], PKCS7_BINARY | PKCS7_DETACHED, $wwdr);
             if (! $ok) {
                 throw new RuntimeException('Signing the pass failed.');
             }
@@ -141,6 +138,7 @@ class ApplePassBuilder
         } finally {
             @unlink($in);
             @unlink($out);
+            @unlink($wwdr);
         }
 
         // The S/MIME output is a MIME message; the signature part is the base64 block after the last boundary header.

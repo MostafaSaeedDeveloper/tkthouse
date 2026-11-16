@@ -7,6 +7,8 @@ use App\Models\Event;
 use App\Models\IssuedTicket;
 use App\Models\User;
 use Illuminate\Support\Str;
+use App\Support\SystemSettings;
+use Illuminate\Support\Facades\Crypt;
 use Tests\Support\BuildsOrders;
 use App\Services\Wallet\ApplePassBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,19 +31,14 @@ class AppleWalletPassTest extends TestCase
 
     private function configure(): void
     {
-        $dir = sys_get_temp_dir().'/wallet-test-'.getmypid();
-        @mkdir($dir);
         $key = openssl_pkey_new(['private_key_bits' => 2048]);
         $csr = openssl_csr_new(['commonName' => 'Pass'], $key);
         $cert = openssl_csr_sign($csr, null, $key, 2);
         openssl_x509_export($cert, $pem);
         openssl_pkcs12_export($cert, $p12, $key, 'pw');
-        file_put_contents("$dir/pass.p12", $p12);
-        file_put_contents("$dir/wwdr.pem", $pem);
-        config(['wallet.apple' => array_merge(config('wallet.apple'), [
-            'pass_type_id' => 'pass.test.tickets', 'team_id' => 'ABCDE12345',
-            'certificate_path' => "$dir/pass.p12", 'certificate_password' => 'pw', 'wwdr_path' => "$dir/wwdr.pem",
-        ])]);
+        SystemSettings::set('wallet_apple_pass_type_id', 'pass.test.tickets');
+        SystemSettings::set('wallet_apple_team_id', 'ABCDE12345');
+        SystemSettings::set('wallet_apple_secrets', Crypt::encryptString(json_encode(['p12' => base64_encode($p12), 'password' => 'pw', 'wwdr' => $pem])));
     }
 
     public function test_not_configured_means_no_button_and_no_pass(): void
@@ -87,5 +84,34 @@ class AppleWalletPassTest extends TestCase
         $this->withoutMiddleware(EnsureAdminPanelAccess::class);
         $owner = User::factory()->create();
         $this->actingAs($owner)->get(route('front.tickets.wallet', $this->ticket($owner)))->assertNotFound();
+    }
+
+    public function test_admin_saves_wallet_settings_and_rejects_a_wrong_password(): void
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+        $admin = User::factory()->create();
+        \Spatie\Permission\Models\Role::findOrCreate('super_admin', 'web');
+        $admin->assignRole('super_admin');
+        \Illuminate\Support\Facades\Gate::before(fn () => true);
+
+        $key = openssl_pkey_new(['private_key_bits' => 2048]);
+        $cert = openssl_csr_sign(openssl_csr_new(['commonName' => 'Pass'], $key), null, $key, 2);
+        openssl_x509_export($cert, $pem);
+        openssl_pkcs12_export($cert, $p12, $key, 'pw');
+        $upload = fn ($name, $bytes) => \Illuminate\Http\UploadedFile::fake()->createWithContent($name, $bytes);
+        $base = ['wallet_apple_pass_type_id' => 'pass.test.tickets', 'wallet_apple_team_id' => 'ABCDE12345'];
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'wallet'), $base + ['wallet_certificate' => $upload('p.p12', $p12), 'wallet_certificate_password' => 'WRONG', 'wallet_wwdr' => $upload('w.pem', $pem)])
+            ->assertSessionHasErrors('wallet_certificate');
+        $this->assertFalse(ApplePassBuilder::configured());
+
+        $this->actingAs($admin)->put(route('admin.settings.section.update', 'wallet'), $base + ['wallet_certificate' => $upload('p.p12', $p12), 'wallet_certificate_password' => 'pw', 'wallet_wwdr' => $upload('w.pem', $pem)])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue(ApplePassBuilder::configured());
+        $stored = (string) \App\Models\SystemSetting::where('key', 'wallet_apple_secrets')->value('value');
+        $this->assertStringNotContainsString('BEGIN CERTIFICATE', $stored);
+        $this->assertStringNotContainsString(base64_encode($p12), $stored); // encrypted, not just encoded
+
+        $this->actingAs($admin)->get(route('admin.settings.section', 'wallet'))->assertOk()->assertSee('Certificates')->assertDontSee('BEGIN CERTIFICATE');
     }
 }
