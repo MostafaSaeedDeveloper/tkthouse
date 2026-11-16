@@ -42,6 +42,7 @@
 
     <div class="tkt-gate__actions">
         <a class="tkt-btn tkt-btn--primary tkt-btn--lg tkt-btn--block" href="{{ route('front.tickets.download', $ticket) }}">Download PDF</a>
+        @if($qr && \App\Services\Wallet\ApplePassBuilder::configured())<a class="tkt-btn tkt-btn--outline tkt-btn--lg tkt-btn--block" style="background:#000;border-color:#000;color:#fff" href="{{ route('front.tickets.wallet', $ticket) }}"><i class="fa fa-wallet" aria-hidden="true"></i> Add to Apple Wallet</a>@endif
     </div>
 </article>
 @endsection

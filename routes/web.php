@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
+    Route::get('/tickets/{ticket:uuid}/wallet', [FrontTicketController::class, 'wallet'])->middleware('throttle:30,1,ticket-wallet')->name('front.tickets.wallet');
 });
 
 Auth::routes(['register' => false]);
