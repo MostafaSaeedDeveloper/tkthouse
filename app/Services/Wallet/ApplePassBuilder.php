@@ -67,7 +67,7 @@ class ApplePassBuilder
             'labelColor' => $c['label_color'],
             'barcodes' => [[
                 'format' => 'PKBarcodeFormatQR',
-                'message' => (string) $ticket->ticket_number, // exactly what the web QR encodes, so the scanner reads it the same way
+                'message' => $ticket->qrPayload(), // exactly what the web QR encodes (the ticket's unguessable token; the bare number for older tickets), so the scanner reads it the same way
                 'messageEncoding' => 'iso-8859-1',
                 'altText' => '#'.$ticket->ticket_number,
             ]],

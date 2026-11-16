@@ -26,6 +26,9 @@ class AppleWalletPassTest extends TestCase
         $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
         $item = $order->items()->first();
 
+        // Real tickets always have their dashboard (scanner) ticket next to the issued one.
+        \App\Models\Ticket::create(['order_id' => $order->id, 'order_item_id' => $item->id, 'event_id' => $item->event_id, 'name' => 'Pay Night - GA', 'price' => 100, 'status' => 'not_checked_in', 'ticket_number' => 'TKT-1', 'qr_payload' => \App\Support\TicketQr::newToken(), 'issued_at' => now()]);
+
         return IssuedTicket::query()->where('order_id', $order->id)->first() ?? IssuedTicket::create(['order_id' => $order->id, 'order_item_id' => $item->id, 'seat_index' => 1, 'uuid' => (string) Str::uuid(), 'ticket_number' => 'TKT-1', 'holder_name' => 'Jane', 'holder_email' => 'jane@example.test', 'holder_phone' => '0100', 'ticket_name' => 'Pay Night - GA', 'ticket_price' => 100]);
     }
 
@@ -59,7 +62,7 @@ class AppleWalletPassTest extends TestCase
             $this->assertNotFalse($zip->locateName($f), $f);
         }
         $pass = json_decode($zip->getFromName('pass.json'), true);
-        $this->assertSame((string) $ticket->ticket_number, $pass['barcodes'][0]['message']);
+        $this->assertSame($ticket->qrPayload(), $pass['barcodes'][0]['message']);   // the same payload the web QR / scanner use
         $this->assertSame('Fest', $pass['eventTicket']['primaryFields'][0]['value']);
         $manifest = json_decode($zip->getFromName('manifest.json'), true);
         $this->assertSame(sha1($zip->getFromName('pass.json')), $manifest['pass.json']);
@@ -77,6 +80,26 @@ class AppleWalletPassTest extends TestCase
         $this->actingAs(User::factory()->create())->get(route('front.tickets.wallet', $ticket))->assertForbidden();
         $this->actingAs($owner)->get(route('front.tickets.wallet', $ticket))->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.apple.pkpass');
+    }
+
+    public function test_the_pass_follows_qr_visibility_and_ticket_status(): void
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+        $this->configure();
+        $owner = User::factory()->create();
+        $event = $this->makeEvent(['name' => 'Fest']);
+        $ticket = $this->ticket($owner, $event);
+
+        $event->forceFill(['qr_visibility_mode' => 'manual'])->save();                       // QR hidden: no pass (it would carry the QR)
+        $this->actingAs($owner)->get(route('front.tickets.wallet', $ticket))->assertStatus(410);
+        $this->actingAs($owner)->get(route('front.tickets.show', $ticket))->assertOk()->assertDontSee('Add to Apple Wallet');
+
+        $event->forceFill(['qr_override' => 'show'])->save();
+        $this->actingAs($owner)->get(route('front.tickets.wallet', $ticket))->assertOk();
+        $this->actingAs($owner)->get(route('front.tickets.show', $ticket))->assertSee('Add to Apple Wallet');
+
+        \App\Models\Ticket::where('ticket_number', $ticket->ticket_number)->update(['status' => 'canceled']);
+        $this->actingAs($owner)->get(route('front.tickets.wallet', $ticket))->assertStatus(410);
     }
 
     public function test_unconfigured_wallet_is_a_404_even_for_the_owner(): void

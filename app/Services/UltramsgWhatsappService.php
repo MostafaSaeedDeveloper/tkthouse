@@ -40,6 +40,21 @@ class UltramsgWhatsappService
             ? trim((string) $ticket->ticketTypeLabel())
             : trim((string) $ticket->name);
 
+        // A ticket bought online is digital: send the link to it, never a PDF (a PDF would carry the QR whatever its visibility).
+        $issued = \App\Models\IssuedTicket::query()->where('ticket_number', $ticket->ticket_number)->first()
+            ?? ($ticket->isGuestList() ? app(\App\Services\Tickets\GuestTicketIssuer::class)->ensure($ticket) : null);
+        if ($issued) {
+            $this->sendTextMessage($phone, implode("\n", [
+                '🎟️ Your ticket is ready',
+                'Holder: '.$holderName,
+                'Ticket Type: '.($ticketType !== '' ? $ticketType : 'General'),
+                'View your ticket: '.route('front.tickets.show', $issued),
+                'Your QR code appears on the ticket page when the event team makes it available.',
+            ]));
+
+            return true;
+        }
+
         $caption = implode("\n", [
             '🎟️ Your ticket PDF is ready',
             'Holder: '.$holderName,
@@ -86,35 +101,13 @@ class UltramsgWhatsappService
             return false;
         }
 
+        // Digital tickets: one message with the link to the customer's account. No PDFs (and so no QR) over WhatsApp.
         $this->sendTextMessage($phone, implode("\n", [
             '✅ Payment completed successfully',
             'Order Number: '.$order->order_number,
-            'Ticket PDFs are attached below 👇',
+            '🎟️ View your tickets: '.\App\Support\TicketLinks::orderTickets($order),
+            'Your QR code appears on your ticket page when the event team makes it available.',
         ]));
-
-        foreach ($order->issuedTickets as $ticket) {
-            $holderName = trim((string) ($ticket->holder_name ?: 'Ticket Holder'));
-            $ticketType = $this->ticketTypeFromName((string) $ticket->ticket_name);
-            $caption = implode("\n", [
-                '🎟️ Ticket PDF',
-                'Holder: '.$holderName,
-                'Ticket Type: '.$ticketType,
-                'Ticket Number: '.$ticket->ticket_number,
-            ]);
-
-            $shortLink = $this->shortDownloadLink((string) $ticket->ticket_number);
-
-            $this->sendDocumentWithFallbacks(
-                phone: $phone,
-                ticketNumber: (string) $ticket->ticket_number,
-                caption: $caption,
-                fallbackText: $caption."\nDownload Link: ".$shortLink,
-                context: [
-                    'order_id' => $order->id,
-                    'ticket_number' => $ticket->ticket_number,
-                ],
-            );
-        }
 
         return true;
     }

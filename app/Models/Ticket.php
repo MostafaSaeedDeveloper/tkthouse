@@ -101,6 +101,18 @@ class Ticket extends Model
         return $this->hasMany(PaymentRefundTicket::class);
     }
 
+    /** True for tickets issued with an unguessable QR token; older tickets still carry their bare ticket number as the QR. */
+    public function hasTokenQr(): bool
+    {
+        return \App\Support\TicketQr::isToken($this->qr_payload);
+    }
+
+    /** What is encoded in this ticket's QR code. */
+    public function qrContent(): string
+    {
+        return (string) ($this->qr_payload ?: $this->ticket_number);
+    }
+
     public function eventLabel(): string
     {
         $name = (string) ($this->name ?? '');

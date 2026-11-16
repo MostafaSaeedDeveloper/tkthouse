@@ -112,7 +112,7 @@
             {{-- Attendees --}}
             <section class="tkt-card tkt-section-card" aria-labelledby="attendeesTitle" id="attendeesSection" @if($wizard) data-wz-step="attendees" @endif>
                 <h2 class="tkt-section-card__title" id="attendeesTitle">Who is attending?</h2>
-                <p class="tkt-section-card__sub">{{ $wizard ? 'All fields are required. Entry is checked against these names.' : 'One form per ticket — all fields are required. Entry is checked against these names.' }}</p>
+                <p class="tkt-section-card__sub">{{ $wizard ? 'All fields are required. Entry is checked against these names.' : 'One form per ticket — all fields are required. Entry is checked against these names.' }} Each person gets their own ticket by email; you keep the order and the invoice.</p>
 
                 @if($errors->has('attendees'))
                     <div class="tkt-alert tkt-alert--danger tkt-inline-alert" role="alert">{{ $errors->first('attendees') }}</div>
@@ -146,6 +146,7 @@
                                     <div class="tkt-field">
                                         <label class="tkt-label" for="att_{{ $i }}_email">Email</label>
                                         <input class="tkt-input {{ $errors->has("attendees.$i.email") ? 'is-invalid' : '' }}" id="att_{{ $i }}_email" name="attendees[{{ $i }}][email]" type="email" inputmode="email" value="{{ $attendeeValue($i, 'email') }}" autocomplete="off" required data-att-email>
+                                        <div class="tkt-field__hint">This person receives their own ticket at this email.</div>
                                         @error("attendees.$i.email")<div class="tkt-field__error">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="tkt-field">

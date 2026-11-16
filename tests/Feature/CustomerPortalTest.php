@@ -50,6 +50,8 @@ class CustomerPortalTest extends TestCase
         $order = $this->makePendingOrder($user, $event ?? $this->event, $people);
         $order->forceFill(['status' => 'paid', 'paid_at' => now()])->save();
         app(TicketIssuanceService::class)->issueIfPaid($order->fresh());
+        // These fixtures model "I bought tickets for myself": the holder is the buyer (My Tickets lists tickets assigned to you).
+        IssuedTicket::where('order_id', $order->id)->update(['holder_email' => $user->email]);
 
         return $order->fresh();
     }
@@ -199,10 +201,11 @@ class CustomerPortalTest extends TestCase
         $theirs = $this->paid($this->customer(), 1, $this->makeEvent(['name' => 'Their Night']));
         $unclaimed = $this->paid($me, 1, $this->makeEvent(['name' => 'Unclaimed Night']));
         $unclaimed->forceFill(['owner_unverified' => true])->save();
+        IssuedTicket::where('order_id', $unclaimed->id)->update(['holder_email' => 'someone.else@example.test']);   // not my address: only the verified buyer / holder may see it
 
         $page = fn (string $when) => $this->actingAs($me)->get(route('front.account.tickets', ['when' => $when]))->assertOk();
 
-        $page('upcoming')->assertSee('Pay Night')->assertSee('Holder 1')->assertSee('api.qrserver.com', false)
+        $page('upcoming')->assertSee('Pay Night')->assertSee('Holder 1')->assertDontSee('api.qrserver.com', false)
             ->assertDontSee('Old Night')->assertDontSee('Unpaid Night')->assertDontSee('Their Night')->assertDontSee('Unclaimed Night');
         $page('past')->assertSee('Old Night')->assertDontSee('Pay Night');
         $page('all')->assertSee('Old Night')->assertSee('Pay Night')->assertDontSee('Their Night')->assertDontSee('Unpaid Night');
@@ -217,15 +220,14 @@ class CustomerPortalTest extends TestCase
         Ticket::where('ticket_number', $tickets[1]->ticket_number)->update(['status' => 'checked_in']);
         Ticket::where('ticket_number', $tickets[2]->ticket_number)->update(['status' => 'canceled']);
 
-        $html = $this->actingAs($me)->get(route('front.account.tickets', ['when' => 'all']))->assertOk()->assertSee('Checked in')->assertSee('Canceled')->assertSee('Valid')->getContent();
+        // The list never draws a QR; each ticket lives on its own page.
+        $list = $this->actingAs($me)->get(route('front.account.tickets', ['when' => 'all']))->assertOk()->assertSee('Checked in')->assertSee('Canceled')->assertSee('Valid')->getContent();
+        $this->assertStringNotContainsString('<svg viewBox="0 0 300', $list);
+        $this->assertStringNotContainsString('qrserver', $list);
 
-        $this->assertStringContainsString(urlencode($tickets[0]->ticket_number), $html);                  // valid: QR shown
-        $this->assertStringNotContainsString('data='.urlencode($tickets[1]->ticket_number), $html);       // used: no QR
-        $this->assertStringNotContainsString('data='.urlencode($tickets[2]->ticket_number), $html);       // canceled: no QR
-
-        $this->actingAs($me)->get(route('front.tickets.show', $tickets[0]))->assertOk()->assertSee('Show this code at the entrance')->assertSee('api.qrserver.com', false);
-        $this->actingAs($me)->get(route('front.tickets.show', $tickets[1]))->assertOk()->assertSee('already been scanned')->assertDontSee('api.qrserver.com', false);
-        $this->actingAs($me)->get(route('front.tickets.show', $tickets[2]))->assertOk()->assertSee('was canceled')->assertDontSee('api.qrserver.com', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $tickets[0]))->assertOk()->assertSee('Show this code at the entrance')->assertSee('class="dt__qr-box"', false)->assertDontSee('qrserver', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $tickets[1]))->assertOk()->assertSee('already been scanned')->assertDontSee('class="dt__qr-box"', false);
+        $this->actingAs($me)->get(route('front.tickets.show', $tickets[2]))->assertOk()->assertSee('was canceled')->assertDontSee('class="dt__qr-box"', false);
     }
 
     /* ------------------------------------------------------------ Ticket details + PDF */
@@ -237,6 +239,7 @@ class CustomerPortalTest extends TestCase
         $stranger = $this->customer();
         $unclaimedOrder = $this->paid($me, 1);
         $unclaimedOrder->forceFill(['owner_unverified' => true])->save();
+        IssuedTicket::where('order_id', $unclaimedOrder->id)->update(['holder_email' => 'someone.else@example.test']);
         $unclaimed = IssuedTicket::where('order_id', $unclaimedOrder->id)->firstOrFail();
 
         $this->get(route('front.tickets.show', $ticket))->assertRedirect();
@@ -246,7 +249,18 @@ class CustomerPortalTest extends TestCase
         $this->actingAs($me)->get(route('front.tickets.download', $unclaimed))->assertForbidden();
 
         $this->actingAs($me)->get(route('front.tickets.show', $ticket))->assertOk()
-            ->assertSee('Holder 1')->assertSee('#'.$ticket->ticket_number)->assertSee('Download PDF')->assertSee('Pay Night');
+            ->assertSee('Holder 1')->assertSee($ticket->ticket_number)->assertDontSee('Download PDF')->assertSee('Pay Night');
+
+        // Digital tickets have no PDF: the old link just leads back to the ticket page.
+        $this->actingAs($me)->get(route('front.tickets.download', $ticket))->assertRedirect(route('front.tickets.show', $ticket));
+    }
+
+    public function test_a_ticket_issued_before_digital_tickets_can_still_be_downloaded_as_pdf(): void
+    {
+        $me = $this->customer();
+        $ticket = IssuedTicket::where('order_id', $this->paid($me, 1)->id)->firstOrFail();
+        Ticket::where('ticket_number', $ticket->ticket_number)->update(['qr_payload' => $ticket->ticket_number]);   // the old payload: the bare number
+
         $pdf = $this->actingAs($me)->get(route('front.tickets.download', $ticket))->assertOk();
         $this->assertStringContainsString('pdf', (string) $pdf->headers->get('content-type'));
     }
@@ -438,7 +452,6 @@ class CustomerPortalTest extends TestCase
         $ticket = IssuedTicket::where('order_id', $order->id)->firstOrFail();
         $this->get(route('front.tickets.show', $ticket))->assertOk()->assertSee('Show this code at the entrance');
 
-        $pdf = $this->get(route('front.tickets.download', $ticket))->assertOk();
-        $this->assertStringContainsString('pdf', (string) $pdf->headers->get('content-type'));
+        $this->get(route('front.tickets.download', $ticket))->assertRedirect(route('front.tickets.show', $ticket));
     }
 }

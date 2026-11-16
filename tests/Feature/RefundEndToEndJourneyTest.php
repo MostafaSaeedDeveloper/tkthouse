@@ -440,14 +440,16 @@ class RefundEndToEndJourneyTest extends TestCase
         $this->svc->confirmSucceeded($r, $this->agentA, 'FAW-C', 'verified in the provider dashboard', now()->toDateString());
         $this->assertSame('partially_refunded', $order->fresh()->status);
 
-        // the remaining tickets are still reachable and downloadable; the refunded one is not
+        // the remaining tickets are still reachable (digital tickets: the old PDF link leads back to the ticket page); the refunded one is not
         $this->actingAs($customer)->get(route('front.tickets.show', $issued($t[1])))->assertOk();
-        $this->actingAs($customer)->get(route('front.tickets.download', $issued($t[1])))->assertOk();
+        $this->actingAs($customer)->get(route('front.tickets.download', $issued($t[1])))->assertRedirect(route('front.tickets.show', $issued($t[1])));
         $this->actingAs($customer)->get(route('front.tickets.download', $issued($t[0])))->assertStatus(410);
         $this->assertTrue(\App\Models\IssuedTicket::ownedByCustomer($customer)->whereKey($issued($t[2])->id)->exists());
         $signed = \Illuminate\Support\Facades\URL::temporarySignedRoute('front.tickets.public-download', now()->addDay(), ['ticketNumber' => $t[0]->ticket_number]);
         $this->get($signed)->assertStatus(410);
         $ok = \Illuminate\Support\Facades\URL::temporarySignedRoute('front.tickets.public-download', now()->addDay(), ['ticketNumber' => $t[1]->ticket_number]);
+        $this->get($ok)->assertNotFound();                                                   // a digital ticket has no public PDF
+        $t[1]->update(['qr_payload' => $t[1]->ticket_number]);                               // a ticket issued before digital tickets still does
         $this->get($ok)->assertOk();
     }
 

@@ -39,7 +39,136 @@ class Event extends Model
             'end_date' => 'date',
             'requires_booking_approval' => 'boolean',
             'archived_at' => 'datetime',
+            'qr_visibility_changed_at' => 'datetime',
+            'entry_changed_at' => 'datetime',
+            'qr_release_activated_at' => 'datetime',
+            'qr_sandbox' => 'array',
         ];
+    }
+
+    public const RELEASE_TEST = 'test';
+    public const RELEASE_LIVE = 'live';
+
+    public function qrReleaseIsLive(): bool
+    {
+        return $this->qr_release_mode === self::RELEASE_LIVE;
+    }
+
+    /* ------------------------------------------------------------ entry availability (the scanner), separate from QR visibility */
+
+    public const ENTRY_ALWAYS = 'always';
+    public const ENTRY_SCHEDULED = 'scheduled';
+    public const ENTRY_MANUAL = 'manual';
+    public const ENTRY_MODES = [self::ENTRY_ALWAYS, self::ENTRY_SCHEDULED, self::ENTRY_MANUAL];
+
+    /** When a scheduled gate opens (N minutes before the event starts); null for the other modes. */
+    public function entryOpensAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->entry_mode !== self::ENTRY_SCHEDULED || ! $this->entry_opens_minutes_before) {
+            return null;
+        }
+
+        return $this->startsAt()?->subMinutes((int) $this->entry_opens_minutes_before);
+    }
+
+    /** Whether the scanner may admit tickets of this event right now. An admin override (open | close) wins over the mode. Default: always open. */
+    public function entryIsOpen(?\Illuminate\Support\Carbon $now = null): bool
+    {
+        $now ??= now();
+
+        if ($this->entry_override === 'open') {
+            return true;
+        }
+        if ($this->entry_override === 'close') {
+            return false;
+        }
+
+        return match ($this->entry_mode) {
+            self::ENTRY_SCHEDULED => ($at = $this->entryOpensAt()) === null ? false : $now->greaterThanOrEqualTo($at),
+            self::ENTRY_MANUAL => false,
+            default => true,
+        };
+    }
+
+    /** @return array{open: bool, state: string, opens_at: ?\Illuminate\Support\Carbon, override: ?string} state: open | closed | scheduled | overridden */
+    public function entryStatus(?\Illuminate\Support\Carbon $now = null): array
+    {
+        $open = $this->entryIsOpen($now);
+        $at = $this->entry_override === null ? $this->entryOpensAt() : null;
+
+        return ['open' => $open, 'override' => $this->entry_override, 'opens_at' => $at, 'state' => match (true) {
+            $this->entry_override !== null => 'overridden',
+            ! $open && $at !== null => 'scheduled',
+            $open => 'open',
+            default => 'closed',
+        }];
+    }
+
+    /* ------------------------------------------------------------ ticket QR visibility */
+
+    public const QR_IMMEDIATE = 'immediate';
+    public const QR_SCHEDULED = 'scheduled';
+    public const QR_MANUAL = 'manual';
+    public const QR_MODES = [self::QR_IMMEDIATE, self::QR_SCHEDULED, self::QR_MANUAL];
+
+    /** When the event starts (app timezone). The reveal countdown is measured from here. */
+    public function startsAt(): ?\Illuminate\Support\Carbon
+    {
+        if (! $this->event_date) {
+            return null;
+        }
+
+        $time = (string) ($this->event_time ?: '00:00:00');
+
+        return \Illuminate\Support\Carbon::parse($this->event_date->format('Y-m-d').' '.$time, config('app.timezone'));
+    }
+
+    /** The moment a scheduled reveal opens; null when the mode is not "scheduled" or no lead time is set. */
+    public function qrRevealsAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->qr_visibility_mode !== self::QR_SCHEDULED || ! $this->qr_reveal_minutes_before) {
+            return null;
+        }
+
+        return $this->startsAt()?->subMinutes((int) $this->qr_reveal_minutes_before);
+    }
+
+    /**
+     * The one server-side answer to "may customers see (and may the gate accept) this event's new-style QR codes right now?".
+     * An admin override wins over the mode; otherwise immediate = yes, scheduled = from the reveal time, manual = no.
+     */
+    public function qrIsVisible(?\Illuminate\Support\Carbon $now = null): bool
+    {
+        $now ??= now();
+
+        if ($this->qr_override === 'show') {
+            return true;
+        }
+        if ($this->qr_override === 'hide') {
+            return false;
+        }
+
+        return match ($this->qr_visibility_mode) {
+            self::QR_SCHEDULED => ($at = $this->qrRevealsAt()) === null ? false : $now->greaterThanOrEqualTo($at),
+            self::QR_MANUAL => false,
+            default => true,
+        };
+    }
+
+    /** Label for the admin: Visible / Hidden / Scheduled / Manually overridden (+ whether it is currently visible). */
+    public function qrStatus(?\Illuminate\Support\Carbon $now = null): array
+    {
+        $visible = $this->qrIsVisible($now);
+        $at = $this->qr_override === null ? $this->qrRevealsAt() : null;
+
+        $state = match (true) {
+            $this->qr_override !== null => 'overridden',
+            ! $visible && $at !== null => 'scheduled',
+            $visible => 'visible',
+            default => 'hidden',
+        };
+
+        return ['visible' => $visible, 'state' => $state, 'reveals_at' => $at, 'override' => $this->qr_override];
     }
 
     public const ARCHIVED = 'archived';

@@ -137,6 +137,24 @@ class AdminOrderUpdateTest extends TestCase
         Mail::assertNotSent(OrderStatusChangedMail::class);
     }
 
+    public function test_marking_an_order_paid_sends_no_status_change_email(): void
+    {
+        Mail::fake();
+
+        $admin = $this->createAdmin();
+        $customer = Customer::create(['first_name' => 'Paid', 'last_name' => 'Customer', 'email' => 'paid@example.com', 'phone' => '01000000000']);
+        $order = Order::create([
+            'customer_id' => $customer->id, 'user_id' => $admin->id, 'order_number' => '700099', 'status' => 'pending_payment',
+            'requires_approval' => false, 'payment_method' => 'cash', 'total_amount' => 300,
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.orders.update', $order), ['status' => 'paid', 'payment_method' => 'cash', 'requires_approval' => 0])
+            ->assertRedirect(route('admin.orders.show', $order));
+
+        $this->assertSame('paid', $order->fresh()->status);
+        Mail::assertNotSent(OrderStatusChangedMail::class);
+    }
+
     public function test_update_status_to_pending_payment_restarts_payment_timeout_counter(): void
     {
         $admin = $this->createAdmin();

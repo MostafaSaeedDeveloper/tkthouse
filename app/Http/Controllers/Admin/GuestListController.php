@@ -270,7 +270,7 @@ class GuestListController extends Controller
             'holder_phone' => $phone,
             'holder_gender' => $gender,
             'ticket_number' => $ticketNumber,
-            'qr_payload' => $ticketNumber,
+            'qr_payload' => \App\Support\TicketQr::newToken(), // unguessable; the number is only a label
             'issued_at' => now(),
             'created_by_user_id' => auth()->id(),
         ]);
@@ -286,40 +286,21 @@ class GuestListController extends Controller
         return 'Guest '.trim($withoutPrefix);
     }
 
+    /** Guest tickets are digital: the holder gets a "View ticket" link (no PDF); the QR is on their ticket page. */
     private function sendTicketEmailIfProvided(Ticket $ticket): void
     {
+        $issued = app(\App\Services\Tickets\GuestTicketIssuer::class)->ensure($ticket);
+
         if (! filled($ticket->holder_email)) {
             return;
         }
 
-        $pdf = Pdf::loadView('admin.tickets.pdf', [
-            'ticket' => $ticket,
-            'qrDataUri' => $this->qrDataUri($ticket),
-            'event' => Event::query()->where('name', $ticket->eventLabel())->first(),
-        ])->output();
-
-        Mail::to($ticket->holder_email)->send(new GuestInvitationMail(
-            ticket: $ticket,
-            pdfBinary: $pdf,
-        ));
+        Mail::to($ticket->holder_email)->send(new GuestInvitationMail(ticket: $ticket, showUrl: route('front.tickets.show', $issued)));
     }
-
 
     private function qrDataUri(Ticket $ticket): string
     {
-        $payload = $ticket->qr_payload ?: $ticket->ticket_number;
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='.urlencode((string) $payload);
-
-        try {
-            $response = Http::timeout(15)->get($url);
-            if ($response->successful()) {
-                return 'data:image/png;base64,'.base64_encode($response->body());
-            }
-        } catch (\Throwable) {
-            // Ignore and fallback to URL
-        }
-
-        return $url;
+        return \App\Support\TicketQr::dataUri($ticket->qrContent());
     }
 
     private function generateTicketNumber(): string
