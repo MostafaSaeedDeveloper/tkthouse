@@ -142,7 +142,7 @@ class OrderController extends Controller
 
         $assigneeOptions = $canAssign ? $this->assigneeOptions($assignees) : [];
 
-        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals'));
+        return view('admin.orders.index', compact('failedAttemptIds', 'assignmentOn', 'canAssign', 'assignees', 'assigneeOptions', 'orders', 'summary', 'sortKey', 'sortDir', 'statusOptions', 'perPageOptions', 'paymentMethods', 'paymentMethodLabels', 'canViewDeletedOrders', 'deletedOrdersCount', 'events', 'canFilterByEvent', 'canExport', 'refundMode', 'refundTotals', 'agentScoped'));
     }
 
     public function deleted(Request $request)
@@ -782,6 +782,12 @@ class OrderController extends Controller
             // An agent must not learn who else is on an order: no assignee filter or column in their file.
             $request->query->remove('assignee');
             $request->request->remove('assignee');
+        }
+
+        if (\App\Orders\OrderAccess::scoped($request->user())) {
+            // Agents filter their export by status and event only.
+            $request->query->remove('search'); $request->request->remove('search');
+            $request->query->remove('payment_method'); $request->request->remove('payment_method');
         }
 
         // visibleTo() is the same scope the list uses: an agent only ever exports the orders they can see (their own).

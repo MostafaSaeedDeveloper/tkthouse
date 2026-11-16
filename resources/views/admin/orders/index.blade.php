@@ -285,10 +285,12 @@
 
                     <h6 class="fw-semibold text-muted text-uppercase fs-sm mb-2">Filters</h6>
                     <div class="row g-3 mb-4">
+                        @unless($agentScoped)
                         <div class="col-md-6">
                             <label class="form-label">Search (Order # / Customer)</label>
                             <input type="text" name="search" class="form-control" placeholder="Order # / customer name / email">
                         </div>
+                        @endunless
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select" id="exportStatusSelect">
@@ -298,6 +300,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @unless($agentScoped)
                         <div class="col-md-6">
                             <label class="form-label">Payment Method</label>
                             <select name="payment_method" class="form-select" id="exportPaymentSelect">
@@ -307,6 +310,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @endunless
                         @if($assignmentOn && $assignees->isNotEmpty())
                         <div class="col-md-6">
                             <label class="form-label">Assigned to</label>

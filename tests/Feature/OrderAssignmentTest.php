@@ -718,15 +718,15 @@ class OrderAssignmentTest extends TestCase
         $this->actingAs($a)->get(route('admin.orders.export'))->assertForbidden();
     }
 
-    public function test_an_agents_export_filters_list_only_payment_methods_of_their_orders(): void
+    public function test_an_agents_export_modal_offers_status_and_event_filters_only(): void
     {
         $this->on();
         \App\Models\PaymentMethod::query()->update(['is_active' => true]);
         $a = $this->agent();
         $this->order($a)->forceFill(['payment_method' => 'visa'])->save();
         $html = $this->actingAs($a)->get(route('admin.orders.index'))->assertOk()->getContent();
-        $this->assertStringContainsString('id="exportPaymentSelect"', $html);
-        preg_match('/id="exportPaymentSelect">(.*?)<\/select>/s', $html, $m);
-        $this->assertSame(1, substr_count($m[1], '<option value="') - 1);
+        $this->assertStringContainsString('id="exportStatusSelect"', $html);
+        $this->assertStringNotContainsString('id="exportPaymentSelect"', $html);
+        $this->assertStringNotContainsString('Search (Order # / Customer)', $html);
     }
 }
