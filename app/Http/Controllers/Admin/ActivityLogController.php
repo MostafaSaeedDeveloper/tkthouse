@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 
 class ActivityLogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $activities = Activity::with('causer')->latest()->paginate(30);
+        $log = trim((string) $request->query('log', ''));
+        $activities = Activity::with('causer')
+            ->when($log !== '', fn ($q) => $q->where('log_name', $log))
+            ->latest()->paginate(30)->withQueryString();
 
-        return view('admin.activity-logs.index', compact('activities'));
+        return view('admin.activity-logs.index', compact('activities', 'log'));
     }
 }

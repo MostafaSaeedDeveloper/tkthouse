@@ -3,6 +3,9 @@
 @section('content')
 <x-admin.page-header title="Activity Logs" subtitle="Who changed what, newest first." :crumbs="['Dashboard' => route('admin.dashboard'), 'Activity Logs']" />
 <x-admin.flash />
+@if(!empty($log))
+    <p style="margin:0 0 12px">Showing <x-admin.badge>{{ $log }}</x-admin.badge> only. <a href="{{ route('admin.activity-logs.index') }}">Show everything</a></p>
+@endif
 <x-admin.card flush>
     @if($activities->isEmpty())
         <x-admin.empty icon="fa-clock-rotate-left" title="No activity yet" text="Actions taken by admins appear here." />
