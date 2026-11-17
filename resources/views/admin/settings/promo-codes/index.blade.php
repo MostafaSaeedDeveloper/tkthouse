@@ -16,12 +16,14 @@
 
 <x-admin.flash />
 
+@if($showStats)
 <div class="a-grid a-grid--4" style="margin-bottom:12px">
     <x-admin.kpi label="Promo codes" :value="$totals['codes']" icon="fa-tags" :hint="$totals['active'].' active'" />
     <x-admin.kpi label="Redemptions" :value="number_format($totals['redemptions'])" icon="fa-ticket" hint="Times codes were used" />
     <x-admin.kpi label="Discount given" :value="number_format($totals['discount'], 2).' EGP'" icon="fa-percent" :hint="'On '.$totals['orders'].' paid orders'" />
     <x-admin.kpi label="Revenue with promo" :value="number_format($totals['revenue'], 2).' EGP'" icon="fa-sack-dollar" hint="Paid orders, after discount, before fees" />
 </div>
+@endif
 
 <x-admin.card flush>
     @if($promoCodes->isEmpty())
@@ -33,7 +35,7 @@
     @else
     @php $showActions = auth()->user()->canany(['promo-codes.update', 'promo-codes.delete']); @endphp
     <x-admin.table stack caption="Promo codes">
-        <thead><tr><th>Code</th><th>Discount</th><th>Usage</th><th>Paid orders</th><th>Discount given</th><th>Revenue</th><th>Status</th><th>Period</th>@if($showActions)<th class="a-num">Actions</th>@endif</tr></thead>
+        <thead><tr><th>Code</th><th>Discount</th><th>Usage</th>@if($showStats)<th>Paid orders</th><th>Discount given</th><th>Revenue</th>@endif<th>Status</th><th>Period</th>@if($showActions)<th class="a-num">Actions</th>@endif</tr></thead>
         <tbody>
         @foreach($promoCodes as $promoCode)
             <tr>
@@ -46,10 +48,12 @@
                     @endif
                 </td>
                 <td data-label="Usage">{{ $promoCode->used_count }} / {{ $promoCode->usage_limit ?? '∞' }}</td>
+                @if($showStats)
                 @php $sales = $perCode->get($promoCode->id); @endphp
                 <td data-label="Paid orders">{{ (int) ($sales->orders ?? 0) }}</td>
                 <td data-label="Discount given">{{ number_format((float) ($sales->discount ?? 0), 2) }} EGP</td>
                 <td data-label="Revenue">{{ number_format((float) ($sales->revenue ?? 0), 2) }} EGP</td>
+                @endif
                 <td data-label="Status"><x-admin.badge :variant="$promoCode->is_active ? 'success' : 'default'" dot>{{ $promoCode->is_active ? 'Active' : 'Inactive' }}</x-admin.badge></td>
                 <td data-label="Period">{{ $promoCode->starts_at?->format('Y-m-d H:i') ?? 'Any' }} → {{ $promoCode->ends_at?->format('Y-m-d H:i') ?? 'Open' }}</td>
                 @if($showActions)

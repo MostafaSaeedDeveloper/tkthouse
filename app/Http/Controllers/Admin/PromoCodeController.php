@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Orders\OrderAccess;
 use App\Models\PromoCode;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,28 +16,35 @@ class PromoCodeController extends Controller
     {
         $promoCodes = PromoCode::query()->latest()->paginate(20);
 
-        // Sales numbers follow the dashboard rules: captured (paid) orders only, never the ones excluded from statistics,
-        // revenue = tickets minus the discount (checkout fees are not part of it).
-        $perCode = $this->salesQuery()
-            ->selectRaw('promo_code_id, COUNT(*) AS orders, COALESCE(SUM(discount_amount), 0) AS discount, COALESCE(SUM('.self::NET.'), 0) AS revenue')
-            ->groupBy('promo_code_id')
-            ->get()
-            ->keyBy('promo_code_id');
+        // Sales numbers are for Super Admin only; nothing is computed for anyone else.
+        $showStats = OrderAccess::isSuper(auth()->user());
+        $perCode = collect();
+        $totals = null;
 
-        $totals = [
-            'codes' => PromoCode::count(),
-            'active' => PromoCode::where('is_active', true)->count(),
-            'redemptions' => (int) PromoCode::sum('used_count'),
-            'orders' => (int) $perCode->sum('orders'),
-            'discount' => (float) $perCode->sum('discount'),
-            'revenue' => (float) $perCode->sum('revenue'),
-        ];
+        if ($showStats) {
+            // Sales numbers follow the dashboard rules: captured (paid) orders only, never the ones excluded from statistics,
+            // revenue = tickets minus the discount (checkout fees are not part of it).
+            $perCode = $this->salesQuery()
+                ->selectRaw('promo_code_id, COUNT(*) AS orders, COALESCE(SUM(discount_amount), 0) AS discount, COALESCE(SUM('.self::NET.'), 0) AS revenue')
+                ->groupBy('promo_code_id')
+                ->get()
+                ->keyBy('promo_code_id');
+
+            $totals = [
+                'codes' => PromoCode::count(),
+                'active' => PromoCode::where('is_active', true)->count(),
+                'redemptions' => (int) PromoCode::sum('used_count'),
+                'orders' => (int) $perCode->sum('orders'),
+                'discount' => (float) $perCode->sum('discount'),
+                'revenue' => (float) $perCode->sum('revenue'),
+            ];
+        }
 
         $activities = auth()->user()->can('activity-logs.view')
             ? Activity::with('causer')->where('log_name', 'promo_codes')->latest()->limit(10)->get()
             : null;
 
-        return view('admin/settings/promo-codes/index', compact('promoCodes', 'perCode', 'totals', 'activities'));
+        return view('admin/settings/promo-codes/index', compact('promoCodes', 'perCode', 'totals', 'showStats', 'activities'));
     }
 
     private const NET = 'CASE WHEN subtotal_amount > 0 THEN subtotal_amount - COALESCE(discount_amount, 0) ELSE total_amount END';

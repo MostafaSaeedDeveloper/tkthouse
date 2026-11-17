@@ -82,6 +82,7 @@ class AdminPromoCodeStatsAndActivityTest extends TestCase
         $this->order($promo, 'paid', 700, 140, ['exclude_from_statistics' => true]);  // hidden from statistics
 
         $admin = $this->user(['dashboard.view', 'promo-codes.view']);
+        $admin->update(['username' => 'superadmin']);
         $response = $this->actingAs($admin)->get(route('admin.promo-codes.index'))->assertOk();
 
         $stats = $response->viewData('perCode')->get($promo->id);
@@ -90,6 +91,18 @@ class AdminPromoCodeStatsAndActivityTest extends TestCase
         $this->assertEquals(1200, $stats->revenue); // (1000-200) + (500-100)
         $response->assertViewHas('totals', fn ($t) => $t['codes'] === 1 && $t['redemptions'] === 3 && $t['orders'] === 2);
         $response->assertSee('Discount given')->assertSee('300.00 EGP');
+    }
+
+    public function test_stats_are_hidden_from_everyone_but_super_admin(): void
+    {
+        $promo = PromoCode::create(['code' => 'HIDDEN', 'discount_type' => 'percent', 'discount_value' => 20, 'is_active' => true]);
+        $this->order($promo, 'paid', 1000, 200);
+
+        $manager = $this->user(['dashboard.view', 'promo-codes.view', 'promo-codes.create', 'promo-codes.update', 'promo-codes.delete', 'activity-logs.view']);
+        $this->actingAs($manager)->get(route('admin.promo-codes.index'))->assertOk()
+            ->assertViewHas('totals', null)
+            ->assertDontSee('Discount given')->assertDontSee('Revenue with promo')->assertDontSee('Paid orders')
+            ->assertSee('HIDDEN');
     }
 
     public function test_activity_panel_needs_the_activity_logs_permission(): void
