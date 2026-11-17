@@ -11,6 +11,7 @@ use App\Support\SystemSettings;
 use Illuminate\Support\Facades\Crypt;
 use Tests\Support\BuildsOrders;
 use App\Services\Wallet\ApplePassBuilder;
+use App\Services\Wallet\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use ZipArchive;
@@ -43,7 +44,7 @@ class AppleWalletPassTest extends TestCase
 
     public function test_not_configured_means_no_button_and_no_pass(): void
     {
-        $this->assertFalse(ApplePassBuilder::configured());
+        $this->assertFalse(Wallet::configured());
     }
 
     public function test_builds_a_signed_pkpass_with_event_and_qr(): void
@@ -103,15 +104,43 @@ class AppleWalletPassTest extends TestCase
 
         $this->actingAs($admin)->put(route('admin.settings.section.update', 'wallet'), $base + ['wallet_certificate' => $upload('p.p12', $p12), 'wallet_certificate_password' => 'WRONG', 'wallet_wwdr' => $upload('w.pem', $pem)])
             ->assertSessionHasErrors('wallet_certificate');
-        $this->assertFalse(ApplePassBuilder::configured());
+        $this->assertFalse(Wallet::configured());
 
         $this->actingAs($admin)->put(route('admin.settings.section.update', 'wallet'), $base + ['wallet_certificate' => $upload('p.p12', $p12), 'wallet_certificate_password' => 'pw', 'wallet_wwdr' => $upload('w.pem', $pem)])
             ->assertSessionHasNoErrors();
-        $this->assertTrue(ApplePassBuilder::configured());
+        $this->assertTrue(Wallet::configured());
         $stored = (string) \App\Models\SystemSetting::where('key', 'wallet_apple_secrets')->value('value');
         $this->assertStringNotContainsString('BEGIN CERTIFICATE', $stored);
         $this->assertStringNotContainsString(base64_encode($p12), $stored); // encrypted, not just encoded
 
-        $this->actingAs($admin)->get(route('admin.settings.section', 'wallet'))->assertOk()->assertSee('Certificates')->assertDontSee('BEGIN CERTIFICATE');
+        $this->actingAs($admin)->get(route('admin.settings.section', 'wallet'))->assertOk()->assertSee('Apple certificates')->assertDontSee('BEGIN CERTIFICATE');
+    }
+
+    public function test_walletwallet_provider_posts_the_ticket_and_serves_the_returned_pkpass(): void
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+        SystemSettings::set('wallet_provider', 'walletwallet');
+        SystemSettings::set('wallet_apple_secrets', Crypt::encryptString(json_encode(['ww_api_key' => 'ww_live_'.str_repeat('a', 32)])));
+        \Illuminate\Support\Facades\Http::fake(['api.walletwallet.dev/*' => \Illuminate\Support\Facades\Http::response('PKPASSBYTES', 200, ['Content-Type' => 'application/vnd.apple.pkpass'])]);
+        $owner = User::factory()->create();
+        $ticket = $this->ticket($owner);
+
+        $this->assertTrue(Wallet::configured());
+        $res = $this->actingAs($owner)->get(route('front.tickets.wallet', $ticket));
+        $res->assertOk()->assertHeader('Content-Type', 'application/vnd.apple.pkpass');
+
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->hasHeader('Authorization', 'Bearer ww_live_'.str_repeat('a', 32))
+            && $r['barcodeValue'] === (string) $ticket->ticket_number && $r['barcodeFormat'] === 'QR' && $r['colorPreset'] === 'dark' && ! isset($r['logoURL']));
+    }
+
+    public function test_walletwallet_failure_is_a_friendly_503_not_a_crash(): void
+    {
+        $this->withoutMiddleware(EnsureAdminPanelAccess::class);
+        SystemSettings::set('wallet_provider', 'walletwallet');
+        SystemSettings::set('wallet_apple_secrets', Crypt::encryptString(json_encode(['ww_api_key' => 'ww_live_'.str_repeat('a', 32)])));
+        \Illuminate\Support\Facades\Http::fake(['api.walletwallet.dev/*' => \Illuminate\Support\Facades\Http::response(['error' => 'rate limit'], 429)]);
+        $owner = User::factory()->create();
+
+        $this->actingAs($owner)->get(route('front.tickets.wallet', $this->ticket($owner)))->assertStatus(503);
     }
 }

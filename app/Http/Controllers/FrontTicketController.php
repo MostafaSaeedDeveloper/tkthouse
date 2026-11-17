@@ -38,13 +38,18 @@ class FrontTicketController extends Controller
     public function wallet(Request $request, IssuedTicket $ticket)
     {
         $this->authorizeTicket($request, $ticket);
-        abort_unless(\App\Services\Wallet\ApplePassBuilder::configured(), 404);
+        abort_unless(\App\Services\Wallet\Wallet::configured(), 404);
 
         $ticket->load(['dashboardTicket', 'orderItem.event']);
         $event = $ticket->orderItem?->event ?? $this->resolveEvent($ticket->ticket_name ?? '');
         abort_unless(\App\Support\CustomerPortal::qrVisible($ticket, $event), 410, 'This ticket can no longer be used.');
 
-        $path = app(\App\Services\Wallet\ApplePassBuilder::class)->build($ticket, $event);
+        try {
+            $path = \App\Services\Wallet\Wallet::build($ticket, $event);
+        } catch (\Throwable $e) {
+            report($e);
+            abort(503, 'Apple Wallet is temporarily unavailable. Please download the PDF instead.');
+        }
 
         return response()->download($path, 'ticket-'.$ticket->ticket_number.'.pkpass', [
             'Content-Type' => 'application/vnd.apple.pkpass',

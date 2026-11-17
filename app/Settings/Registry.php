@@ -88,6 +88,11 @@ final class Registry
                 'help' => 'Inserted just before </body> on every public page, e.g. chat widgets or deferred scripts. Code runs for all visitors — only paste code from sources you trust.', 'rules' => ['nullable', 'string', 'max:30000']],
 
             // ---- Apple Wallet (the certificate files and its password are saved encrypted by SystemSettingController, never as plain settings)
+            'wallet_provider' => ['group' => 'wallet', 'type' => 'select', 'label' => 'How passes are made', 'default' => 'apple',
+                'options' => ['apple' => 'Directly, with my Apple Developer certificate', 'walletwallet' => 'Through the WalletWallet service (no Apple account needed)'],
+                'help' => 'Choose one. The settings of the other stay saved, so you can switch back at any time.', 'rules' => ['required', 'in:apple,walletwallet']],
+            'wallet_ww_pro' => ['group' => 'wallet', 'type' => 'bool', 'label' => 'My WalletWallet plan is Pro (or its trial)', 'default' => false,
+                'help' => 'Pro allows the site colour and logo on the pass. Leave off on the Free plan, which only accepts preset colours.', 'rules' => ['boolean']],
             'wallet_apple_pass_type_id' => ['group' => 'wallet', 'type' => 'string', 'label' => 'Pass Type ID', 'default' => null,
                 'help' => 'From Apple Developer → Identifiers → Pass Type IDs, e.g. pass.com.yourcompany.tickets.', 'rules' => ['nullable', 'string', 'max:120', 'regex:/^pass\.[A-Za-z0-9.\-]+$/']],
             'wallet_apple_team_id' => ['group' => 'wallet', 'type' => 'string', 'label' => 'Team ID', 'default' => null,

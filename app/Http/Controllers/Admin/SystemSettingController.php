@@ -129,6 +129,7 @@ class SystemSettingController extends Controller
             'wallet_certificate' => ['nullable', 'file', 'max:512'],
             'wallet_wwdr' => ['nullable', 'file', 'max:256'],
             'wallet_certificate_password' => ['nullable', 'string', 'max:200'],
+            'wallet_ww_api_key' => ['nullable', 'string', 'regex:/^ww_live_[A-Fa-f0-9]{32}$/'],
             'wallet_remove' => ['nullable', 'boolean'],
         ]);
 
@@ -136,7 +137,7 @@ class SystemSettingController extends Controller
         if ($request->boolean('wallet_remove')) {
             \App\Models\SystemSetting::query()->where('key', $key)->delete();
             $this->settings->flush();
-            activity('settings')->causedBy($request->user())->log('Apple Wallet certificate removed');
+            activity('settings')->causedBy($request->user())->log('Apple Wallet credentials removed');
 
             return null;
         }
@@ -156,7 +157,9 @@ class SystemSettingController extends Controller
             }
         }
 
-        if ($p12 === null && $wwdr === null) {
+        $apiKey = $request->filled('wallet_ww_api_key') ? trim((string) $request->input('wallet_ww_api_key')) : ($current['ww_api_key'] ?? null);
+
+        if ($p12 === null && $wwdr === null && $apiKey === null) {
             return null; // nothing uploaded yet
         }
         if ($p12 !== null) {
@@ -167,7 +170,7 @@ class SystemSettingController extends Controller
         }
 
         \App\Support\SystemSettings::set($key, \Illuminate\Support\Facades\Crypt::encryptString(json_encode([
-            'p12' => $p12 === null ? null : base64_encode($p12), 'password' => $password, 'wwdr' => $wwdr,
+            'p12' => $p12 === null ? null : base64_encode($p12), 'password' => $password, 'wwdr' => $wwdr, 'ww_api_key' => $apiKey,
         ])));
         activity('settings')->causedBy($request->user())->log('Apple Wallet certificate updated');
 

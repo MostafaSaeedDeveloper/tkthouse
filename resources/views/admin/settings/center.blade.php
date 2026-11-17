@@ -61,10 +61,16 @@
 
         @if($section === 'wallet')
             @php
-                $walletReady = \App\Services\Wallet\ApplePassBuilder::configured();
+                $walletReady = \App\Services\Wallet\Wallet::configured();
                 $hasCert = \App\Services\Wallet\WalletSettings::secrets();
             @endphp
-            <x-admin.form-section title="Certificates" description="Uploaded files are validated and stored encrypted. They are never shown again." cols="2">
+            <x-admin.form-section title="WalletWallet service" description="Used when “How passes are made” is set to WalletWallet. Your API key is stored encrypted and never shown again." cols="2">
+                <x-admin.field label="WalletWallet API key" name="wallet_ww_api_key" for="s-wallet_ww_api_key" :hint="$hasCert['ww_api_key'] ? 'A key is saved. Paste a new one only to replace it.' : 'Starts with ww_live_ — from your WalletWallet dashboard.'">
+                    <input id="s-wallet_ww_api_key" type="text" class="form-control" name="wallet_ww_api_key" autocomplete="off" spellcheck="false" placeholder="{{ $hasCert['ww_api_key'] ? '••••••••••••••••' : 'ww_live_…' }}">
+                    @error('wallet_ww_api_key')<div class="a-error" role="alert">{{ $message }}</div>@enderror
+                </x-admin.field>
+            </x-admin.form-section>
+            <x-admin.form-section title="Apple certificates" description="Uploaded files are validated and stored encrypted. They are never shown again." cols="2">
                 <div class="a-field is-full">
                     <x-admin.badge :variant="$walletReady ? 'success' : 'warning'">{{ $walletReady ? 'Active — customers see “Add to Apple Wallet”' : 'Not active — the button stays hidden until everything below is set' }}</x-admin.badge>
                     @error('wallet_certificate')<div class="a-error" role="alert">{{ $message }}</div>@enderror
@@ -78,10 +84,10 @@
                 <x-admin.field label="Apple WWDR certificate (.cer / .pem)" name="wallet_wwdr" for="s-wallet_wwdr" :hint="$hasCert['wwdr'] ? 'A WWDR certificate is saved. Upload a new file only to replace it.' : 'Download “Worldwide Developer Relations” from apple.com/certificateauthority.'">
                     <input id="s-wallet_wwdr" type="file" class="form-control" name="wallet_wwdr" accept=".cer,.pem,.crt">
                 </x-admin.field>
-                @if($hasCert['p12'] || $hasCert['wwdr'])
+                @if($hasCert['p12'] || $hasCert['wwdr'] || $hasCert['ww_api_key'])
                     <div class="a-m-switch form-check form-switch is-full" style="grid-column:1/-1">
                         <input class="form-check-input" type="checkbox" id="s-wallet_remove" name="wallet_remove" value="1">
-                        <label class="form-check-label" for="s-wallet_remove"><strong>Remove the saved certificates</strong><span class="a-hint d-block">Turns “Add to Apple Wallet” off. Passes already in customers’ wallets keep working.</span></label>
+                        <label class="form-check-label" for="s-wallet_remove"><strong>Remove all saved credentials (certificates and API key)</strong><span class="a-hint d-block">Turns “Add to Apple Wallet” off. Passes already in customers’ wallets keep working.</span></label>
                     </div>
                 @endif
             </x-admin.form-section>

@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Crypt;
 /** Apple Wallet credentials as saved in Settings → Apple Wallet (the certificate and its password are stored encrypted). */
 final class WalletSettings
 {
-    /** @return array{p12: ?string, password: string, wwdr: ?string} raw certificate bytes, password and WWDR PEM */
+    /** @return array{p12: ?string, password: string, wwdr: ?string, ww_api_key: ?string} raw certificate bytes, password and WWDR PEM */
     public static function secrets(): array
     {
-        $empty = ['p12' => null, 'password' => '', 'wwdr' => null];
+        $empty = ['p12' => null, 'password' => '', 'wwdr' => null, 'ww_api_key' => null];
         $stored = SystemSettings::get('wallet_apple_secrets');
         if (! is_string($stored) || $stored === '') {
             return $empty;
@@ -27,7 +27,13 @@ final class WalletSettings
             'p12' => ! empty($data['p12']) ? base64_decode($data['p12']) : null,
             'password' => (string) ($data['password'] ?? ''),
             'wwdr' => $data['wwdr'] ?? null,
+            'ww_api_key' => ! empty($data['ww_api_key']) ? (string) $data['ww_api_key'] : null,
         ];
+    }
+
+    public static function provider(): string
+    {
+        return SystemSettings::get('wallet_provider', 'apple') === 'walletwallet' ? 'walletwallet' : 'apple';
     }
 
     public static function passTypeId(): ?string
