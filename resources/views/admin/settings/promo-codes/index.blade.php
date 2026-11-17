@@ -6,7 +6,9 @@
 
 @section('content')
 <x-admin.page-header title="Promo Codes" subtitle="Discount codes customers can apply at checkout." :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates' => route('admin.affiliates.index'), 'Promo Codes']">
-    <a href="{{ route('admin.affiliates.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back to Affiliate</a>
+    @can('affiliates.view')
+        <a href="{{ route('admin.affiliates.index') }}" class="a-btn a-btn--ghost"><i class="fa fa-arrow-left"></i> Back to Affiliate</a>
+    @endcan
     @can('promo-codes.create')
         <a href="{{ route('admin.promo-codes.create') }}" class="a-btn a-btn--primary"><i class="fa fa-plus"></i> Add Promo Code</a>
     @endcan

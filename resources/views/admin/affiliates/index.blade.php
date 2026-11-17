@@ -5,7 +5,9 @@
 
 @section('content')
 <x-admin.page-header title="Affiliates" subtitle="Portal users with a referral link, and the orders they bring in." :crumbs="['Dashboard' => route('admin.dashboard'), 'Affiliates']">
-    <a href="{{ route('admin.promo-codes.index') }}" class="a-btn a-btn--outline"><i class="fa fa-tags"></i> Promo codes</a>
+    @can('promo-codes.view')
+        <a href="{{ route('admin.promo-codes.index') }}" class="a-btn a-btn--outline"><i class="fa fa-tags"></i> Promo codes</a>
+    @endcan
     <a href="{{ route('admin.affiliates.create') }}" class="a-btn a-btn--primary"><i class="fa fa-plus"></i> Add New Link</a>
 </x-admin.page-header>
 
