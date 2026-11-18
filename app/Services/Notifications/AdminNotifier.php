@@ -28,6 +28,10 @@ class AdminNotifier
             if (! $u->can('orders.view') || ! $order->isVisibleTo($u)) {
                 return false;
             }
+            // Agents (restricted by assignment) only hear about orders that are assigned to them.
+            if (OrderAccess::scoped($u) && ! $order->isAssignedTo($u)) {
+                return false;
+            }
 
             return (int) $order->assigned_user_id === $u->id || ! $needsUpdatePermission || $u->can('orders.update');
         })->values();
@@ -105,37 +109,14 @@ class AdminNotifier
         });
     }
 
+    /** Assigning an order never creates a bell notification (kept as a no-op so existing callers stay valid). */
     public function orderAssigned(Order $order): void
     {
-        $this->safely(function () use ($order) {
-            $to = $order->assigned_user_id ? User::query()->find($order->assigned_user_id) : null;
-            if (! $to || $to->id === auth()->id()) {
-                return;   // unassigned, or someone assigned an order to themselves
-            }
-            $this->send([$to], [
-                'type' => 'order.assigned', 'icon' => 'fa-user-check',
-                'title' => 'Order assigned to you · #'.$this->number($order),
-                'body' => $this->who($order).' · '.$this->money($order),
-                'url' => $this->orderUrl($order),
-            ]);
-        });
     }
 
-    /** Extra agents added to an order (the primary assignee is notified by orderAssigned()). @param list<User> $users */
+    /** @param list<User> $users */
     public function orderAssignedTo(Order $order, array $users): void
     {
-        $this->safely(function () use ($order, $users) {
-            $to = array_values(array_filter($users, fn (User $u) => $u->id !== auth()->id()));
-            if ($to === []) {
-                return;
-            }
-            $this->send($to, [
-                'type' => 'order.assigned', 'icon' => 'fa-user-check',
-                'title' => 'Order assigned to you · #'.$this->number($order),
-                'body' => $this->who($order).' · '.$this->money($order),
-                'url' => $this->orderUrl($order),
-            ]);
-        });
     }
 
     public function refundRequested(PaymentRefund $refund): void
