@@ -11,8 +11,10 @@
 
 <nav class="a-tabs" aria-label="Event filter">
     <a href="{{ route('admin.events.index') }}" class="{{ $archived === '' ? 'is-active' : '' }}" @if($archived === '') aria-current="page" @endif>Current</a>
+    @unless(auth()->user()?->hasAnyRole(['agent', 'Order Agent']))
     <a href="{{ route('admin.events.index', ['archived' => 'only']) }}" class="{{ $archived === 'only' ? 'is-active' : '' }}" @if($archived === 'only') aria-current="page" @endif>Archived @if($archivedCount)<span class="a-table__sub" style="display:inline">({{ $archivedCount }})</span>@endif</a>
     <a href="{{ route('admin.events.index', ['archived' => 'all']) }}" class="{{ $archived === 'all' ? 'is-active' : '' }}" @if($archived === 'all') aria-current="page" @endif>All</a>
+    @endunless
 </nav>
 
 <x-admin.card flush :title="$archived === 'only' ? 'Archived Events' : ($archived === 'all' ? 'All Events (including archived)' : 'Events')" :subtitle="number_format($events->total()).' total'">
