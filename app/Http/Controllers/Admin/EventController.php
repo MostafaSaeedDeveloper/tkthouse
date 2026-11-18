@@ -21,9 +21,12 @@ class EventController extends Controller
     {
         // Archived events stay in the admin but are out of the way by default: ?archived=only shows just them, ?archived=all shows everything.
         $archived = in_array($request->query('archived'), ['only', 'all'], true) ? $request->query('archived') : '';
+        // Agents only ever see active events.
+        $agentOnly = (bool) auth()->user()?->hasAnyRole(['agent', 'Order Agent']);
         $events = Event::query()
-            ->when($archived === '', fn ($q) => $q->where('status', '!=', Event::ARCHIVED))
-            ->when($archived === 'only', fn ($q) => $q->where('status', Event::ARCHIVED))
+            ->when($agentOnly, fn ($q) => $q->where('status', 'active'))
+            ->when(! $agentOnly && $archived === '', fn ($q) => $q->where('status', '!=', Event::ARCHIVED))
+            ->when(! $agentOnly && $archived === 'only', fn ($q) => $q->where('status', Event::ARCHIVED))
             ->latest()->paginate(12)->withQueryString();
         $archivedCount = Event::query()->where('status', Event::ARCHIVED)->count();
         $lifecycle = app(EventLifecycle::class);
