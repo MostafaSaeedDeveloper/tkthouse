@@ -57,33 +57,22 @@
     </table>
   @endif
 
-  @php
-    $dt = 'padding:11px 0 11px 18px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#8a8aa3;vertical-align:top;border-bottom:1px solid #26263a;';
-    $dv = 'padding:11px 18px 11px 12px;font-size:14px;color:#dddde8;text-align:right;vertical-align:top;border-bottom:1px solid #26263a;';
-    $ticketCount = $order->issuedTickets->count();
-  @endphp
+  <p class="ep">You can view or download each ticket from the links below.</p>
 
-  <p class="ep" style="margin-top:22px;margin-bottom:8px;"><strong>Your booking</strong></p>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#15151e;border:1px solid #26263a;border-radius:10px;border-collapse:separate;margin:0 0 6px;">
-    @if($event)
-      <tr><td style="{{ $dt }}" width="34%">Event</td><td style="{{ $dv }}font-weight:700;color:#fff;">{{ $event->name }}</td></tr>
-      <tr><td style="{{ $dt }}">Date &amp; time</td><td style="{{ $dv }}">{{ $event->formatted_date_range }}@if($event->event_time) · {{ \Carbon\Carbon::parse($event->event_time)->format('g:i A') }}@endif</td></tr>
-      @if($event->location)<tr><td style="{{ $dt }}">Venue</td><td style="{{ $dv }}">{{ $event->location }}</td></tr>@endif
-    @endif
-    <tr><td style="{{ $dt }}">Order</td><td style="{{ $dv }}color:#f5b800;font-weight:700;">#{{ $order->order_number }}</td></tr>
-    <tr><td style="padding:11px 0 11px 18px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#8a8aa3;vertical-align:top;">Tickets</td><td style="padding:11px 18px 11px 12px;font-size:14px;color:#dddde8;text-align:right;">{{ $ticketCount }} {{ \Illuminate\Support\Str::plural('ticket', $ticketCount) }}</td></tr>
-  </table>
-
-  <div class="ecta-wrap" style="margin-top:28px;">
-    <a class="ecta" href="{{ $ticketsUrl }}" style="text-transform:uppercase;letter-spacing:.6px;">View your tickets</a>
-    <p class="ecta-sub">Your digital tickets are in your TKT House account. You may be asked to confirm your email with a one-time code.</p>
-  </div>
-
-  <div class="ealert gold" style="margin-top:22px;">
-    <strong>Your QR code is not in this email.</strong> It appears on your ticket page when the event team makes it available — you will see it there, ready for the gate.
-  </div>
+  @foreach($order->issuedTickets as $ticket)
+    <div class="eticket">
+      <p class="eticket-num">{{ $ticket->ticket_number }}</p>
+      <p class="eticket-name">{{ $ticket->ticket_name }}</p>
+      <p class="eticket-meta">Holder: {{ $ticket->holder_name }} · {{ $ticket->holder_email }}</p>
+      <div class="eticket-links">
+        <a href="{{ route('front.tickets.show', $ticket) }}">View</a>
+        <a href="{{ route('front.tickets.download', $ticket) }}">PDF</a>
+      </div>
+    </div>
+  @endforeach
 
   <div class="ealert green">
-    Your invoice (PDF) is attached. You can also download it any time from My Orders in your account.
+    Attached: your invoice (PDF) and a PDF containing all issued tickets.
+    You can also download the invoice any time from your TKT House account under My Orders.
   </div>
 @endsection

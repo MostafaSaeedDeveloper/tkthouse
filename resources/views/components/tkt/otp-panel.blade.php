@@ -1,7 +1,7 @@
 {{-- Reusable e-mail code box. Behaviour lives in public/js/tkt-otp.js (data-otp-panel). --}}
-@props(['email' => '', 'emailMasked' => null, 'order' => null, 'token' => null, 'after' => '', 'autosend' => false, 'idSuffix' => 'x', 'sendUrl' => null])
+@props(['email' => '', 'emailMasked' => null, 'order' => null, 'token' => null, 'after' => '', 'autosend' => false, 'idSuffix' => 'x'])
 <div data-otp-panel
-     data-send-url="{{ $sendUrl ?? route('front.auth.otp.send') }}"
+     data-send-url="{{ route('front.auth.otp.send') }}"
      data-verify-url="{{ route('front.auth.otp.verify') }}"
      data-email="{{ $email }}"
      @if($order) data-order="{{ $order }}" data-token="{{ $token }}" @endif

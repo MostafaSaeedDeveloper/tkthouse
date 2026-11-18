@@ -80,7 +80,7 @@ class TicketIssuanceService
     {
         $order->unsetRelation('items');
         $order->unsetRelation('issuedTickets');
-        $order->load(['items.event', 'customer']);
+        $order->load(['items', 'customer']);
 
         if ($order->status !== 'paid') {
             return;
@@ -104,9 +104,6 @@ class TicketIssuanceService
                         'holder_phone' => $item->holder_phone,
                         'ticket_name' => $item->ticket_name,
                         'ticket_price' => $item->ticket_price,
-                        'event_id' => $item->event_id,
-                        // A ticket whose QR is hidden when it is issued is the only kind that later gets a "QR is available" e-mail.
-                        'qr_locked_at_issue' => $item->event ? ! $item->event->qrIsVisible() : false,
                     ]
                 );
 
@@ -125,7 +122,7 @@ class TicketIssuanceService
                         'holder_name' => $item->holder_name,
                         'holder_email' => $item->holder_email,
                         'holder_phone' => $item->holder_phone,
-                        'qr_payload' => \App\Support\TicketQr::newToken(), // unguessable; the number is only a label
+                        'qr_payload' => $issuedTicket->ticket_number,
                         'issued_at' => now(),
                     ]
                 );
@@ -162,16 +159,7 @@ class TicketIssuanceService
             ->filter(fn (IssuedTicket $ticket) => filled($ticket->holder_email))
             ->groupBy(fn (IssuedTicket $ticket) => mb_strtolower(trim((string) $ticket->holder_email)));
 
-        $buyerEmail = mb_strtolower(trim((string) $order->customer?->email));
-
         foreach ($groupedByHolder as $holderEmail => $tickets) {
-            // The buyer is also a holder: their booking-confirmation e-mail already links to those tickets, so no second e-mail.
-            if ($buyerEmail !== '' && $holderEmail === $buyerEmail) {
-                IssuedTicket::query()->whereIn('id', $tickets->pluck('id'))->update(['sent_at' => now()]);
-
-                continue;
-            }
-
             $ok = $this->sendMailWithRetry(
                 fn () => Mail::to($holderEmail)->send(new HolderTicketsIssuedMail($order, $tickets->values(), $holderEmail)),
                 ['order_id' => $order->id, 'recipient' => $holderEmail, 'mail_type' => 'holder_tickets_issued']
@@ -236,6 +224,31 @@ class TicketIssuanceService
 
     private function sendMailWithRetry(callable $send, array $context = []): bool
     {
-        return \App\Support\MailRetry::send($send, $context) === null;
+        $maxAttempts = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $send();
+
+                return true;
+            } catch (UnexpectedResponseException $exception) {
+                $isRateLimited = $exception->getCode() === 550
+                    && str_contains(mb_strtolower($exception->getMessage()), 'too many emails per second');
+
+                if (! $isRateLimited || $attempt === $maxAttempts) {
+                    Log::error('Mail send failed.', [...$context, 'attempt' => $attempt, 'error' => $exception->getMessage()]);
+
+                    return false;
+                }
+
+                usleep($attempt * 500000);
+            } catch (Throwable $exception) {
+                Log::error('Mail send failed.', [...$context, 'attempt' => $attempt, 'error' => $exception->getMessage()]);
+
+                return false;
+            }
+        }
+
+        return false;
     }
 }

@@ -70,41 +70,27 @@
             </div>
         </section>
 
-        {{-- Tickets: who each ticket is for, its status, and the buyer's tools --}}
+        {{-- Tickets --}}
         <section class="tkt-card tkt-pcard" id="order-tickets">
             <h2 class="tkt-pcard__h">Tickets &amp; attendees <span class="tkt-text-muted" style="font-weight:600">({{ $count }})</span></h2>
-            @if($order->issuedTickets->isNotEmpty() && in_array($order->status, \App\Models\IssuedTicket::PORTAL_ORDER_STATUSES, true))
-                @php $holders = app(\App\Services\Tickets\TicketHolderService::class); @endphp
-                <p class="tkt-text-muted tkt-text-sm" style="margin:-6px 0 12px">Each person receives their own ticket by e-mail and sees only their ticket. You keep the order and the invoice.</p>
-                <ul class="tkt-hold-list">
+            @if($order->status === 'paid' && $order->issuedTickets->isNotEmpty())
+                <ul class="tkt-pticket-list">
                     @foreach($order->issuedTickets->sortBy('id') as $ticket)
                         @php
-                            $tEvent = $ticket->event() ?? $event;
+                            $tEvent = $ticket->orderItem?->event ?? $event;
                             [$tLabel, $tVariant] = \App\Support\CustomerPortal::ticketBadge($ticket, $tEvent);
-                            $blocked = $holders->blockedReason($ticket);
-                            $isMe = mb_strtolower((string) $ticket->holder_email) === mb_strtolower((string) $user->email);
-                            $invite = blank($ticket->holder_email) ? ['No e-mail yet', 'warning'] : ($isMe ? ['Yours', 'default'] : ($ticket->sent_at ? ['Link sent '.$ticket->sent_at->format('j M, H:i'), 'success'] : ['Not sent yet', 'warning']));
                         @endphp
-                        <li id="t-{{ $ticket->id }}" class="tkt-hold">
-                            <div class="tkt-hold__top">
-                                <div class="tkt-hold__who">
-                                    <b>{{ $ticket->holder_name ?: 'Attendee' }}@if($isMe) <span class="tkt-text-muted" style="font-weight:600">(you)</span>@endif</b>
-                                    <span>{{ $ticket->holder_email ?: '—' }}</span>
-                                    <small>{{ $ticket->ticketTypeLabel() }} · #{{ $ticket->ticket_number }}</small>
-                                </div>
-                                <div class="tkt-hold__badges">
-                                    <x-tkt.badge :variant="$tVariant">{{ $tLabel }}</x-tkt.badge>
-                                    @if($blocked === null)<x-tkt.badge :variant="$invite[1]">{{ $invite[0] }}</x-tkt.badge>@endif
-                                </div>
+                        <li>
+                            <div class="tkt-pticket-list__text">
+                                <b>{{ $ticket->holder_name ?: 'Attendee' }}</b>
+                                <span>{{ $ticket->ticket_name }} · #{{ $ticket->ticket_number }}</span>
+                                @if($ticket->holder_email)<small>{{ $ticket->holder_email }}</small>@endif
                             </div>
-                            <div class="tkt-hold__actions">
-                                <a class="tkt-btn tkt-btn--primary tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View ticket</a>
-                                @if($blocked !== null)<small class="tkt-text-muted">{{ $blocked }}</small>@endif
-                            </div>
+                            <x-tkt.badge :variant="$tVariant">{{ $tLabel }}</x-tkt.badge>
+                            <a class="tkt-btn tkt-btn--outline tkt-btn--sm" href="{{ route('front.tickets.show', $ticket) }}">View ticket</a>
                         </li>
                     @endforeach
                 </ul>
-                <p class="tkt-text-muted tkt-text-sm" style="margin-top:12px">Need to change a ticket holder's name or e-mail? Contact support and we will update it for you.</p>
             @else
                 <ul class="tkt-pticket-list">
                     @foreach($order->items as $item)

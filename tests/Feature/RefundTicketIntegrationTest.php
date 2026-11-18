@@ -328,7 +328,7 @@ class RefundTicketIntegrationTest extends TestCase
         // ordinary administrative cancellation is NOT shown as a refund
         $this->actingAs($scanner)->post(route('admin.tickets.scanner.status', $adminCanceled), ['status' => 'canceled'])->assertRedirect();
         $res = $this->actingAs($scanner)->postJson(route('admin.tickets.scanner.lookup'), ['code' => $adminCanceled->ticket_number]);
-        $res->assertStatus(409)->assertJson(['ok' => false, 'admit' => false, 'code' => 'canceled']);   // a canceled ticket is never admitted either
+        $res->assertOk();
         $this->assertStringNotContainsString('REFUNDED', $res->json('html'));
         $this->assertStringContainsString('Canceled', $res->json('html'));
 

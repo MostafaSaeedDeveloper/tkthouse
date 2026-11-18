@@ -96,7 +96,7 @@ class OrderInvoiceTest extends TestCase
         $this->assertStringStartsWith('%PDF', $pdf);
     }
 
-    public function test_completed_order_email_is_the_invoice_with_no_ticket_pdf(): void
+    public function test_completed_order_email_is_the_invoice_with_both_pdfs(): void
     {
         EventFee::create(['event_id' => $this->event->id, 'name' => 'VAT', 'fee_type' => 'percentage', 'value' => 14]);
         $order = $this->paid(User::factory()->create());
@@ -108,9 +108,7 @@ class OrderInvoiceTest extends TestCase
             $mail->assertSeeInHtml('VAT (14%)');
                         $names = collect($mail->attachments())->map(fn ($a) => $a->as)->all();
             $this->assertContains('invoice-'.$mail->order->order_number.'.pdf', $names);
-            $this->assertNotContains('tickets-'.$mail->order->order_number.'.pdf', $names);   // tickets are digital: no ticket PDF
-            $this->assertCount(1, $names);
-            $mail->assertSeeInHtml('View your tickets');
+            $this->assertContains('tickets-'.$mail->order->order_number.'.pdf', $names);
 
             return true;
         });

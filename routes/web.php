@@ -85,11 +85,6 @@ Route::group([], function () {
     Route::post('/auth/otp/verify', [AuthOtpController::class, 'verify'])->middleware('throttle:20,1,otp-verify')->name('front.auth.otp.verify');
 });
 
-// ---- Digital-ticket access: the page an e-mailed "View your tickets" button lands on when nobody is signed in.
-//      A one-time e-mail code signs the buyer, a guest or a ticket holder in, then returns them to their ticket.
-Route::get('/tickets/access', [\App\Http\Controllers\TicketAccessController::class, 'show'])->name('front.tickets.access');
-Route::post('/tickets/access/send', [\App\Http\Controllers\TicketAccessController::class, 'send'])->middleware('throttle:10,1,ticket-access-send')->name('front.tickets.access.send');
-
 Route::middleware('auth')->group(function () {
     Route::post('/account/logout', [CustomerAuthController::class, 'logout'])->name('front.customer.logout');
     Route::redirect('/account/dashboard', '/account/profile')->name('front.account.dashboard');
@@ -104,7 +99,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/account/set-password', [AccountPasswordController::class, 'show'])->name('front.account.set-password');
     Route::post('/account/set-password', [AccountPasswordController::class, 'store'])->name('front.account.set-password.store');
     Route::get('/tickets/{ticket:uuid}', [FrontTicketController::class, 'show'])->name('front.tickets.show');
-    Route::get('/tickets/{ticket:uuid}/qr', [FrontTicketController::class, 'qr'])->middleware('throttle:60,1,ticket-qr')->name('front.tickets.qr');
     Route::get('/tickets/{ticket:uuid}/download', [FrontTicketController::class, 'download'])->name('front.tickets.download');
     Route::get('/tickets/{ticket:uuid}/wallet', [FrontTicketController::class, 'wallet'])->middleware('throttle:30,1,ticket-wallet')->name('front.tickets.wallet');
 });
@@ -143,14 +137,6 @@ Route::middleware(['auth', 'admin.panel', \App\Http\Middleware\AppMaintenance::c
         ->middlewareFor('destroy', 'permission:permissions.delete');
 
     Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->middleware('permission:events.create')->name('events.duplicate');
-    Route::post('events/{event}/qr-visibility', [EventController::class, 'qrVisibility'])->middleware('permission:events.qr-visibility.manage')->name('events.qr-visibility');
-    Route::post('events/{event}/qr-override', [EventController::class, 'qrOverride'])->middleware('permission:events.qr-visibility.manage')->name('events.qr-override');
-    Route::post('events/{event}/qr-release/sandbox', [\App\Http\Controllers\Admin\QrReleaseController::class, 'sandbox'])->middleware(['permission:events.qr-notifications.manage', 'throttle:60,1'])->name('events.qr-release.sandbox');
-    Route::post('events/{event}/qr-release/activate', [\App\Http\Controllers\Admin\QrReleaseController::class, 'activate'])->middleware('permission:events.qr-notifications.manage')->name('events.qr-release.activate');
-    Route::post('events/{event}/qr-release/pause', [\App\Http\Controllers\Admin\QrReleaseController::class, 'pause'])->middleware('permission:events.qr-notifications.manage')->name('events.qr-release.pause');
-    Route::post('events/{event}/qr-release/retry', [\App\Http\Controllers\Admin\QrReleaseController::class, 'retry'])->middleware('permission:events.qr-notifications.manage')->name('events.qr-release.retry');
-    Route::post('events/{event}/entry-availability', [EventController::class, 'entryAvailability'])->middleware('permission:events.entry.manage')->name('events.entry-availability');
-    Route::post('events/{event}/entry-override', [EventController::class, 'entryOverride'])->middleware('permission:events.entry.manage')->name('events.entry-override');
     Route::post('events/{event}/archive', [EventController::class, 'archive'])->middleware('permission:events.archive')->name('events.archive');
     Route::post('events/{event}/restore', [EventController::class, 'restore'])->middleware('permission:events.restore')->name('events.restore');
     Route::resource('events', EventController::class)

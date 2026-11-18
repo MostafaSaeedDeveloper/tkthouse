@@ -18,7 +18,7 @@ class AdminTicketIssuedMail extends Mailable
         public Ticket $ticket,
         public string $showUrl,
         public string $recipientEmail,
-        private ?string $pdfBinary = null
+        private string $pdfBinary
     ) {
         $this->ticket->loadMissing('order.customer');
     }
@@ -34,17 +34,11 @@ class AdminTicketIssuedMail extends Mailable
             'ticket' => $this->ticket,
             'showUrl' => $this->showUrl,
             'recipientEmail' => $this->recipientEmail,
-            'hasPdf' => $this->pdfBinary !== null,
         ]);
     }
 
     public function attachments(): array
     {
-        // Tickets bought online are digital (the e-mail links to the customer's account), so no PDF goes with them.
-        if ($this->pdfBinary === null) {
-            return [];
-        }
-
         return [
             Attachment::fromData(fn () => $this->pdfBinary, 'ticket-'.$this->ticket->ticket_number.'.pdf')
                 ->withMime('application/pdf'),

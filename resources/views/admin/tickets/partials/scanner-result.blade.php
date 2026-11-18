@@ -13,12 +13,6 @@
   @endphp
 
   <div class="sc-result {{ $refunded ? 'sc-result--refunded' : '' }}">
-    @if(! empty($denial))
-      <div class="sc-refund-banner" role="alert">
-        <i class="fa fa-ban" aria-hidden="true"></i>
-        <div><strong>ENTRY DENIED</strong><span>{{ $denial }}</span></div>
-      </div>
-    @endif
     @if($refunded)
       <div class="sc-refund-banner" role="alert">
         <i class="fa fa-ban" aria-hidden="true"></i>
@@ -30,7 +24,7 @@
       </div>
     @endif
     <div class="sc-result-header">
-      <div class="sc-result-title">{{ ($refunded || ! empty($denial)) ? 'Entry Denied' : 'Ticket Found' }}</div>
+      <div class="sc-result-title">{{ $refunded ? 'Entry Denied' : 'Ticket Found' }}</div>
       <span class="sc-status {{ $statusClass }}">
         @if($ticket->status === 'checked_in')
           <i class="fa fa-circle-check"></i>
@@ -79,7 +73,7 @@
       @endif
     </div>
 
-    @unless($refunded || ! empty($denial))
+    @unless($refunded)
     <form method="POST" action="{{ route('admin.tickets.scanner.status', $ticket) }}">
       @csrf
       <div class="sc-actions">
