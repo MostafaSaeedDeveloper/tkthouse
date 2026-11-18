@@ -22,12 +22,12 @@
   </div>
 
   <div class="ecta-wrap">
-    <a href="{{ $paymentLink }}" class="ecta">Pay Now & Confirm Tickets</a>
+    <a href="{{ $paymentLink }}" class="ecta">💳 &nbsp;Pay Now & Confirm Tickets</a>
     <p class="ecta-sub">Secure payment · Takes less than 2 minutes</p>
   </div>
 
   <div class="ealert gold">
-    This payment link is personal and time-limited. Please do not share it with anyone else.
+    ⚠️ &nbsp;This payment link is personal and time-limited. Please do not share it with anyone else.
   </div>
 
   <p class="ep ep-sm">If the button above doesn't work, copy and paste this link into your browser:</p>

@@ -97,4 +97,3 @@
 .a-ev-handle:active { cursor: grabbing; }
 .a-ev-row.is-dragging { opacity: .45; border-style: dashed; }
 .a-ev-add-bottom { display: flex; justify-content: center; margin-top: 12px; }
-.a-seg { display: inline-flex; gap: 8px; flex-wrap: wrap; }
