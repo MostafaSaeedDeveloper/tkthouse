@@ -3,11 +3,15 @@
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<x-admin.page-header title="Guest List" :subtitle="\App\Orders\OrderAccess::isSuper(auth()->user()) ? 'Invitation tickets issued outside of paid orders (all users).' : 'Invitation tickets you added, issued outside of paid orders.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
+<x-admin.page-header title="Guest List" :subtitle="'Invitation tickets issued outside of paid orders.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
+    @can('guest-list.create')
     <a href="{{ route('admin.guest-list.template') }}" class="a-btn a-btn--outline"><i class="fa fa-file-arrow-down"></i> Import Template</a>
+    @endcan
     <a href="{{ route('admin.guest-list.export') }}" class="a-btn a-btn--outline"><i class="fa fa-file-export"></i> Export</a>
+    @can('guest-list.create')
     <button type="button" class="a-btn a-btn--outline" data-bs-toggle="modal" data-bs-target="#importGuestListModal"><i class="fa fa-file-import"></i> Import</button>
     <button type="button" class="a-btn a-btn--primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal"><i class="fa fa-plus"></i> Create Invitation</button>
+    @endcan
 </x-admin.page-header>
 
 <x-admin.flash />
@@ -33,7 +37,9 @@
 <x-admin.card flush>
     @if($tickets->isEmpty())
         <x-admin.empty icon="fa-list-check" title="No guest tickets found" text="Create an invitation or import a CSV to add guests.">
+            @can('guest-list.create')
             <button type="button" class="a-btn a-btn--primary" data-bs-toggle="modal" data-bs-target="#createInvitationModal"><i class="fa fa-plus"></i> Create Invitation</button>
+            @endcan
         </x-admin.empty>
     @else
         <x-admin.table stack caption="Guest tickets">
@@ -69,6 +75,7 @@
     @endif
 </x-admin.card>
 
+@can('guest-list.create')
 <div class="modal fade" id="createInvitationModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -144,6 +151,7 @@
     </div>
   </div>
 </div>
+@endcan
 @endsection
 
 
