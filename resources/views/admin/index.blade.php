@@ -132,7 +132,7 @@
     @if(auth()->user()->can('payments.refunds.view') || auth()->user()->can('orders.view'))
     <x-admin.kpi label="Total Refunded" :value="$moneyShort($kpis['refunded'])" icon="fa-rotate-left" :href="$refundHref" :hint="'Confirmed refunds · '.$rangeLabel.($refundPending ? ' · '.$refundPending : '')" />
     @endif
-    <x-admin.kpi label="Guest list" :value="number_format($kpis['guest_list'])" icon="fa-clipboard-list" :href="auth()->user()->can('guest-list.view') ? route('admin.guest-list.index') : null" hint="Invitations (not counted in Tickets sold)" />
+    <x-admin.kpi label="Guest list" :value="number_format($kpis['guest_list'])" icon="fa-clipboard-list" :href="auth()->user()->can('guest-list.view') ? route('admin.guest-list.index') : null" hint="Invitations" />
 </div>
 
 @if($ticketTypeSales->isNotEmpty())
