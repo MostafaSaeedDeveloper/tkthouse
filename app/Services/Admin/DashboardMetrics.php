@@ -142,11 +142,24 @@ class DashboardMetrics
             'tickets' => $tickets, 'tickets_change' => self::change($tickets, $prevTickets),
             'active_events' => $activeEvents,
             'paid_orders' => $paidOrders,
+            'guest_list' => $this->guestListCount(),
             'refunded' => $refunds['amount'], 'refunded_orders' => $refunds['orders'],
             'refunds_pending_amount' => $refunds['pending_amount'], 'refunds_pending_count' => $refunds['pending_count'],
             'net_collected' => $sales,
             'pending_orders' => $this->orders()->whereIn('status', ['pending_payment', 'pending_approval', 'pending', 'on_hold'])->whereBetween('created_at', [$start, $end])->count(),
         ];
+    }
+
+    /**
+     * Guest-list tickets (invitations, not sales: so never part of "Tickets sold" and not limited to the period) of the selected event,
+     * else the managed/working events, else the active events. Users only count the guest tickets they are allowed to see.
+     */
+    public function guestListCount(): int
+    {
+        $ids = $this->eventIds() ?: Event::query()->where('status', 'active')->pluck('id')->all();
+
+        return (int) Ticket::query()->where('source', 'guest_list')->where('status', '!=', 'canceled')
+            ->whereIn('event_id', $ids)->guestListVisibleTo($this->user)->count();
     }
 
     /** Tickets canceled by a confirmed refund in the window (by the cancellation date), inside this dashboard's scope. */
