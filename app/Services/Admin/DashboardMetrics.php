@@ -156,10 +156,27 @@ class DashboardMetrics
      */
     public function guestListCount(): int
     {
-        $ids = $this->eventIds() ?: Event::query()->where('status', 'active')->pluck('id')->all();
+        $events = $this->event
+            ? collect([$this->event])
+            : Event::query()->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids), fn ($q) => $q->where('status', 'active'))->get(['id', 'name']);
+
+        if ($events->isEmpty()) {
+            return 0;
+        }
 
         return (int) Ticket::query()->where('source', 'guest_list')->where('status', '!=', 'canceled')
-            ->whereIn('event_id', $ids)->count();
+            ->where(function ($scope) use ($events) {
+                $scope->whereIn('event_id', $events->pluck('id')->all())
+                    // guest tickets added before they were tied to an event id fall back to the "Event - Type" name
+                    ->orWhere(function ($legacy) use ($events) {
+                        $legacy->whereNull('event_id')->where(function ($names) use ($events) {
+                            foreach ($events->pluck('name') as $name) {
+                                $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], (string) $name);
+                                $names->orWhereRaw("name LIKE ? ESCAPE '!'", [$escaped.' - %']);
+                            }
+                        });
+                    });
+            })->count();
     }
 
     /** Tickets canceled by a confirmed refund in the window (by the cancellation date), inside this dashboard's scope. */
