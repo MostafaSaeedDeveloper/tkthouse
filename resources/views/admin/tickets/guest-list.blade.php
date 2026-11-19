@@ -3,7 +3,7 @@
 @push('styles')<link rel="stylesheet" href="{{ asset('admin-v2/events-tickets.css') }}?v={{ filemtime(public_path('admin-v2/events-tickets.css')) }}">@endpush
 
 @section('content')
-<x-admin.page-header title="Guest List" :subtitle="\App\Orders\OrderAccess::isSuper(auth()->user()) ? 'Invitation tickets issued outside of paid orders (all users).' : 'Invitation tickets you added, issued outside of paid orders.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
+<x-admin.page-header title="Guest List" :subtitle="'Invitation tickets issued outside of paid orders.'" :crumbs="['Dashboard' => route('admin.dashboard'), 'Tickets' => route('admin.tickets.index'), 'Guest List']">
     <a href="{{ route('admin.guest-list.template') }}" class="a-btn a-btn--outline"><i class="fa fa-file-arrow-down"></i> Import Template</a>
     <a href="{{ route('admin.guest-list.export') }}" class="a-btn a-btn--outline"><i class="fa fa-file-export"></i> Export</a>
     <button type="button" class="a-btn a-btn--outline" data-bs-toggle="modal" data-bs-target="#importGuestListModal"><i class="fa fa-file-import"></i> Import</button>
