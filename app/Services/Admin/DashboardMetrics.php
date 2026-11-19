@@ -152,14 +152,14 @@ class DashboardMetrics
 
     /**
      * Guest-list tickets (invitations, not sales: so never part of "Tickets sold" and not limited to the period) of the selected event,
-     * else the managed/working events, else the active events. Users only count the guest tickets they are allowed to see.
+     * else the managed/working events, else the active events. Guest tickets have no assignment, so everyone sees the same count.
      */
     public function guestListCount(): int
     {
         $ids = $this->eventIds() ?: Event::query()->where('status', 'active')->pluck('id')->all();
 
         return (int) Ticket::query()->where('source', 'guest_list')->where('status', '!=', 'canceled')
-            ->whereIn('event_id', $ids)->guestListVisibleTo($this->user)->count();
+            ->whereIn('event_id', $ids)->count();
     }
 
     /** Tickets canceled by a confirmed refund in the window (by the cancellation date), inside this dashboard's scope. */

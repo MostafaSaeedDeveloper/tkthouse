@@ -128,16 +128,12 @@
     $refundHref = auth()->user()->can('orders.view') && auth()->user()->can('payments.refunds.view') ? route('admin.orders.index', $refundParams) : null;
     $refundPending = $kpis['refunds_pending_count'] > 0 ? number_format($kpis['refunds_pending_count']).' pending request(s) · '.$moneyShort($kpis['refunds_pending_amount']).' (not refunded yet)' : null;
 @endphp
-@if(auth()->user()->can('payments.refunds.view') || auth()->user()->can('orders.view') || auth()->user()->can('guest-list.view'))
 <div class="a-grid" style="margin-bottom:20px">
     @if(auth()->user()->can('payments.refunds.view') || auth()->user()->can('orders.view'))
     <x-admin.kpi label="Total Refunded" :value="$moneyShort($kpis['refunded'])" icon="fa-rotate-left" :href="$refundHref" :hint="'Confirmed refunds · '.$rangeLabel.($refundPending ? ' · '.$refundPending : '')" />
     @endif
-    @can('guest-list.view')
-    <x-admin.kpi label="Guest list" :value="number_format($kpis['guest_list'])" icon="fa-clipboard-list" :href="route('admin.guest-list.index')" hint="Invitations (not counted in Tickets sold)" />
-    @endcan
+    <x-admin.kpi label="Guest list" :value="number_format($kpis['guest_list'])" icon="fa-clipboard-list" :href="auth()->user()->can('guest-list.view') ? route('admin.guest-list.index') : null" hint="Invitations (not counted in Tickets sold)" />
 </div>
-@endif
 
 @if($ticketTypeSales->isNotEmpty())
 <div style="margin-bottom:20px">
