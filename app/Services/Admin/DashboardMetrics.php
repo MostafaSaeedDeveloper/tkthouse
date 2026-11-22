@@ -142,11 +142,41 @@ class DashboardMetrics
             'tickets' => $tickets, 'tickets_change' => self::change($tickets, $prevTickets),
             'active_events' => $activeEvents,
             'paid_orders' => $paidOrders,
+            'guest_list' => $this->guestListCount(),
             'refunded' => $refunds['amount'], 'refunded_orders' => $refunds['orders'],
             'refunds_pending_amount' => $refunds['pending_amount'], 'refunds_pending_count' => $refunds['pending_count'],
             'net_collected' => $sales,
             'pending_orders' => $this->orders()->whereIn('status', ['pending_payment', 'pending_approval', 'pending', 'on_hold'])->whereBetween('created_at', [$start, $end])->count(),
         ];
+    }
+
+    /**
+     * Guest-list tickets (invitations, not sales: so never part of "Tickets sold" and not limited to the period) of the selected event,
+     * else the managed/working events, else the active events. Guest tickets have no assignment, so everyone sees the same count.
+     */
+    public function guestListCount(): int
+    {
+        $events = $this->event
+            ? collect([$this->event])
+            : Event::query()->when($this->eventIds(), fn ($q, $ids) => $q->whereIn('id', $ids), fn ($q) => $q->where('status', 'active'))->get(['id', 'name']);
+
+        if ($events->isEmpty()) {
+            return 0;
+        }
+
+        return (int) Ticket::query()->where('source', 'guest_list')->where('status', '!=', 'canceled')
+            ->where(function ($scope) use ($events) {
+                $scope->whereIn('event_id', $events->pluck('id')->all())
+                    // guest tickets added before they were tied to an event id fall back to the "Event - Type" name
+                    ->orWhere(function ($legacy) use ($events) {
+                        $legacy->whereNull('event_id')->where(function ($names) use ($events) {
+                            foreach ($events->pluck('name') as $name) {
+                                $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], (string) $name);
+                                $names->orWhereRaw("name LIKE ? ESCAPE '!'", [$escaped.' - %']);
+                            }
+                        });
+                    });
+            })->count();
     }
 
     /** Tickets canceled by a confirmed refund in the window (by the cancellation date), inside this dashboard's scope. */

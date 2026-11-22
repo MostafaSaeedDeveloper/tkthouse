@@ -82,9 +82,21 @@ class FrontTicketController extends Controller
     private function authorizeTicket(Request $request, IssuedTicket $ticket): void
     {
         $user = $request->user();
-        abort_unless($user, 403);
 
-        abort_unless(IssuedTicket::query()->ownedByCustomer($user)->whereKey($ticket->id)->exists(), 403);
+        if ($user && IssuedTicket::query()->ownedByCustomer($user)->whereKey($ticket->id)->exists()) {
+            return;
+        }
+
+        // Not signed in, or signed in as someone who does not own this ticket: send them to sign in (and bring them back here afterwards).
+        if ($user) {
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        throw new \Illuminate\Http\Exceptions\HttpResponseException(
+            redirect()->route('front.customer.login', ['redirect' => $request->fullUrl()])
+        );
     }
 
     private function resolveEvent(string $ticketName): ?Event
