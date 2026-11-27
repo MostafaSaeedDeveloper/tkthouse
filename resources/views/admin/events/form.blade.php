@@ -379,6 +379,7 @@
             html = html.replaceAll('__ID__', `${prefix}-${nextIndex}-couple`);
             container.insertAdjacentHTML('beforeend', html);
             container.dataset.nextIndex = String(nextIndex + 1);
+            window.TKTDatePicker?.init(container.lastElementChild); // new rows may hold date/time fields
         };
 
         // A couple pass is one man + one woman, so a fixed gender doesn't apply: lock the select while "Couples only" is ticked.
