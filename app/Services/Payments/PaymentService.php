@@ -359,6 +359,8 @@ class PaymentService
                 if ($order->trashed()) {
                     $order->restore();
                 }
+                // saveQuietly() skips the observer, so the "Payment received" bell alert must be raised explicitly.
+                app(\App\Services\Notifications\AdminNotifier::class)->orderStatusChanged($order, $from);
 
                 $this->log($order, $expiredCancel ? 'Payment received after the deadline; order reinstated' : 'Payment completed successfully', $locked, [
                     'payment_status' => 'paid', 'from_status' => $from, 'to_status' => 'paid',
