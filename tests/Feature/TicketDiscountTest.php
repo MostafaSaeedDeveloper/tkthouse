@@ -77,4 +77,16 @@ class TicketDiscountTest extends TestCase
         $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-27 22:00:01', 'Africa/Cairo'));
         $this->assertFalse($t->fresh()->hasActiveDiscount());
     }
+
+    public function test_fixed_discount_shows_no_percentage_badge(): void
+    {
+        $t = $this->ticket(['discount_type' => 'fixed', 'discount_value' => 500, 'discount_ends_at' => now()->addHours(12)]);
+
+        $this->get(route('front.events.show', $t->event))
+            ->assertOk()
+            ->assertSee('tkt-ticket__was', false)
+            ->assertSee('data-countdown-end', false)
+            ->assertDontSee('-50%')
+            ->assertDontSee('-50.0%');
+    }
 }

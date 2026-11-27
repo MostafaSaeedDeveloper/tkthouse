@@ -293,7 +293,7 @@
                                         {{ number_format($unitPrice, 2) }} <small>EGP</small>
                                         @if($onOffer)
                                             <span class="tkt-ticket__offer">
-                                                <x-tkt.badge variant="danger">{{ $ticket->discountPercentLabel() }}</x-tkt.badge>
+                                                @if($ticket->discount_type === 'percent')<x-tkt.badge variant="danger">{{ $ticket->discountPercentLabel() }}</x-tkt.badge>@endif
                                                 <span class="tkt-ticket__timer" data-countdown-end="{{ $ticket->discount_ends_at->toIso8601String() }}" data-countdown-server="{{ now()->toIso8601String() }}">Offer ends in <b>--:--:--</b></span>
                                             </span>
                                         @endif
