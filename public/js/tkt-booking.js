@@ -272,23 +272,41 @@
 
 
 /* Countdown for timed ticket discounts. Uses the server clock offset so a wrong device clock does not shift the deadline.
-   When the offer ends the page reloads so the regular price (the one the server will charge) is shown. */
+   When the offer ends the page reloads so the regular price (the one the server will charge) is shown.
+   Registered with TktPage so it also starts after a soft (Swup) navigation to the event page, and stops when leaving it. */
 (function () {
-    var timers = document.querySelectorAll('[data-countdown-end]');
-    if (!timers.length) return;
+    'use strict';
+
     function pad(n) { return (n < 10 ? '0' : '') + n; }
-    var started = Date.now();
-    function tick() {
-        var expired = false;
-        timers.forEach(function (el) {
-            var skew = Date.parse(el.dataset.countdownServer) - started;
-            var left = Math.max(0, Math.floor((Date.parse(el.dataset.countdownEnd) - (Date.now() + skew)) / 1000));
-            if (left === 0) { expired = true; return; }
-            var d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
-            el.querySelector('b').textContent = (d ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(s);
-        });
-        if (expired) { window.location.reload(); return; }
-        setTimeout(tick, 1000);
+
+    function init(root) {
+        var timers = (root || document).querySelectorAll('[data-countdown-end]');
+        if (!timers.length) return null;
+
+        var started = Date.now();
+        var handle = null;
+        var stopped = false;
+
+        function tick() {
+            if (stopped) return;
+            var expired = false;
+            timers.forEach(function (el) {
+                var skew = Date.parse(el.dataset.countdownServer) - started;
+                var left = Math.max(0, Math.floor((Date.parse(el.dataset.countdownEnd) - (Date.now() + skew)) / 1000));
+                if (left === 0) { expired = true; return; }
+                var d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), sec = left % 60;
+                var out = el.querySelector('b');
+                if (out) out.textContent = (d ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(sec);
+            });
+            if (expired) { window.location.reload(); return; }
+            handle = setTimeout(tick, 1000);
+        }
+
+        tick();
+        return function cleanup() { stopped = true; if (handle) clearTimeout(handle); };
     }
-    tick();
+
+    if (window.TktPage) window.TktPage.register('discount-countdown', init);
+    else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(document); });
+    else init(document);
 })();
