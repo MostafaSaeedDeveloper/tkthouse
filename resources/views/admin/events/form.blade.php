@@ -15,6 +15,10 @@
         'sold' => $ticketSync->usage($event, $ticket)['total'],
         'name' => $ticket->name,
         'price' => $ticket->price,
+        'discount_type' => $ticket->discount_type,
+        'discount_value' => $ticket->discount_value,
+        'discount_starts_at' => $ticket->discount_starts_at?->format('Y-m-d\TH:i'),
+        'discount_ends_at' => $ticket->discount_ends_at?->format('Y-m-d\TH:i'),
         'status' => $ticket->status,
         'color' => $ticket->color,
         'label' => $ticket->label,
@@ -172,6 +176,15 @@
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-status">Status</label><select class="form-select" id="tickets-{{ $index }}-status" name="tickets[{{ $index }}][status]"><option value="active" @selected(($ticket['status'] ?? 'active') === 'active')>Active</option><option value="inactive" @selected(($ticket['status'] ?? '') === 'inactive')>Inactive</option><option value="sold_out" @selected(($ticket['status'] ?? '') === 'sold_out')>Sold Out</option><option value="hidden" @selected(($ticket['status'] ?? '') === 'hidden')>Hidden</option></select></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-color">Color</label><input type="color" class="form-control form-control-color w-100" id="tickets-{{ $index }}-color" name="tickets[{{ $index }}][color]" value="{{ $ticket['color'] ?? '#0d6efd' }}"></div>
                 <div class="a-field"><label class="form-label" for="tickets-{{ $index }}-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="tickets-{{ $index }}-max" name="tickets[{{ $index }}][max_per_order]" value="{{ $ticket['max_per_order'] ?? 10 }}"></div>
+                <div class="a-field a-ev-span-6 a-ev-discount">
+                    <span class="form-label">Timed discount <span class="a-hint">(optional — shows the old price crossed out with a countdown)</span></span>
+                    <div class="a-ev-discount__grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                        <div><label class="form-label" for="tickets-{{ $index }}-dtype">Type</label><select class="form-select" id="tickets-{{ $index }}-dtype" name="tickets[{{ $index }}][discount_type]"><option value="">No discount</option><option value="percent" @selected(($ticket['discount_type'] ?? '') === 'percent')>Percent (%)</option><option value="fixed" @selected(($ticket['discount_type'] ?? '') === 'fixed')>Fixed amount (EGP)</option></select></div>
+                        <div><label class="form-label" for="tickets-{{ $index }}-dvalue">Value</label><input type="number" step="0.01" min="0" class="form-control" id="tickets-{{ $index }}-dvalue" name="tickets[{{ $index }}][discount_value]" value="{{ $ticket['discount_value'] ?? '' }}"></div>
+                        <div><label class="form-label" for="tickets-{{ $index }}-dstart">Starts (optional)</label><input type="datetime-local" class="form-control" id="tickets-{{ $index }}-dstart" name="tickets[{{ $index }}][discount_starts_at]" value="{{ $ticket['discount_starts_at'] ?? '' }}"></div>
+                        <div><label class="form-label" for="tickets-{{ $index }}-dend">Ends</label><input type="datetime-local" class="form-control" id="tickets-{{ $index }}-dend" name="tickets[{{ $index }}][discount_ends_at]" value="{{ $ticket['discount_ends_at'] ?? '' }}"></div>
+                    </div>
+                </div>
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-label">Label</label><input class="form-control" id="tickets-{{ $index }}-label" name="tickets[{{ $index }}][label]" value="{{ $ticket['label'] ?? '' }}"></div>
                 <div class="a-field a-ev-span-2"><label class="form-label" for="tickets-{{ $index }}-description">Description</label><input class="form-control" id="tickets-{{ $index }}-description" name="tickets[{{ $index }}][description]" value="{{ $ticket['description'] ?? '' }}"></div>
                 <div class="a-field">
@@ -311,6 +324,15 @@
         <div class="a-field"><label class="form-label" for="__ID__-status">Status</label><select class="form-select" id="__ID__-status" name="__NAME__[status]"><option value="active">Active</option><option value="inactive">Inactive</option><option value="sold_out">Sold Out</option><option value="hidden">Hidden</option></select></div>
         <div class="a-field"><label class="form-label" for="__ID__-color">Color</label><input type="color" class="form-control form-control-color w-100" id="__ID__-color" name="__NAME__[color]" value="#0d6efd"></div>
         <div class="a-field"><label class="form-label" for="__ID__-max">Max per order</label><input type="number" min="1" max="100" class="form-control" id="__ID__-max" name="__NAME__[max_per_order]" value="10"></div>
+                <div class="a-field a-ev-span-6 a-ev-discount">
+                    <span class="form-label">Timed discount <span class="a-hint">(optional — shows the old price crossed out with a countdown)</span></span>
+                    <div class="a-ev-discount__grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                        <div><label class="form-label" for="__ID__-dtype">Type</label><select class="form-select" id="__ID__-dtype" name="__NAME__[discount_type]"><option value="">No discount</option><option value="percent">Percent (%)</option><option value="fixed">Fixed amount (EGP)</option></select></div>
+                        <div><label class="form-label" for="__ID__-dvalue">Value</label><input type="number" step="0.01" min="0" class="form-control" id="__ID__-dvalue" name="__NAME__[discount_value]" value=""></div>
+                        <div><label class="form-label" for="__ID__-dstart">Starts (optional)</label><input type="datetime-local" class="form-control" id="__ID__-dstart" name="__NAME__[discount_starts_at]" value=""></div>
+                        <div><label class="form-label" for="__ID__-dend">Ends</label><input type="datetime-local" class="form-control" id="__ID__-dend" name="__NAME__[discount_ends_at]" value=""></div>
+                    </div>
+                </div>
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-label">Label</label><input class="form-control" id="__ID__-label" name="__NAME__[label]"></div>
         <div class="a-field a-ev-span-2"><label class="form-label" for="__ID__-description">Description</label><input class="form-control" id="__ID__-description" name="__NAME__[description]"></div>
         <div class="a-field">
@@ -357,6 +379,7 @@
             html = html.replaceAll('__ID__', `${prefix}-${nextIndex}-couple`);
             container.insertAdjacentHTML('beforeend', html);
             container.dataset.nextIndex = String(nextIndex + 1);
+            window.TKTDatePicker?.init(container.lastElementChild); // new rows may hold date/time fields
         };
 
         // A couple pass is one man + one woman, so a fixed gender doesn't apply: lock the select while "Couples only" is ticked.

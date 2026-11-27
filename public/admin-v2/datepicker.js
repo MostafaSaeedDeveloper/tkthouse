@@ -1,16 +1,31 @@
-/* Admin date fields: every <input type="date"> becomes a styled calendar (flatpickr, bundled with the admin).
+/* Admin date fields: every <input type="date"> and <input type="datetime-local"> becomes a styled calendar (flatpickr, bundled with the admin).
    The real input keeps its name and its Y-m-d value, so forms submit exactly what they did before; the visible field shows "19 Oct 2026".
    Opt out with data-native-date. Without flatpickr the browser's own date input is left alone. */
 (function () {
     'use strict';
 
+    /* "Now" / "Today" follow Egypt time (the app's timezone), not the admin's device clock. */
+    function cairoNow() {
+        try {
+            var p = {};
+            new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+            return new Date(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+        } catch (e) { return new Date(); }
+    }
+
     function enhance(el) {
         if (!window.flatpickr || el.dataset.native !== undefined || el.hasAttribute('data-native-date') || el._flatpickr) return;
 
+        // <input type="datetime-local"> gets the same calendar plus a time row; the value stays "Y-m-dTH:i" so servers parse it as before.
+        var withTime = el.getAttribute('type') === 'datetime-local';
         var fp = window.flatpickr(el, {
-            dateFormat: 'Y-m-d',
+            dateFormat: withTime ? 'Y-m-d\\TH:i' : 'Y-m-d',
+            enableTime: withTime,
+            time_24hr: false,
+            minuteIncrement: 5,
             altInput: true,
-            altFormat: 'd M Y',
+            altFormat: withTime ? 'd M Y, h:i K' : 'd M Y',
             altInputClass: ((el.className || 'form-control') + ' a-datepicker__alt').trim(),
             allowInput: false,
             disableMobile: true,
@@ -22,7 +37,7 @@
             onReady: function (selected, str, inst) {
                 var alt = inst.altInput;
                 if (alt) {
-                    alt.placeholder = el.getAttribute('placeholder') || 'Select date';
+                    alt.placeholder = el.getAttribute('placeholder') || (withTime ? 'Select date & time' : 'Select date');
                     if (el.id) {
                         alt.id = el.id + '-display';
                         document.querySelectorAll('label[for="' + el.id + '"]').forEach(function (l) { l.setAttribute('for', alt.id); });
@@ -30,10 +45,12 @@
                 }
                 var foot = document.createElement('div');
                 foot.className = 'a-fp-foot';
-                foot.innerHTML = '<button type="button" class="a-fp-foot__btn" data-fp-clear>Clear</button><button type="button" class="a-fp-foot__btn a-fp-foot__btn--primary" data-fp-today>Today</button>';
+                foot.innerHTML = '<button type="button" class="a-fp-foot__btn" data-fp-clear>Clear</button><button type="button" class="a-fp-foot__btn a-fp-foot__btn--primary" ' + (withTime ? 'data-fp-now>Now' : 'data-fp-today>Today') + '</button>' + (withTime ? '<button type="button" class="a-fp-foot__btn a-fp-foot__btn--done" data-fp-done>Done</button>' : '');
                 foot.addEventListener('click', function (e) {
                     if (e.target.closest('[data-fp-clear]')) { inst.clear(); inst.close(); }
-                    if (e.target.closest('[data-fp-today]')) { inst.setDate(new Date(), true); inst.close(); }
+                    if (e.target.closest('[data-fp-today]')) { inst.setDate(cairoNow(), true); inst.close(); }
+                    if (e.target.closest('[data-fp-now]')) { inst.setDate(cairoNow(), true); }
+                    if (e.target.closest('[data-fp-done]')) { inst.close(); }
                 });
                 inst.calendarContainer.appendChild(foot);
             },
@@ -43,7 +60,7 @@
     }
 
     function init(root) {
-        (root || document).querySelectorAll('input[type="date"]').forEach(enhance);
+        (root || document).querySelectorAll('input[type="date"], input[type="datetime-local"]').forEach(enhance);
     }
 
     window.TKTDatePicker = { init: init };

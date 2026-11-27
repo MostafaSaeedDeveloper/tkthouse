@@ -270,11 +270,13 @@
                                 @php
                                     $isCouple = (bool) $ticket->is_couple;
                                     $maxQuantity = $isCouple ? 2 : max(1, (int) ($ticket->max_per_order ?? 10));
+                                    $onOffer = $ticket->hasActiveDiscount();
+                                    $unitPrice = $ticket->currentPrice();
                                 @endphp
                                 <div class="tkt-ticket"
                                      data-id="ticket-{{ $ticket->id }}"
                                      data-ticket="{{ $ticket->name }}"
-                                     data-price="{{ number_format($ticket->price, 2, '.', '') }}"
+                                     data-price="{{ number_format($unitPrice, 2, '.', '') }}"
                                      data-max-qty="{{ $maxQuantity }}"
                                      data-is-couple="{{ $isCouple ? 1 : 0 }}"
                                      data-index="{{ $i }}"
@@ -284,7 +286,18 @@
                                         <div class="tkt-ticket__name">{{ $ticket->name }}</div>
                                         @if($ticket->description)<div class="tkt-ticket__desc">{{ $ticket->description }}</div>@endif
                                     </div>
-                                    <div class="tkt-ticket__price">{{ number_format($ticket->price, 2) }} <small>EGP</small></div>
+                                    <div class="tkt-ticket__price">
+                                        @if($onOffer)
+                                            <span class="tkt-ticket__was" aria-label="Original price {{ number_format($ticket->price, 2) }} EGP"><s>{{ number_format($ticket->price, 2) }}</s></span>
+                                        @endif
+                                        {{ number_format($unitPrice, 2) }} <small>EGP</small>
+                                        @if($onOffer)
+                                            <span class="tkt-ticket__offer">
+                                                <x-tkt.badge variant="danger">{{ $ticket->discount_type === 'percent' ? $ticket->discountPercentLabel() : 'Limited offer' }}</x-tkt.badge>
+                                                <span class="tkt-ticket__timer" data-countdown-end="{{ $ticket->discount_ends_at->toIso8601String() }}" data-countdown-server="{{ now()->toIso8601String() }}">Offer ends in <b>--:--:--</b></span>
+                                            </span>
+                                        @endif
+                                    </div>
                                     <div class="tkt-ticket__limit">
                                         <span class="tkt-ticket__avail">Available</span>
                                         @if($isCouple)

@@ -29,3 +29,16 @@ span.flatpickr-weekday { font-size: 11.5px; font-weight: 700; color: var(--a-mut
 .a-fp-foot__btn:hover { background: var(--a-surface-2, #f4f4f1); color: var(--a-ink, #111); }
 .a-fp-foot__btn--primary { color: var(--a-ink, #111); background: var(--a-yellow-soft, #fff4c2); }
 .a-fp-foot__btn--primary:hover { background: var(--a-yellow, #ffd200); }
+
+/* Time row (datetime-local fields) */
+.flatpickr-calendar.hasTime .flatpickr-time { border-top: 1px solid var(--a-line, #e8e8e0); height: 48px; max-height: 48px; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.flatpickr-time .numInputWrapper { height: 38px; width: 62px; flex: none; border-radius: 10px; background: var(--a-surface-2, #f4f4f1); }
+.flatpickr-time .numInputWrapper:hover, .flatpickr-time .numInputWrapper:focus-within { background: var(--a-yellow-soft, #fff4c2); }
+.flatpickr-time input { font-family: inherit; font-size: 16px; font-weight: 800; color: var(--a-ink, #111); height: 38px; }
+.flatpickr-time .flatpickr-time-separator { font-weight: 800; width: auto; color: var(--a-muted, #888); }
+.flatpickr-time .flatpickr-am-pm { width: 62px; flex: none; height: 38px; line-height: 38px; border-radius: 10px; font-family: inherit; font-weight: 800; font-size: 14px; background: var(--a-yellow, #ffd200); color: #111; margin-left: 6px; }
+.flatpickr-time .flatpickr-am-pm:hover, .flatpickr-time .flatpickr-am-pm:focus { background: var(--a-yellow-soft, #fff4c2); }
+.flatpickr-time input:hover, .flatpickr-time input:focus, .flatpickr-time .flatpickr-am-pm:hover, .flatpickr-time .flatpickr-am-pm:focus { background: transparent; }
+.flatpickr-time .flatpickr-am-pm { background: var(--a-yellow, #ffd200); }
+.a-fp-foot__btn--done { background: var(--a-ink, #111); color: #fff; }
+.a-fp-foot__btn--done:hover { background: #333; color: #fff; }
