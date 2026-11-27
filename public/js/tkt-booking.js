@@ -269,3 +269,26 @@
     if (window.TktPage) window.TktPage.register('booking', init);
     else init();
 })();
+
+
+/* Countdown for timed ticket discounts. Uses the server clock offset so a wrong device clock does not shift the deadline.
+   When the offer ends the page reloads so the regular price (the one the server will charge) is shown. */
+(function () {
+    var timers = document.querySelectorAll('[data-countdown-end]');
+    if (!timers.length) return;
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    var started = Date.now();
+    function tick() {
+        var expired = false;
+        timers.forEach(function (el) {
+            var skew = Date.parse(el.dataset.countdownServer) - started;
+            var left = Math.max(0, Math.floor((Date.parse(el.dataset.countdownEnd) - (Date.now() + skew)) / 1000));
+            if (left === 0) { expired = true; return; }
+            var d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+            el.querySelector('b').textContent = (d ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(s);
+        });
+        if (expired) { window.location.reload(); return; }
+        setTimeout(tick, 1000);
+    }
+    tick();
+})();

@@ -148,10 +148,18 @@ final class EventTicketSync
     private function attributes(array $row): array
     {
         $isCouple = (bool) ($row['is_couple'] ?? false);
+        // A discount needs a type, a positive value and an end time; anything less means "no discount".
+        $discount = in_array($row['discount_type'] ?? null, ['percent', 'fixed'], true)
+            && (float) ($row['discount_value'] ?? 0) > 0
+            && ! empty($row['discount_ends_at']);
 
         return [
             'name' => trim((string) $row['name']),
             'price' => $row['price'],
+            'discount_type' => $discount ? $row['discount_type'] : null,
+            'discount_value' => $discount ? $row['discount_value'] : null,
+            'discount_starts_at' => $discount ? ($row['discount_starts_at'] ?? null) ?: null : null,
+            'discount_ends_at' => $discount ? $row['discount_ends_at'] : null,
             'status' => $row['status'],
             'color' => $row['color'] ?? '#0d6efd',
             'label' => $row['label'] ?? null,

@@ -89,7 +89,7 @@ class CheckoutSelection
                 $units[] = [
                     'ticket_id' => $ticket->id,
                     'ticket_name' => $ticket->name,
-                    'ticket_price' => (float) $ticket->price,
+                    'ticket_price' => $ticket->currentPrice(), // the discounted price while an offer runs; never a client-supplied value
                     'is_couple' => (bool) $ticket->is_couple,
                     'gender' => $ticket->gender,
                     'event_name' => $event->name,

@@ -136,6 +136,10 @@
 .tkt-ticket__desc { margin-top: 2px; font-size: var(--tkt-fs-sm); line-height: 1.35; color: var(--tkt-ink-soft); overflow-wrap: anywhere; }
 .tkt-ticket__price { grid-area: price; align-self: end; text-align: left; font-weight: 800; font-size: var(--tkt-fs-lg); line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tkt-ticket__price small { font-size: var(--tkt-fs-xs); font-weight: 600; color: var(--tkt-muted); }
+.tkt-ticket__was { display: block; font-size: var(--tkt-fs-sm); font-weight: 600; color: var(--tkt-muted); line-height: 1.1; }
+.tkt-ticket__offer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; font-weight: 600; font-size: var(--tkt-fs-xs); white-space: normal; }
+.tkt-ticket__timer { color: #B42318; font-variant-numeric: tabular-nums; }
+.tkt-ticket__timer b { font-weight: 800; }
 .tkt-ticket__avail { color: #1B7F3B; font-weight: 700; }
 .tkt-ticket__avail::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: currentColor; vertical-align: 1px; }
 .tkt-ticket__limit { grid-area: limit; min-width: 0; font-size: var(--tkt-fs-xs); color: var(--tkt-muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

@@ -23,7 +23,7 @@ final class EventDuplicator
             $copy = Event::create(['name' => $this->copyName($source->name), 'slug' => null, 'status' => 'draft'] + $source->only($source->getFillable()));
 
             foreach ($source->tickets as $i => $ticket) {
-                $copy->tickets()->create(collect($ticket->only($ticket->getFillable()))->except('event_id')->all() + ['sort_order' => $ticket->sort_order ?? $i]);
+                $copy->tickets()->create(collect($ticket->only($ticket->getFillable()))->except(['event_id', 'discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at'])->all() + ['sort_order' => $ticket->sort_order ?? $i]);
             }
             foreach ($source->fees as $fee) {
                 $copy->fees()->create(collect($fee->only($fee->getFillable()))->except('event_id')->all());
