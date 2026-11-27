@@ -78,7 +78,7 @@ class TicketDiscountTest extends TestCase
         $this->assertFalse($t->fresh()->hasActiveDiscount());
     }
 
-    public function test_fixed_discount_shows_no_percentage_badge(): void
+    public function test_fixed_discount_shows_limited_offer_instead_of_a_percentage(): void
     {
         $t = $this->ticket(['discount_type' => 'fixed', 'discount_value' => 500, 'discount_ends_at' => now()->addHours(12)]);
 
@@ -86,6 +86,7 @@ class TicketDiscountTest extends TestCase
             ->assertOk()
             ->assertSee('tkt-ticket__was', false)
             ->assertSee('data-countdown-end', false)
+            ->assertSee('Limited offer')
             ->assertDontSee('-50%')
             ->assertDontSee('-50.0%');
     }
