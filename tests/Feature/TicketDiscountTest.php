@@ -62,4 +62,19 @@ class TicketDiscountTest extends TestCase
             ->assertSee('data-countdown-end', false)
             ->assertSee('-10%');
     }
+
+    public function test_offer_times_use_egypt_time(): void
+    {
+        $this->assertSame('Africa/Cairo', config('app.timezone'));
+
+        // 2026-11-27 is winter time in Egypt (UTC+2); the countdown deadline sent to the browser carries that offset.
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-27 10:00:00', 'Africa/Cairo'));
+        $t = $this->ticket(['discount_type' => 'percent', 'discount_value' => 10, 'discount_ends_at' => '2026-11-27 22:00:00']);
+
+        $this->assertSame('2026-11-27T22:00:00+02:00', $t->fresh()->discount_ends_at->toIso8601String());
+        $this->assertTrue($t->fresh()->hasActiveDiscount());
+
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-27 22:00:01', 'Africa/Cairo'));
+        $this->assertFalse($t->fresh()->hasActiveDiscount());
+    }
 }

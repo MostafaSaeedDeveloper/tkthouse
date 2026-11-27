@@ -4,6 +4,16 @@
 (function () {
     'use strict';
 
+    /* "Now" / "Today" follow Egypt time (the app's timezone), not the admin's device clock. */
+    function cairoNow() {
+        try {
+            var p = {};
+            new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+            return new Date(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+        } catch (e) { return new Date(); }
+    }
+
     function enhance(el) {
         if (!window.flatpickr || el.dataset.native !== undefined || el.hasAttribute('data-native-date') || el._flatpickr) return;
 
@@ -38,8 +48,8 @@
                 foot.innerHTML = '<button type="button" class="a-fp-foot__btn" data-fp-clear>Clear</button><button type="button" class="a-fp-foot__btn a-fp-foot__btn--primary" ' + (withTime ? 'data-fp-now>Now' : 'data-fp-today>Today') + '</button>' + (withTime ? '<button type="button" class="a-fp-foot__btn a-fp-foot__btn--done" data-fp-done>Done</button>' : '');
                 foot.addEventListener('click', function (e) {
                     if (e.target.closest('[data-fp-clear]')) { inst.clear(); inst.close(); }
-                    if (e.target.closest('[data-fp-today]')) { inst.setDate(new Date(), true); inst.close(); }
-                    if (e.target.closest('[data-fp-now]')) { inst.setDate(new Date(), true); }
+                    if (e.target.closest('[data-fp-today]')) { inst.setDate(cairoNow(), true); inst.close(); }
+                    if (e.target.closest('[data-fp-now]')) { inst.setDate(cairoNow(), true); }
                     if (e.target.closest('[data-fp-done]')) { inst.close(); }
                 });
                 inst.calendarContainer.appendChild(foot);
